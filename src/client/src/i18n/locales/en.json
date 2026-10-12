@@ -1,0 +1,140 @@
+{
+  "app": {
+    "title": "Telegram Bot Studio",
+    "subtitle": "Bot & Mini App Management"
+  },
+  "login": {
+    "title": "Sign in to the Studio",
+    "masterKey": "Master key",
+    "submit": "Sign in",
+    "hint": "Use the ADMIN_MASTER_KEY configured for this deployment (default: admin123).",
+    "invalid": "Invalid master key"
+  },
+  "nav": {
+    "overview": "All Bots",
+    "botDashboard": "Overview",
+    "modules": "Modules",
+    "miniApps": "Mini Apps",
+    "security": "Security & Sessions",
+    "primary": "Primary",
+    "studio": "Studio",
+    "bot": "Active bot",
+    "account": "Account",
+    "skipToContent": "Skip to main content",
+    "openMenu": "Open navigation menu",
+    "breadcrumbs": "Breadcrumb",
+    "lightMode": "Switch to light mode",
+    "darkMode": "Switch to dark mode",
+    "toggleTheme": "Toggle color theme",
+    "signOut": "Sign out",
+    "categories": {
+      "Directory & Content": "Directory & Content",
+      "Communication & CRM": "Communication & CRM",
+      "Community & Moderation": "Community & Moderation",
+      "Automation & Monetization": "Automation & Monetization"
+    }
+  },
+  "actions": {
+    "add": "Add",
+    "create": "Create",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "refresh": "Refresh",
+    "confirm": "Confirm",
+    "copy": "Copy",
+    "copied": "Copied",
+    "export": "Export",
+    "test": "Send test",
+    "publish": "Publish"
+  },
+  "status": {
+    "active": "Active",
+    "starting": "Starting",
+    "failed": "Failed",
+    "stopped": "Stopped",
+    "inactive": "Inactive",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "running": "Running",
+    "queued": "Queued",
+    "done": "Done",
+    "pending": "Pending"
+  },
+  "bots": {
+    "addTitle": "Add Bot",
+    "token": "BotFather API token",
+    "name": "Display name",
+    "validate": "Validate token",
+    "validated": "Token verified",
+    "empty": "No bots registered yet. Add your first bot to get started.",
+    "subscribers": "Subscribers",
+    "activeModules": "Active modules",
+    "miniApps": "Mini Apps",
+    "volume24h": "24h message volume",
+    "deleteConfirm": "Delete this bot and all of its data? This action cannot be undone."
+  },
+  "modules": {
+    "managerTitle": "Feature Modules",
+    "enabled": "{{count}} of {{total}} modules enabled",
+    "configSaved": "Configuration saved. Bot runtime reloaded.",
+    "toggleFailed": "Could not update the module"
+  },
+  "connections": {
+    "sync": "Sync from bot",
+    "manage": "Open Connections",
+    "noneYet": "No chat connections yet. Add your groups and channels in the Connections module to pick them from dropdowns across the studio.",
+    "noneOfType": "No {{type}} connections yet. Add one in the Connections module.",
+    "manualOption": "Other — enter chat id manually",
+    "manualEntry": "Manual entry",
+    "backToSelect": "Pick from connections",
+    "empty": "No connections yet. Add your groups and channels here once and every module will offer them as dropdown targets.",
+    "emptyHint": "Tip: press \"Sync from bot\" to import chats the bot was already added to.",
+    "chatIdHelp": "Numeric id (-100…) or public @username",
+    "deleteConfirm": "Delete the connection \"{{title}}\"? Modules using it keep their stored ids."
+  },
+  "help": {
+    "open": "Documentation & Setup Guide",
+    "overview": "Overview & Use Cases",
+    "setup": "Step-by-Step Setup",
+    "placeholders": "Variables & Placeholders",
+    "troubleshooting": "Troubleshooting & Rate Limits"
+  },
+  "common": {
+    "search": "Search",
+    "name": "Name",
+    "title": "Title",
+    "description": "Description",
+    "actions": "Actions",
+    "status": "Status",
+    "created": "Created",
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "empty": "Nothing here yet",
+    "unsaved": "You have unsaved changes"
+  },
+  "security": {
+    "sessions": "Active sessions",
+    "logs": "Security audit log",
+    "changeKey": "Change master key",
+    "currentKey": "Current master key",
+    "newKey": "New master key",
+    "keyChanged": "Master key rotated. Use the new key on next sign-in.",
+    "revoke": "Revoke",
+    "revokeOthers": "Revoke all other sessions"
+  },
+  "miniApps": {
+    "addTitle": "Create Mini App",
+    "template": "Template",
+    "slug": "URL slug",
+    "config": "Configuration (JSON)",
+    "theme": "Theme (JSON)",
+    "preview": "Phone preview",
+    "publishHint": "Sets the Telegram chat menu button to launch this Mini App.",
+    "publicBaseUrl": "Public base URL",
+    "orders": "Orders",
+    "forms": "Form submissions"
+  }
+}

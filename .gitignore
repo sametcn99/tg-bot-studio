@@ -1,0 +1,39 @@
+# dependencies
+node_modules
+
+# build output
+dist
+out
+*.tgz
+
+# runtime data (SQLite database and WAL files)
+data
+data/*.sqlite
+data/*.sqlite-*
+
+# environment files
+.env
+.env.*
+!.env.example
+
+# logs
+logs
+*.log
+
+# code coverage
+coverage
+*.lcov
+
+# caches
+.eslintcache
+.cache
+*.tsbuildinfo
+
+# editors
+.idea
+.vscode
+
+# OS
+.DS_Store
+Thumbs.db
+.zcode/

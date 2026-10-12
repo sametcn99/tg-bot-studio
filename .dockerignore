@@ -1,0 +1,17 @@
+node_modules
+dist
+.git
+.gitignore
+.env
+.env.*
+data
+data/*.sqlite
+data/*.sqlite-*
+.DS_Store
+coverage
+*.lcov
+.idea
+.vscode
+*.tsbuildinfo
+README.md
+docker-compose.yml
