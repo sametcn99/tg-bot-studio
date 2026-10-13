@@ -40,32 +40,12 @@ import CheckIcon from '@mui/icons-material/Check';
 import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
 import KeyboardDoubleArrowLeftIcon from '@mui/icons-material/KeyboardDoubleArrowLeft';
 import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArrowRight';
-import TuneIcon from '@mui/icons-material/Tune';
-import CableIcon from '@mui/icons-material/Cable';
-import MenuBookIcon from '@mui/icons-material/MenuBook';
-import ScheduleIcon from '@mui/icons-material/Schedule';
-import SupportAgentIcon from '@mui/icons-material/SupportAgent';
-import BusinessCenterIcon from '@mui/icons-material/BusinessCenter';
-import ForumIcon from '@mui/icons-material/Forum';
-import CampaignIcon from '@mui/icons-material/Campaign';
-import GroupsIcon from '@mui/icons-material/Groups';
-import WavingHandIcon from '@mui/icons-material/WavingHand';
-import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
-import GavelIcon from '@mui/icons-material/Gavel';
-import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-import ShareIcon from '@mui/icons-material/Share';
-import QuizIcon from '@mui/icons-material/Quiz';
-import SmartButtonIcon from '@mui/icons-material/SmartButton';
-import PsychologyIcon from '@mui/icons-material/Psychology';
-import ReplyIcon from '@mui/icons-material/Reply';
-import PaidIcon from '@mui/icons-material/Paid';
-import StarIcon from '@mui/icons-material/Star';
-import WebhookIcon from '@mui/icons-material/Webhook';
 import { useBots, type BotSummary } from '../context/BotContext';
 import { useAuth } from '../context/AuthContext';
 import { useThemeMode } from '../theme';
 import { modulesByCategory } from '../registry/modules';
 import { localizedCategory, useLocalizedModules } from '../registry/localize';
+import { moduleIcon } from './ModuleIcons';
 import { colorFor as statusColor } from './StatusDot';
 
 /** Expanded sidebar width in pixels. */
@@ -73,30 +53,6 @@ export const SIDEBAR_WIDTH = 272;
 
 /** Collapsed (icon rail) sidebar width in pixels. */
 export const SIDEBAR_COLLAPSED_WIDTH = 76;
-
-/** Icon registry keyed by module key. */
-const MODULE_ICONS: Record<string, React.ReactElement> = {
-  connections: <CableIcon />,
-  'start-menu': <MenuBookIcon />,
-  scheduler: <ScheduleIcon />,
-  support: <SupportAgentIcon />,
-  business: <BusinessCenterIcon />,
-  drip: <ForumIcon />,
-  broadcast: <CampaignIcon />,
-  crm: <GroupsIcon />,
-  welcome: <WavingHandIcon />,
-  captcha: <VerifiedUserIcon />,
-  moderation: <GavelIcon />,
-  giveaways: <EmojiEventsIcon />,
-  referrals: <ShareIcon />,
-  quizzes: <QuizIcon />,
-  reactions: <SmartButtonIcon />,
-  'ai-assistant': <PsychologyIcon />,
-  autoresponder: <ReplyIcon />,
-  'paid-media': <PaidIcon />,
-  'vip-subs': <StarIcon />,
-  webhooks: <WebhookIcon />,
-};
 
 /** Deterministic avatar gradients, picked by bot id. */
 const AVATAR_GRADIENTS: Array<[string, string]> = [
@@ -718,17 +674,20 @@ function ModuleNavSections({
         const containsActive = modules.some((module) => module.key === activeModuleKey);
         const list = (
           <List dense disablePadding role="group" aria-label={categoryLabel}>
-            {modules.map((module) => (
-              <NavItem
-                key={module.key}
-                to={`/bots/${botId}/m/${module.key}`}
-                icon={MODULE_ICONS[module.key] ?? <TuneIcon />}
-                label={byKey.get(module.key)?.name ?? module.name}
-                selected={activeModuleKey === module.key}
-                collapsed={collapsed}
-                onNavigate={onNavigate}
-              />
-            ))}
+            {modules.map((module) => {
+              const Icon = moduleIcon(module.key);
+              return (
+                <NavItem
+                  key={module.key}
+                  to={`/bots/${botId}/m/${module.key}`}
+                  icon={<Icon />}
+                  label={byKey.get(module.key)?.name ?? module.name}
+                  selected={activeModuleKey === module.key}
+                  collapsed={collapsed}
+                  onNavigate={onNavigate}
+                />
+              );
+            })}
           </List>
         );
 

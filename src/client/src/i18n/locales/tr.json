@@ -198,7 +198,9 @@
     "overview": "Genel Bakış & Kullanım Alanları",
     "setup": "Adım Adım Kurulum",
     "placeholders": "Değişkenler & Yer Tutucular",
-    "troubleshooting": "Sorun Giderme & Hız Limitleri"
+    "troubleshooting": "Sorun Giderme & Hız Limitleri",
+    "escHint": "kapatmak için",
+    "placeholdersHint": "Kopyalamak için bir değişken kartına tıklayın. Yer tutucular bu modülün tüm mesaj alanlarında çalışır."
   },
   "crud": {
     "moveUp": "Yukarı taşı",

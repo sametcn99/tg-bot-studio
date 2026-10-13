@@ -198,7 +198,9 @@
     "overview": "Overview & Use Cases",
     "setup": "Step-by-Step Setup",
     "placeholders": "Variables & Placeholders",
-    "troubleshooting": "Troubleshooting & Rate Limits"
+    "troubleshooting": "Troubleshooting & Rate Limits",
+    "escHint": "to close",
+    "placeholdersHint": "Click any variable card to copy it. Placeholders work in every messaging field of this module."
   },
   "crud": {
     "moveUp": "Move up",
