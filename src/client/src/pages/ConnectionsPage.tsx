@@ -30,6 +30,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SyncIcon from '@mui/icons-material/Sync';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { apiFetch } from '../services/api';
 import PageHeader from '../components/PageHeader';
 import ModuleHelpDialog from '../components/ModuleHelpDialog';
@@ -38,6 +39,7 @@ import { LoadingState } from '../components/Feedback';
 import { useConnections } from '../context/ConnectionsContext';
 import type { ChatConnection } from '../context/ConnectionsContext';
 import type { ModuleEntry } from '../registry/modules';
+import { localizedErrorMessage } from '../utils/errors';
 
 /** Blank dialog form for a new connection. */
 const BLANK_FORM = { title: '', type: 'channel', chatId: '', username: '' };
@@ -51,6 +53,18 @@ function chipColor(type: string): 'primary' | 'success' | 'secondary' {
   if (type === 'channel') return 'primary';
   if (type === 'supergroup') return 'secondary';
   return 'success';
+}
+
+/**
+ * Localized display label for a connection type.
+ * @param {string} type - Raw connection type.
+ * @param {TFunction} t - i18next translator.
+ * @returns {string} Translated type label.
+ */
+function typeLabel(type: string, t: TFunction): string {
+  if (type === 'channel') return t('connections.typeChannel');
+  if (type === 'supergroup') return t('connections.typeSupergroup');
+  return t('connections.typeGroup');
 }
 
 /**
@@ -111,7 +125,7 @@ export default function ConnectionsPage({
         isEnabled: moduleEnabled,
         config: { ...moduleConfig, autoSync: next },
       }),
-    }).catch((err: Error) => setError(err.message));
+    }).catch((err: Error) => setError(localizedErrorMessage(err)));
   }
 
   /**
@@ -159,7 +173,7 @@ export default function ConnectionsPage({
         setForm(null);
         refresh();
       })
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => setError(localizedErrorMessage(err)));
   }
 
   /**
@@ -173,7 +187,7 @@ export default function ConnectionsPage({
         setDeleting(null);
         refresh();
       })
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => setError(localizedErrorMessage(err)));
   }
 
   /**
@@ -187,12 +201,12 @@ export default function ConnectionsPage({
       .then((result) => {
         setStatus(
           result.synced > 0
-            ? `Synced ${result.synced} chat${result.synced === 1 ? '' : 's'} discovered by the bot.`
-            : 'The bot has not discovered any chats yet. Add it to a group or channel first.',
+            ? t('connections.syncedCount', { count: result.synced })
+            : t('connections.nothingToSync'),
         );
         refresh();
       })
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => setError(localizedErrorMessage(err)));
   }
 
   /**
@@ -206,7 +220,7 @@ export default function ConnectionsPage({
       body: JSON.stringify({ isActive: !row.is_active }),
     })
       .then(refresh)
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => setError(localizedErrorMessage(err)));
   }
 
   return (
@@ -217,16 +231,16 @@ export default function ConnectionsPage({
         onDocs={() => setDocsOpen(true)}
         actions={
           <Stack direction="row" spacing={1} alignItems="center">
-            <Tooltip title="Automatically import every group and channel the bot is added to">
+            <Tooltip title={t('connections.autoSyncTooltip')}>
               <Stack direction="row" alignItems="center" spacing={0.5}>
                 <Typography variant="body2" color="text.secondary">
-                  Auto-sync
+                  {t('connections.autoSync')}
                 </Typography>
                 <Switch
                   size="small"
                   checked={autoSync}
                   onChange={(event) => toggleAutoSync(event.target.checked)}
-                  inputProps={{ 'aria-label': 'Auto-sync discovered chats' }}
+                  inputProps={{ 'aria-label': t('connections.autoSyncAria') }}
                 />
               </Stack>
             </Tooltip>
@@ -256,13 +270,13 @@ export default function ConnectionsPage({
           <LoadingState label={t('common.loading')} />
         ) : (
           <TableContainer sx={{ overflowX: 'auto' }}>
-            <Table size="small" aria-label={`${module.name} records`}>
+            <Table size="small" aria-label={t('connections.recordsAria', { name: module.name })}>
               <TableHead>
                 <TableRow>
-                  <TableCell>Title</TableCell>
-                  <TableCell>Type</TableCell>
-                  <TableCell>Chat id</TableCell>
-                  <TableCell>Username</TableCell>
+                  <TableCell>{t('common.title')}</TableCell>
+                  <TableCell>{t('connections.type')}</TableCell>
+                  <TableCell>{t('connections.chatId')}</TableCell>
+                  <TableCell>{t('connections.username')}</TableCell>
                   <TableCell>{t('status.active')}</TableCell>
                   <TableCell align="right">{t('common.actions')}</TableCell>
                 </TableRow>
@@ -276,7 +290,11 @@ export default function ConnectionsPage({
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Chip size="small" color={chipColor(row.type)} label={row.type} />
+                      <Chip
+                        size="small"
+                        color={chipColor(row.type)}
+                        label={typeLabel(row.type, t)}
+                      />
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" fontFamily="monospace" noWrap>
@@ -352,7 +370,7 @@ export default function ConnectionsPage({
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
             <TextField
-              label="Title"
+              label={t('common.title')}
               size="small"
               fullWidth
               value={form?.title ?? ''}
@@ -364,25 +382,25 @@ export default function ConnectionsPage({
             />
             <TextField
               select
-              label="Type"
+              label={t('connections.type')}
               size="small"
               fullWidth
               value={form?.type ?? 'channel'}
               onChange={(event) =>
                 setForm((current) => (current ? { ...current, type: event.target.value } : current))
               }
-              helperText="Forum-enabled supergroups power the Support Desk"
+              helperText={t('connections.typeHelp')}
             >
-              <MenuItem value="channel">Channel</MenuItem>
-              <MenuItem value="group">Group</MenuItem>
-              <MenuItem value="supergroup">Supergroup</MenuItem>
+              <MenuItem value="channel">{t('connections.typeChannel')}</MenuItem>
+              <MenuItem value="group">{t('connections.typeGroup')}</MenuItem>
+              <MenuItem value="supergroup">{t('connections.typeSupergroup')}</MenuItem>
             </TextField>
             <TextField
-              label="Chat id"
+              label={t('connections.chatId')}
               size="small"
               fullWidth
               required
-              placeholder="-1001234567890 or @username"
+              placeholder={t('connections.chatIdPlaceholder')}
               value={form?.chatId ?? ''}
               onChange={(event) =>
                 setForm((current) =>
@@ -392,10 +410,10 @@ export default function ConnectionsPage({
               helperText={t('connections.chatIdHelp')}
             />
             <TextField
-              label="Username (optional)"
+              label={t('connections.usernameOptional')}
               size="small"
               fullWidth
-              placeholder="mychannel"
+              placeholder={t('connections.usernamePlaceholder')}
               value={form?.username ?? ''}
               onChange={(event) =>
                 setForm((current) =>

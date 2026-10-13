@@ -178,6 +178,15 @@ export class MiniAppModel {
   }
 
   /**
+   * Updates one order's lifecycle status (pending → pending_payment → paid).
+   */
+  async updateOrderStatus(orderId: number, status: string): Promise<void> {
+    await this.prisma.miniAppOrder
+      .update({ where: { id: orderId }, data: { status } })
+      .catch(() => undefined);
+  }
+
+  /**
    * Lists recent orders for a user.
    */
   async listUserOrders(

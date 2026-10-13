@@ -15,14 +15,18 @@ const TOKEN_KEY = 'studio-token';
 export class ApiError extends Error {
   /** HTTP status code (0 for network failures). */
   public readonly status: number;
+  /** Machine-readable error code from the API (`VALIDATION_ERROR`, `NOT_FOUND`, ...). */
+  public readonly code?: string;
 
   /**
    * @param {string} message - Human-readable error text.
    * @param {number} status - HTTP status code.
+   * @param {string} [code] - Machine-readable code for localized messages.
    */
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, code?: string) {
     super(message);
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -84,12 +88,13 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     success?: boolean;
     data?: T;
     message?: string | string[];
+    code?: string;
   };
   if (!response.ok || payload.success === false) {
     const message = Array.isArray(payload.message)
       ? payload.message.join(', ')
       : (payload.message ?? `Request failed (${response.status})`);
-    throw new ApiError(message, response.status);
+    throw new ApiError(message, response.status, payload.code);
   }
   return (payload.data ?? (payload as T)) as T;
 }

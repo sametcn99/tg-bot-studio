@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bot-module-handler';
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
 import { AiAssistantService, type AiConfig } from './ai-assistant.service';
+import { AiModel } from '../../models/ai.model';
 import { BotModel } from '../../models/bot.model';
 import { AutoresponderModel } from '../../models/autoresponder.model';
 import { SupportModel } from '../../models/support.model';
@@ -21,6 +22,7 @@ export class AiAssistantRuntime extends BotModuleHandler {
 
   constructor(
     private readonly service: AiAssistantService,
+    private readonly aiModel: AiModel,
     private readonly botModel: BotModel,
     private readonly autoresponderModel: AutoresponderModel,
     private readonly supportModel: SupportModel,
@@ -60,7 +62,7 @@ export class AiAssistantRuntime extends BotModuleHandler {
 
       try {
         const file = await update.getFile();
-        if (!file.file_path || !config.apiKey) return;
+        if (!file.file_path || !this.service.isConfigured(config)) return;
 
         const token = bot.token;
         const fileUrl = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
@@ -69,7 +71,7 @@ export class AiAssistantRuntime extends BotModuleHandler {
 
         const arrayBuf = await res.arrayBuffer();
         const transcribed = await this.service.transcribeAudio(
-          config.apiKey,
+          config,
           Buffer.from(arrayBuf),
           'voice.oga',
         );
@@ -86,6 +88,69 @@ export class AiAssistantRuntime extends BotModuleHandler {
     });
   }
 
+  /** Cheap keyword fallback for handoff detection (TR + EN). */
+  private static readonly HANDOFF_KEYWORDS = [
+    'yetkili',
+    'temsilci',
+    'canlı destek',
+    'insan',
+    'human',
+    'agent',
+    'operator',
+    'speak to a person',
+    'real person',
+  ];
+
+  /**
+   * Current consecutive-frustration counter for a user.
+   * @param {ModuleRuntimeContext} ctx - Runtime context.
+   * @param {number} telegramId - User id.
+   * @returns {number} Streak length.
+   */
+  private angerStreak(ctx: ModuleRuntimeContext, telegramId: number): number {
+    return Number(this.settings.getBotSetting(ctx.botId, `handoff_anger_${telegramId}`) ?? '0');
+  }
+
+  /**
+   * Classifies whether the user wants a human agent or is frustrated with the
+   * bot. Uses a cheap LLM classification when the module is configured and
+   * `smartHandoff` is not disabled; falls back to the keyword list on any
+   * failure. Repeated frustration escalates after the second angry turn.
+   * @param {ModuleRuntimeContext} ctx - Runtime context.
+   * @param {AiConfig} config - Effective AI module config.
+   * @param {string} text - User message.
+   * @returns {Promise<'human' | 'angry' | 'no'>} Classification result.
+   */
+  private async classifyHandoffIntent(
+    ctx: ModuleRuntimeContext,
+    config: AiConfig,
+    text: string,
+  ): Promise<'human' | 'angry' | 'no'> {
+    const lower = text.toLowerCase();
+    const keywordHit = AiAssistantRuntime.HANDOFF_KEYWORDS.some((word) => lower.includes(word));
+    if (config.smartHandoff === false || !this.service.isConfigured(config)) {
+      return keywordHit ? 'human' : 'no';
+    }
+    try {
+      const raw = await this.service.complete(
+        {
+          ...config,
+          systemPrompt:
+            'You are a strict intent classifier for a Telegram support bot. Reply with exactly one word: "human" if the user explicitly asks to talk to a human agent/operator, "angry" if the user expresses frustration with or distrust of the bot (but does not ask for a human), otherwise "no". No punctuation, no explanation.',
+          maxTokens: 8,
+        },
+        [{ role: 'user', content: text }],
+      );
+      const verdict = raw.trim().toLowerCase();
+      if (verdict.startsWith('human')) return 'human';
+      if (verdict.startsWith('angry')) return 'angry';
+      if (verdict.startsWith('no')) return 'no';
+      return keywordHit ? 'human' : 'no';
+    } catch {
+      return keywordHit ? 'human' : 'no';
+    }
+  }
+
   /**
    * Processes a user turn: checks smart human handoff, loads persistent history,
    * queries RAG context, and replies.
@@ -99,23 +164,23 @@ export class AiAssistantRuntime extends BotModuleHandler {
     const telegramId = update.from.id;
     const config = ctx.config as unknown as AiConfig;
 
-    // 1. Smart Human-in-the-Loop Handoff Check
-    const lower = text.toLowerCase();
-    const handoffTriggers = [
-      'yetkili',
-      'temsilci',
-      'canlı destek',
-      'insan',
-      'human',
-      'agent',
-      'operator',
-      'speak to a person',
-      'real person',
-    ];
-    const wantsHuman = handoffTriggers.some((t) => lower.includes(t));
+    // 1. Smart Human-in-the-Loop Handoff Check (LLM classifier with keyword
+    //    fallback; repeated frustration escalates too).
+    const classification = await this.classifyHandoffIntent(ctx, config, text);
+    const angerStreakKey = `handoff_anger_${telegramId}`;
+    if (classification === 'no') {
+      this.settings.setBotSetting(ctx.botId, angerStreakKey, '0');
+    } else {
+      const streak = Number(this.settings.getBotSetting(ctx.botId, angerStreakKey) ?? '0') + 1;
+      this.settings.setBotSetting(ctx.botId, angerStreakKey, String(streak));
+    }
+    const escalationIntent =
+      classification === 'human' ||
+      (classification === 'angry' && this.angerStreak(ctx, telegramId) >= 2);
 
-    if (wantsHuman) {
+    if (escalationIntent) {
       this.settings.setBotSetting(ctx.botId, `escalation_${telegramId}`, new Date().toISOString());
+      this.settings.setBotSetting(ctx.botId, angerStreakKey, '0');
 
       const senderName = update.from
         ? `${(update.from as { first_name?: string }).first_name ?? ''} ${(update.from as { last_name?: string }).last_name ?? ''}`.trim()
@@ -127,6 +192,8 @@ export class AiAssistantRuntime extends BotModuleHandler {
         : {};
       const adminChatId = Number(supportConfig.adminChatId ?? 0);
 
+      // The record lands in the Support Desk (and the AI→Human queue) even
+      // when the support module toggle is off, so escalations are never lost.
       await this.supportModel.createMessage({
         botId: ctx.botId,
         telegramId,
@@ -143,7 +210,7 @@ export class AiAssistantRuntime extends BotModuleHandler {
         void ctx.bot.api
           .sendMessage(
             adminChatId,
-            `🚨 <b>[AI Escalation to Human Agent]</b>\nUser: <b>${senderName}</b> (ID: <code>${telegramId}</code>)\nInquiry: "${text}"`,
+            `🚨 <b>[AI Escalation to Human Agent]</b>\nUser: <b>${senderName}</b> (ID: <code>${telegramId}</code>)\nReason: <i>${classification}</i>\nInquiry: "${text}"`,
             { parse_mode: 'HTML' },
           )
           .catch(() => undefined);
@@ -163,23 +230,35 @@ export class AiAssistantRuntime extends BotModuleHandler {
     // 3. Save incoming turn
     await this.service.saveMessage(ctx.botId, telegramId, 'user', text);
 
-    try {
-      // 4. Generate RAG & Tool-enriched Completion
-      const reply = await this.service.completeWithContext(ctx.botId, telegramId, config, history);
+    // 4. Generate RAG & Tool-enriched Completion (never throws; failures are
+    //    classified in the result and shown to the user as unavailability).
+    const result = await this.service.completeWithSources(ctx.botId, telegramId, config, history);
 
-      // 5. Save assistant reply
-      await this.service.saveMessage(ctx.botId, telegramId, 'assistant', reply);
+    // 5. Save assistant reply and attach usage metrics.
+    const savedId = await this.service.saveMessage(
+      ctx.botId,
+      telegramId,
+      'assistant',
+      result.reply,
+    );
+    await this.aiModel
+      .recordMetrics(savedId, {
+        promptTokens: result.usage?.prompt_tokens,
+        completionTokens: result.usage?.completion_tokens,
+        latencyMs: result.latencyMs,
+        isError: result.isError,
+      })
+      .catch(() => undefined);
 
-      // 6. Send to Telegram user
-      await update.reply(reply);
-    } catch (error) {
-      this.logger.warn(
-        `AI reply failed: ${error instanceof Error ? error.message : String(error)}`,
-      );
+    // 6. Send to Telegram user (friendly fallback on provider failure).
+    if (result.isError) {
+      this.logger.warn(`AI reply failed: ${result.reply}`);
       await update
         .reply('The assistant is temporarily unavailable. Please try again later.')
         .catch(() => undefined);
+      return;
     }
+    await update.reply(result.reply);
   }
 
   /**

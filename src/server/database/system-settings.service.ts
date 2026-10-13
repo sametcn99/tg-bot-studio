@@ -114,4 +114,36 @@ export class SystemSettingsService implements OnModuleInit {
       })
       .catch(() => undefined);
   }
+
+  /**
+   * Deletes a per-bot setting (cache + database).
+   * @param {number} botId - Owning bot identifier.
+   * @param {string} key - Setting key to remove.
+   * @returns {void}
+   */
+  deleteBotSetting(botId: number, key: string): void {
+    this.botCache.delete(`${botId}:${key}`);
+    void this.prisma.botSetting
+      .delete({ where: { botId_key: { botId, key } } })
+      .catch(() => undefined);
+  }
+
+  /**
+   * Lists per-bot settings whose key starts with the prefix, decoded from
+   * their raw string values. Used by dashboard views (e.g. open AI
+   * escalations) that enumerate dynamic keys.
+   * @param {number} botId - Owning bot identifier.
+   * @param {string} prefix - Key prefix filter.
+   * @returns {Array<{key: string, value: string}>} Matching settings.
+   */
+  listBotSettingsByPrefix(botId: number, prefix: string): Array<{ key: string; value: string }> {
+    const out: Array<{ key: string; value: string }> = [];
+    for (const [composite, value] of this.botCache) {
+      const [owner, ...rest] = composite.split(':');
+      if (Number(owner) === botId && rest.join(':').startsWith(prefix)) {
+        out.push({ key: rest.join(':'), value });
+      }
+    }
+    return out;
+  }
 }

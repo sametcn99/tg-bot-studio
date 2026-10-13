@@ -64,9 +64,9 @@ export default function VisualDripStepsBuilder({
         setJsonError(null);
       }
     } catch {
-      setJsonError('Invalid JSON format');
+      setJsonError(t('visual.invalidJson'));
     }
-  }, [value]);
+  }, [value, t]);
 
   const updateSteps = (next: DripStepItem[]) => {
     setSteps(next);
@@ -91,9 +91,9 @@ export default function VisualDripStepsBuilder({
   };
 
   const formatDelay = (minutes: number): string => {
-    if (minutes < 60) return `${minutes} min`;
-    if (minutes < 1440) return `${Math.round(minutes / 60)} hour(s)`;
-    return `${Math.round(minutes / 1440)} day(s)`;
+    if (minutes < 60) return t('visual.delayMin', { n: minutes });
+    if (minutes < 1440) return t('visual.delayHour', { n: Math.round(minutes / 60) });
+    return t('visual.delayDay', { n: Math.round(minutes / 1440) });
   };
 
   const handleJsonBlur = (val: string) => {
@@ -115,10 +115,10 @@ export default function VisualDripStepsBuilder({
         setJsonError(null);
         onChange(val);
       } else {
-        setJsonError('Steps must be an array of objects with delayMinutes and text');
+        setJsonError(t('visual.stepsMustBeArray'));
       }
     } catch {
-      setJsonError('Invalid JSON');
+      setJsonError(t('visual.invalidJson'));
     }
   };
 
@@ -134,7 +134,7 @@ export default function VisualDripStepsBuilder({
     >
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
         <Typography variant="subtitle2" fontWeight={600}>
-          {label ?? 'Drip Sequence Steps'}
+          {label ?? t('visual.dripBuilderTitle')}
         </Typography>
         <Tabs
           value={tab}
@@ -147,13 +147,13 @@ export default function VisualDripStepsBuilder({
           <Tab
             icon={<TimelineIcon sx={{ fontSize: 16 }} />}
             iconPosition="start"
-            label="Visual Timeline"
+            label={t('visual.visualTimeline')}
             value="visual"
           />
           <Tab
             icon={<CodeIcon sx={{ fontSize: 16 }} />}
             iconPosition="start"
-            label="JSON"
+            label={t('visual.jsonTab')}
             value="json"
           />
         </Tabs>
@@ -169,7 +169,10 @@ export default function VisualDripStepsBuilder({
                   <Chip
                     size="small"
                     variant="outlined"
-                    label={`Wait ${formatDelay(step.delayMinutes)} after step ${idx}`}
+                    label={t('visual.waitAfterStep', {
+                      delay: formatDelay(step.delayMinutes),
+                      step: idx,
+                    })}
                     sx={{ fontSize: '0.75rem' }}
                   />
                 </Stack>
@@ -191,14 +194,14 @@ export default function VisualDripStepsBuilder({
                   sx={{ mb: 1.5 }}
                 >
                   <Typography variant="subtitle2" fontWeight={700}>
-                    Step {idx + 1}
+                    {t('visual.stepNumber', { n: idx + 1 })}
                   </Typography>
                   <Tooltip title={t('actions.delete')}>
                     <IconButton
                       size="small"
                       color="error"
                       onClick={() => removeStep(idx)}
-                      aria-label="Delete step"
+                      aria-label={t('visual.deleteStepAria')}
                     >
                       <DeleteOutlineIcon fontSize="small" />
                     </IconButton>
@@ -208,7 +211,7 @@ export default function VisualDripStepsBuilder({
                 <Stack spacing={1.5}>
                   <Stack direction="row" spacing={1} alignItems="center">
                     <TextField
-                      label="Delay (minutes after previous step)"
+                      label={t('visual.delayLabel')}
                       type="number"
                       size="small"
                       value={step.delayMinutes}
@@ -218,36 +221,36 @@ export default function VisualDripStepsBuilder({
                     <Stack direction="row" spacing={0.5}>
                       <Chip
                         size="small"
-                        label="15m"
+                        label={t('visual.delay15m')}
                         onClick={() => updateField(idx, 'delayMinutes', 15)}
                       />
                       <Chip
                         size="small"
-                        label="1h"
+                        label={t('visual.delay1h')}
                         onClick={() => updateField(idx, 'delayMinutes', 60)}
                       />
                       <Chip
                         size="small"
-                        label="24h"
+                        label={t('visual.delay24h')}
                         onClick={() => updateField(idx, 'delayMinutes', 1440)}
                       />
                       <Chip
                         size="small"
-                        label="3d"
+                        label={t('visual.delay3d')}
                         onClick={() => updateField(idx, 'delayMinutes', 4320)}
                       />
                     </Stack>
                   </Stack>
 
                   <TextField
-                    label="Message text"
+                    label={t('visual.messageTextLabel')}
                     size="small"
                     multiline
                     minRows={3}
                     fullWidth
                     value={step.text}
                     onChange={(e) => updateField(idx, 'text', e.target.value)}
-                    helperText="Placeholders: {first_name}, {mention}, {date}, {time}"
+                    helperText={t('visual.placeholdersHint')}
                   />
                 </Stack>
               </Paper>
@@ -261,7 +264,7 @@ export default function VisualDripStepsBuilder({
             onClick={() => addStep(steps.length === 0 ? 0 : 1440)}
             sx={{ alignSelf: 'flex-start' }}
           >
-            Add Next Step
+            {t('visual.addNextStep')}
           </Button>
         </Stack>
       ) : (

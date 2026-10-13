@@ -57,7 +57,8 @@ import { useBots } from '../context/BotContext';
 import { useThemeMode } from '../theme';
 import BotSwitcher from './BotSwitcher';
 import BotSimulatorDrawer from './BotSimulatorDrawer';
-import { MODULES, modulesByCategory } from '../registry/modules';
+import { modulesByCategory } from '../registry/modules';
+import { localizedCategory, useLocalizedModule, useLocalizedModules } from '../registry/localize';
 
 /** Sidebar width in pixels on medium screens and up. */
 const SIDEBAR_WIDTH = 264;
@@ -113,9 +114,8 @@ export default function Layout(): React.ReactElement {
 
   const pathParts = location.pathname.split('/').filter(Boolean);
   const moduleKey = pathParts[2] === 'm' ? pathParts[3] : null;
-  const sectionTitle = moduleKey
-    ? MODULES.find((module) => module.key === moduleKey)?.name
-    : pathParts.join('/');
+  const localizedModule = useLocalizedModule(moduleKey ?? '');
+  const sectionTitle = moduleKey ? localizedModule?.name : pathParts.join('/');
 
   /**
    * Closes the mobile drawer after a navigation.
@@ -289,7 +289,7 @@ export default function Layout(): React.ReactElement {
                   sx={{ cursor: 'pointer', fontWeight: 600 }}
                   onClick={() => navigate('/')}
                 >
-                  Studio
+                  {t('nav.studio')}
                 </Link>
                 {activeBot && (
                   <Link
@@ -313,9 +313,11 @@ export default function Layout(): React.ReactElement {
             <Box sx={{ flexGrow: { xs: 1, sm: 0 } }} />
             <BotSwitcher />
             <Tooltip
-              title={currentLang.startsWith('tr') ? 'Switch to English' : 'Türkçe Dilini Seç'}
+              title={
+                currentLang.startsWith('tr') ? t('nav.switchToEnglish') : t('nav.switchToTurkish')
+              }
             >
-              <IconButton size="small" onClick={toggleLanguage} aria-label="Toggle language">
+              <IconButton size="small" onClick={toggleLanguage} aria-label={t('nav.language')}>
                 <LanguageIcon fontSize="small" />
                 <Typography variant="caption" sx={{ ml: 0.5, fontWeight: 700 }}>
                   {currentLang.startsWith('tr') ? 'TR' : 'EN'}
@@ -404,6 +406,11 @@ function ModuleNavSections({
   onNavigate: (key: string) => void;
 }): React.ReactElement {
   const { t } = useTranslation();
+  const localizedModules = useLocalizedModules();
+  const nameByKey = useMemo(
+    () => new Map(localizedModules.map((module) => [module.key, module.name])),
+    [localizedModules],
+  );
   const groups = useMemo(() => modulesByCategory(), []);
   const [collapsed, setCollapsed] = useState<Set<string>>(
     () => new Set(groups.map(([category]) => category)),
@@ -446,6 +453,7 @@ function ModuleNavSections({
     <Box component="nav" aria-label={t('nav.modules')} sx={{ pb: 1 }}>
       {groups.map(([category, modules]) => {
         const open = !collapsed.has(category);
+        const categoryLabel = localizedCategory(t, category);
         return (
           <Box key={category} sx={{ px: 1.5 }}>
             <ListItemButton
@@ -455,7 +463,7 @@ function ModuleNavSections({
               sx={{ borderRadius: 1, minHeight: 36 }}
             >
               <ListItemText
-                primary={category}
+                primary={categoryLabel}
                 primaryTypographyProps={{
                   variant: 'overline',
                   sx: { lineHeight: 1.4 },
@@ -472,12 +480,12 @@ function ModuleNavSections({
               />
             </ListItemButton>
             <Collapse in={open} id={categorySlug(category)}>
-              <List dense disablePadding role="group" aria-label={category} sx={{ pl: 1 }}>
+              <List dense disablePadding role="group" aria-label={categoryLabel} sx={{ pl: 1 }}>
                 {modules.map((module) => (
                   <NavItem
                     key={module.key}
                     icon={MODULE_ICONS[module.key] ?? <TuneIcon />}
-                    label={module.name}
+                    label={nameByKey.get(module.key) ?? module.name}
                     selected={activeModuleKey === module.key}
                     onClick={() => onNavigate(module.key)}
                   />

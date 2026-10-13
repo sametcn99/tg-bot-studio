@@ -6,6 +6,8 @@ import {
   OnApplicationShutdown,
 } from '@nestjs/common';
 import { BotPoolService } from '../../bot-engine/bot-pool.service';
+import { SystemSettingsService } from '../../database/system-settings.service';
+import { nextZonedOccurrence, safeTimeZone } from '../../common/utils/tz.util';
 import { renderTemplate } from '../../common/utils/template.util';
 import {
   MessageScoreModel,
@@ -15,6 +17,7 @@ import {
 } from '../../models/message-score.model';
 import { BotModel } from '../../models/bot.model';
 import { ChatConnectionModel } from '../../models/chat-connection.model';
+import { StudioException } from '../../common/errors/studio-error';
 
 export type ScorePeriod = 'daily' | 'weekly' | 'monthly' | 'alltime';
 export type ScoreFrequency = 'once' | 'hourly' | 'daily' | 'weekly';
@@ -62,6 +65,7 @@ function computeFirstRun(
   frequency: ScoreFrequency,
   timeOfDay: string,
   dayOfWeek: number,
+  timeZone: string,
   runAt?: string,
 ): string {
   if (frequency === 'once') {
@@ -71,38 +75,27 @@ function computeFirstRun(
   if (frequency === 'hourly') {
     return new Date(Date.now() + 3_600_000).toISOString();
   }
-  const [hours, minutes] = /^\d{1,2}:\d{2}$/.test(timeOfDay)
-    ? timeOfDay.split(':').map(Number)
-    : [18, 0];
-  const candidate = new Date();
-  candidate.setUTCHours(hours, minutes, 0, 0);
-  if (frequency === 'daily') {
-    if (candidate.getTime() <= Date.now()) candidate.setUTCDate(candidate.getUTCDate() + 1);
-    return candidate.toISOString();
-  }
-  const target = Math.min(Math.max(Math.trunc(dayOfWeek || 0), 0), 6);
-  let delta = (target - candidate.getUTCDay() + 7) % 7;
-  if (delta === 0 && candidate.getTime() <= Date.now()) delta = 7;
-  candidate.setUTCDate(candidate.getUTCDate() + delta);
-  return candidate.toISOString();
+  return nextZonedOccurrence(
+    frequency === 'weekly' ? 'weekly' : 'daily',
+    timeZone,
+    timeOfDay,
+    dayOfWeek,
+  ).toISOString();
 }
 
-function computeNextRun(frequency: ScoreFrequency, timeOfDay: string, dayOfWeek: number): string {
+function computeNextRun(
+  frequency: ScoreFrequency,
+  timeOfDay: string,
+  dayOfWeek: number,
+  timeZone: string,
+): string {
   if (frequency === 'hourly') return new Date(Date.now() + 3_600_000).toISOString();
-  const [hours, minutes] = /^\d{1,2}:\d{2}$/.test(timeOfDay)
-    ? timeOfDay.split(':').map(Number)
-    : [18, 0];
-  const candidate = new Date();
-  candidate.setUTCHours(hours, minutes, 0, 0);
-  if (frequency === 'daily') {
-    while (candidate.getTime() <= Date.now()) candidate.setUTCDate(candidate.getUTCDate() + 1);
-    return candidate.toISOString();
-  }
-  const target = Math.min(Math.max(Math.trunc(dayOfWeek || 0), 0), 6);
-  do {
-    candidate.setUTCDate(candidate.getUTCDate() + 1);
-  } while (candidate.getUTCDay() !== target || candidate.getTime() <= Date.now());
-  return candidate.toISOString();
+  return nextZonedOccurrence(
+    frequency === 'weekly' ? 'weekly' : 'daily',
+    timeZone,
+    timeOfDay,
+    dayOfWeek,
+  ).toISOString();
 }
 
 /**
@@ -119,12 +112,22 @@ export class MessageScoreService implements OnApplicationShutdown {
     private readonly botModel: BotModel,
     private readonly chatConnectionModel: ChatConnectionModel,
     private readonly pool: BotPoolService,
+    private readonly settings: SystemSettingsService,
   ) {
     this.ticker = setInterval(() => {
       void this.dispatchDue().catch((error: Error) =>
         this.logger.error(`Score schedule dispatch failed: ${error.message}`),
       );
     }, TICK_INTERVAL_MS);
+  }
+
+  /**
+   * Resolves the bot-level IANA time zone (falls back to UTC).
+   * @param {number} botId - Owning bot id.
+   * @returns {string} Zone name.
+   */
+  private botTimeZone(botId: number): string {
+    return safeTimeZone(this.settings.getBotSetting(botId, 'timezone'));
   }
 
   onApplicationShutdown(): void {
@@ -263,7 +266,11 @@ export class MessageScoreService implements OnApplicationShutdown {
     data: Record<string, unknown>,
   ): Promise<Array<{ chatId: string; ok: boolean; error?: string }>> {
     const bot = this.pool.getBot(botId);
-    if (!bot) throw new BadRequestException('The bot is not running; start it before sending.');
+    if (!bot)
+      throw new StudioException(
+        'BOT_NOT_RUNNING',
+        'The bot is not running; start it before sending.',
+      );
     const config = this.formatFromPayload(data);
     const period = this.periodFromPayload(data);
     const weights = await this.weightsFor(botId);
@@ -317,6 +324,7 @@ export class MessageScoreService implements OnApplicationShutdown {
         frequency,
         timeOfDay,
         dayOfWeek,
+        this.botTimeZone(botId),
         data.runAt ? String(data.runAt) : undefined,
       ),
       topLimit: config.topLimit,
@@ -389,7 +397,7 @@ export class MessageScoreService implements OnApplicationShutdown {
         ? data.runAt
           ? new Date(String(data.runAt)).toISOString()
           : existing.run_at
-        : computeNextRun(frequency, timeOfDay, dayOfWeek);
+        : computeNextRun(frequency, timeOfDay, dayOfWeek, this.botTimeZone(botId));
     if (status === 'active' && new Date(runAt).getTime() <= Date.now()) {
       status = frequency === 'once' ? 'done' : 'active';
     }
@@ -421,7 +429,10 @@ export class MessageScoreService implements OnApplicationShutdown {
   async runScheduleNow(botId: number, id: number): Promise<ScoreScheduleRow> {
     const schedule = await this.scheduleOrFail(botId, id);
     if (!this.pool.getBot(botId)) {
-      throw new BadRequestException('The bot is not running; start it before dispatching.');
+      throw new StudioException(
+        'BOT_NOT_RUNNING',
+        'The bot is not running; start it before dispatching.',
+      );
     }
     await this.dispatchSchedule(schedule);
     return this.scheduleOrFail(botId, id);
@@ -492,7 +503,12 @@ export class MessageScoreService implements OnApplicationShutdown {
     const nextRun =
       frequency === 'once'
         ? null
-        : computeNextRun(frequency, schedule.time_of_day ?? '18:00', schedule.day_of_week ?? 1);
+        : computeNextRun(
+            frequency,
+            schedule.time_of_day ?? '18:00',
+            schedule.day_of_week ?? 1,
+            this.botTimeZone(schedule.bot_id),
+          );
     await this.scoreModel.updateScheduleDispatch(schedule.id, {
       runAt: nextRun ?? schedule.run_at,
       status: nextRun ? 'active' : 'done',
@@ -536,7 +552,7 @@ export class MessageScoreService implements OnApplicationShutdown {
         : [];
     const chatIds = [...new Set(raw.map((entry) => String(entry).trim()).filter(Boolean))];
     if (chatIds.length === 0) {
-      throw new BadRequestException('Select at least one target chat.');
+      throw new StudioException('NO_TARGET_CHAT', 'Select at least one target chat.');
     }
     return chatIds;
   }

@@ -7,7 +7,7 @@ A self-hosted web application for managing multiple Telegram bots and Telegram M
 | Layer     | Technology                                                              |
 | --------- | ----------------------------------------------------------------------- |
 | Backend   | NestJS 11, grammY (multi-bot long-polling pool), class-validator        |
-| Database  | SQLite (`bun:sqlite`) with WAL mode at `data/studio.sqlite`             |
+| Database  | SQLite via Prisma 6 (WAL mode) at `data/studio.sqlite`, versioned `prisma/migrations` |
 | Dashboard | React 19, Vite, Material UI v7, React Router v7, i18next (English & Turkish) |
 | Mini Apps | React + Vite shell with the official Telegram WebApp SDK                |
 | Runtime   | Bun (`oven/bun:1-alpine` in Docker)                                     |
@@ -34,8 +34,26 @@ On first boot the master key from `ADMIN_MASTER_KEY` (default `admin123`) is has
 
 ```bash
 bun run build    # compiles dashboard -> dist/client, TMA shell -> dist/client-tma, backend -> dist/server
-bun run start    # serves everything on port 3000
+bun run start    # applies pending prisma migrations, then serves everything on port 3000
 ```
+
+### Database Migrations
+
+Schema changes ship as versioned SQL under `prisma/migrations/`. `bun run start` and the Docker entrypoint run `prisma migrate deploy` before boot, so upgrading an existing installation applies only the pending migrations. Existing databases created before migrations were introduced need a one-time baseline:
+
+```bash
+bunx prisma migrate resolve --applied 0_init
+```
+
+## Tests & CI
+
+Unit tests (bun test) cover the critical pure logic: Telegram initData HMAC validation, CSV serialization/escaping, message placeholder rendering, and spin prize weighting. GitHub Actions CI (`.github/workflows/ci.yml`) runs format check, ESLint, typecheck, tests, and a full build on every push/PR.
+
+## Bot Portability & Operations
+
+- **Clone bot**: copy module toggles/configs, autoresponders, drip campaigns, and mini apps to a new bot from the bot dashboard (requires a fresh BotFather token).
+- **Export/Import**: full bot configuration as a JSON bundle (AI API keys excluded from exports).
+- **Backups**: one-click SQLite backups (`VACUUM INTO`) served by `/api/backup` with download and delete.
 
 ## Docker Deployment
 

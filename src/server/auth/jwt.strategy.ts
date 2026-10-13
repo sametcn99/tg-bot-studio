@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import type { Request } from 'express';
 import { AuthService } from './auth.service';
 
 /**
@@ -10,6 +11,20 @@ import { AuthService } from './auth.service';
  */
 export interface JwtPayload {
   sessionId: string;
+}
+
+/**
+ * Token extractor: Authorization bearer header first, then the
+ * `access_token` query parameter so EventSource (which cannot set headers)
+ * can authenticate the SSE streams.
+ * @param {Request} req - Incoming request.
+ * @returns {string | null} Raw JWT when present.
+ */
+function fromHeaderOrQuery(req: Request): string | null {
+  return (
+    ExtractJwt.fromAuthHeaderAsBearerToken()(req) ??
+    (typeof req.query?.access_token === 'string' ? req.query.access_token : null)
+  );
 }
 
 /**
@@ -24,7 +39,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
    */
   constructor(private readonly authService: AuthService) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: fromHeaderOrQuery,
       ignoreExpiration: false,
       secretOrKey: process.env.JWT_SECRET || 'change_this_secret_in_production',
     });

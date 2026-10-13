@@ -27,10 +27,13 @@ import { apiFetch } from '../../services/api';
 import PageHeader from '../../components/PageHeader';
 import ModuleHelpDialog from '../../components/ModuleHelpDialog';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import DataTable, { type Column } from '../../components/DataTable';
 import { useSnackbar } from '../../context/SnackbarContext';
 import { ConnectionSelect, NoConnectionsNotice } from '../../components/ConnectionSelect';
 import { useConnections } from '../../context/ConnectionsContext';
 import type { ModuleEntry } from '../../registry/modules';
+import { formatDateTime } from '../../utils/format';
+import { localizedErrorMessage } from '../../utils/errors';
 
 /**
  * Outgoing webhook endpoint row.
@@ -153,13 +156,13 @@ export default function WebhooksPage({
       body: JSON.stringify({ url: outForm.url, secret: outForm.secret, events }),
     })
       .then(() => {
-        showSuccess('Webhook endpoint created successfully.');
+        showSuccess(t('webhooks.endpointCreated'));
         setOutForm({ url: '', secret: '', events: '' });
         reload();
       })
       .catch((err: Error) => {
-        setError(err.message);
-        showError(err.message);
+        setError(localizedErrorMessage(err));
+        showError(localizedErrorMessage(err));
       });
   }
 
@@ -176,13 +179,13 @@ export default function WebhooksPage({
       }),
     })
       .then(() => {
-        showSuccess('Inbound webhook created successfully.');
+        showSuccess(t('webhooks.inboundCreated'));
         setInForm({ targetChatId: '', template: 'Event: {payload.event}' });
         reload();
       })
       .catch((err: Error) => {
-        setError(err.message);
-        showError(err.message);
+        setError(localizedErrorMessage(err));
+        showError(localizedErrorMessage(err));
       });
   }
 
@@ -190,22 +193,22 @@ export default function WebhooksPage({
     if (!deletingEndpoint) return;
     apiFetch(`/api/bots/${botId}/webhooks/endpoints/${deletingEndpoint.id}`, { method: 'DELETE' })
       .then(() => {
-        showSuccess('Webhook endpoint deleted.');
+        showSuccess(t('webhooks.endpointDeleted'));
         setDeletingEndpoint(null);
         reload();
       })
-      .catch((err: Error) => showError(err.message));
+      .catch((err: Error) => showError(localizedErrorMessage(err)));
   }
 
   function confirmDeleteInbound(): void {
     if (!deletingInbound) return;
     apiFetch(`/api/bots/${botId}/webhooks/inbound/${deletingInbound.hookId}`, { method: 'DELETE' })
       .then(() => {
-        showSuccess('Inbound webhook deleted.');
+        showSuccess(t('webhooks.inboundDeleted'));
         setDeletingInbound(null);
         reload();
       })
-      .catch((err: Error) => showError(err.message));
+      .catch((err: Error) => showError(localizedErrorMessage(err)));
   }
 
   return (
@@ -225,14 +228,14 @@ export default function WebhooksPage({
         value={tab}
         onChange={(_event, value: number) => setTab(value)}
         sx={{ mb: 2 }}
-        aria-label="Webhook sections"
+        aria-label={t('webhooks.sectionsAria')}
         variant="scrollable"
         scrollButtons="auto"
         allowScrollButtonsMobile
       >
-        <Tab label="Outgoing" />
-        <Tab label="Inbound" />
-        <Tab label="Delivery log" />
+        <Tab label={t('webhooks.tabOutgoing')} />
+        <Tab label={t('webhooks.tabInbound')} />
+        <Tab label={t('webhooks.tabDeliveryLog')} />
       </Tabs>
 
       {tab === 0 && (
@@ -241,24 +244,24 @@ export default function WebhooksPage({
             <CardContent>
               <Stack spacing={2} sx={{ maxWidth: 520 }}>
                 <TextField
-                  label="Target URL"
+                  label={t('webhooks.targetUrl')}
                   size="small"
                   value={outForm.url}
                   onChange={(event) => setOutForm({ ...outForm, url: event.target.value })}
                 />
                 <TextField
-                  label="Signing secret"
+                  label={t('webhooks.signingSecret')}
                   size="small"
                   value={outForm.secret}
                   onChange={(event) => setOutForm({ ...outForm, secret: event.target.value })}
-                  helperText="Sent as HMAC-SHA256 in X-Studio-Signature"
+                  helperText={t('webhooks.signingSecretHelp')}
                 />
                 <TextField
-                  label="Events (comma separated, empty = all)"
+                  label={t('webhooks.eventsLabel')}
                   size="small"
                   value={outForm.events}
                   onChange={(event) => setOutForm({ ...outForm, events: event.target.value })}
-                  helperText="order_created, form_submitted, support_message"
+                  helperText={t('webhooks.eventsHelp')}
                 />
                 <Box>
                   <Typography
@@ -266,7 +269,7 @@ export default function WebhooksPage({
                     color="text.secondary"
                     sx={{ mb: 0.5, display: 'block' }}
                   >
-                    Quick-add events:
+                    {t('webhooks.quickAddEvents')}
                   </Typography>
                   <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
                     {STANDARD_EVENTS.map((evt) => (
@@ -296,11 +299,11 @@ export default function WebhooksPage({
           </Card>
           <Card>
             <TableContainer sx={{ overflowX: 'auto' }}>
-              <Table size="small" aria-label="Webhook records">
+              <Table size="small" aria-label={t('webhooks.recordsAria')}>
                 <TableHead>
                   <TableRow>
-                    <TableCell>URL</TableCell>
-                    <TableCell>Events</TableCell>
+                    <TableCell>{t('webhooks.url')}</TableCell>
+                    <TableCell>{t('webhooks.events')}</TableCell>
                     <TableCell align="right">{t('common.actions')}</TableCell>
                   </TableRow>
                 </TableHead>
@@ -314,7 +317,7 @@ export default function WebhooksPage({
                       </TableCell>
                       <TableCell>
                         {endpoint.events.length === 0 ? (
-                          <Chip size="small" label="All events" />
+                          <Chip size="small" label={t('webhooks.allEvents')} />
                         ) : (
                           <Stack direction="row" spacing={0.5}>
                             {endpoint.events.map((event) => (
@@ -353,19 +356,19 @@ export default function WebhooksPage({
             <CardContent>
               <Stack spacing={2} sx={{ maxWidth: 520 }}>
                 <ConnectionSelect
-                  label="Target chat"
+                  label={t('webhooks.targetChat')}
                   value={inForm.targetChatId}
                   onChange={(value) => setInForm({ ...inForm, targetChatId: value })}
-                  helperText="Group or channel that receives the rendered message"
+                  helperText={t('webhooks.targetChatHelp')}
                 />
                 <TextField
-                  label="Message template"
+                  label={t('webhooks.messageTemplate')}
                   size="small"
                   multiline
                   minRows={2}
                   value={inForm.template}
                   onChange={(event) => setInForm({ ...inForm, template: event.target.value })}
-                  helperText="Use {payload.<key>} placeholders from the JSON body"
+                  helperText={t('webhooks.messageTemplateHelp')}
                 />
                 <Box>
                   <Button
@@ -382,11 +385,11 @@ export default function WebhooksPage({
           </Card>
           <Card>
             <TableContainer sx={{ overflowX: 'auto' }}>
-              <Table size="small" aria-label="Webhook records">
+              <Table size="small" aria-label={t('webhooks.recordsAria')}>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Receiver URL</TableCell>
-                    <TableCell>Target chat</TableCell>
+                    <TableCell>{t('webhooks.receiverUrl')}</TableCell>
+                    <TableCell>{t('webhooks.targetChat')}</TableCell>
                     <TableCell align="right">{t('common.actions')}</TableCell>
                   </TableRow>
                 </TableHead>
@@ -435,69 +438,61 @@ export default function WebhooksPage({
       )}
 
       {tab === 2 && (
-        <Card>
-          <TableContainer sx={{ overflowX: 'auto' }}>
-            <Table size="small" aria-label="Webhook records">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Event</TableCell>
-                  <TableCell>URL</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Time</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {log.map((entry, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{entry.event}</TableCell>
-                    <TableCell>
-                      <Typography variant="body2" noWrap sx={{ maxWidth: 320 }}>
-                        {entry.url}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        size="small"
-                        color={
-                          entry.status === 'error'
-                            ? 'error'
-                            : entry.status < 300
-                              ? 'success'
-                              : 'warning'
-                        }
-                        label={String(entry.status)}
-                      />
-                    </TableCell>
-                    <TableCell>{entry.at?.slice(0, 19).replace('T', ' ')}</TableCell>
-                  </TableRow>
-                ))}
-                {log.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={4}>
-                      <Typography color="text.secondary" align="center" sx={{ py: 2 }}>
-                        {t('common.empty')}
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+        <Card sx={{ p: 1 }}>
+          <DataTable<DeliveryLog & { id: number }>
+            rows={log.map((entry, index) => ({ ...entry, id: index }))}
+            columns={
+              [
+                { id: 'event', label: t('webhooks.eventCol') },
+                {
+                  id: 'url',
+                  label: t('webhooks.url'),
+                  render: (row) => (
+                    <Typography variant="body2" noWrap sx={{ maxWidth: 320 }}>
+                      {row.url}
+                    </Typography>
+                  ),
+                },
+                {
+                  id: 'status',
+                  label: t('common.status'),
+                  render: (row) => (
+                    <Chip
+                      size="small"
+                      color={
+                        row.status === 'error' ? 'error' : row.status < 300 ? 'success' : 'warning'
+                      }
+                      label={
+                        row.status === 'error' ? t('webhooks.statusError') : String(row.status)
+                      }
+                    />
+                  ),
+                },
+                {
+                  id: 'at',
+                  label: t('webhooks.time'),
+                  render: (row) => formatDateTime(row.at),
+                },
+              ] satisfies Column<DeliveryLog & { id: number }>[]
+            }
+            keyField="id"
+            ariaLabel={t('webhooks.recordsAria')}
+          />
         </Card>
       )}
 
       <ConfirmDialog
         open={Boolean(deletingEndpoint)}
-        title={t('actions.delete') || 'Delete Webhook Endpoint'}
-        message={`Are you sure you want to delete the outgoing webhook endpoint "${deletingEndpoint?.url}"? This action cannot be undone.`}
+        title={t('actions.delete')}
+        message={t('webhooks.deleteEndpointConfirm', { url: deletingEndpoint?.url ?? '' })}
         onConfirm={confirmDeleteEndpoint}
         onCancel={() => setDeletingEndpoint(null)}
       />
 
       <ConfirmDialog
         open={Boolean(deletingInbound)}
-        title={t('actions.delete') || 'Delete Inbound Hook'}
-        message={`Are you sure you want to delete this inbound webhook? External integrations posting to its URL will stop working.`}
+        title={t('actions.delete')}
+        message={t('webhooks.deleteInboundConfirm')}
         onConfirm={confirmDeleteInbound}
         onCancel={() => setDeletingInbound(null)}
       />

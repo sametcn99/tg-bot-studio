@@ -65,8 +65,9 @@ export default function Ecommerce({ config }: { config: TmaAppConfig }): React.R
   }
 
   /**
-   * Submits the cart as a Mini App order.
-   * @returns {Promise<void>} Resolves after the server acknowledged.
+   * Submits the cart as a Telegram Stars invoice, opens it, and polls the
+   * order status until paid or failed.
+   * @returns {Promise<void>} Resolves after the status settles.
    */
   async function checkout(): Promise<void> {
     setBusy(true);
@@ -74,17 +75,46 @@ export default function Ecommerce({ config }: { config: TmaAppConfig }): React.R
     try {
       const items = cartItems.map((product) => ({
         id: product.id,
-        title: product.title,
-        price: product.price,
         quantity: cart[product.id] ?? 0,
       }));
-      await tmaFetch(`/api/tma/${config.slug}/order`, {
-        method: 'POST',
-        body: JSON.stringify({ items }),
+      const result = await tmaFetch<{ orderId: number; invoiceLink: string }>(
+        `/api/tma/${config.slug}/checkout`,
+        { method: 'POST', body: JSON.stringify({ items }) },
+      );
+
+      const tg = (
+        window as unknown as {
+          Telegram?: {
+            WebApp?: { openInvoice?: (url: string, callback?: (status: string) => void) => void };
+          };
+        }
+      ).Telegram?.WebApp;
+      if (!tg?.openInvoice) {
+        setStatus('Payments require Telegram. Open this app inside Telegram to check out.');
+        return;
+      }
+
+      const invoiceStatus = await new Promise<string>((resolve) => {
+        tg.openInvoice!(result.invoiceLink, (closedStatus: string) => resolve(closedStatus));
       });
+
+      if (invoiceStatus !== 'paid') {
+        setStatus(`Payment not completed (${invoiceStatus}).`);
+        return;
+      }
+
+      // Confirm server-side status (webhook-level fulfilment may lag briefly).
+      let status = 'pending_payment';
+      for (let attempt = 0; attempt < 6 && status === 'pending_payment'; attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        const order = await tmaFetch<{ status: string } | null>(
+          `/api/tma/${config.slug}/order/${result.orderId}`,
+        );
+        status = order?.status ?? status;
+      }
       haptic('medium');
       setCart({});
-      setStatus('Order placed successfully.');
+      setStatus(status === 'paid' ? 'Payment received — thank you! 🎉' : `Order status: ${status}`);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Checkout failed');
     } finally {

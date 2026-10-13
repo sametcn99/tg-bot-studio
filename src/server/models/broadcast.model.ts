@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { Broadcast } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
+import { LiveEventsService } from '../common/live/live-events.service';
 import type { BotUserEntity } from './bot-user.model';
 
 export interface BroadcastRow {
@@ -56,7 +57,10 @@ export function toBroadcastRow(b: Broadcast): BroadcastRow {
  */
 @Injectable()
 export class BroadcastModel {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly live: LiveEventsService,
+  ) {}
 
   /**
    * Lists broadcasts for a bot newest first.
@@ -101,6 +105,7 @@ export class BroadcastModel {
         createdAt: new Date().toISOString(),
       },
     });
+    this.live.emit('broadcasts', data.botId);
   }
 
   /**
@@ -115,10 +120,12 @@ export class BroadcastModel {
       failedCount?: number;
     },
   ): Promise<Broadcast> {
-    return this.prisma.broadcast.update({
+    const updated = await this.prisma.broadcast.update({
       where: { id },
       data,
     });
+    this.live.emit('broadcasts', updated.botId);
+    return updated;
   }
 
   /**

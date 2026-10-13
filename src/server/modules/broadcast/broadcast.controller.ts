@@ -1,5 +1,7 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Post, Sse } from '@nestjs/common';
+import type { MessageEvent } from '@nestjs/common';
 import { BroadcastService } from './broadcast.service';
+import { LiveEventsService } from '../../common/live/live-events.service';
 
 /**
  * Broadcast composition and history endpoints.
@@ -8,8 +10,21 @@ import { BroadcastService } from './broadcast.service';
 export class BroadcastController {
   /**
    * @param {BroadcastService} service - Broadcast engine service.
+   * @param {LiveEventsService} live - Live change bus for SSE pings.
    */
-  constructor(private readonly service: BroadcastService) {}
+  constructor(
+    private readonly service: BroadcastService,
+    private readonly live: LiveEventsService,
+  ) {}
+
+  /**
+   * Server-Sent Events stream pinging whenever broadcast data changes
+   * (queue, progress tick, cancel) for instant progress updates.
+   */
+  @Sse('stream')
+  stream(@Param('botId', ParseIntPipe) botId: number): import('rxjs').Observable<MessageEvent> {
+    return this.live.stream('broadcasts', botId);
+  }
 
   /**
    * Lists broadcast history.

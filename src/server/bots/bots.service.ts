@@ -6,6 +6,11 @@ import { MODULE_REGISTRY, findModule } from '../bot-engine/module-registry';
 import { callGetMe } from '../common/utils/telegram.util';
 import { AiAssistantService } from '../modules/ai-assistant/ai-assistant.service';
 import type { CreateBotDto, UpdateBotDto, UpdateModuleStateDto } from './dto/bots.dto';
+import { StudioException } from '../common/errors/studio-error';
+import { SystemSettingsService } from '../database/system-settings.service';
+import { SimulatorService } from '../bot-engine/simulator.service';
+import { AuditService } from '../database/audit.service';
+import { isValidTimeZone, safeTimeZone } from '../common/utils/tz.util';
 
 /**
  * Bot row with runtime enrichment for the dashboard.
@@ -43,13 +48,47 @@ export class BotsService {
    * @param {PrismaService} prisma - Prisma ORM access service.
    * @param {BotPoolService} pool - Multi-bot runtime pool.
    * @param {AiAssistantService} aiService - AI service gateway.
+   * @param {SystemSettingsService} settings - Per-bot operational settings.
    */
   constructor(
     private readonly botModel: BotModel,
     private readonly prisma: PrismaService,
     private readonly pool: BotPoolService,
     private readonly aiService: AiAssistantService,
+    private readonly settings: SystemSettingsService,
+    private readonly simulator: SimulatorService,
+    private readonly audit: AuditService,
   ) {}
+
+  /**
+   * Reads bot-level operational settings (IANA time zone).
+   * @param {number} botId - Bot identifier.
+   * @returns {Promise<{timezone: string}>} Effective settings.
+   */
+  async getBotSettings(botId: number): Promise<{ timezone: string }> {
+    await this.botModel.findById(botId);
+    return { timezone: safeTimeZone(this.settings.getBotSetting(botId, 'timezone')) };
+  }
+
+  /**
+   * Updates bot-level operational settings.
+   * @param {number} botId - Bot identifier.
+   * @param {{timezone?: string}} body - Patch payload.
+   * @returns {Promise<{timezone: string}>} Effective settings after the update.
+   * @throws {StudioException} When the zone name is not a valid IANA zone.
+   */
+  async updateBotSettings(
+    botId: number,
+    body: { timezone?: string },
+  ): Promise<{ timezone: string }> {
+    await this.botModel.findById(botId);
+    const requested = String(body.timezone ?? '').trim();
+    if (requested && !isValidTimeZone(requested)) {
+      throw new StudioException('INVALID_TIMEZONE', 'Unknown IANA time zone');
+    }
+    this.settings.setBotSetting(botId, 'timezone', requested || 'UTC');
+    return { timezone: requested || 'UTC' };
+  }
 
   /**
    * Lists all bots enriched with runtime status and audience metrics.
@@ -141,7 +180,7 @@ export class BotsService {
 
     const existing = await this.botModel.findByToken(dto.token);
     if (existing) {
-      throw new BadRequestException('This bot token is already registered');
+      throw new StudioException('BOT_TOKEN_DUPLICATE', 'This bot token is already registered');
     }
 
     const created = await this.botModel.create({
@@ -183,6 +222,7 @@ export class BotsService {
   async remove(id: number): Promise<void> {
     this.pool.destroyBot(id);
     await this.botModel.delete(id);
+    this.audit.log('bot.delete', { botId: id });
   }
 
   /**
@@ -236,6 +276,7 @@ export class BotsService {
     );
 
     await this.pool.restartBot(botId);
+    this.audit.log('module.update', { botId, moduleKey, isEnabled: dto.isEnabled });
     const modules = await this.listModules(botId);
     return modules.find((module) => module.key === moduleKey)!;
   }
@@ -429,7 +470,7 @@ export class BotsService {
 
     const modulesToEnable = presetBundles[presetKey];
     if (!modulesToEnable) {
-      throw new BadRequestException(`Unknown preset bundle: ${presetKey}`);
+      throw new StudioException('PRESET_UNKNOWN', `Unknown preset bundle: ${presetKey}`);
     }
 
     for (const key of modulesToEnable) {
@@ -462,96 +503,28 @@ export class BotsService {
   ): Promise<{
     text: string;
     mediaUrl?: string | null;
-    buttons?: Array<{ text: string; url?: string }>;
+    buttons?: Array<{ text: string; url?: string; callback_data?: string }>;
   }> {
-    const row = await this.botModel.findById(botId);
-    if (!row) throw new NotFoundException(`Bot ${botId} not found`);
+    // Delegates to the real grammY middleware chain: every enabled module
+    // runtime processes the sandbox message exactly like live traffic.
+    return this.simulator.send(botId, { text });
+  }
 
-    const trimmed = text.trim();
-    const lower = trimmed.toLowerCase();
-
-    // 1. Check Start Menu (/start or /menu)
-    if (trimmed.startsWith('/start') || trimmed.startsWith('/menu')) {
-      const startMenuModule = await this.botModel.getModule(botId, 'start-menu');
-      if (startMenuModule?.isEnabled) {
-        const config = startMenuModule.configJson
-          ? (JSON.parse(startMenuModule.configJson) as Record<string, unknown>)
-          : {};
-        const menuItems = await this.prisma.link.findMany({
-          where: { botId, isActive: 1 },
-          orderBy: { orderIndex: 'asc' },
-        });
-        const startMessage = String(
-          config.startMessage || `Welcome to ${row.name}! Choose an option below:`,
-        );
-        const buttons = menuItems.map((item) => ({
-          text: item.title,
-          url: item.url,
-        }));
-        return {
-          text: startMessage.replace('{first_name}', 'Tester').replace('{username}', 'studio_test'),
-          buttons,
-        };
-      }
-    }
-
-    // 2. Check Autoresponder (slash commands and keyword triggers)
-    const autoresponderModule = await this.botModel.getModule(botId, 'autoresponder');
-    if (autoresponderModule?.isEnabled) {
-      const rules = await this.prisma.autoresponder.findMany({
-        where: { botId, isActive: 1 },
-      });
-      const cmdText = trimmed.split(/[\s@]/)[0].toLowerCase();
-      const matched =
-        rules.find((r) => r.command.startsWith('/') && r.command.toLowerCase() === cmdText) ??
-        rules.find((r) => !r.command.startsWith('/') && lower.includes(r.command.toLowerCase()));
-
-      if (matched) {
-        let buttons: Array<{ text: string; url?: string }> = [];
-        if (matched.buttonsJson) {
-          try {
-            buttons = JSON.parse(matched.buttonsJson) as Array<{ text: string; url?: string }>;
-          } catch {
-            // ignore
-          }
-        }
-        return {
-          text: matched.responseText
-            .replace('{first_name}', 'Tester')
-            .replace('{username}', 'studio_test'),
-          mediaUrl: matched.mediaUrl,
-          buttons,
-        };
-      }
-    }
-
-    // 3. Check AI Assistant (with RAG retrieval)
-    const aiModule = await this.botModel.getModule(botId, 'ai-assistant');
-    if (aiModule?.isEnabled) {
-      const config = aiModule.configJson
-        ? (JSON.parse(aiModule.configJson) as Record<string, unknown>)
-        : {};
-      if (config.apiKey) {
-        try {
-          const reply = await this.aiService.completeWithContext(
-            botId,
-            999999, // sandbox simulator user id
-            config as any,
-            [{ role: 'user', content: trimmed }],
-          );
-          return { text: reply };
-        } catch (err: unknown) {
-          return { text: `[AI Error]: ${err instanceof Error ? err.message : String(err)}` };
-        }
-      } else {
-        return { text: 'AI Assistant module is enabled, but no API key is set in configuration.' };
-      }
-    }
-
-    // 4. Default echo response
-    return {
-      text: `Message received: "${trimmed}". (No matching command, auto-responder, or AI rule found). Try typing /start.`,
-    };
+  /**
+   * Simulates a callback button press through the real module chain.
+   * @param {number} botId - Studio bot identifier.
+   * @param {string} callbackData - callback_data payload of the pressed button.
+   * @returns {Promise<object>} Simulated bot response.
+   */
+  async simulateCallback(
+    botId: number,
+    callbackData: string,
+  ): Promise<{
+    text: string;
+    mediaUrl?: string | null;
+    buttons?: Array<{ text: string; url?: string; callback_data?: string }>;
+  }> {
+    return this.simulator.send(botId, { callbackData });
   }
 
   /**
@@ -563,7 +536,8 @@ export class BotsService {
     if (!original) this.throwNotFound(botId);
 
     const token = data.token.trim();
-    if (!token) throw new BadRequestException('New bot token is required for cloning');
+    if (!token)
+      throw new StudioException('CLONE_TOKEN_REQUIRED', 'New bot token is required for cloning');
 
     const check = await callGetMe(token);
     if (!check.ok || !check.bot) {

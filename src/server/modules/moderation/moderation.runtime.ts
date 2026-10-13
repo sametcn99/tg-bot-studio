@@ -21,6 +21,31 @@ export class ModerationRuntime extends BotModuleHandler {
   /** Strike counters per (bot, chat, user). */
   private readonly strikes = new Map<string, number>();
 
+  /** Last activity timestamp per key, for state sweeping. */
+  private readonly lastSeen = new Map<string, number>();
+
+  /** Max once-per-10-minutes guard for the sweep. */
+  private lastSweepAt = 0;
+
+  /**
+   * Periodic in-memory sweep (max once per 10 minutes) so flood windows and
+   * strike counters stay bounded: keys with no activity for 24h are dropped.
+   * @returns {void}
+   */
+  private sweepStaleState(): void {
+    const now = Date.now();
+    if (now - this.lastSweepAt < 600_000) return;
+    this.lastSweepAt = now;
+    const staleCutoff = now - 86_400_000;
+    for (const [key, seen] of this.lastSeen) {
+      if (seen < staleCutoff) {
+        this.lastSeen.delete(key);
+        this.floodWindow.delete(key);
+        this.strikes.delete(key);
+      }
+    }
+  }
+
   /**
    * @param {EngineHelpersService} helpers - Shared audience operations.
    * @param {ModuleHandlerRegistry} registry - Handler registry (self sign-up).
@@ -51,6 +76,8 @@ export class ModerationRuntime extends BotModuleHandler {
       if (!update.from) return;
       const text = update.msg.text;
       const key = `${ctx.botId}:${update.chat.id}:${update.from.id}`;
+      this.sweepStaleState();
+      this.lastSeen.set(key, Date.now());
 
       // Blacklisted words (string or /regex/).
       const wordHit = blockedWords.find((word) => {

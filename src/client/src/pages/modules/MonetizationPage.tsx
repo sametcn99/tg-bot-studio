@@ -10,12 +10,6 @@ import {
   Stack,
   Tab,
   Tabs,
-  Table,
-  TableContainer,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
   TextField,
   Typography,
 } from '@mui/material';
@@ -25,8 +19,12 @@ import { apiFetch } from '../../services/api';
 import PageHeader from '../../components/PageHeader';
 import ModuleHelpDialog from '../../components/ModuleHelpDialog';
 import { ConnectionSelect, NoConnectionsNotice } from '../../components/ConnectionSelect';
+import UserPicker from '../../components/UserPicker';
+import DataTable, { type Column } from '../../components/DataTable';
 import { useConnections } from '../../context/ConnectionsContext';
 import type { ModuleEntry } from '../../registry/modules';
+import { formatDateTime } from '../../utils/format';
+import { localizedErrorMessage } from '../../utils/errors';
 
 /**
  * VIP subscription row.
@@ -105,8 +103,8 @@ export default function MonetizationPage({
         starCount: Number(mediaForm.starCount),
       }),
     })
-      .then(() => setStatus('Paid media sent.'))
-      .catch((err: Error) => setError(err.message));
+      .then(() => setStatus(t('monetization.paidMediaSent')))
+      .catch((err: Error) => setError(localizedErrorMessage(err)));
   }
 
   /**
@@ -117,7 +115,7 @@ export default function MonetizationPage({
     setError(null);
     setStatus(null);
     if (!/^-?\d+$/.test(vipForm.channelChatId)) {
-      setError('VIP subscriptions need a connection with a numeric channel id.');
+      setError(t('monetization.vipNeedsNumericChannel'));
       return;
     }
     apiFetch(`/api/bots/${botId}/monetization/vip/grant`, {
@@ -129,15 +127,15 @@ export default function MonetizationPage({
         starPrice: Number(vipForm.starPrice),
       }),
     })
-      .then(() => setStatus('VIP invite link sent to the subscriber.'))
-      .catch((err: Error) => setError(err.message));
+      .then(() => setStatus(t('monetization.vipInviteSent')))
+      .catch((err: Error) => setError(localizedErrorMessage(err)));
   }
 
   return (
     <Box>
       <PageHeader
-        title="Monetization"
-        subtitle="Telegram Stars paywalls and VIP channel subscriptions"
+        title={t('monetization.title')}
+        subtitle={t('monetization.subtitle')}
         onDocs={() => setDocsOpen(true)}
       />
       {status && (
@@ -155,13 +153,13 @@ export default function MonetizationPage({
         value={tab}
         onChange={(_event, value: number) => setTab(value)}
         sx={{ mb: 2 }}
-        aria-label="Monetization sections"
+        aria-label={t('monetization.sectionsAria')}
         variant="scrollable"
         scrollButtons="auto"
         allowScrollButtonsMobile
       >
-        <Tab label="Paid Media Paywall" />
-        <Tab label="VIP Subscriptions" />
+        <Tab label={t('monetization.tabPaidMedia')} />
+        <Tab label={t('monetization.tabVip')} />
       </Tabs>
 
       {tab === 0 && (
@@ -174,31 +172,31 @@ export default function MonetizationPage({
                   {module.description}
                 </Typography>
                 <ConnectionSelect
-                  label="Target chat"
+                  label={t('monetization.targetChat')}
                   value={mediaForm.chatId}
                   onChange={(value) => setMediaForm({ ...mediaForm, chatId: value })}
-                  helperText="Chat that receives the Stars-locked media"
+                  helperText={t('monetization.targetChatHelp')}
                 />
                 <TextField
                   select
-                  label="Media type"
+                  label={t('monetization.mediaType')}
                   size="small"
                   value={mediaForm.mediaType}
                   onChange={(event) =>
                     setMediaForm({ ...mediaForm, mediaType: event.target.value })
                   }
                 >
-                  <MenuItem value="photo">Photo</MenuItem>
-                  <MenuItem value="video">Video</MenuItem>
+                  <MenuItem value="photo">{t('monetization.photo')}</MenuItem>
+                  <MenuItem value="video">{t('monetization.video')}</MenuItem>
                 </TextField>
                 <TextField
-                  label="Media URL"
+                  label={t('monetization.mediaUrl')}
                   size="small"
                   value={mediaForm.mediaUrl}
                   onChange={(event) => setMediaForm({ ...mediaForm, mediaUrl: event.target.value })}
                 />
                 <TextField
-                  label="Caption"
+                  label={t('monetization.caption')}
                   size="small"
                   multiline
                   minRows={2}
@@ -206,7 +204,7 @@ export default function MonetizationPage({
                   onChange={(event) => setMediaForm({ ...mediaForm, caption: event.target.value })}
                 />
                 <TextField
-                  label="Price (Stars)"
+                  label={t('monetization.priceStars')}
                   type="number"
                   size="small"
                   value={mediaForm.starCount}
@@ -216,7 +214,7 @@ export default function MonetizationPage({
                 />
                 <Box>
                   <Button variant="contained" startIcon={<PaidIcon />} onClick={sendPaidMedia}>
-                    Send paid media
+                    {t('monetization.sendPaidMedia')}
                   </Button>
                 </Box>
               </Stack>
@@ -228,28 +226,31 @@ export default function MonetizationPage({
       {tab === 1 && (
         <Stack spacing={2}>
           {!connectionsLoading && (
-            <NoConnectionsNotice typeLabel={connections.length === 0 ? undefined : 'channel'} />
+            <NoConnectionsNotice
+              typeLabel={connections.length === 0 ? undefined : t('connections.typeChannel')}
+            />
           )}
           <Card>
             <CardContent>
               <Stack spacing={2} sx={{ maxWidth: 520 }}>
-                <TextField
-                  label="Subscriber Telegram id"
-                  type="number"
-                  size="small"
+                <UserPicker
+                  botId={botId}
                   value={vipForm.telegramId}
-                  onChange={(event) => setVipForm({ ...vipForm, telegramId: event.target.value })}
+                  onChange={(telegramId) =>
+                    setVipForm({ ...vipForm, telegramId: String(telegramId) })
+                  }
+                  label={t('monetization.subscriberId')}
                 />
                 <ConnectionSelect
-                  label="Channel"
+                  label={t('monetization.channel')}
                   types={['channel']}
                   value={vipForm.channelChatId}
                   onChange={(value) => setVipForm({ ...vipForm, channelChatId: value })}
-                  helperText="Bot must administrate this channel"
+                  helperText={t('monetization.channelHelp')}
                 />
                 <Stack direction="row" spacing={2}>
                   <TextField
-                    label="Period (days)"
+                    label={t('monetization.periodDays')}
                     type="number"
                     size="small"
                     value={vipForm.periodDays}
@@ -258,7 +259,7 @@ export default function MonetizationPage({
                     }
                   />
                   <TextField
-                    label="Price (Stars)"
+                    label={t('monetization.priceStars')}
                     type="number"
                     size="small"
                     value={vipForm.starPrice}
@@ -269,51 +270,45 @@ export default function MonetizationPage({
                 </Stack>
                 <Box>
                   <Button variant="contained" onClick={grantVip}>
-                    Grant subscription
+                    {t('monetization.grantSubscription')}
                   </Button>
                 </Box>
               </Stack>
             </CardContent>
           </Card>
 
-          <Card>
-            <TableContainer sx={{ overflowX: 'auto' }}>
-              <Table size="small" aria-label="VIP subscriptions">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Subscriber</TableCell>
-                    <TableCell>Channel</TableCell>
-                    <TableCell>Expires</TableCell>
-                    <TableCell>State</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {vip.map((row) => (
-                    <TableRow key={row.id}>
-                      <TableCell>{row.telegram_id}</TableCell>
-                      <TableCell>{row.channel_id}</TableCell>
-                      <TableCell>{row.expires_at?.slice(0, 19).replace('T', ' ')}</TableCell>
-                      <TableCell>
-                        <Chip
-                          size="small"
-                          color={row.is_active ? 'success' : 'default'}
-                          label={row.is_active ? 'Active' : 'Expired'}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {vip.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={4}>
-                        <Typography color="text.secondary" align="center" sx={{ py: 2 }}>
-                          {t('common.empty')}
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+          <Card sx={{ p: 1 }}>
+            <DataTable<VipRow>
+              rows={vip}
+              columns={
+                [
+                  {
+                    id: 'telegram_id',
+                    label: t('monetization.subscriber'),
+                    align: 'right',
+                  },
+                  { id: 'channel_id', label: t('monetization.channel'), align: 'right' },
+                  {
+                    id: 'expires_at',
+                    label: t('monetization.expires'),
+                    render: (row) => formatDateTime(row.expires_at),
+                  },
+                  {
+                    id: 'is_active',
+                    label: t('monetization.state'),
+                    render: (row) => (
+                      <Chip
+                        size="small"
+                        color={row.is_active ? 'success' : 'default'}
+                        label={row.is_active ? t('status.active') : t('monetization.expired')}
+                      />
+                    ),
+                  },
+                ] satisfies Column<VipRow>[]
+              }
+              keyField="id"
+              ariaLabel={t('monetization.vipRecordsAria')}
+            />
           </Card>
         </Stack>
       )}

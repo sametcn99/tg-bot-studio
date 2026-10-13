@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Box,
@@ -14,12 +14,6 @@ import {
   MenuItem,
   Stack,
   Switch,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
   Tooltip,
   Typography,
@@ -30,21 +24,51 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../services/api';
 import PageHeader from './PageHeader';
 import ModuleHelpDialog from './ModuleHelpDialog';
 import ConfirmDialog from './ConfirmDialog';
+import DataTable, { type Column } from './DataTable';
 import { ConnectionSelect, ConnectionMultiSelect } from './ConnectionSelect';
 import VisualButtonBuilder from './VisualButtonBuilder';
 import VisualDripStepsBuilder from './VisualDripStepsBuilder';
 import { LoadingState } from './Feedback';
+import { useSnackbar } from '../context/SnackbarContext';
+import { openSimulatorWith } from '../utils/simulatorBus';
+import AiGenerateButton from './AiGenerateButton';
+import TemplatePicker from './TemplatePicker';
 import type { CrudField, ModuleEntry } from '../registry/modules';
+import type { ContentTemplateKind } from '../registry/templates';
+import { localizedErrorMessage } from '../utils/errors';
+
+/**
+ * Form fields that support "Create with AI", mapped to the generation kind.
+ */
+const AI_FIELD_KINDS: Record<string, string> = {
+  responseText: 'autoresponder',
+  steps: 'drip-steps',
+  buttons: 'buttons',
+  messageText: 'broadcast',
+};
+
+/**
+ * Form fields that offer a curated content template, mapped to template kind.
+ */
+const TEMPLATE_FIELD_KINDS: Record<string, ContentTemplateKind> = {
+  steps: 'drip-steps',
+  responseText: 'autoresponder',
+};
 
 /**
  * Generic bot-scoped CRUD page driven by a registry resource descriptor:
- * a data table, a create/edit dialog, delete confirmation, an optional
- * module configuration card, and the standard docs dialog.
+ * a searchable/sortable/paginated data table, a create/edit dialog with
+ * busy-state protection, delete confirmation, row reordering for ordered
+ * resources, an optional module configuration card, and the standard docs
+ * dialog.
  * @param {object} props - Component props.
  * @param {number} props.botId - Active bot id.
  * @param {ModuleEntry} props.module - Module catalog entry with `crud`.
@@ -58,6 +82,7 @@ export default function CrudPage({
   module: ModuleEntry;
 }): React.ReactElement {
   const { t } = useTranslation();
+  const { showSuccess, showError } = useSnackbar();
   const resource = module.crud!;
   const endpoint = resource.endpoint.replace('{botId}', String(botId));
 
@@ -69,13 +94,18 @@ export default function CrudPage({
   const [docsOpen, setDocsOpen] = useState(false);
   const [enabled, setEnabled] = useState(false);
   const [config, setConfig] = useState<Record<string, unknown>>({});
+  const [submitBusy, setSubmitBusy] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [configBusy, setConfigBusy] = useState(false);
+  const [configDirty, setConfigDirty] = useState(false);
+  const [reorderBusy, setReorderBusy] = useState(false);
   const theme = useTheme();
   const compactDialogs = useMediaQuery(theme.breakpoints.down('sm'));
 
   const reload = useCallback(() => {
     apiFetch<Record<string, unknown>[]>(`/api${endpoint}`)
       .then(setRows)
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => setError(localizedErrorMessage(err)));
   }, [endpoint]);
 
   const loading = rows === null;
@@ -92,6 +122,36 @@ export default function CrudPage({
       })
       .catch(() => undefined);
   }, [reload, botId, module.key]);
+
+  // Warn before leaving with an open dialog or unsaved module config.
+  useEffect(() => {
+    if (!form && !configDirty) return;
+    const handler = (event: BeforeUnloadEvent): void => {
+      event.preventDefault();
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [form, configDirty]);
+
+  /** The form field driving row order, when the resource is ordered. */
+  const orderField = useMemo(
+    () => resource.formFields.find((field) => field.key === 'orderIndex'),
+    [resource.formFields],
+  );
+
+  /** Command-driven resources can trigger their rule from the simulator. */
+  const canTestInSimulator = resource.formFields.some((field) => field.key === 'command');
+
+  /**
+   * Rows sorted by the order field when present, otherwise as returned.
+   * @returns {Record<string, unknown>[]} Display-ordered rows.
+   */
+  const orderedRows = useMemo(() => {
+    if (!rows) return [];
+    if (!orderField) return rows;
+    const serverKey = serverKeyFor(orderField.key);
+    return [...rows].sort((a, b) => Number(a[serverKey] ?? 0) - Number(b[serverKey] ?? 0));
+  }, [rows, orderField]);
 
   /**
    * Opens the create dialog with initial values.
@@ -158,7 +218,7 @@ export default function CrudPage({
    * @returns {void}
    */
   function submit(): void {
-    if (!form) return;
+    if (!form || submitBusy) return;
     const payload: Record<string, unknown> = { ...form };
     for (const field of resource.formFields) {
       if (field.type === 'json' && typeof payload[field.key] === 'string') {
@@ -167,7 +227,7 @@ export default function CrudPage({
           try {
             payload[field.key] = JSON.parse(text);
           } catch {
-            setError(`Invalid JSON for field "${field.label || field.key}"`);
+            showError(t('modules.invalidJson', { field: field.label || field.key }));
             return;
           }
         } else {
@@ -181,12 +241,15 @@ export default function CrudPage({
     }
     const url = editingId ? `/api${endpoint}/${editingId}` : `/api${endpoint}`;
     const method = editingId ? 'PATCH' : 'POST';
+    setSubmitBusy(true);
     apiFetch(url, { method, body: JSON.stringify(payload) })
       .then(() => {
         setForm(null);
+        showSuccess(t('common.saved'));
         reload();
       })
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => showError(localizedErrorMessage(err)))
+      .finally(() => setSubmitBusy(false));
   }
 
   /**
@@ -194,13 +257,16 @@ export default function CrudPage({
    * @returns {void}
    */
   function confirmDelete(): void {
-    if (!deleting) return;
+    if (!deleting || deleteBusy) return;
+    setDeleteBusy(true);
     apiFetch(`/api${endpoint}/${deleting.id}`, { method: 'DELETE' })
       .then(() => {
         setDeleting(null);
+        showSuccess(t('common.deleted'));
         reload();
       })
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => showError(localizedErrorMessage(err)))
+      .finally(() => setDeleteBusy(false));
   }
 
   /**
@@ -208,13 +274,137 @@ export default function CrudPage({
    * @returns {void}
    */
   function saveConfig(): void {
+    if (configBusy) return;
+    setConfigBusy(true);
     apiFetch(`/api/bots/${botId}/modules/${module.key}`, {
       method: 'PUT',
       body: JSON.stringify({ isEnabled: enabled, config }),
     })
-      .then(() => setError(null))
-      .catch((err: Error) => setError(err.message));
+      .then(() => {
+        setError(null);
+        setConfigDirty(false);
+        showSuccess(t('modules.configSaved'));
+      })
+      .catch((err: Error) => showError(localizedErrorMessage(err)))
+      .finally(() => setConfigBusy(false));
   }
+
+  /**
+   * Swaps an ordered row with its neighbor by exchanging order values.
+   * @param {Record<string, unknown>} row - Row being moved.
+   * @param {-1 | 1} direction - Move direction (-1 up, +1 down).
+   * @returns {void}
+   */
+  function moveRow(row: Record<string, unknown>, direction: -1 | 1): void {
+    if (!orderField || reorderBusy) return;
+    const serverKey = serverKeyFor(orderField.key);
+    const index = orderedRows.findIndex((entry) => entry.id === row.id);
+    const neighbor = orderedRows[index + direction];
+    if (index < 0 || !neighbor) return;
+    setReorderBusy(true);
+    const rowOrder = Number(row[serverKey] ?? index);
+    const neighborOrder = Number(neighbor[serverKey] ?? index + direction);
+    void Promise.all([
+      apiFetch(`/api${endpoint}/${row.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ [orderField.key]: neighborOrder }),
+      }),
+      apiFetch(`/api${endpoint}/${neighbor.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ [orderField.key]: rowOrder }),
+      }),
+    ])
+      .then(() => reload())
+      .catch((err: Error) => showError(localizedErrorMessage(err)))
+      .finally(() => setReorderBusy(false));
+  }
+
+  /** DataTable column set: registry columns plus a trailing actions column. */
+  const columns: Column<Record<string, unknown>>[] = useMemo(
+    () => [
+      ...resource.columns.map<Column<Record<string, unknown>>>((column) => ({
+        id: column.key,
+        label: column.label,
+        align: column.type === 'number' ? 'right' : 'left',
+        getValue: (row) => row[column.key],
+        render: (row) => <CellValue value={row[column.key]} type={column.type} />,
+      })),
+      {
+        id: 'actions',
+        label: t('common.actions'),
+        align: 'right',
+        sortable: false,
+        render: (row) => (
+          <Stack
+            direction="row"
+            spacing={0.25}
+            justifyContent="flex-end"
+            onClick={(event) => event.stopPropagation()}
+          >
+            {orderField && (
+              <>
+                <Tooltip title={t('crud.moveUp')}>
+                  <IconButton
+                    size="small"
+                    disabled={reorderBusy || orderedRows[0]?.id === row.id}
+                    onClick={() => moveRow(row, -1)}
+                    aria-label={`${t('crud.moveUp')} ${String(row.id ?? '')}`}
+                  >
+                    <ArrowUpwardIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title={t('crud.moveDown')}>
+                  <IconButton
+                    size="small"
+                    disabled={reorderBusy || orderedRows[orderedRows.length - 1]?.id === row.id}
+                    onClick={() => moveRow(row, 1)}
+                    aria-label={`${t('crud.moveDown')} ${String(row.id ?? '')}`}
+                  >
+                    <ArrowDownwardIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </>
+            )}
+            {canTestInSimulator && (
+              <Tooltip title={t('crud.testInSimulator')}>
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    const command = String(row.command ?? '').trim();
+                    if (command)
+                      openSimulatorWith(command.startsWith('/') ? command : `/${command}`);
+                  }}
+                  aria-label={`${t('crud.testInSimulator')} ${String(row.id ?? '')}`}
+                >
+                  <PlayArrowIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+            <Tooltip title={t('actions.edit')}>
+              <IconButton
+                size="small"
+                onClick={() => openEdit(row)}
+                aria-label={`${t('actions.edit')} ${String(row.id ?? '')}`}
+              >
+                <EditIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title={t('actions.delete')}>
+              <IconButton
+                size="small"
+                onClick={() => setDeleting(row)}
+                aria-label={`${t('actions.delete')} ${String(row.id ?? '')}`}
+              >
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Stack>
+        ),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [resource.columns, orderField, orderedRows, reorderBusy, t],
+  );
 
   return (
     <Box>
@@ -241,7 +431,7 @@ export default function CrudPage({
       />
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
@@ -255,7 +445,7 @@ export default function CrudPage({
               alignItems="center"
               sx={{ mb: 2 }}
             >
-              <Typography variant="subtitle2">Module settings</Typography>
+              <Typography variant="subtitle2">{t('modules.settings')}</Typography>
               <Stack direction="row" spacing={1} alignItems="center">
                 <Typography
                   variant="caption"
@@ -266,11 +456,14 @@ export default function CrudPage({
                 </Typography>
                 <Switch
                   checked={enabled}
-                  onChange={(event) => setEnabled(event.target.checked)}
+                  onChange={(event) => {
+                    setEnabled(event.target.checked);
+                    setConfigDirty(true);
+                  }}
                   inputProps={{ 'aria-label': `${module.name} ${t('status.enabled')}` }}
                 />
-                <Button size="small" onClick={saveConfig}>
-                  {t('actions.save')}
+                <Button size="small" onClick={saveConfig} disabled={configBusy}>
+                  {configBusy ? t('common.saving') : t('actions.save')}
                 </Button>
               </Stack>
             </Stack>
@@ -289,9 +482,10 @@ export default function CrudPage({
                       ? String(config[field.key] ?? field.options?.[0] ?? '')
                       : String(config[field.key] ?? '')
                   }
-                  onChange={(event) =>
-                    setConfig((current) => ({ ...current, [field.key]: event.target.value }))
-                  }
+                  onChange={(event) => {
+                    setConfig((current) => ({ ...current, [field.key]: event.target.value }));
+                    setConfigDirty(true);
+                  }}
                   helperText={field.help}
                 >
                   {field.type === 'select' &&
@@ -307,62 +501,16 @@ export default function CrudPage({
         </Card>
       )}
 
-      <Card>
+      <Card sx={{ p: 1 }}>
         {loading ? (
           <LoadingState label={t('common.loading')} />
         ) : (
-          <TableContainer sx={{ overflowX: 'auto' }}>
-            <Table size="small" aria-label={`${module.name} records`}>
-              <TableHead>
-                <TableRow>
-                  {resource.columns.map((column) => (
-                    <TableCell key={column.key}>{column.label}</TableCell>
-                  ))}
-                  <TableCell align="right">{t('common.actions')}</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {rows.map((row) => (
-                  <TableRow key={String(row.id)}>
-                    {resource.columns.map((column) => (
-                      <TableCell key={column.key}>
-                        <CellValue value={row[column.key]} type={column.type} />
-                      </TableCell>
-                    ))}
-                    <TableCell align="right">
-                      <Tooltip title={t('actions.edit')}>
-                        <IconButton
-                          size="small"
-                          onClick={() => openEdit(row)}
-                          aria-label={`${t('actions.edit')} ${String(row.id ?? '')}`}
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title={t('actions.delete')}>
-                        <IconButton
-                          size="small"
-                          onClick={() => setDeleting(row)}
-                          aria-label={`${t('actions.delete')} ${String(row.id ?? '')}`}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {rows.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={resource.columns.length + 1}>
-                      <Typography color="text.secondary" align="center" sx={{ py: 3 }}>
-                        {t('common.empty')}
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <DataTable
+            rows={orderedRows}
+            columns={columns}
+            keyField="id"
+            ariaLabel={`${module.name} records`}
+          />
         )}
       </Card>
 
@@ -380,21 +528,50 @@ export default function CrudPage({
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
             {resource.formFields.map((field) => (
-              <CrudFormField
-                key={field.key}
-                field={field}
-                value={form?.[field.key]}
-                onChange={(value) =>
-                  setForm((current) => ({ ...(current ?? {}), [field.key]: value }))
-                }
-              />
+              <Box key={field.key}>
+                {AI_FIELD_KINDS[field.key] && (
+                  <Box sx={{ mb: 0.5, display: 'flex', justifyContent: 'flex-end' }}>
+                    <AiGenerateButton
+                      botId={botId}
+                      kind={AI_FIELD_KINDS[field.key]}
+                      onResult={(value) =>
+                        setForm((current) => ({ ...(current ?? {}), [field.key]: value }))
+                      }
+                    />
+                  </Box>
+                )}
+                {TEMPLATE_FIELD_KINDS[field.key] && (
+                  <Box sx={{ mb: 0.5, display: 'flex', justifyContent: 'flex-end' }}>
+                    <TemplatePicker
+                      moduleKey={module.key}
+                      kind={TEMPLATE_FIELD_KINDS[field.key]}
+                      onPick={(payload) =>
+                        setForm((current) => ({
+                          ...(current ?? {}),
+                          [field.key]:
+                            typeof payload === 'string'
+                              ? payload
+                              : JSON.stringify(payload, null, 2),
+                        }))
+                      }
+                    />
+                  </Box>
+                )}
+                <CrudFormField
+                  field={field}
+                  value={form?.[field.key]}
+                  onChange={(value) =>
+                    setForm((current) => ({ ...(current ?? {}), [field.key]: value }))
+                  }
+                />
+              </Box>
             ))}
           </Stack>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setForm(null)}>{t('actions.cancel')}</Button>
-          <Button variant="contained" onClick={submit}>
-            {t('actions.save')}
+          <Button variant="contained" onClick={submit} disabled={submitBusy}>
+            {submitBusy ? t('common.saving') : t('actions.save')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -402,7 +579,7 @@ export default function CrudPage({
       <ConfirmDialog
         open={Boolean(deleting)}
         title={t('actions.delete')}
-        message="This record will be permanently removed."
+        message={t('modules.recordRemoved')}
         onConfirm={confirmDelete}
         onCancel={() => setDeleting(null)}
       />
@@ -425,10 +602,11 @@ function CellValue({
   value: unknown;
   type?: 'bool' | 'text' | 'number';
 }): React.ReactElement {
+  const { t } = useTranslation();
   if (type === 'bool') {
     return (
       <Typography variant="body2" color={value ? 'success.main' : 'text.secondary'}>
-        {value ? 'Active' : 'Off'}
+        {value ? t('status.active') : t('common.off')}
       </Typography>
     );
   }
@@ -456,6 +634,7 @@ function CrudFormField({
   value: unknown;
   onChange: (value: unknown) => void;
 }): React.ReactElement {
+  const { t } = useTranslation();
   const common = {
     label: field.label,
     fullWidth: true,
@@ -545,10 +724,10 @@ function CrudFormField({
             onChange={(event) => onChange(event.target.value)}
           />
           <Stack direction="row" spacing={0.5} sx={{ pt: 0.5 }}>
-            <Chip size="small" label="Now" onClick={() => setOffset(0)} />
-            <Chip size="small" label="+1 Hour" onClick={() => setOffset(60)} />
-            <Chip size="small" label="+24 Hours" onClick={() => setOffset(1440)} />
-            <Chip size="small" label="+7 Days" onClick={() => setOffset(10080)} />
+            <Chip size="small" label={t('common.now')} onClick={() => setOffset(0)} />
+            <Chip size="small" label={t('common.plus1h')} onClick={() => setOffset(60)} />
+            <Chip size="small" label={t('common.plus24h')} onClick={() => setOffset(1440)} />
+            <Chip size="small" label={t('common.plus7d')} onClick={() => setOffset(10080)} />
           </Stack>
         </Stack>
       );

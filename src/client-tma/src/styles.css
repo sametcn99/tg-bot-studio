@@ -264,3 +264,13 @@ button.secondary {
   color: #16a34a;
   font-size: 13px;
 }
+
+/* Studio-configured brand logo (themeJson.logoUrl). */
+.app-logo {
+  display: block;
+  margin: 0 auto 8px;
+  max-width: 120px;
+  max-height: 120px;
+  border-radius: 12px;
+  object-fit: contain;
+}

@@ -36,7 +36,8 @@ import PhonePreview from '../components/PhonePreview';
 import ModuleHelpDialog from '../components/ModuleHelpDialog';
 import VisualMiniAppConfigBuilder from '../components/VisualMiniAppConfigBuilder';
 import { EmptyState } from '../components/Feedback';
-import { MINI_APPS_DOCS_ENTRY } from '../registry/modules';
+import { useMiniAppsDocsEntry } from '../registry/localize';
+import { localizedErrorMessage } from '../utils/errors';
 
 /**
  * Mini App row from the studio API (config and theme parsed).
@@ -61,13 +62,13 @@ interface MiniApp {
   theme: Record<string, unknown>;
 }
 
-/** Available template choices. */
+/** Available template choices (labels resolved via i18n at render time). */
 const TEMPLATES = [
-  { value: 'ecommerce', label: 'E-Commerce & Digital Storefront' },
-  { value: 'loyalty', label: 'Loyalty, Points & Referral Hub' },
-  { value: 'forms', label: 'Dynamic Forms & Lead Capture' },
-  { value: 'spin', label: 'Gamification & Daily Spin' },
-  { value: 'webview', label: 'External Webview Wrapper' },
+  { value: 'ecommerce', labelKey: 'miniApps.templateEcommerce' },
+  { value: 'loyalty', labelKey: 'miniApps.templateLoyalty' },
+  { value: 'forms', labelKey: 'miniApps.templateForms' },
+  { value: 'spin', labelKey: 'miniApps.templateSpin' },
+  { value: 'webview', labelKey: 'miniApps.templateWebview' },
 ];
 
 /**
@@ -77,11 +78,13 @@ const TEMPLATES = [
  */
 export default function MiniAppsPage(): React.ReactElement {
   const { t } = useTranslation();
+  const miniAppsDocsEntry = useMiniAppsDocsEntry();
   const { botId } = useParams<{ botId: string }>();
   const [apps, setApps] = useState<MiniApp[]>([]);
   const [selected, setSelected] = useState<MiniApp | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [docsOpen, setDocsOpen] = useState(false);
+  const [previewNonce, setPreviewNonce] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [publicBaseUrl, setPublicBaseUrl] = useState(
     (import.meta as unknown as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL ||
@@ -94,7 +97,7 @@ export default function MiniAppsPage(): React.ReactElement {
         setApps(list);
         setSelected((current) => list.find((app) => app.id === current?.id) ?? list[0] ?? null);
       })
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => setError(localizedErrorMessage(err)));
   }, [botId]);
 
   useEffect(() => {
@@ -112,8 +115,11 @@ export default function MiniAppsPage(): React.ReactElement {
       method: 'PATCH',
       body: JSON.stringify(patch),
     })
-      .then(reload)
-      .catch((err: Error) => setError(err.message));
+      .then(() => {
+        if ('theme' in patch) setPreviewNonce((nonce) => nonce + 1);
+        reload();
+      })
+      .catch((err: Error) => setError(localizedErrorMessage(err)));
   }
 
   /**
@@ -127,14 +133,14 @@ export default function MiniAppsPage(): React.ReactElement {
       body: JSON.stringify({ publicBaseUrl }),
     })
       .then(() => setError(null))
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => setError(localizedErrorMessage(err)));
   }
 
   return (
     <Box>
       <PageHeader
         title={t('nav.miniApps')}
-        subtitle="Create, configure, and host Telegram Mini Apps without external hosting"
+        subtitle={t('miniApps.subtitle')}
         onDocs={() => setDocsOpen(true)}
         actions={
           <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)}>
@@ -153,7 +159,7 @@ export default function MiniAppsPage(): React.ReactElement {
         <Grid size={{ xs: 12, md: 7 }}>
           {apps.length === 0 ? (
             <Card>
-              <EmptyState message="No Mini Apps yet. Create one and it will be hosted live under /tma/." />
+              <EmptyState message={t('miniApps.empty')} />
             </Card>
           ) : (
             <Stack spacing={2}>
@@ -207,6 +213,7 @@ export default function MiniAppsPage(): React.ReactElement {
                         config={selected.config}
                         onChange={(newConfig) => save({ config: newConfig })}
                       />
+                      <ThemeEditor theme={selected.theme} onChange={(theme) => save({ theme })} />
                       <TextField
                         label={t('miniApps.publicBaseUrl')}
                         size="small"
@@ -233,7 +240,10 @@ export default function MiniAppsPage(): React.ReactElement {
           <Card>
             <CardContent sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
               <PhonePreview
-                url={selected ? `${publicBaseUrl}/tma/${selected.slug}/` : ''}
+                key={previewNonce}
+                url={
+                  selected ? `${publicBaseUrl}/tma/${selected.slug}/?preview=${previewNonce}` : ''
+                }
                 label={t('miniApps.preview')}
               />
             </CardContent>
@@ -248,9 +258,88 @@ export default function MiniAppsPage(): React.ReactElement {
         onCreated={reload}
       />
       <ModuleHelpDialog
-        module={docsOpen ? MINI_APPS_DOCS_ENTRY : null}
+        module={docsOpen ? miniAppsDocsEntry : null}
         onClose={() => setDocsOpen(false)}
       />
+    </Box>
+  );
+}
+
+/**
+ * Branding editor for the selected app: writes themeJson overrides that the
+ * TMA runtime applies as CSS variables (colors) plus a header logo.
+ * @param {object} props - Component props.
+ * @param {Record<string, unknown>} props.theme - Current theme overrides.
+ * @param {(theme: Record<string, unknown>) => void} props.onChange - Persist callback.
+ * @returns {React.ReactElement} The theme editor card section.
+ */
+function ThemeEditor({
+  theme,
+  onChange,
+}: {
+  theme: Record<string, unknown>;
+  onChange: (theme: Record<string, unknown>) => void;
+}): React.ReactElement {
+  const { t } = useTranslation();
+  const [draft, setDraft] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    setDraft({
+      primaryColor: String(theme.primaryColor ?? ''),
+      backgroundColor: String(theme.backgroundColor ?? ''),
+      textColor: String(theme.textColor ?? ''),
+      logoUrl: String(theme.logoUrl ?? ''),
+    });
+    // Re-seed when switching between apps (object identity changes).
+  }, [theme]);
+
+  /**
+   * Saves one theme key, dropping empty values.
+   * @param {string} key - Theme key.
+   * @param {string} value - New value ('' clears the override).
+   * @returns {void}
+   */
+  function persist(key: string, value: string): void {
+    const next = { ...theme, [key]: value };
+    if (!value) delete next[key];
+    onChange(next);
+  }
+
+  const colorFields: Array<{ key: string; label: string }> = [
+    { key: 'primaryColor', label: t('miniApps.themePrimary') },
+    { key: 'backgroundColor', label: t('miniApps.themeBackground') },
+    { key: 'textColor', label: t('miniApps.themeText') },
+  ];
+
+  return (
+    <Box>
+      <Typography variant="subtitle2" sx={{ mb: 1 }}>
+        {t('miniApps.themeEditor')}
+      </Typography>
+      <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', gap: 1 }}>
+        {colorFields.map((field) => (
+          <TextField
+            key={field.key}
+            label={field.label}
+            size="small"
+            type="color"
+            value={draft[field.key] || '#000000'}
+            sx={{ width: 140 }}
+            onChange={(event) => setDraft({ ...draft, [field.key]: event.target.value })}
+            onBlur={() => persist(field.key, draft[field.key] ?? '')}
+          />
+        ))}
+        <TextField
+          label={t('miniApps.themeLogo')}
+          size="small"
+          fullWidth
+          placeholder="https://…/logo.png"
+          value={draft.logoUrl ?? ''}
+          onChange={(event) => setDraft({ ...draft, logoUrl: event.target.value })}
+          onBlur={(event) => persist('logoUrl', event.target.value.trim())}
+          helperText={t('miniApps.themeHelp')}
+        />
+      </Stack>
     </Box>
   );
 }
@@ -281,7 +370,7 @@ function AppDataViewer({ botId, app }: { botId: number; app: MiniApp }): React.R
       <Tabs
         value={tab}
         onChange={(_event, value: number) => setTab(value)}
-        aria-label="Mini App data sections"
+        aria-label={t('miniApps.dataSectionsAria')}
       >
         <Tab label={t('miniApps.orders')} />
         <Tab label={t('miniApps.forms')} />
@@ -372,7 +461,7 @@ function CreateMiniAppDialog({
         setName('');
         setSlug('');
       })
-      .catch((err: Error) => setError(err.message))
+      .catch((err: Error) => setError(localizedErrorMessage(err)))
       .finally(() => setBusy(false));
   }
 
@@ -399,7 +488,7 @@ function CreateMiniAppDialog({
             label={t('miniApps.slug')}
             value={slug}
             onChange={(event) => setSlug(event.target.value)}
-            helperText="Served at /tma/<slug>"
+            helperText={t('miniApps.slugHint')}
             fullWidth
             size="small"
           />
@@ -413,7 +502,7 @@ function CreateMiniAppDialog({
           >
             {TEMPLATES.map((template) => (
               <MenuItem key={template.value} value={template.value}>
-                {template.label}
+                {t(template.labelKey)}
               </MenuItem>
             ))}
           </TextField>

@@ -79,15 +79,15 @@ export default function ReferralsPage({
         <Card>
           <CardContent>
             <Typography variant="subtitle2" sx={{ mb: 1 }} component="h3">
-              Leaderboard
+              {t('referrals.leaderboard')}
             </Typography>
             <TableContainer sx={{ overflowX: 'auto' }}>
-              <Table size="small" aria-label="Referral leaderboard">
+              <Table size="small" aria-label={t('referrals.tableAria')}>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Rank</TableCell>
-                    <TableCell>Member</TableCell>
-                    <TableCell align="right">Points</TableCell>
+                    <TableCell>{t('referrals.rank')}</TableCell>
+                    <TableCell>{t('referrals.member')}</TableCell>
+                    <TableCell align="right">{t('referrals.points')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>

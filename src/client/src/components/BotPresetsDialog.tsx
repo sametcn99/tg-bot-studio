@@ -22,6 +22,7 @@ import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../services/api';
+import { useLocalizedModules } from '../registry/localize';
 
 interface BotPresetsDialogProps {
   botId: number;
@@ -37,6 +38,8 @@ export default function BotPresetsDialog({
   onSuccess,
 }: BotPresetsDialogProps): React.ReactElement {
   const { t } = useTranslation();
+  const localizedModules = useLocalizedModules();
+  const moduleNameByKey = new Map(localizedModules.map((m) => [m.key, m.name]));
   const [applying, setApplying] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -80,7 +83,7 @@ export default function BotPresetsDialog({
       await apiFetch(`/api/bots/${botId}/presets/${presetKey}`, {
         method: 'POST',
       });
-      setSuccessMsg(`Preset bundle activated successfully! Modules hot-reloaded.`);
+      setSuccessMsg(t('presets.applied'));
       onSuccess();
       setTimeout(() => {
         onClose();
@@ -150,11 +153,16 @@ export default function BotPresetsDialog({
                     fontWeight={600}
                     sx={{ mb: 0.75, display: 'block' }}
                   >
-                    Included Modules:
+                    {t('modules.includedModules')}
                   </Typography>
                   <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', gap: 0.5, mb: 2 }}>
                     {preset.modules.map((m) => (
-                      <Chip key={m} label={m} size="small" variant="outlined" />
+                      <Chip
+                        key={m}
+                        label={moduleNameByKey.get(m) ?? m}
+                        size="small"
+                        variant="outlined"
+                      />
                     ))}
                   </Stack>
 

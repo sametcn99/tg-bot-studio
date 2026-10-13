@@ -46,7 +46,7 @@ export default function VisualMiniAppConfigBuilder({
       setJsonError(null);
       onChange(parsed);
     } catch {
-      setJsonError('Invalid JSON format');
+      setJsonError(t('visual.invalidJson'));
     }
   };
 
@@ -164,7 +164,7 @@ export default function VisualMiniAppConfigBuilder({
           {templateType === 'ecommerce' && (
             <Stack spacing={2}>
               <Typography variant="caption" color="text.secondary">
-                Configure your product catalog. Items are shown in the Telegram storefront.
+                {t('visual.ecommerceHint')}
               </Typography>
               {products.map((prod, idx) => (
                 <Paper
@@ -176,14 +176,14 @@ export default function VisualMiniAppConfigBuilder({
                     <Stack direction="row" spacing={1} alignItems="center">
                       <TextField
                         size="small"
-                        label="Product Title"
+                        label={t('visual.productTitle')}
                         value={String(prod.title ?? '')}
                         onChange={(e) => updateProductField(idx, 'title', e.target.value)}
                         sx={{ flex: 2 }}
                       />
                       <TextField
                         size="small"
-                        label="Price (Stars)"
+                        label={t('visual.productPrice')}
                         type="number"
                         value={Number(prod.price ?? 0)}
                         onChange={(e) => updateProductField(idx, 'price', Number(e.target.value))}
@@ -198,7 +198,7 @@ export default function VisualMiniAppConfigBuilder({
                     <Stack direction="row" spacing={1}>
                       <TextField
                         size="small"
-                        label="Image URL"
+                        label={t('visual.imageUrl')}
                         placeholder="https://..."
                         value={String(prod.imageUrl ?? '')}
                         onChange={(e) => updateProductField(idx, 'imageUrl', e.target.value)}
@@ -206,7 +206,7 @@ export default function VisualMiniAppConfigBuilder({
                       />
                       <TextField
                         size="small"
-                        label="Description"
+                        label={t('common.description')}
                         value={String(prod.description ?? '')}
                         onChange={(e) => updateProductField(idx, 'description', e.target.value)}
                         sx={{ flex: 1 }}
@@ -222,7 +222,7 @@ export default function VisualMiniAppConfigBuilder({
                 onClick={addProduct}
                 sx={{ alignSelf: 'flex-start' }}
               >
-                Add Product
+                {t('visual.addProduct')}
               </Button>
             </Stack>
           )}
@@ -230,7 +230,7 @@ export default function VisualMiniAppConfigBuilder({
           {templateType === 'forms' && (
             <Stack spacing={2}>
               <Typography variant="caption" color="text.secondary">
-                Configure form inputs. Responses are recorded in the forms table.
+                {t('visual.formsHint')}
               </Typography>
               {fields.map((f, idx) => (
                 <Paper
@@ -241,7 +241,7 @@ export default function VisualMiniAppConfigBuilder({
                   <Stack direction="row" spacing={1.5} alignItems="center">
                     <TextField
                       size="small"
-                      label="Field Label"
+                      label={t('visual.fieldLabel')}
                       value={String(f.label ?? '')}
                       onChange={(e) => updateFormField(idx, 'label', e.target.value)}
                       sx={{ flex: 2 }}
@@ -249,15 +249,15 @@ export default function VisualMiniAppConfigBuilder({
                     <TextField
                       size="small"
                       select
-                      label="Input Type"
+                      label={t('visual.inputType')}
                       value={String(f.type ?? 'text')}
                       onChange={(e) => updateFormField(idx, 'type', e.target.value)}
                       sx={{ flex: 1 }}
                     >
-                      <MenuItem value="text">Text</MenuItem>
-                      <MenuItem value="phone">Phone</MenuItem>
-                      <MenuItem value="file">File Link</MenuItem>
-                      <MenuItem value="select">Dropdown</MenuItem>
+                      <MenuItem value="text">{t('visual.typeText')}</MenuItem>
+                      <MenuItem value="phone">{t('visual.typePhone')}</MenuItem>
+                      <MenuItem value="file">{t('visual.typeFile')}</MenuItem>
+                      <MenuItem value="select">{t('visual.typeSelect')}</MenuItem>
                     </TextField>
                     <FormControlLabel
                       control={
@@ -267,7 +267,7 @@ export default function VisualMiniAppConfigBuilder({
                           onChange={(e) => updateFormField(idx, 'required', e.target.checked)}
                         />
                       }
-                      label={<Typography variant="caption">Required</Typography>}
+                      label={<Typography variant="caption">{t('visual.required')}</Typography>}
                     />
                     <Tooltip title={t('actions.delete')}>
                       <IconButton size="small" color="error" onClick={() => removeField(idx)}>
@@ -284,7 +284,7 @@ export default function VisualMiniAppConfigBuilder({
                 onClick={addField}
                 sx={{ alignSelf: 'flex-start' }}
               >
-                Add Form Field
+                {t('visual.addFormField')}
               </Button>
             </Stack>
           )}
@@ -292,7 +292,7 @@ export default function VisualMiniAppConfigBuilder({
           {templateType === 'spin' && (
             <Stack spacing={2}>
               <Typography variant="caption" color="text.secondary">
-                Configure wheel slices and point prizes.
+                {t('visual.spinHint')}
               </Typography>
               {prizes.map((prz, idx) => (
                 <Paper
@@ -303,14 +303,14 @@ export default function VisualMiniAppConfigBuilder({
                   <Stack direction="row" spacing={1.5} alignItems="center">
                     <TextField
                       size="small"
-                      label="Prize Label"
+                      label={t('visual.prizeLabel')}
                       value={String(prz.label ?? '')}
                       onChange={(e) => updatePrizeField(idx, 'label', e.target.value)}
                       sx={{ flex: 2 }}
                     />
                     <TextField
                       size="small"
-                      label="Points"
+                      label={t('visual.points')}
                       type="number"
                       value={Number(prz.points ?? 0)}
                       onChange={(e) => updatePrizeField(idx, 'points', Number(e.target.value))}
@@ -318,7 +318,7 @@ export default function VisualMiniAppConfigBuilder({
                     />
                     <TextField
                       size="small"
-                      label="Weight (Odds)"
+                      label={t('visual.weight')}
                       type="number"
                       value={Number(prz.weight ?? 10)}
                       onChange={(e) =>
@@ -341,7 +341,7 @@ export default function VisualMiniAppConfigBuilder({
                 onClick={addPrize}
                 sx={{ alignSelf: 'flex-start' }}
               >
-                Add Prize Slice
+                {t('visual.addPrize')}
               </Button>
             </Stack>
           )}
@@ -349,7 +349,7 @@ export default function VisualMiniAppConfigBuilder({
           {templateType === 'loyalty' && (
             <Stack spacing={2}>
               <Typography variant="caption" color="text.secondary">
-                Configure loyalty rank tiers.
+                {t('visual.loyaltyHint')}
               </Typography>
               {tiers.map((tr, idx) => (
                 <Paper
@@ -360,14 +360,14 @@ export default function VisualMiniAppConfigBuilder({
                   <Stack direction="row" spacing={1.5} alignItems="center">
                     <TextField
                       size="small"
-                      label="Tier Name"
+                      label={t('visual.tierName')}
                       value={String(tr.name ?? '')}
                       onChange={(e) => updateTierField(idx, 'name', e.target.value)}
                       sx={{ flex: 2 }}
                     />
                     <TextField
                       size="small"
-                      label="Min Points Required"
+                      label={t('visual.tierMinPoints')}
                       type="number"
                       value={Number(tr.minPoints ?? 0)}
                       onChange={(e) => updateTierField(idx, 'minPoints', Number(e.target.value))}
@@ -388,7 +388,7 @@ export default function VisualMiniAppConfigBuilder({
                 onClick={addTier}
                 sx={{ alignSelf: 'flex-start' }}
               >
-                Add Tier Level
+                {t('visual.addTier')}
               </Button>
             </Stack>
           )}
@@ -396,13 +396,13 @@ export default function VisualMiniAppConfigBuilder({
           {templateType === 'webview' && (
             <Stack spacing={2}>
               <TextField
-                label="Target Webview URL"
+                label={t('visual.webviewUrl')}
                 size="small"
                 fullWidth
                 placeholder="https://example.com"
                 value={String(config.url ?? '')}
                 onChange={(e) => onChange({ ...config, url: e.target.value })}
-                helperText="Must support HTTPS. Make sure the target site does not block framing (X-Frame-Options)."
+                helperText={t('visual.webviewHint')}
               />
             </Stack>
           )}
@@ -418,7 +418,7 @@ export default function VisualMiniAppConfigBuilder({
             onChange={(e) => setJsonText(e.target.value)}
             onBlur={(e) => handleJsonBlur(e.target.value)}
             error={Boolean(jsonError)}
-            helperText={jsonError ?? 'Edit raw JSON configuration directly'}
+            helperText={jsonError ?? t('visual.rawJsonHint')}
           />
         </Stack>
       )}

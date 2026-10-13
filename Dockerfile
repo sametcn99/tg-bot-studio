@@ -41,6 +41,12 @@ RUN bun install --production --frozen-lockfile
 
 COPY --from=builder /app/dist ./dist
 
+# Versioned migrations + the Prisma CLI (schema engine) so the container can
+# apply pending migrations on boot before the server starts.
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+
 RUN mkdir -p /app/data \
     && chown -R bun:bun /app/data \
     && chown -R bun:bun /app/node_modules
@@ -53,5 +59,6 @@ HEALTHCHECK --interval=30s --timeout=5s --retries=3 --start-period=10s \
     CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/api/health || exit 1
 
 # Bun forwards SIGTERM/SIGINT to the process so NestJS shutdown hooks run and
-# every active grammY bot in the pool is stopped cleanly.
-CMD ["bun", "dist/server/main.js"]
+# every active grammY bot in the pool is stopped cleanly. Pending versioned
+# migrations are applied before boot (safe to re-run: deploy is idempotent).
+CMD ["sh", "-c", "bun node_modules/prisma/build/index.js migrate deploy && bun dist/server/main.js"]

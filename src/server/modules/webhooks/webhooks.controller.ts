@@ -4,7 +4,6 @@ import {
   Delete,
   Get,
   HttpCode,
-  NotFoundException,
   Param,
   ParseIntPipe,
   Post,
@@ -13,6 +12,7 @@ import {
 import type { Request } from 'express';
 import { WebhooksService } from './webhooks.service';
 import { Public } from '../../common/decorators/public.decorator';
+import { StudioException } from '../../common/errors/studio-error';
 
 /**
  * Outgoing webhook CRUD, delivery log access, and the public inbound
@@ -126,7 +126,7 @@ export class WebhooksController {
       hookId,
       (req.body ?? {}) as Record<string, unknown>,
     );
-    if (!handled) throw new NotFoundException('Unknown hook');
+    if (!handled) throw new StudioException('HOOK_UNKNOWN', 'Unknown hook');
     return { success: true };
   }
 }

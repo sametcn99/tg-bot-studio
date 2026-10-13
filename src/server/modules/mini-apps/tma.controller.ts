@@ -72,6 +72,41 @@ export class TmaController {
   }
 
   /**
+   * Creates a Telegram Stars invoice for the cart (server-verified prices).
+   * The TMA shell opens the returned link via `openInvoice`; the engine's
+   * payment handlers validate pre-checkout and mark the order paid.
+   */
+  @Public()
+  @UseGuards(TmaInitDataGuard)
+  @Post(':slug/checkout')
+  @HttpCode(200)
+  async checkout(
+    @Param('slug') slug: string,
+    @Req() req: Request & { tmaUser?: TmaUser },
+    @Body() body: { items?: Array<{ id: string; quantity: number }> },
+  ) {
+    const app = await this.appForSlug(slug);
+    return this.service.createStarsCheckout(app.bot_id, app.id, req.tmaUser!.id, body.items ?? []);
+  }
+
+  /**
+   * Order status lookup for the buyer after opening an invoice.
+   */
+  @Public()
+  @UseGuards(TmaInitDataGuard)
+  @Get(':slug/order/:orderId')
+  async orderStatus(
+    @Param('slug') slug: string,
+    @Param('orderId') orderId: string,
+    @Req() req: Request & { tmaUser?: TmaUser },
+  ) {
+    const app = await this.appForSlug(slug);
+    const parsed = Number(orderId);
+    if (!Number.isFinite(parsed)) return null;
+    return this.service.getOrderStatus(app.bot_id, app.id, parsed, req.tmaUser!.id);
+  }
+
+  /**
    * Performs the daily reward-wheel spin.
    */
   @Public()

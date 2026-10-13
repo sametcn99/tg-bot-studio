@@ -19,8 +19,12 @@ import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../../services/api';
 import PageHeader from '../../components/PageHeader';
 import ModuleHelpDialog from '../../components/ModuleHelpDialog';
+import { useSnackbar } from '../../context/SnackbarContext';
+import { formatDateTime } from '../../utils/format';
 import ModuleConfigPage from '../ModuleConfigPage';
+import { useLiveStream } from '../../hooks/useLiveStream';
 import type { ModuleEntry } from '../../registry/modules';
+import { localizedErrorMessage } from '../../utils/errors';
 
 /**
  * Support thread summary.
@@ -31,6 +35,16 @@ interface SupportThread {
   message_count: number;
   last_activity: string;
   last_message: string | null;
+}
+
+/**
+ * Open AI→Human escalation row.
+ */
+interface Escalation {
+  telegramId: number;
+  escalatedAt: string;
+  senderName: string | null;
+  lastMessage: string | null;
 }
 
 /**
@@ -59,7 +73,9 @@ export default function SupportPage({
   module: ModuleEntry;
 }): React.ReactElement {
   const { t } = useTranslation();
+  const { showSuccess, showError } = useSnackbar();
   const [threads, setThreads] = useState<SupportThread[]>([]);
+  const [escalations, setEscalations] = useState<Escalation[]>([]);
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -72,11 +88,17 @@ export default function SupportPage({
     apiFetch<SupportThread[]>(`/api/bots/${botId}/support/threads`)
       .then(setThreads)
       .catch(() => undefined);
+    apiFetch<Escalation[]>(`/api/bots/${botId}/support/escalations`)
+      .then(setEscalations)
+      .catch(() => undefined);
     const query = selectedUser ? `?limit=200` : '?limit=100';
     apiFetch<SupportMessage[]>(`/api/bots/${botId}/support/messages${query}`)
       .then(setMessages)
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => setError(localizedErrorMessage(err)));
   }, [botId, selectedUser]);
+
+  // SSE pings trigger an instant refetch; the slow interval is a backstop.
+  useLiveStream('support', botId, loadData);
 
   useEffect(() => {
     loadData();
@@ -84,7 +106,7 @@ export default function SupportPage({
       if (document.visibilityState === 'visible') {
         loadData();
       }
-    }, 4000);
+    }, 15000);
     return () => window.clearInterval(timer);
   }, [loadData]);
 
@@ -129,6 +151,18 @@ export default function SupportPage({
     }
   };
 
+  const handleResolveEscalation = async (telegramId: number): Promise<void> => {
+    try {
+      await apiFetch(`/api/bots/${botId}/support/escalations/${telegramId}/resolve`, {
+        method: 'POST',
+      });
+      showSuccess(t('support.resolved'));
+      loadData();
+    } catch (err: unknown) {
+      showError(localizedErrorMessage(err));
+    }
+  };
+
   return (
     <Box>
       <PageHeader
@@ -146,12 +180,68 @@ export default function SupportPage({
         <ModuleConfigPage botId={botId} module={module} embedded={true} />
       </Box>
 
+      {escalations.length > 0 && (
+        <Card sx={{ mb: 3, borderColor: 'warning.main', borderWidth: 1, borderStyle: 'solid' }}>
+          <CardContent>
+            <Typography variant="subtitle2" fontWeight={700} component="h3" sx={{ mb: 0.5 }}>
+              🚨 {t('support.escalations')} ({escalations.length})
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+              {t('support.escalationsHint')}
+            </Typography>
+            <Stack spacing={1}>
+              {escalations.map((escalation) => (
+                <Stack
+                  key={escalation.telegramId}
+                  direction={{ xs: 'column', sm: 'row' }}
+                  spacing={1}
+                  alignItems={{ sm: 'center' }}
+                  justifyContent="space-between"
+                >
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography variant="body2" fontWeight={600} noWrap>
+                      {escalation.senderName ??
+                        t('support.userFallback', { id: escalation.telegramId })}
+                      <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                        {t('support.escalatedAt')}: {formatDateTime(escalation.escalatedAt)}
+                      </Typography>
+                    </Typography>
+                    {escalation.lastMessage && (
+                      <Typography variant="caption" color="text.secondary" noWrap display="block">
+                        {escalation.lastMessage}
+                      </Typography>
+                    )}
+                  </Box>
+                  <Stack direction="row" spacing={1} flexShrink={0}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => setSelectedUser(escalation.telegramId)}
+                    >
+                      {t('support.title')}
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      color="success"
+                      onClick={() => void handleResolveEscalation(escalation.telegramId)}
+                    >
+                      {t('support.resolve')}
+                    </Button>
+                  </Stack>
+                </Stack>
+              ))}
+            </Stack>
+          </CardContent>
+        </Card>
+      )}
+
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="stretch">
         {/* Threads list */}
         <Card sx={{ width: { xs: '100%', md: 320 }, flexShrink: 0 }}>
           <CardContent>
             <Typography variant="subtitle2" sx={{ mb: 1 }} component="h3">
-              Conversations ({threads.length})
+              {t('support.conversations', { count: threads.length })}
             </Typography>
             <Stack spacing={1} sx={{ maxHeight: 600, overflowY: 'auto', pr: 0.5 }}>
               {threads.map((thread) => (
@@ -170,7 +260,7 @@ export default function SupportPage({
                   }}
                 >
                   <Typography variant="body2" fontWeight={600} noWrap>
-                    {thread.sender_name ?? `User #${thread.telegram_id}`}
+                    {thread.sender_name ?? t('support.userFallback', { id: thread.telegram_id })}
                   </Typography>
                   <Typography
                     variant="caption"
@@ -178,10 +268,11 @@ export default function SupportPage({
                     noWrap
                     sx={{ display: 'block' }}
                   >
-                    {thread.last_message ?? '[media]'}
+                    {thread.last_message ?? t('support.mediaPlaceholder')}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    {thread.message_count} msgs • {thread.last_activity?.slice(11, 16) ?? ''}
+                    {t('support.msgsCount', { count: thread.message_count })} •{' '}
+                    {formatDateTime(thread.last_activity)}
                   </Typography>
                 </Box>
               ))}
@@ -204,10 +295,16 @@ export default function SupportPage({
               sx={{ mb: 2 }}
             >
               <Typography variant="subtitle2" component="h3">
-                {selectedUser ? `Thread #${selectedUser}` : 'All Messages'}
+                {selectedUser
+                  ? t('support.threadTitle', { id: selectedUser })
+                  : t('support.allMessages')}
               </Typography>
               {selectedUser && (
-                <Chip size="small" label="Clear filter" onClick={() => setSelectedUser(null)} />
+                <Chip
+                  size="small"
+                  label={t('support.clearFilter')}
+                  onClick={() => setSelectedUser(null)}
+                />
               )}
             </Stack>
 
@@ -239,17 +336,20 @@ export default function SupportPage({
                   }}
                 >
                   <Typography variant="caption" sx={{ opacity: 0.8, display: 'block' }}>
-                    {message.direction === 'out' ? 'Admin' : (message.sender_name ?? 'User')} •{' '}
-                    {message.created_at?.slice(11, 16)}
+                    {message.direction === 'out'
+                      ? t('support.admin')
+                      : (message.sender_name ?? t('support.user'))}{' '}
+                    • {formatDateTime(message.created_at)}
                   </Typography>
                   <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                    {message.message_text ?? `[${message.media_type}]`}
+                    {message.message_text ??
+                      t('support.mediaTypePlaceholder', { type: message.media_type })}
                   </Typography>
                 </Box>
               ))}
               {visible.length === 0 && (
                 <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 4 }}>
-                  {selectedUser ? 'No messages in this conversation yet.' : t('common.empty')}
+                  {selectedUser ? t('support.noMessages') : t('common.empty')}
                 </Typography>
               )}
             </Stack>
@@ -279,17 +379,17 @@ export default function SupportPage({
                   </Button>
                   <Chip
                     size="small"
-                    label="👋 Hello"
+                    label={t('support.quickHello')}
                     onClick={() => setReplyText(t('support.cannedGreeting'))}
                   />
                   <Chip
                     size="small"
-                    label="👍 Thank you"
+                    label={t('support.quickThanks')}
                     onClick={() => setReplyText(t('support.cannedThanks'))}
                   />
                   <Chip
                     size="small"
-                    label="⏳ Escalated"
+                    label={t('support.quickEscalate')}
                     onClick={() => setReplyText(t('support.cannedEscalate'))}
                   />
                 </Stack>
@@ -316,14 +416,14 @@ export default function SupportPage({
                           color="primary"
                           onClick={() => void handleSendReply()}
                           disabled={!replyText.trim() || sending}
-                          aria-label="Send reply"
+                          aria-label={t('support.sendReplyAria')}
                         >
                           {sending ? <CircularProgress size={20} /> : <SendIcon />}
                         </IconButton>
                       </InputAdornment>
                     ),
                   }}
-                  helperText="Press Ctrl+Enter or click Send to reply via Telegram"
+                  helperText={t('support.replyHelper')}
                 />
               </Box>
             ) : (
@@ -331,7 +431,7 @@ export default function SupportPage({
                 sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default', borderRadius: 2 }}
               >
                 <Typography variant="body2" color="text.secondary">
-                  Select a user conversation from the left to reply directly from the web dashboard.
+                  {t('support.selectConversationHint')}
                 </Typography>
               </Box>
             )}

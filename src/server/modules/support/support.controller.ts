@@ -1,13 +1,5 @@
-import {
-  Body,
-  Controller,
-  Get,
-  NotFoundException,
-  Param,
-  ParseIntPipe,
-  Post,
-  Query,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Post, Query, Sse } from '@nestjs/common';
+import type { MessageEvent } from '@nestjs/common';
 import { BotPoolService } from '../../bot-engine/bot-pool.service';
 import {
   AiAssistantService,
@@ -16,6 +8,9 @@ import {
 } from '../ai-assistant/ai-assistant.service';
 import { SupportModel } from '../../models/support.model';
 import { BotModel } from '../../models/bot.model';
+import { SystemSettingsService } from '../../database/system-settings.service';
+import { LiveEventsService } from '../../common/live/live-events.service';
+import { StudioException } from '../../common/errors/studio-error';
 
 /**
  * Support desk inbox and reply endpoints for the dashboard.
@@ -27,7 +22,57 @@ export class SupportController {
     private readonly botModel: BotModel,
     private readonly pool: BotPoolService,
     private readonly ai: AiAssistantService,
+    private readonly settings: SystemSettingsService,
+    private readonly live: LiveEventsService,
   ) {}
+
+  /**
+   * Server-Sent Events stream pinging whenever support data changes, so the
+   * inbox refetches instantly instead of polling on a fixed timer.
+   */
+  @Sse('stream')
+  stream(@Param('botId', ParseIntPipe) botId: number): import('rxjs').Observable<MessageEvent> {
+    return this.live.stream('support', botId);
+  }
+
+  /**
+   * Lists open AI→Human escalations (users the AI classifier routed to a
+   * human operator) with the latest message preview per user.
+   */
+  @Get('escalations')
+  async escalations(@Param('botId', ParseIntPipe) botId: number) {
+    const open = this.settings
+      .listBotSettingsByPrefix(botId, 'escalation_')
+      .map(({ key, value }) => ({
+        telegramId: Number(key.slice('escalation_'.length)),
+        escalatedAt: value,
+      }))
+      .filter((row) => Number.isFinite(row.telegramId) && row.telegramId !== 0)
+      .sort((a, b) => b.escalatedAt.localeCompare(a.escalatedAt));
+    const previews = await this.supportModel.listMessages(botId, 300);
+    return open.map((row) => {
+      const latest = [...previews]
+        .reverse()
+        .find((message) => message.telegram_id === row.telegramId && message.direction === 'in');
+      return {
+        ...row,
+        senderName: latest?.sender_name ?? null,
+        lastMessage: latest?.message_text ?? null,
+      };
+    });
+  }
+
+  /**
+   * Marks an AI→Human escalation as resolved (removes it from the queue).
+   */
+  @Post('escalations/:telegramId/resolve')
+  async resolveEscalation(
+    @Param('botId', ParseIntPipe) botId: number,
+    @Param('telegramId', ParseIntPipe) telegramId: number,
+  ) {
+    this.settings.deleteBotSetting(botId, `escalation_${telegramId}`);
+    return { success: true };
+  }
 
   /**
    * Lists recent support messages (both directions).
@@ -56,11 +101,15 @@ export class SupportController {
   ) {
     const bot = this.pool.getBot(botId);
     if (!bot) {
-      throw new NotFoundException('Bot is not running. Please start the bot first.');
+      throw new StudioException(
+        'BOT_NOT_RUNNING',
+        'Bot is not running. Please start the bot first.',
+        404,
+      );
     }
     const text = String(body.text ?? '').trim();
     if (!text) {
-      throw new NotFoundException('Reply text cannot be empty');
+      throw new StudioException('REPLY_EMPTY', 'Reply text cannot be empty', 404);
     }
 
     // 1. Send via Telegram Bot API directly to the user
@@ -113,7 +162,7 @@ export class SupportController {
       ? (JSON.parse(aiModuleRow.configJson) as AiConfig)
       : null;
 
-    if (aiConfig?.apiKey) {
+    if (aiConfig && this.ai.isConfigured(aiConfig)) {
       const messages: ChatMessage[] = historyRows.map((row) => ({
         role: row.direction === 'out' ? 'assistant' : 'user',
         content: row.message_text,

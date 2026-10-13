@@ -23,7 +23,7 @@ import WebhooksPage from './pages/modules/WebhooksPage';
 import EngagementPage from './pages/modules/EngagementPage';
 import ReferralsPage from './pages/modules/ReferralsPage';
 import MessageScorePage from './pages/modules/MessageScorePage';
-import { findModule } from './registry/modules';
+import { useLocalizedModule } from './registry/localize';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import ScrollToTop from './components/ScrollToTop';
 
@@ -42,7 +42,7 @@ function ModulePageDispatcher({
   botId: number;
   moduleKey: string;
 }): React.ReactElement | null {
-  const module = findModule(moduleKey);
+  const module = useLocalizedModule(moduleKey);
   if (!module) return null;
 
   switch (module.pageType) {

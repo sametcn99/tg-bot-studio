@@ -181,7 +181,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     name: 'AI Knowledge Assistant',
     category: 'Automation & Monetization',
     description:
-      '24/7 AI answering powered by OpenAI or Gemini with a configurable enterprise system prompt.',
+      '24/7 AI answering via OpenAI, Gemini, or any OpenAI-compatible URL (OpenRouter, DeepSeek, Ollama, ...) with a configurable enterprise system prompt.',
     defaultConfig: {
       provider: 'openai',
       apiKey: '',

@@ -9,7 +9,7 @@
     "dev:client": "vite",
     "dev:tma": "vite -c vite.config.tma.ts",
     "build": "bun run prisma:generate && tsc -p tsconfig.json && vite build && vite build -c vite.config.tma.ts",
-    "start": "bun dist/server/main.js",
+    "start": "prisma migrate deploy && bun dist/server/main.js",
     "test": "bun test",
     "typecheck": "bun run prisma:generate && tsc -p tsconfig.json --noEmit && tsc -p src/client/tsconfig.json --noEmit && tsc -p src/client-tma/tsconfig.json --noEmit",
     "lint": "eslint .",
@@ -17,6 +17,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prisma:generate": "prisma generate",
+    "prisma:deploy": "prisma migrate deploy",
+    "prisma:dev": "prisma migrate dev",
     "prisma:push": "prisma db push",
     "postinstall": "prisma generate"
   },

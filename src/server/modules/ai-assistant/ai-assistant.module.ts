@@ -4,7 +4,7 @@ import { AiAssistantService } from './ai-assistant.service';
 import { AiAssistantRuntime } from './ai-assistant.runtime';
 
 /**
- * AI Knowledge Assistant (OpenAI / Gemini) feature module.
+ * AI Knowledge Assistant (OpenAI-compatible providers / Gemini) feature module.
  */
 @Module({
   controllers: [AiAssistantController],

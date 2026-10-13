@@ -93,6 +93,22 @@ export class BotsController {
   }
 
   /**
+   * Reads bot-level operational settings (IANA time zone).
+   */
+  @Get(':id/settings')
+  getSettings(@Param('id', ParseIntPipe) id: number) {
+    return this.botsService.getBotSettings(id);
+  }
+
+  /**
+   * Updates bot-level operational settings (IANA time zone).
+   */
+  @Patch(':id/settings')
+  updateSettings(@Param('id', ParseIntPipe) id: number, @Body() body: { timezone?: string }) {
+    return this.botsService.updateBotSettings(id, body);
+  }
+
+  /**
    * Lists all modules with effective state and config for a bot.
    * @param {number} id - Studio bot identifier.
    * @returns {object[]} Module descriptors.
@@ -148,6 +164,14 @@ export class BotsController {
   @Post(':id/simulator/send')
   simulateMessage(@Param('id', ParseIntPipe) id: number, @Body() body: { message: string }) {
     return this.botsService.simulateMessage(id, body.message);
+  }
+
+  /**
+   * Simulates an inline callback button press through the real module chain.
+   */
+  @Post(':id/simulator/callback')
+  simulateCallback(@Param('id', ParseIntPipe) id: number, @Body() body: { callbackData: string }) {
+    return this.botsService.simulateCallback(id, String(body.callbackData ?? ''));
   }
 
   /**

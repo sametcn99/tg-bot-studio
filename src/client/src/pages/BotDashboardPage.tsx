@@ -13,6 +13,7 @@ import {
   Grid,
   IconButton,
   Link,
+  MenuItem,
   Stack,
   Switch,
   TextField,
@@ -35,7 +36,26 @@ import PageHeader from '../components/PageHeader';
 import BotDiagnosticsDialog from '../components/BotDiagnosticsDialog';
 import BotPresetsDialog from '../components/BotPresetsDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
+import AnalyticsCard from '../components/AnalyticsCard';
 import { MODULES } from '../registry/modules';
+import { localizedErrorMessage } from '../utils/errors';
+
+/** Curated IANA zones offered for bot-level scheduling. */
+const TIMEZONE_OPTIONS = [
+  'UTC',
+  'Europe/Istanbul',
+  'Europe/London',
+  'Europe/Berlin',
+  'Europe/Moscow',
+  'Asia/Dubai',
+  'Asia/Tbilisi',
+  'Asia/Singapore',
+  'Asia/Tokyo',
+  'America/New_York',
+  'America/Chicago',
+  'America/Los_Angeles',
+  'Australia/Sydney',
+];
 
 /**
  * Contextual bot dashboard: key audience and runtime metrics for the active
@@ -58,6 +78,9 @@ export default function BotDashboardPage(): React.ReactElement {
   const [cloneToken, setCloneToken] = useState('');
   const [cloneBusy, setCloneBusy] = useState(false);
 
+  // Bot operational settings (IANA timezone for scheduled jobs)
+  const [timezone, setTimezone] = useState<string>('UTC');
+
   // File import ref
   const importFileRef = useRef<HTMLInputElement | null>(null);
 
@@ -75,6 +98,29 @@ export default function BotDashboardPage(): React.ReactElement {
       .then(setSecurityPosture)
       .catch(() => undefined);
   }, []);
+
+  const botIdNumber = bot?.id;
+  useEffect(() => {
+    if (!botIdNumber) return;
+    apiFetch<{ timezone: string }>(`/api/bots/${botIdNumber}/settings`)
+      .then((settings) => setTimezone(settings.timezone || 'UTC'))
+      .catch(() => undefined);
+  }, [botIdNumber]);
+
+  /**
+   * Persists the bot time zone used by scheduled jobs (leaderboards etc.).
+   * @param {string} zone - IANA zone name.
+   * @returns {void}
+   */
+  function handleTimezoneChange(zone: string): void {
+    setTimezone(zone);
+    apiFetch(`/api/bots/${currentBot.id}/settings`, {
+      method: 'PATCH',
+      body: JSON.stringify({ timezone: zone }),
+    })
+      .then(() => showSuccess(t('bots.timezoneSaved')))
+      .catch((err: Error) => showError(localizedErrorMessage(err)));
+  }
 
   useEffect(() => {
     if (bot && activeBot?.id !== bot.id) {
@@ -111,21 +157,21 @@ export default function BotDashboardPage(): React.ReactElement {
       body: JSON.stringify({ isActive: active }),
     })
       .then(() => {
-        showSuccess(active ? 'Bot activated.' : 'Bot paused.');
+        showSuccess(active ? t('bots.activated') : t('bots.paused'));
         refresh();
       })
-      .catch((err: Error) => showError(err.message));
+      .catch((err: Error) => showError(localizedErrorMessage(err)));
   }
 
   function handleDeleteBot(): void {
     apiFetch(`/api/bots/${currentBot.id}`, { method: 'DELETE' })
       .then(() => {
-        showSuccess(`Bot "${currentBot.name}" deleted successfully.`);
+        showSuccess(t('bots.deleted', { name: currentBot.name }));
         setDeleteConfirmOpen(false);
         refresh();
         navigate('/');
       })
-      .catch((err: Error) => showError(err.message));
+      .catch((err: Error) => showError(localizedErrorMessage(err)));
   }
 
   function handleOpenClone(): void {
@@ -142,12 +188,12 @@ export default function BotDashboardPage(): React.ReactElement {
       body: JSON.stringify({ name: cloneName, token: cloneToken.trim() }),
     })
       .then((created: any) => {
-        showSuccess(`Bot cloned successfully as "${created.name}"!`);
+        showSuccess(t('bots.cloned', { name: created.name }));
         setCloneOpen(false);
         refresh();
         if (created.id) navigate(`/bots/${created.id}`);
       })
-      .catch((err: Error) => showError(err.message))
+      .catch((err: Error) => showError(localizedErrorMessage(err)))
       .finally(() => setCloneBusy(false));
   }
 
@@ -162,9 +208,9 @@ export default function BotDashboardPage(): React.ReactElement {
         a.download = `bot_${currentBot.id}_config.json`;
         a.click();
         URL.revokeObjectURL(url);
-        showSuccess('Bot configuration exported.');
+        showSuccess(t('bots.exported'));
       })
-      .catch((err: Error) => showError(err.message));
+      .catch((err: Error) => showError(localizedErrorMessage(err)));
   }
 
   function handleImportFile(event: React.ChangeEvent<HTMLInputElement>): void {
@@ -179,14 +225,12 @@ export default function BotDashboardPage(): React.ReactElement {
           body: JSON.stringify(bundle),
         })
           .then((res: any) => {
-            showSuccess(
-              `Configuration imported successfully (${res.importedModules ?? 0} modules configured).`,
-            );
+            showSuccess(t('bots.imported', { count: res.importedModules ?? 0 }));
             refresh();
           })
-          .catch((err: Error) => showError(err.message));
+          .catch((err: Error) => showError(localizedErrorMessage(err)));
       } catch {
-        showError('Invalid JSON file format.');
+        showError(t('bots.invalidImportFile'));
       }
     };
     reader.readAsText(file);
@@ -197,22 +241,19 @@ export default function BotDashboardPage(): React.ReactElement {
     <Box>
       {isInsecureUrl && (
         <Alert severity="warning" icon={<WarningAmberIcon />} sx={{ mb: 2 }}>
-          Dashboard is accessed via plain HTTP. Telegram Mini Apps and webhook tracking require
-          HTTPS in production (e.g. reverse proxy or SSL certificate).
+          {t('bots.insecureHttp')}
         </Alert>
       )}
 
       {securityPosture?.isDefaultMasterKey && (
         <Alert severity="error" sx={{ mb: 2 }}>
-          Security Warning: Your studio is using the default master key ("admin123"). Please change
-          it immediately in Security settings to protect your bots.
+          {t('bots.defaultKeyWarning')}
         </Alert>
       )}
 
       {securityPosture?.isDefaultJwtSecret && (
         <Alert severity="warning" sx={{ mb: 2 }}>
-          Security Notice: Default development JWT secret is active. Set JWT_SECRET in your
-          environment before deploying to production.
+          {t('bots.defaultJwtWarning')}
         </Alert>
       )}
 
@@ -238,30 +279,30 @@ export default function BotDashboardPage(): React.ReactElement {
             >
               {t('actions.applyPreset')}
             </Button>
-            <Tooltip title="Clone all modules, autoresponders, drip flows and mini apps to a new bot">
+            <Tooltip title={t('bots.cloneTooltip')}>
               <Button
                 variant="outlined"
                 size="small"
                 startIcon={<ContentCopyIcon />}
                 onClick={handleOpenClone}
               >
-                Clone Bot
+                {t('bots.clone')}
               </Button>
             </Tooltip>
-            <Tooltip title="Export configuration bundle as JSON">
+            <Tooltip title={t('bots.exportTooltip')}>
               <IconButton
                 size="small"
                 onClick={handleExportConfig}
-                aria-label="Export configuration"
+                aria-label={t('bots.exportAria')}
               >
                 <FileDownloadIcon fontSize="small" />
               </IconButton>
             </Tooltip>
-            <Tooltip title="Import configuration from JSON file">
+            <Tooltip title={t('bots.importTooltip')}>
               <IconButton
                 size="small"
                 onClick={() => importFileRef.current?.click()}
-                aria-label="Import configuration"
+                aria-label={t('bots.importAria')}
               >
                 <FileUploadIcon fontSize="small" />
               </IconButton>
@@ -273,15 +314,31 @@ export default function BotDashboardPage(): React.ReactElement {
               accept=".json"
               style={{ display: 'none' }}
             />
-            <Tooltip title="Delete bot and all scoped tables">
+            <Tooltip title={t('bots.deleteTooltip')}>
               <IconButton
                 size="small"
                 color="error"
                 onClick={() => setDeleteConfirmOpen(true)}
-                aria-label="Delete bot"
+                aria-label={t('bots.deleteAria')}
               >
                 <DeleteOutlineIcon fontSize="small" />
               </IconButton>
+            </Tooltip>
+            <Tooltip title={t('bots.timezoneLabel')}>
+              <TextField
+                select
+                size="small"
+                value={timezone}
+                onChange={(event) => handleTimezoneChange(event.target.value)}
+                label={t('bots.timezoneLabel')}
+                sx={{ minWidth: 170, maxWidth: 220 }}
+              >
+                {TIMEZONE_OPTIONS.map((zone) => (
+                  <MenuItem key={zone} value={zone}>
+                    {zone}
+                  </MenuItem>
+                ))}
+              </TextField>
             </Tooltip>
             <Stack
               direction="row"
@@ -299,6 +356,8 @@ export default function BotDashboardPage(): React.ReactElement {
           </Stack>
         }
       />
+
+      <AnalyticsCard botId={currentBot.id} />
 
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {stats.map((stat) => (
@@ -327,7 +386,7 @@ export default function BotDashboardPage(): React.ReactElement {
               </Typography>
             </Stack>
             <Typography variant="body2" color="text.secondary">
-              Enable or disable feature modules; changes hot-reload the bot runtime.
+              {t('bots.modulesHint')}
             </Typography>
             <Box>
               <Link
@@ -337,7 +396,7 @@ export default function BotDashboardPage(): React.ReactElement {
                 fontWeight={600}
                 onClick={() => navigate(`/bots/${bot.id}/modules`)}
               >
-                Open Feature Modules
+                {t('bots.openModules')}
               </Link>
             </Box>
           </Stack>
@@ -346,23 +405,21 @@ export default function BotDashboardPage(): React.ReactElement {
 
       {/* Clone Bot Dialog */}
       <Dialog open={cloneOpen} onClose={() => setCloneOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Clone Bot: {currentBot.name}</DialogTitle>
+        <DialogTitle>{t('bots.cloneTitle', { name: currentBot.name })}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
             <Typography variant="body2" color="text.secondary">
-              Creates an identical copy of this bot with all 21 module settings, auto-responders,
-              drip flows, and mini app configurations. Enter a new Telegram bot token from
-              @BotFather.
+              {t('bots.cloneDesc')}
             </Typography>
             <TextField
-              label="Cloned Bot Name"
+              label={t('bots.cloneName')}
               value={cloneName}
               onChange={(e) => setCloneName(e.target.value)}
               fullWidth
               size="small"
             />
             <TextField
-              label="New BotFather Token"
+              label={t('bots.cloneToken')}
               value={cloneToken}
               onChange={(e) => setCloneToken(e.target.value)}
               placeholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
@@ -373,13 +430,13 @@ export default function BotDashboardPage(): React.ReactElement {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setCloneOpen(false)}>Cancel</Button>
+          <Button onClick={() => setCloneOpen(false)}>{t('actions.cancel')}</Button>
           <Button
             variant="contained"
             disabled={!cloneToken.trim() || cloneBusy}
             onClick={handleCloneSubmit}
           >
-            {cloneBusy ? 'Cloning...' : 'Clone Bot'}
+            {cloneBusy ? t('bots.cloning') : t('bots.clone')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -387,8 +444,8 @@ export default function BotDashboardPage(): React.ReactElement {
       {/* Delete Bot Confirmation Dialog */}
       <ConfirmDialog
         open={deleteConfirmOpen}
-        title={`Delete Bot: ${currentBot.name}`}
-        message={`Are you sure you want to permanently delete "${currentBot.name}"? This will terminate the bot runtime and permanently erase all associated subscribers, mini apps, orders, messages, and settings across all 18 tables.`}
+        title={t('bots.deleteTitle', { name: currentBot.name })}
+        message={t('bots.deleteMessage', { name: currentBot.name })}
         onConfirm={handleDeleteBot}
         onCancel={() => setDeleteConfirmOpen(false)}
       />

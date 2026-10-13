@@ -8,6 +8,7 @@ import {
 import { PrismaService } from '../../database/prisma.service';
 import { MonetizationModel, type VipSubscriptionEntity } from '../../models/monetization.model';
 import { BotPoolService } from '../../bot-engine/bot-pool.service';
+import { StudioException } from '../../common/errors/studio-error';
 
 /**
  * VIP subscription row shape.
@@ -58,7 +59,7 @@ export class MonetizationService implements OnApplicationShutdown {
     data: Record<string, unknown>,
   ): Promise<{ messageId: number }> {
     const bot = this.pool.getBot(botId);
-    if (!bot) throw new BadRequestException('Bot is not running');
+    if (!bot) throw new StudioException('BOT_NOT_RUNNING', 'Bot is not running');
 
     const mediaType = String(data.mediaType ?? 'photo');
     const rawChatId = data.chatId;
@@ -97,7 +98,7 @@ export class MonetizationService implements OnApplicationShutdown {
     data: Record<string, unknown>,
   ): Promise<{ inviteLink: string; expiresAt: string }> {
     const bot = this.pool.getBot(botId);
-    if (!bot) throw new BadRequestException('Bot is not running');
+    if (!bot) throw new StudioException('BOT_NOT_RUNNING', 'Bot is not running');
 
     const moduleRow = await this.prisma.botModule.findUnique({
       where: {
@@ -112,7 +113,7 @@ export class MonetizationService implements OnApplicationShutdown {
     const starPrice = Number(data.starPrice ?? stored.starPrice ?? 50);
     const telegramId = Number(data.telegramId ?? 0);
     if (!channelChatId || !telegramId) {
-      throw new BadRequestException('channelChatId and telegramId are required');
+      throw new StudioException('VIP_GRANT_REQUIRED', 'channelChatId and telegramId are required');
     }
 
     try {

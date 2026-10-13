@@ -15,6 +15,7 @@ import {
   Typography,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import { useTranslation } from 'react-i18next';
 
 export interface Column<T> {
   id: string;
@@ -45,18 +46,21 @@ export default function DataTable<T extends Record<string, any>>({
   columns,
   keyField,
   searchable = true,
-  searchPlaceholder = 'Search records...',
+  searchPlaceholder,
   searchFilter,
   rowsPerPageOptions = [10, 25, 50],
   defaultRowsPerPage = 10,
-  emptyMessage = 'No records found',
+  emptyMessage,
   ariaLabel = 'Data table',
 }: DataTableProps<T>): React.ReactElement {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [orderBy, setOrderBy] = useState<string | null>(null);
   const [order, setOrder] = useState<Order>('asc');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(defaultRowsPerPage);
+  const resolvedSearchPlaceholder = searchPlaceholder ?? t('common.searchPlaceholder');
+  const resolvedEmptyMessage = emptyMessage ?? t('common.noRecords');
 
   const handleRequestSort = (property: string) => {
     const isAsc = orderBy === property && order === 'asc';
@@ -126,7 +130,7 @@ export default function DataTable<T extends Record<string, any>>({
           <TextField
             size="small"
             fullWidth
-            placeholder={searchPlaceholder}
+            placeholder={resolvedSearchPlaceholder}
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
@@ -190,7 +194,7 @@ export default function DataTable<T extends Record<string, any>>({
               <TableRow>
                 <TableCell colSpan={columns.length} align="center" sx={{ py: 3 }}>
                   <Typography variant="body2" color="text.secondary">
-                    {emptyMessage}
+                    {resolvedEmptyMessage}
                   </Typography>
                 </TableCell>
               </TableRow>

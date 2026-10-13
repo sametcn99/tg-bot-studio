@@ -36,6 +36,29 @@ function slugFromPath(): string {
 }
 
 /**
+ * Applies studio-defined theme overrides (themeJson) as CSS custom
+ * properties so brand colors configured in the dashboard recolor the app.
+ * @param {Record<string, unknown>} theme - Theme overrides from the config.
+ * @returns {void}
+ */
+function applyTheme(theme: Record<string, unknown>): void {
+  const root = document.documentElement.style;
+  const overrides: Record<string, string> = {
+    primaryColor: '--tg-button-color',
+    buttonColor: '--tg-button-color',
+    backgroundColor: '--tg-bg-color',
+    textColor: '--tg-text-color',
+    linkColor: '--tg-link-color',
+  };
+  for (const [key, cssVar] of Object.entries(overrides)) {
+    const value = theme[key];
+    if (typeof value === 'string' && value.trim()) {
+      root.setProperty(cssVar, value.trim());
+    }
+  }
+}
+
+/**
  * Root component of the Mini App shell. Resolves the slug, loads the app
  * configuration, and renders the matching template.
  * @returns {React.ReactElement} The Mini App shell.
@@ -55,6 +78,10 @@ export default function App(): React.ReactElement {
       .catch((err: Error) => setError(err.message));
   }, [slug]);
 
+  useEffect(() => {
+    if (config?.theme) applyTheme(config.theme);
+  }, [config]);
+
   if (error) {
     return <div className="state-message">{error}</div>;
   }
@@ -63,10 +90,12 @@ export default function App(): React.ReactElement {
   }
 
   const insideTelegram = isInsideTelegram();
+  const logoUrl = typeof config.theme?.logoUrl === 'string' ? config.theme.logoUrl : '';
 
   return (
     <main className="app-shell">
       <header className="app-header">
+        {logoUrl ? <img src={logoUrl} alt={config.title} className="app-logo" /> : null}
         <h1>{config.title}</h1>
         {config.description ? <p>{config.description}</p> : null}
       </header>

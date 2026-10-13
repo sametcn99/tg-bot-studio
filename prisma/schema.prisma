@@ -38,6 +38,7 @@ model Bot {
   scoreSchedules   ScoreSchedule[]
   aiChatHistories  AiChatHistory[]
   aiKnowledgeDocs  AiKnowledgeDoc[]
+  aiKnowledgeChunks AiKnowledgeChunk[]
 
   @@map("bots")
 }
@@ -379,12 +380,16 @@ model ScoreSchedule {
 }
 
 model AiChatHistory {
-  id         Int    @id @default(autoincrement())
-  botId      Int    @map("bot_id")
-  telegramId BigInt @map("telegram_id")
-  role       String
-  content    String
-  createdAt  String @map("created_at")
+  id               Int     @id @default(autoincrement())
+  botId            Int     @map("bot_id")
+  telegramId       BigInt  @map("telegram_id")
+  role             String
+  content          String
+  promptTokens     Int?    @map("prompt_tokens")
+  completionTokens Int?    @map("completion_tokens")
+  latencyMs        Int?    @map("latency_ms")
+  isError          Boolean @default(false) @map("is_error")
+  createdAt        String  @map("created_at")
 
   bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
 
@@ -399,7 +404,26 @@ model AiKnowledgeDoc {
   tags      String?
   createdAt String  @map("created_at")
 
-  bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
+  bot    Bot                @relation(fields: [botId], references: [id], onDelete: Cascade)
+  chunks AiKnowledgeChunk[]
 
   @@map("ai_knowledge_docs")
+}
+
+/// Semantic RAG chunk with its optional embedding vector (JSON float array).
+model AiKnowledgeChunk {
+  id         Int     @id @default(autoincrement())
+  botId      Int     @map("bot_id")
+  docId      Int     @map("doc_id")
+  idx        Int
+  content    String
+  vectorJson String? @map("vector_json")
+  createdAt  String  @map("created_at")
+
+  bot Bot            @relation(fields: [botId], references: [id], onDelete: Cascade)
+  doc AiKnowledgeDoc @relation(fields: [docId], references: [id], onDelete: Cascade)
+
+  @@index([botId])
+  @@index([docId])
+  @@map("ai_knowledge_chunks")
 }

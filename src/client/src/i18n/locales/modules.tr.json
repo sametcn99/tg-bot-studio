@@ -1,0 +1,660 @@
+{
+  "connections": {
+    "name": "Sohbet Bağlantıları",
+    "description": "Gruplarınızın ve kanallarınızın merkezi adres defteri; her modüldeki hedef seçicileri bu listeden beslenir.",
+    "docs": {
+      "overview": [
+        "Botun işlem yaptığı her grubu, süpergrubu ve kanalı bir kez kaydedin — stüdyodaki tüm hedef sohbet alanları bunları açılır listede sunar.",
+        "Botun eklendiği sohbetler otomatik keşfedilir; Eşitle, bunları başlıkları ve türleriyle birlikte içe aktarır.",
+        "Bağlantılar sayısal kimlikleri (-100…) ve herkese açık @kullanıcı adlarını kabul eder; silmeden devre dışı bırakılabilir."
+      ],
+      "setup": [
+        "Botu hedef gruba veya kanala yönetici olarak ekleyin (kanallar için gönderim yetkisi yeterlidir).",
+        "Botun zaten keşfettiği sohbetleri içe aktarmak için Eşitle'ye basın veya sohbet kimliği / @kullanıcı adı ile elle ekleyin.",
+        "Aynı listeyi Zamanlayıcı, Destek Masası, Çekilişler, VIP Abonelikler, Ücretli Medya ve Webhooks modüllerinde kullanın."
+      ],
+      "troubleshooting": [
+        "Özel sohbetler için sayısal sohbet kimliği gerekir; @kullanıcı adları yalnızca herkese açık kanal ve gruplarda çalışır.",
+        "Eşitle yalnızca botun en az bir güncelleme aldığı sohbetleri bilir (my_chat_member olayları).",
+        "Bir bağlantıyı silmek botu asla atmaz; yalnızca stüdyo tarafındaki kısayolu kaldırır."
+      ]
+    }
+  },
+  "start-menu": {
+    "name": "Başlangıç Menüsü",
+    "description": "Birleşik /start menüsü: bölümler, düzen kontrolü, tıklama analitiği ve /menu ile yeniden açma özelliğiyle sohbet klasörü (addlist), kanal, grup ve web butonları.",
+    "fields": {
+      "menuStyle": {
+        "label": "Menü stili",
+        "help": "Düz stil tek bir buton listesi gösterir; kategorize stil hedefleri başlıklarla gruplar"
+      },
+      "startMessage": {
+        "label": "Başlangıç mesajı",
+        "help": "{first_name} ve {mention} gibi yer tutucuları destekler"
+      },
+      "buttonsPerRow": {
+        "label": "Satır başına buton",
+        "help": "İnline buton sütun sayısı, 1-4"
+      },
+      "enableMenuCommand": {
+        "label": "/menu komutunu etkinleştir",
+        "help": "Kullanıcılar menüyü istedikleri zaman /menu ile yeniden açabilir"
+      },
+      "trackClicks": {
+        "label": "Tıklamaları yönlendirmeyle izle"
+      },
+      "publicBaseUrl": {
+        "label": "Genel temel URL",
+        "help": "Tıklama takibi için gerekli, örn. https://studio.example.com"
+      },
+      "title": { "label": "Başlık" },
+      "type": {
+        "label": "Tür",
+        "help": "folder = sohbet klasörü (t.me/addlist/...) paylaşım bağlantısı"
+      },
+      "url": { "label": "URL" },
+      "description": { "label": "Açıklama" },
+      "orderIndex": { "label": "Sıra" }
+    },
+    "columns": {
+      "title": "Başlık",
+      "type": "Tür",
+      "url": "URL",
+      "order_index": "Sıra",
+      "click_count": "Tıklama",
+      "is_active": "Aktif"
+    },
+    "docs": {
+      "overview": [
+        "Birleşik başlangıç menüsü: botunuzun /start üzerinde sunduğu her hedef burada yaşar — sohbet klasörü paylaşım bağlantıları (t.me/addlist/...), kanallar, gruplar ve dış web bağlantıları.",
+        "Düz stil tek bir buton listesi oluşturur; kategorize stil hedefleri türüne göre gruplandırır ve mesaj metninde bölüm başlıkları gösterir.",
+        "Buton düzeni satır başına kontrol edilir (1-4 sütun) ve kullanıcılar menüyü istedikleri an /menu ile yeniden açabilir.",
+        "Takip etkinleştirildiğinde tıklama sayaçları menü öğesi başına etkileşimi ölçer."
+      ],
+      "setup": [
+        "Telegram'da bir sohbet klasörü oluşturun ve paylaşım bağlantısını (t.me/addlist/...) türü folder olan bir menü öğesi olarak kullanın.",
+        "Kanalları, grupları ve web hedeflerini kendi türlerinde öğe olarak ekleyin; sıra, buton konumunu belirler.",
+        "Kişiselleştirilmiş bir başlık için yer tutuculu bir başlangıç mesajı belirleyin ({first_name}, {mention}).",
+        "İsteğe bağlı olarak butonları yerleşik tıklama takibinden geçirmek için genel temel URL belirleyin.",
+        "Menünün göründüğünü doğrulamak için bota /start (veya /menu) gönderin."
+      ],
+      "troubleshooting": [
+        "Tıklama takibi, stüdyonun herkese açık bir HTTPS adresinden erişilebilir olmasını gerektirir.",
+        "Telegram inline klavyeleri kısa süre önbelleğe alır; düzenlemeler yeni gönderilen menülere uygulanır.",
+        "Hem bu modül hem de Özel Komutlar bir /start yanıtı tanımladığında Başlangıç Menüsü öncelik alır."
+      ]
+    }
+  },
+  "scheduler": {
+    "name": "Kanal Gönderi Zamanlayıcı",
+    "description": "Zamanlanmış kanal gönderileri: inline butonlar ve açıklama filigranı.",
+    "fields": {
+      "watermarkText": {
+        "label": "Filigran metni",
+        "help": "Zamanlanmış her açıklamaya eklenir"
+      },
+      "timezoneOffsetMinutes": {
+        "label": "Saat dilimi farkı (dakika, örn. UTC+3 için 180)",
+        "help": "{date} ve {time} yer tutucuları ve zamanlama için yerel saat farkı"
+      },
+      "targetChatId": {
+        "label": "Hedef sohbet",
+        "help": "Bağlı bir kanal veya grup seçin; listeyi Sohbet Bağlantıları'nda yönetin"
+      },
+      "messageText": { "label": "Mesaj metni" },
+      "mediaUrl": { "label": "Medya URL'si (foto/video)" },
+      "buttons": {
+        "label": "Butonlar (JSON dizisi)",
+        "help": "[{\"text\":\"Open\",\"url\":\"https://...\"}]"
+      },
+      "scheduledAt": { "label": "Gönderim zamanı (UTC ISO)" }
+    },
+    "columns": {
+      "target_chat_id": "Hedef sohbet",
+      "message_text": "Mesaj",
+      "scheduled_at": "Zaman",
+      "status": "Durum"
+    },
+    "docs": {
+      "overview": [
+        "Kanallara tam gönderim zamanları, zengin medya ve inline butonlarla gönderi kuyruğa alın.",
+        "Tutarlı kanal kimliği için açıklamalara marka filigranı satırı eklenir."
+      ],
+      "setup": [
+        "Botu hedef kanala gönderim yetkisi olan bir yönetici olarak ekleyin.",
+        "Kanal kimliğini (@kullanıcı adı veya sayısal) gönderi formuna yapıştırın.",
+        "Gönderileri zamanlayın; dağıtıcı 30 saniyede bir kontrol eder."
+      ],
+      "troubleshooting": [
+        "Bot hedef sohbette yönetici haklarına sahip değilse gönderiler 400 hatasıyla başarısız olur.",
+        "Zamanlar UTC ISO biçiminde saklanır ve karşılaştırılır."
+      ]
+    }
+  },
+  "support": {
+    "name": "Destek Masası (Livegram)",
+    "description": "Yönetici süpergrubunda kullanıcı başına forum konuları ve çift yönlü aktarım.",
+    "fields": {
+      "adminChatId": {
+        "label": "Yönetici süpergrubu",
+        "help": "Forum özellikli yönetici grubu; listeyi Sohbet Bağlantıları'nda yönetin"
+      },
+      "welcomeText": { "label": "Otomatik yanıt metni" },
+      "autoReplyThrottleMinutes": { "label": "Otomatik yanıt sınırı (dakika)" }
+    },
+    "docs": {
+      "overview": [
+        "Her kullanıcı mesajı, yönetici süpergrubunuzda özel bir forum konusu açar.",
+        "Yöneticiler konu içinde yanıtlar; bot cevabı kullanıcıya iletir.",
+        "Hızlı komutlar: bir konuya yanıt verirken /ban, /unban, /info."
+      ],
+      "setup": [
+        "Bir süpergrup oluşturun, ayarlarından Konuları etkinleştirin ve botu yönetici olarak ekleyin.",
+        "Süpergrup kimliğini yapılandırmaya yapıştırın ve kaydedin.",
+        "Kullanıcılar bota doğrudan mesaj yazar; konular otomatik görünür."
+      ],
+      "troubleshooting": [
+        "Konu oluşturmak, botun can_manage_topics yetkili yönetici olmasını gerektirir.",
+        "Otomatik yanıt, alındı spamini önlemek için kullanıcı başına sınırlıdır."
+      ]
+    }
+  },
+  "business": {
+    "name": "İş Sekreteri",
+    "description": "Bir Telegram Business hesabına yazan müşterilere otomatik yanıt verir.",
+    "fields": {
+      "connectionId": {
+        "label": "Business bağlantı kimliği",
+        "help": "Tüm bağlantıları yanıtlamak için boş bırakın"
+      },
+      "autoReplyText": { "label": "Otomatik yanıt metni" }
+    },
+    "docs": {
+      "overview": [
+        "Yöneticinin kişisel Telegram Business bağlantısı üzerinden gelen mesajları işler.",
+        "Mesai dışı bilgilendirmeler ve çalışma saatleri dışında önceliklendirme için kullanışlıdır."
+      ],
+      "setup": [
+        "Telegram Business ayarlarında botu yönetici hesabına bağlayın.",
+        "Üretilen business_connection_id değerini yapılandırmaya yapıştırın.",
+        "Kısa ve profesyonel bir otomatik yanıt yazın ve modülü etkinleştirin."
+      ],
+      "troubleshooting": [
+        "Business mesaj API'leri gelişmeye devam ediyor; yanıtlar ham Bot API yüzeyiyle gönderilir.",
+        "Yanıtlar başarısız olursa bağlantının Telegram ayarlarında hâlâ aktif olduğunu doğrulayın."
+      ]
+    }
+  },
+  "drip": {
+    "name": "Damla Kampanyaları",
+    "description": "Onboarding yolculukları gibi zamanlanmış çok adımlı diziler.",
+    "fields": {
+      "subscribeOnStart": { "label": "/start'ta otomatik abone ol" },
+      "name": { "label": "Kampanya adı" },
+      "steps": {
+        "label": "Adımlar (JSON)",
+        "help": "[{\"delayMinutes\":60,\"text\":\"Welcome {first_name}\"}]"
+      }
+    },
+    "columns": {
+      "name": "Kampanya",
+      "subscribers": "Abone",
+      "is_active": "Aktif"
+    },
+    "docs": {
+      "overview": [
+        "Klasik 1./3./7. gün onboarding ve promosyon yolculukları.",
+        "Her adım, bir öncekinden sonra yapılandırılabilir sayıda dakika gecikir.",
+        "Aboneler elle veya /start üzerinde otomatik eklenebilir."
+      ],
+      "setup": [
+        "En az bir adımla (delayMinutes + metin) bir kampanya oluşturun.",
+        "Başlangıçta otomatik aboneliği etkinleştirin veya kampanya görünümünden abone ekleyin.",
+        "Zamanlayıcı adımları 30 saniyede bir ilerletir."
+      ],
+      "troubleshooting": [
+        "Botu engelleyen kullanıcılar teslimat başarısızında otomatik olarak abonelikten çıkarılır.",
+        "delayMinutes abonelikten değil, önceki adımdan itibaren sayılır."
+      ]
+    }
+  },
+  "broadcast": {
+    "name": "Yayın Motoru",
+    "description": "429 farkında hız sınırlamalı, filtreli toplu mesajlaşma.",
+    "docs": {
+      "overview": [
+        "Duyuruları herkese, bir dil segmentine veya yakın zamanda aktif kullanıcılara gönderin.",
+        "Zengin medya ve inline butonlar, alıcı başına yer tutucularla desteklenir.",
+        "Kuyruk boşalarken başarı ve başarısızlık sayaçları canlı güncellenir."
+      ],
+      "setup": [
+        "Önce kitleyi büyütün: bota mesaj yazan her kullanıcı kaydedilir.",
+        "Yayını yazın, hedef filtresi seçin ve kuyruğa alın.",
+        "İlerlemeyi geçmiş tablosundan izleyin."
+      ],
+      "troubleshooting": [
+        "Telegram yayınları saniyede ~30 mesajla sınırlar; motor bunun altında tempo tutar.",
+        "Botu engelleyen kullanıcılar başarısız sayılır ve sonraki hedeflemelerde atlanır."
+      ]
+    }
+  },
+  "crm": {
+    "name": "Kitle CRM",
+    "description": "Abone profilleri, etiketler, notlar ve CSV/JSON dışa aktarma.",
+    "docs": {
+      "overview": [
+        "Her bot etkileşimi abone profilini otomatik güncelleyerek kaydeder.",
+        "Kullanıcıları segmentlere ayırın (VIP, beta, kayıp riski) ve dahili not tutun.",
+        "Tüm kitleyi dış araçlar için CSV veya JSON olarak dışa aktarın."
+      ],
+      "setup": [
+        "Kurulum gerekmez; profiller bot çalıştıkça birikir.",
+        "Etiketleri yayın filtreleri ve segmentleme kancaları olarak kullanın."
+      ],
+      "troubleshooting": [
+        "Arama; kullanıcı adı, isim ve Telegram kimliğinde eşleşir.",
+        "Burada gösterilen puanlar tavsiye ve oyunlaştırma modüllerini besler."
+      ]
+    }
+  },
+  "welcome": {
+    "name": "Karşılama & Temiz Sohbet",
+    "description": "Otomatik silinen yeni üye karşılamaları ve servis mesajı temizliği.",
+    "fields": {
+      "template": { "label": "Karşılama şablonu" },
+      "autoDeleteSeconds": {
+        "label": "Kaç saniye sonra otomatik silinsin (15-120, 0 = kapalı)"
+      },
+      "deleteServiceMessages": { "label": "Katılma servis mesajlarını sil" },
+      "deleteLeaveMessages": { "label": "Ayrılma servis mesajlarını sil" }
+    },
+    "docs": {
+      "overview": [
+        "Her yeni grup üyesini şablon bir mesaj ve bahsetme bağlantısıyla karşılar.",
+        "Telegram katılma/ayrılma servis mesajlarını kaldırarak sohbetleri temiz tutar.",
+        "Karşılama mesajları 15 ila 120 saniye sonra kendiliğinden silinebilir."
+      ],
+      "setup": [
+        "Bot katılma olaylarını görebilsin diye BotFather üzerinden gizlilik modunu kapatın.",
+        "Botu gruba silme yetkisi olan bir yönetici olarak ekleyin.",
+        "Şablonu {mention} ve {group_name} gibi yer tutucularla yazın."
+      ],
+      "troubleshooting": [
+        "Yönetici hakları olmadan bot servis veya karşılama mesajlarını silemez.",
+        "autoDeleteSeconds desteklenen 15-120 aralığına sabitlenir."
+      ]
+    }
+  },
+  "captcha": {
+    "name": "Captcha Kapısı",
+    "description": "Otomatik atma zamanlayıcılı buton veya matematik doğrulaması.",
+    "fields": {
+      "mode": { "label": "Mod" },
+      "timeoutSeconds": { "label": "Zaman aşımı (saniye)" },
+      "kickOnFail": { "label": "Zaman aşımında at" },
+      "successText": { "label": "Başarı mesajı" }
+    },
+    "docs": {
+      "overview": [
+        "Akın koruması: yeni üyeler yapılandırılan süre içinde doğrulanmalıdır.",
+        "Buton modu dokunarak doğrular; matematik modu bir toplama cevabı ister.",
+        "Doğrulanmayan üyeler süre dolduğunda atılır (ban + unban)."
+      ],
+      "setup": [
+        "Botu grup yöneticisi olarak ban yetkisiyle ekleyin.",
+        "Bir mod ve zaman aşımı seçin, ardından modülü etkinleştirin."
+      ],
+      "troubleshooting": [
+        "Atma işlemleri can_restrict_members dahil yönetici hakları gerektirir.",
+        "Bekleyen doğrulamalar bellekte tutulur ve bot yeniden başladığında sıfırlanır."
+      ]
+    }
+  },
+  "moderation": {
+    "name": "Moderasyon & Anti-Spam",
+    "description": "Kara liste kelimeler, bağlantı engelleme, flood kontrolü, ihtar artışı.",
+    "fields": {
+      "blockedWords": {
+        "label": "Engellenen kelimeler (satır başına bir veya /regex/)"
+      },
+      "blockLinks": { "label": "Bağlantıları engelle" },
+      "floodMessageLimit": { "label": "Flood sınırı (0 = kapalı)" },
+      "floodWindowSeconds": { "label": "Flood penceresi (saniye)" },
+      "autoBanAfterStrikes": { "label": "İhtar sonrası otomatik ban (0 = kapalı)" }
+    },
+    "docs": {
+      "overview": [
+        "Kara listedeki kelimelerle (düz veya /regex/ biçimi), bağlantılarla veya flood ile eşleşen mesajları siler.",
+        "Tekrarlayan ihlaller stüdyo düzeyi ban ve sohbetten atmaya yükselir.",
+        "Banlanan kullanıcılar inceleme ve manuel ban kaldırma için burada listelenir."
+      ],
+      "setup": [
+        "Bota mesaj silme yetkisi olan yönetici hakları verin.",
+        "Yanlış pozitifleri önlemek için eşikleri temkinli ayarlayın."
+      ],
+      "troubleshooting": [
+        "Regex girdileri /pattern/flags biçimini kullanır, örn. /\\bfree crypto\\b/i.",
+        "Flood pencereleri grup ve kullanıcı başınadır ve bellekte tutulur."
+      ]
+    }
+  },
+  "giveaways": {
+    "name": "Çekiliş Motoru",
+    "description": "Doğrulanabilir kazanan çekilişli, kanal üyeliği koşullu çekilişler.",
+    "fields": {
+      "announceWinners": { "label": "Kazananları duyur" },
+      "title": { "label": "Başlık" },
+      "prizeDetails": { "label": "Ödül ayrıntıları" },
+      "requiredChannels": {
+        "label": "Zorunlu kanallar",
+        "help": "Katılımda doğrulanan üyelik koşulları; listeyi Sohbet Bağlantıları'nda yönetin"
+      },
+      "winnersCount": { "label": "Kazanan sayısı" },
+      "endsAt": { "label": "Bitiş (UTC ISO, boş = manuel)" }
+    },
+    "columns": {
+      "title": "Başlık",
+      "winners_count": "Kazanan",
+      "participants": "Katılımcı",
+      "ends_at": "Bitiş",
+      "status": "Durum"
+    },
+    "docs": {
+      "overview": [
+        "Kullanıcılar /giveaway ve inline Katıl butonlarıyla katılır.",
+        "Zorunlu kanallardaki üyelik getChatMember ile doğrulanır.",
+        "Kazananlar, katılımcı listesinden yeniden üretilebilir tohumlu karıştırma ile seçilir."
+      ],
+      "setup": [
+        "Botu her zorunlu kanalda yönetici olarak ekleyin.",
+        "Çekilişi kanal kimlikleri ve bir bitiş zamanıyla oluşturun.",
+        "Katılımcı toplamaya başlamak için topluluğunuzda /giveaway duyurun."
+      ],
+      "troubleshooting": [
+        "Bot kanal üye listesini göremediğinde doğrulama başarısız olur.",
+        "Çekilişler, ends_at geçtikten sonra 60 saniyede bir çalışır."
+      ]
+    }
+  },
+  "referrals": {
+    "name": "Tavsiye Liderlik Tablosu",
+    "description": "Puan ödüllü ve /top destekli derin bağlantı tavsiye takibi.",
+    "fields": {
+      "pointsPerReferral": { "label": "Tavsiye başına puan" },
+      "leaderboardSize": { "label": "Liderlik tablosu boyutu" }
+    },
+    "docs": {
+      "overview": [
+        "Kullanıcılar t.me/bot?start=ref_<id> derin bağlantılarını paylaşır; atama otomatiktir.",
+        "Tavsiye edenler anında puan kazanır; /top güncel sıralamayı gösterir."
+      ],
+      "setup": [
+        "Modülü etkinleştirin ve tavsiye başına ödülü yapılandırın.",
+        "Kişisel bağlantı desenini topluluğunuza duyurun."
+      ],
+      "troubleshooting": [
+        "Kendi kendine tavsiyeler ve tekrar atamalar yok sayılır.",
+        "Davet edilen geldiğinde tavsiye edenin kayıtlı bir abone olması gerekir."
+      ]
+    }
+  },
+  "quizzes": {
+    "name": "Bilgi Yarışmaları & Anketler",
+    "description": "Kalıcı skor tablolu, zamanlı bilgi yarışmaları.",
+    "fields": {
+      "defaultCommand": { "label": "Tetikleyici komut" }
+    },
+    "docs": {
+      "overview": [
+        "sendPoll tabanlı, doğru cevapları otomatik puanlanan yarışmalar.",
+        "Puanlar ve yarışma başına skor tabloları liderlik için kalıcıdır (/scoreboard)."
+      ],
+      "setup": [
+        "Yarışmaları etkileşim sekmesinde oluşturun (soru, seçenekler, doğru indeks, puan).",
+        "Kullanıcılar yapılandırılan komutla rastgele bir yarışma başlatır."
+      ],
+      "troubleshooting": [
+        "Puanlama için anketler anonim olmamalıdır; modül bunu zorunlu kılar.",
+        "Tepki analitiği aynı etkileşim sekmesinde yer alır."
+      ]
+    }
+  },
+  "reactions": {
+    "name": "Tepki Analitiği",
+    "description": "Kanal gönderi tepkilerini izler ve puan verir.",
+    "fields": {
+      "pointsPerReaction": { "label": "Tepki başına puan" }
+    },
+    "docs": {
+      "overview": [
+        "Gönderilerdeki emoji tepkilerini sayar ve tepki veren üyeye puan verir.",
+        "Özet grafik, hangi emojilerin kitlede karşılık bulduğunu gösterir."
+      ],
+      "setup": [
+        "Botu izlenen kanalda yönetici olarak ekleyin.",
+        "Tepki güncellemeleri, sohbetin bot tepki olaylarına izin vermesini gerektirir."
+      ],
+      "troubleshooting": [
+        "Anonim tepki verenler eşleştirilemez ve atlanır.",
+        "Yalnızca emoji tepkileri sayılır; ücretli ve özel tepkiler yok sayılır."
+      ]
+    }
+  },
+  "message-score": {
+    "name": "Mesaj Skoru & Liderlik Tablosu",
+    "description": "Gruplardaki üye etkinliğini puanlar (mesaj, yanıt, medya), en aktif üyeleri listeler ve zengin biçimli liderlik tablolarını tek veya birden çok sohbete zamanlar.",
+    "fields": {
+      "messageWeight": {
+        "label": "Mesaj başına puan",
+        "help": "Her normal üye mesajına eklenen ağırlık"
+      },
+      "replyWeight": {
+        "label": "Yanıt başına puan",
+        "help": "Bir üye başkasına yanıt verdiğinde eklenen ağırlık"
+      },
+      "mediaWeight": {
+        "label": "Medya mesajı başına puan",
+        "help": "Foto, video, çıkartma, sesli mesaj ve dosyalar için ağırlık"
+      }
+    },
+    "docs": {
+      "overview": [
+        "Gruplarınızdaki her üye mesajı günlük bir etkinlik kaydı oluşturur: mesajlar, başkalarına yanıtlar ve medya ayrı sayılır.",
+        "Ağırlıklı puan, herhangi bir dönem için (bugün, 7 gün, 30 gün veya tüm zamanlar) en aktif üyeleri sıralar.",
+        "Zengin liderlik mesajları (başlık, üye başına satır şablonu, altbilgi, madalyalar, ayrıştırma modu, sessiz bayrağı) anında veya yinelenen zamanlamayla bir ya da birden çok bağlı sohbete gönderilebilir.",
+        "Zamanlamalar UTC üzerinde tek seferlik, saatlik, günlük ve haftalık yinelenmeleri destekler."
+      ],
+      "setup": [
+        "Bot, gruplardaki üye mesajlarını görebilsin diye BotFather üzerinden gizlilik modunu kapatın (veya botu yönetici yapın).",
+        "Modülü etkinleştirin ve yapılandırma kartındaki puan ağırlıklarını ayarlayın.",
+        "Bir veya birden çok hedef sohbet seçin, mesaj biçimini yer tutucularla tasarlayın ve canlı önizlemeyi kontrol edin.",
+        "Tek seferlik gönderim için Şimdi gönder'e, otomatikleştirmek için Zamanlama olarak kaydet'e basın."
+      ],
+      "troubleshooting": [
+        "Liderlik tablosunda üye olmaması genellikle gizlilik modunun grup mesajlarını bottan sakladığı anlamına gelir.",
+        "Servis mesajları (katılmalar, sabitlemeler, başlık değişiklikleri) skora asla katılmaz.",
+        "Bot hedef sohbetin üyesi değilse veya gönderim hakkı yoksa gönderim 403 ile başarısız olur.",
+        "Zamanlanmış saatler UTC kullanır; günlük/haftalık çalıştırımlar yapılandırılan HH:mm'de tetiklenir."
+      ]
+    }
+  },
+  "ai-assistant": {
+    "name": "AI Asistan",
+    "description": "OpenAI, Gemini veya OpenAI-uyumlu herhangi bir URL (OpenRouter, DeepSeek, Ollama…) ile 7/24 AI yanıtlama.",
+    "fields": {
+      "provider": {
+        "label": "Sağlayıcı",
+        "help": "openrouter/custom, OpenAI-uyumlu temel URL üzerinden her modeli çağırır"
+      },
+      "baseUrl": {
+        "label": "Temel URL (OpenAI-uyumlu)",
+        "help": "openai/openrouter için yok sayılır. Özel örnek: http://localhost:11434/v1 (Ollama), https://api.deepseek.com/v1"
+      },
+      "apiKey": { "label": "API anahtarı" },
+      "model": {
+        "label": "Model",
+        "help": "Sağlayıcı model kimliği: gpt-4o-mini, openai/gpt-4o-mini (OpenRouter), anthropic/claude-3.5-sonnet (OpenRouter), gemini-2.0-flash"
+      },
+      "transcriptionModel": {
+        "label": "Sesli transkripsiyon modeli",
+        "help": "Sesli mesajlar için OpenAI-uyumlu /audio/transcriptions ucu üzerinde kullanılan model; boşsa whisper-1"
+      },
+      "systemPrompt": { "label": "Sistem promptu" },
+      "maxTokens": { "label": "Maksimum token" },
+      "historyLimit": { "label": "Geçmiş tur sayısı" },
+      "smartHandoff": {
+        "label": "Akıllı insana yönlendirme (AI sınılandırıcı)",
+        "help": "İnsan talebini LLM ile sınıflandırır; kapalıyken veya hata durumunda anahtar kelimelere düşer"
+      },
+      "showSources": {
+        "label": "Yanıtlara bilgi kaynağı ekle",
+        "help": "Yanıtın hangi bilgi tabanı dokümanlarıyla desteklendiğini gösterir"
+      },
+      "embeddingModel": {
+        "label": "Embedding modeli (semantik RAG, isteğe bağlı)",
+        "help": "OpenAI-uyumlu embedding, örn. text-embedding-3-small; boş = yalnızca anahtar kelime erişimi"
+      },
+      "knowledgeTags": {
+        "label": "Bilgi etiket filtresi (isteğe bağlı)",
+        "help": "Virgülle ayrılmış etiketler; yalnızca bunlardan birini taşıyan dokümanlar erişilir"
+      }
+    },
+    "docs": {
+      "overview": [
+        "Özel kullanıcı mesajlarını kurumsal bir tonda 7/24 yanıtlar.",
+        "OpenAI Chat Completions protokolünü konuşur; OpenRouter, DeepSeek, Groq, Ollama, vLLM dahil her OpenAI-uyumlu hizmet çalışır. Gemini yerel API'sini kullanır.",
+        "Bağlama uygun yanıtlar için kullanıcı başına kısa bir geçmiş tutar."
+      ],
+      "setup": [
+        "Bir sağlayıcı seçin: openai, openrouter, gemini veya custom (kendi OpenAI-uyumlu temel URL'niz).",
+        "API anahtarını yapıştırın, model kimliğini sağlayıcı biçiminde girin (OpenRouter openai/gpt-4o-mini gibi satıcı/model kullanır) ve sistem promptunu ayarlayın.",
+        "Etkinleştirmeden önce yerleşik test düğmesini kullanın."
+      ],
+      "troubleshooting": [
+        "Asistan, destek masasına ve otomatik yanıtlayıcı anahtar kelime kurallarına öncelik tanır.",
+        "Sağlayıcı hataları sohbette geçici erişilemez bildirimi olarak görünür.",
+        "Sesli transkripsiyon OpenAI-uyumlu bir /audio/transcriptions ucu gerektirir; OpenRouter bu ucu sunmaz, transcriptionModel'i uyumlu bir sağlayıcıya (OpenAI, Groq, yerel Whisper) yönlendirin."
+      ]
+    }
+  },
+  "autoresponder": {
+    "name": "Komutlar & Otomatik Yanıtlayıcı",
+    "description": "Medya destekli özel /komutlar ve anahtar kelime tetikleyicileri.",
+    "fields": {
+      "startMessage": { "label": "Varsayılan /start mesajı" },
+      "command": { "label": "Komut (/fiyat) veya anahtar kelime" },
+      "responseText": { "label": "Yanıt metni" },
+      "mediaUrl": { "label": "Fotoğraf URL'si" },
+      "buttons": { "label": "Butonlar (JSON dizisi)" }
+    },
+    "columns": {
+      "command": "Tetikleyici",
+      "response_text": "Yanıt",
+      "is_active": "Aktif"
+    },
+    "docs": {
+      "overview": [
+        "/fiyat ve /sss gibi özel komutlar medya ile anında yanıtlanır.",
+        "Eğik çizgisiz tetikleyiciler, mesaj alt dizileriyle anahtar kelime otomatik yanıtları olarak eşleşir."
+      ],
+      "setup": [
+        "Kurallar oluşturun; komutlar / ile başlamalı, anahtar kelimeler başlamamalıdır.",
+        "Fotoğraf URL'leri ve inline butonlar isteğe bağlı zenginleştirmelerdir."
+      ],
+      "troubleshooting": [
+        "Başlangıç Menüsü modülü /start'a sahip olduğunda menüsü öncelik alır.",
+        "Anahtar kelime kuralları çift yanıtı önlemek için AI asistan yanıtlarını da duraklatır."
+      ]
+    }
+  },
+  "paid-media": {
+    "name": "Ücretli Medya Duvarı",
+    "description": "sendPaidMedia ile Stars kilitli fotoğraf ve videolar.",
+    "fields": {
+      "starCount": { "label": "Varsayılan fiyat (Stars)" },
+      "protectCaption": { "label": "Açıklama içeriğini koru" }
+    },
+    "docs": {
+      "overview": [
+        "Kullanıcıların Telegram Stars ödeyerek açtığı medya gönderir.",
+        "Gelir, bot sahibinin Fragment bakiyesine aktarılır."
+      ],
+      "setup": [
+        "Gelir sekmesinden herhangi bir sohbet kimliğine ücretli medya gönderin.",
+        "Her gönderiyi Stars ile fiyatlandırın; alıcılar yerel ödeme duvarı görür."
+      ],
+      "troubleshooting": [
+        "sendPaidMedia destekleyen bir Bot API sürümü gerektirir.",
+        "Medya, herkese açık erişilebilir URL'ler olmalıdır."
+      ]
+    }
+  },
+  "vip-subs": {
+    "name": "VIP Abonelikler",
+    "description": "Süre bitimi uygulanan, Stars fiyatlı kanal davetleri.",
+    "fields": {
+      "channelChatId": {
+        "label": "VIP kanalı",
+        "help": "Botun yönettiği özel kanal; listeyi Sohbet Bağlantıları'nda yönetin"
+      },
+      "subscriptionPeriodDays": { "label": "Süre (gün)" },
+      "starPrice": { "label": "Fiyat (Stars)" }
+    },
+    "docs": {
+      "overview": [
+        "createChatSubscriptionInviteLink, Stars faturalı davet bağlantıları üretir.",
+        "Süresi biten üyeler tarama zamanlayıcısı tarafından otomatik çıkarılır."
+      ],
+      "setup": [
+        "Özel bir kanal oluşturun ve botu yönetici olarak ekleyin.",
+        "Kanal kimliğini, süreyi ve Stars fiyatını ayarlayın, ardından abonelik tanımlayın."
+      ],
+      "troubleshooting": [
+        "Kanal, botun davet bağlantılarını yönetmesine izin vermelidir.",
+        "Çıkarma ban + unban ile yapılır; üye yeniledikten sonra tekrar katılabilir."
+      ]
+    }
+  },
+  "webhooks": {
+    "name": "Webhooks Merkezi",
+    "description": "İmzalı giden olaylar ve gelen otomasyon tetikleyicileri.",
+    "docs": {
+      "overview": [
+        "Olayları (siparişler, form gönderimleri, destek etkinliği) Zapier, Make veya n8n'e aktarın.",
+        "Her teslimat, X-Studio-Signature içinde HMAC-SHA256 ile imzalanır.",
+        "Gelen kancalar, dış sistemlerden şablonlu mesajları bir sohbete işler."
+      ],
+      "setup": [
+        "Paylaşılan gizli anahtar ve olay filtresiyle giden bir uç nokta kaydedin.",
+        "Yüklere güvenmeden önce imzaları alıcı tarafta doğrulayın.",
+        "Gelen taraf için bir kanca oluşturun ve URL'sine JSON POST edin."
+      ],
+      "troubleshooting": [
+        "Boş olay listesi, uç noktayı her olaya abone eder.",
+        "Başarısız teslimatlar teslimat günlüğü sekmesine kaydedilir."
+      ]
+    }
+  },
+  "mini-apps": {
+    "name": "Mini Uygulama Stüdyosu",
+    "description": "Telegram Mini Uygulamalarını dış hosting olmadan oluşturun, barındırın ve yayınlayın.",
+    "docs": {
+      "overview": [
+        "Telegram Mini Uygulamalarını doğrudan stüdyodan, birleşik /tma/* rotası üzerinde oluşturun ve barındırın.",
+        "Beş kurumsal şablon: E-Ticaret vitrini, Sadakat merkezi, dinamik Formlar, günlük Çark ve dış Webview sarmalayıcı.",
+        "Yerleşik telefon önizlemesi canlı uygulamayı gösterir; yayınlama sohbet menü butonunu tek tıkla bağlar."
+      ],
+      "setup": [
+        "Bir BotFather botu oluşturun ve stüdyoya kaydedin (bot çalışıyor olmalıdır).",
+        "Bir Mini Uygulama oluşturun, şablon seçin ve JSON yapılandırmasını ayarlayın.",
+        "Telegram HTTPS barındırma ister: yayınlamadan önce genel temel URL'yi ayarlayın.",
+        "Sohbet sol-alt menü butonunu setChatMenuButton ile ayarlamak için yayınlayın."
+      ],
+      "troubleshooting": [
+        "Telegram Mini Uygulamalar için HTTPS genel adres ister; localhost yalnızca bayraklarla Telegram Desktop içinde çalışır.",
+        "Mini Uygulama API çağrıları, sahip bot tokenine bağlı initData HMAC-SHA256 imzalarıyla doğrulanır.",
+        "Webview şablonu, X-Frame-Options veya CSP frame-ancestors kısıtlaması gönderen siteleri çerçeveleyemez."
+      ]
+    }
+  }
+}

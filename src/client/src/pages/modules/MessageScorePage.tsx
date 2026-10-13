@@ -34,6 +34,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SendIcon from '@mui/icons-material/Send';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { apiFetch } from '../../services/api';
 import PageHeader from '../../components/PageHeader';
 import ModuleHelpDialog from '../../components/ModuleHelpDialog';
@@ -43,41 +44,51 @@ import ModuleConfigPage from '../ModuleConfigPage';
 import { ConnectionMultiSelect, ConnectionSelect } from '../../components/ConnectionSelect';
 import { LoadingState } from '../../components/Feedback';
 import type { ModuleEntry } from '../../registry/modules';
+import { formatDateTime } from '../../utils/format';
+import { localizedErrorMessage } from '../../utils/errors';
 
 /** Leaderboard period options shared by browsing, preview, and schedules. */
 const PERIODS = ['daily', 'weekly', 'monthly', 'alltime'] as const;
 
-/** Human labels for the period options. */
-const PERIOD_LABELS: Record<(typeof PERIODS)[number], string> = {
-  daily: 'Today',
-  weekly: 'Last 7 days',
-  monthly: 'Last 30 days',
-  alltime: 'All time',
+/** Period label i18n keys keyed by period value. */
+const PERIOD_LABEL_KEYS: Record<(typeof PERIODS)[number], string> = {
+  daily: 'periodDaily',
+  weekly: 'periodWeekly',
+  monthly: 'periodMonthly',
+  alltime: 'periodAlltime',
 };
 
 /** Recurrence options for schedules. */
 const FREQUENCIES = ['once', 'hourly', 'daily', 'weekly'] as const;
 
-/** Weekday labels indexed 0 (Sun) to 6 (Sat). */
-const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+/** Weekday label i18n keys indexed 0 (Sun) to 6 (Sat). */
+const WEEKDAY_KEYS = [
+  'daySunday',
+  'dayMonday',
+  'dayTuesday',
+  'dayWednesday',
+  'dayThursday',
+  'dayFriday',
+  'daySaturday',
+] as const;
 
 /** Placeholders available in the message format editor. */
-const SCORE_PLACEHOLDERS: Array<{ tag: string; description: string }> = [
-  { tag: '{group_name}', description: 'Title of the target chat' },
-  { tag: '{period_label}', description: 'Human label of the leaderboard period' },
-  { tag: '{rank}', description: 'Position in the leaderboard (1-based)' },
-  { tag: '{medal}', description: 'Medal emoji for the top three ranks' },
-  { tag: '{mention}', description: 'Clickable mention link for the member' },
-  { tag: '{name}', description: 'Member display name' },
-  { tag: '{username}', description: 'Member @username without the @' },
-  { tag: '{user_id}', description: 'Member numeric Telegram id' },
-  { tag: '{score}', description: 'Weighted activity score' },
-  { tag: '{messages}', description: 'Message count in the period' },
-  { tag: '{replies}', description: 'Replies to others in the period' },
-  { tag: '{media}', description: 'Media messages in the period' },
-  { tag: '{bot_name}', description: 'Display name of the bot' },
-  { tag: '{date}', description: 'Current date (ISO)' },
-  { tag: '{time}', description: 'Current UTC time (HH:mm)' },
+const SCORE_PLACEHOLDERS: Array<{ tag: string; phKey: string }> = [
+  { tag: '{group_name}', phKey: 'phGroupName' },
+  { tag: '{period_label}', phKey: 'phPeriodLabel' },
+  { tag: '{rank}', phKey: 'phRank' },
+  { tag: '{medal}', phKey: 'phMedal' },
+  { tag: '{mention}', phKey: 'phMention' },
+  { tag: '{name}', phKey: 'phName' },
+  { tag: '{username}', phKey: 'phUsername' },
+  { tag: '{user_id}', phKey: 'phUserId' },
+  { tag: '{score}', phKey: 'phScore' },
+  { tag: '{messages}', phKey: 'phMessages' },
+  { tag: '{replies}', phKey: 'phReplies' },
+  { tag: '{media}', phKey: 'phMedia' },
+  { tag: '{bot_name}', phKey: 'phBotName' },
+  { tag: '{date}', phKey: 'phDate' },
+  { tag: '{time}', phKey: 'phTime' },
 ];
 
 /** Default composer values shown on first load. */
@@ -286,12 +297,12 @@ export default function MessageScorePage({
       .then((results) => {
         const ok = results.filter((result) => result.ok).length;
         const failed = results.filter((result) => !result.ok);
-        setStatus(`Leaderboard sent to ${ok}/${results.length} chat(s).`);
+        setStatus(t('messageScore.sent', { sent: ok, total: results.length }));
         if (failed.length > 0) {
           setError(failed.map((result) => `${result.chatId}: ${result.error}`).join(' · '));
         }
       })
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => setError(localizedErrorMessage(err)));
   }
 
   /**
@@ -300,7 +311,7 @@ export default function MessageScorePage({
    */
   function openCreateSchedule(): void {
     setEditingScheduleId(null);
-    setDraft({ ...BLANK_DRAFT });
+    setDraft({ ...BLANK_DRAFT, name: t('messageScore.defaultScheduleName') });
   }
 
   /**
@@ -347,14 +358,16 @@ export default function MessageScorePage({
       .then(() => {
         setDraft(null);
         setEditingScheduleId(null);
-        const msg = editingScheduleId ? 'Schedule updated.' : 'Schedule created.';
+        const msg = editingScheduleId
+          ? t('messageScore.scheduleUpdated')
+          : t('messageScore.scheduleCreated');
         setStatus(msg);
         showSuccess(msg);
         loadSchedules();
       })
       .catch((err: Error) => {
-        setError(err.message);
-        showError(err.message);
+        setError(localizedErrorMessage(err));
+        showError(localizedErrorMessage(err));
       });
   }
 
@@ -368,14 +381,14 @@ export default function MessageScorePage({
     setStatus(null);
     apiFetch(`/api/bots/${botId}/message-score/schedules/${row.id}/run`, { method: 'POST' })
       .then(() => {
-        const msg = `Schedule "${row.name}" dispatched.`;
+        const msg = t('messageScore.scheduleDispatched', { name: row.name });
         setStatus(msg);
         showSuccess(msg);
         loadSchedules();
       })
       .catch((err: Error) => {
-        setError(err.message);
-        showError(err.message);
+        setError(localizedErrorMessage(err));
+        showError(localizedErrorMessage(err));
       });
   }
 
@@ -388,13 +401,13 @@ export default function MessageScorePage({
     const target = scheduleToDelete;
     apiFetch(`/api/bots/${botId}/message-score/schedules/${target.id}`, { method: 'DELETE' })
       .then(() => {
-        showSuccess(`Schedule "${target.name}" deleted.`);
+        showSuccess(t('messageScore.scheduleDeleted', { name: target.name }));
         setScheduleToDelete(null);
         loadSchedules();
       })
       .catch((err: Error) => {
-        setError(err.message);
-        showError(err.message);
+        setError(localizedErrorMessage(err));
+        showError(localizedErrorMessage(err));
       });
   }
 
@@ -432,22 +445,22 @@ export default function MessageScorePage({
         <Card>
           <CardContent>
             <Typography variant="subtitle2" sx={{ mb: 2 }} component="h3">
-              Live leaderboard
+              {t('messageScore.liveLeaderboard')}
             </Typography>
             <Grid container spacing={2} sx={{ mb: 2 }}>
               <Grid size={{ xs: 12, md: 6 }}>
                 <ConnectionSelect
-                  label="Chat (empty = all chats)"
+                  label={t('messageScore.chatFilterLabel')}
                   value={lbChat}
                   onChange={setLbChat}
                   types={['group', 'supergroup']}
-                  helperText="Filter the ranking to one connected group"
+                  helperText={t('messageScore.chatFilterHelp')}
                 />
               </Grid>
               <Grid size={{ xs: 6, md: 3 }}>
                 <TextField
                   select
-                  label="Period"
+                  label={t('messageScore.period')}
                   size="small"
                   fullWidth
                   value={lbPeriod}
@@ -455,7 +468,7 @@ export default function MessageScorePage({
                 >
                   {PERIODS.map((period) => (
                     <MenuItem key={period} value={period}>
-                      {PERIOD_LABELS[period]}
+                      {periodLabel(period, t)}
                     </MenuItem>
                   ))}
                 </TextField>
@@ -463,7 +476,7 @@ export default function MessageScorePage({
               <Grid size={{ xs: 6, md: 3 }}>
                 <TextField
                   select
-                  label="Rows"
+                  label={t('messageScore.rows')}
                   size="small"
                   fullWidth
                   value={String(lbLimit)}
@@ -471,22 +484,22 @@ export default function MessageScorePage({
                 >
                   {[5, 10, 15, 20, 30].map((limit) => (
                     <MenuItem key={limit} value={String(limit)}>
-                      Top {limit}
+                      {t('messageScore.topN', { count: limit })}
                     </MenuItem>
                   ))}
                 </TextField>
               </Grid>
             </Grid>
             <TableContainer sx={{ overflowX: 'auto' }}>
-              <Table size="small" aria-label="Activity leaderboard">
+              <Table size="small" aria-label={t('messageScore.leaderboardAria')}>
                 <TableHead>
                   <TableRow>
                     <TableCell>#</TableCell>
-                    <TableCell>Member</TableCell>
-                    <TableCell align="right">Messages</TableCell>
-                    <TableCell align="right">Replies</TableCell>
-                    <TableCell align="right">Media</TableCell>
-                    <TableCell align="right">Score</TableCell>
+                    <TableCell>{t('messageScore.member')}</TableCell>
+                    <TableCell align="right">{t('messageScore.messages')}</TableCell>
+                    <TableCell align="right">{t('messageScore.replies')}</TableCell>
+                    <TableCell align="right">{t('messageScore.media')}</TableCell>
+                    <TableCell align="right">{t('messageScore.score')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -512,8 +525,7 @@ export default function MessageScorePage({
                     <TableRow>
                       <TableCell colSpan={6}>
                         <Typography color="text.secondary" align="center" sx={{ py: 2 }}>
-                          No activity recorded yet. Make sure the bot can see group messages (admin
-                          rights or privacy mode disabled in BotFather).
+                          {t('messageScore.noActivity')}
                         </Typography>
                       </TableCell>
                     </TableRow>
@@ -527,21 +539,21 @@ export default function MessageScorePage({
         <Card>
           <CardContent>
             <Typography variant="subtitle2" sx={{ mb: 2 }} component="h3">
-              Post to groups
+              {t('messageScore.postToGroups')}
             </Typography>
             <Stack spacing={2.5}>
               <ConnectionMultiSelect
-                label="Target chats (one or many)"
+                label={t('messageScore.targetChats')}
                 value={composer.chatIds}
                 onChange={(chatIds) => setComposerField('chatIds', chatIds)}
                 types={['group', 'supergroup', 'channel']}
-                helperText="Every selected chat receives the leaderboard; manage the list in Chat Connections"
+                helperText={t('messageScore.targetChatsHelp')}
               />
               <Grid container spacing={2}>
                 <Grid size={{ xs: 6, md: 3 }}>
                   <TextField
                     select
-                    label="Period"
+                    label={t('messageScore.period')}
                     size="small"
                     fullWidth
                     value={composer.period}
@@ -551,7 +563,7 @@ export default function MessageScorePage({
                   >
                     {PERIODS.map((period) => (
                       <MenuItem key={period} value={period}>
-                        {PERIOD_LABELS[period]}
+                        {periodLabel(period, t)}
                       </MenuItem>
                     ))}
                   </TextField>
@@ -559,7 +571,7 @@ export default function MessageScorePage({
                 <Grid size={{ xs: 6, md: 3 }}>
                   <TextField
                     select
-                    label="Leaderboard size"
+                    label={t('messageScore.leaderboardSize')}
                     size="small"
                     fullWidth
                     value={String(composer.topLimit)}
@@ -567,7 +579,7 @@ export default function MessageScorePage({
                   >
                     {[3, 5, 10, 15, 20, 30].map((limit) => (
                       <MenuItem key={limit} value={String(limit)}>
-                        Top {limit}
+                        {t('messageScore.topN', { count: limit })}
                       </MenuItem>
                     ))}
                   </TextField>
@@ -575,12 +587,12 @@ export default function MessageScorePage({
                 <Grid size={{ xs: 6, md: 3 }}>
                   <TextField
                     select
-                    label="Format"
+                    label={t('messageScore.format')}
                     size="small"
                     fullWidth
                     value={composer.parseMode}
                     onChange={(event) => setComposerField('parseMode', event.target.value)}
-                    helperText="HTML recommended"
+                    helperText={t('messageScore.formatHelp')}
                   >
                     {['HTML', 'Markdown', 'None'].map((mode) => (
                       <MenuItem key={mode} value={mode}>
@@ -592,30 +604,30 @@ export default function MessageScorePage({
                 <Grid size={{ xs: 6, md: 3 }}>
                   <Stack spacing={0.5}>
                     <Stack direction="row" justifyContent="space-between" alignItems="center">
-                      <Typography variant="body2">Medal emojis</Typography>
+                      <Typography variant="body2">{t('messageScore.medalEmojis')}</Typography>
                       <Switch
                         size="small"
                         checked={composer.medals}
                         onChange={(event) => setComposerField('medals', event.target.checked)}
-                        inputProps={{ 'aria-label': 'Medal emojis' }}
+                        inputProps={{ 'aria-label': t('messageScore.medalEmojis') }}
                       />
                     </Stack>
                     <Stack direction="row" justifyContent="space-between" alignItems="center">
-                      <Typography variant="body2">Send silently</Typography>
+                      <Typography variant="body2">{t('messageScore.sendSilently')}</Typography>
                       <Switch
                         size="small"
                         checked={composer.disableNotification}
                         onChange={(event) =>
                           setComposerField('disableNotification', event.target.checked)
                         }
-                        inputProps={{ 'aria-label': 'Send silently' }}
+                        inputProps={{ 'aria-label': t('messageScore.sendSilently') }}
                       />
                     </Stack>
                   </Stack>
                 </Grid>
               </Grid>
               <TextField
-                label="Header"
+                label={t('messageScore.header')}
                 size="small"
                 fullWidth
                 multiline
@@ -624,17 +636,17 @@ export default function MessageScorePage({
                 onChange={(event) => setComposerField('headerText', event.target.value)}
               />
               <TextField
-                label="Member row template"
+                label={t('messageScore.rowTemplate')}
                 size="small"
                 fullWidth
                 multiline
                 minRows={2}
                 value={composer.rowTemplate}
                 onChange={(event) => setComposerField('rowTemplate', event.target.value)}
-                helperText="Rendered once per ranked member"
+                helperText={t('messageScore.rowTemplateHelp')}
               />
               <TextField
-                label="Footer"
+                label={t('messageScore.footer')}
                 size="small"
                 fullWidth
                 multiline
@@ -644,7 +656,7 @@ export default function MessageScorePage({
               />
               <Stack direction="row" spacing={0.5} useFlexGap sx={{ flexWrap: 'wrap' }}>
                 {SCORE_PLACEHOLDERS.map((placeholder) => (
-                  <Tooltip key={placeholder.tag} title={placeholder.description}>
+                  <Tooltip key={placeholder.tag} title={t(`messageScore.${placeholder.phKey}`)}>
                     <Chip size="small" label={placeholder.tag} variant="outlined" />
                   </Tooltip>
                 ))}
@@ -653,7 +665,7 @@ export default function MessageScorePage({
               {previewError && <Alert severity="warning">{previewError}</Alert>}
               {composer.chatIds.length === 0 ? (
                 <Typography variant="body2" color="text.secondary">
-                  Select at least one target chat to see the live preview.
+                  {t('messageScore.previewHint')}
                 </Typography>
               ) : (
                 previews.map((preview) => (
@@ -689,7 +701,7 @@ export default function MessageScorePage({
                   onClick={sendNow}
                   disabled={composer.chatIds.length === 0}
                 >
-                  Send now
+                  {t('messageScore.sendNow')}
                 </Button>
                 <Button
                   variant="outlined"
@@ -697,7 +709,7 @@ export default function MessageScorePage({
                   onClick={openCreateSchedule}
                   disabled={composer.chatIds.length === 0}
                 >
-                  Save as schedule
+                  {t('messageScore.saveAsSchedule')}
                 </Button>
               </Stack>
             </Stack>
@@ -713,25 +725,25 @@ export default function MessageScorePage({
               sx={{ mb: 2 }}
             >
               <Typography variant="subtitle2" component="h3">
-                Schedules
+                {t('messageScore.schedules')}
               </Typography>
               <Button size="small" startIcon={<AddIcon />} onClick={openCreateSchedule}>
-                New schedule
+                {t('messageScore.newSchedule')}
               </Button>
             </Stack>
             {schedulesLoading ? (
               <LoadingState label={t('common.loading')} />
             ) : (
               <TableContainer sx={{ overflowX: 'auto' }}>
-                <Table size="small" aria-label="Leaderboard schedules">
+                <Table size="small" aria-label={t('messageScore.schedulesAria')}>
                   <TableHead>
                     <TableRow>
-                      <TableCell>Name</TableCell>
-                      <TableCell>Targets</TableCell>
-                      <TableCell>Period</TableCell>
-                      <TableCell>Recurrence</TableCell>
-                      <TableCell>Next run (UTC)</TableCell>
-                      <TableCell>Last result</TableCell>
+                      <TableCell>{t('common.name')}</TableCell>
+                      <TableCell>{t('messageScore.targets')}</TableCell>
+                      <TableCell>{t('messageScore.period')}</TableCell>
+                      <TableCell>{t('messageScore.recurrence')}</TableCell>
+                      <TableCell>{t('messageScore.nextRun')}</TableCell>
+                      <TableCell>{t('messageScore.lastResult')}</TableCell>
                       <TableCell align="right">{t('common.actions')}</TableCell>
                     </TableRow>
                   </TableHead>
@@ -748,7 +760,13 @@ export default function MessageScorePage({
                               <Chip
                                 size="small"
                                 color={row.status === 'active' ? 'success' : 'default'}
-                                label={row.status}
+                                label={
+                                  row.status === 'active'
+                                    ? t('status.active')
+                                    : row.status === 'done'
+                                      ? t('status.done')
+                                      : row.status
+                                }
                               />
                             </Stack>
                           </TableCell>
@@ -757,12 +775,10 @@ export default function MessageScorePage({
                               {targetsSummary(chatIds)}
                             </Typography>
                           </TableCell>
-                          <TableCell>{PERIOD_LABELS[normalizePeriod(row.period)]}</TableCell>
-                          <TableCell>{recurrenceLabel(row)}</TableCell>
+                          <TableCell>{periodLabel(normalizePeriod(row.period), t)}</TableCell>
+                          <TableCell>{recurrenceLabel(row, t)}</TableCell>
                           <TableCell>
-                            {row.status === 'active'
-                              ? row.run_at.replace('T', ' ').slice(0, 16)
-                              : '—'}
+                            {row.status === 'active' ? formatDateTime(row.run_at) : '—'}
                           </TableCell>
                           <TableCell>
                             <Typography
@@ -771,15 +787,15 @@ export default function MessageScorePage({
                               noWrap
                               sx={{ maxWidth: 220, display: 'block' }}
                             >
-                              {row.last_result ?? 'Not run yet'}
+                              {row.last_result ?? t('messageScore.notRunYet')}
                             </Typography>
                           </TableCell>
                           <TableCell align="right">
-                            <Tooltip title="Run now">
+                            <Tooltip title={t('messageScore.runNow')}>
                               <IconButton
                                 size="small"
                                 onClick={() => runSchedule(row)}
-                                aria-label={`Run ${row.name}`}
+                                aria-label={t('messageScore.runScheduleAria', { name: row.name })}
                               >
                                 <PlayArrowIcon fontSize="small" />
                               </IconButton>
@@ -810,8 +826,7 @@ export default function MessageScorePage({
                       <TableRow>
                         <TableCell colSpan={7}>
                           <Typography color="text.secondary" align="center" sx={{ py: 2 }}>
-                            No schedules yet. Compose the message above and press “Save as
-                            schedule”.
+                            {t('messageScore.noSchedules')}
                           </Typography>
                         </TableCell>
                       </TableRow>
@@ -832,12 +847,12 @@ export default function MessageScorePage({
         aria-labelledby="score-schedule-dialog-title"
       >
         <DialogTitle id="score-schedule-dialog-title">
-          {editingScheduleId ? 'Edit schedule' : 'New schedule'}
+          {editingScheduleId ? t('messageScore.editSchedule') : t('messageScore.newSchedule')}
         </DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
             <TextField
-              label="Name"
+              label={t('common.name')}
               size="small"
               fullWidth
               value={draft?.name ?? ''}
@@ -849,7 +864,7 @@ export default function MessageScorePage({
             />
             <TextField
               select
-              label="Repeat"
+              label={t('messageScore.repeat')}
               size="small"
               fullWidth
               value={draft?.frequency ?? 'daily'}
@@ -864,18 +879,18 @@ export default function MessageScorePage({
               {FREQUENCIES.map((frequency) => (
                 <MenuItem key={frequency} value={frequency}>
                   {frequency === 'once'
-                    ? 'Once (one-off)'
+                    ? t('messageScore.freqOnce')
                     : frequency === 'hourly'
-                      ? 'Every hour'
+                      ? t('messageScore.freqHourly')
                       : frequency === 'daily'
-                        ? 'Every day'
-                        : 'Every week'}
+                        ? t('messageScore.freqDaily')
+                        : t('messageScore.freqWeekly')}
                 </MenuItem>
               ))}
             </TextField>
             {draft?.frequency === 'once' && (
               <TextField
-                label="Dispatch at (local time)"
+                label={t('messageScore.dispatchAt')}
                 size="small"
                 fullWidth
                 type="datetime-local"
@@ -885,12 +900,12 @@ export default function MessageScorePage({
                     current ? { ...current, runAt: event.target.value } : current,
                   )
                 }
-                helperText="Converted to UTC for the dispatcher"
+                helperText={t('messageScore.dispatchAtHelp')}
               />
             )}
             {(draft?.frequency === 'daily' || draft?.frequency === 'weekly') && (
               <TextField
-                label="Time of day (UTC)"
+                label={t('messageScore.timeOfDay')}
                 size="small"
                 fullWidth
                 type="time"
@@ -905,7 +920,7 @@ export default function MessageScorePage({
             {draft?.frequency === 'weekly' && (
               <TextField
                 select
-                label="Day of week"
+                label={t('messageScore.dayOfWeek')}
                 size="small"
                 fullWidth
                 value={String(draft.dayOfWeek)}
@@ -915,16 +930,15 @@ export default function MessageScorePage({
                   )
                 }
               >
-                {WEEKDAYS.map((day, index) => (
+                {WEEKDAY_KEYS.map((day, index) => (
                   <MenuItem key={day} value={String(index)}>
-                    {day}
+                    {weekdayLabel(index, t)}
                   </MenuItem>
                 ))}
               </TextField>
             )}
             <Typography variant="caption" color="text.secondary">
-              Targets and message format come from the composer above ({composer.chatIds.length}{' '}
-              chat(s) selected).
+              {t('messageScore.targetsFromComposer', { count: composer.chatIds.length })}
             </Typography>
           </Stack>
         </DialogContent>
@@ -938,8 +952,8 @@ export default function MessageScorePage({
 
       <ConfirmDialog
         open={Boolean(scheduleToDelete)}
-        title={t('actions.delete') || 'Delete Schedule'}
-        message={`Are you sure you want to delete the schedule "${scheduleToDelete?.name}"? This action cannot be undone.`}
+        title={t('actions.delete')}
+        message={t('messageScore.deleteScheduleConfirm', { name: scheduleToDelete?.name ?? '' })}
         onConfirm={handleDeleteSchedule}
         onCancel={() => setScheduleToDelete(null)}
       />
@@ -998,16 +1012,38 @@ function toLocalInput(iso: string): string {
 }
 
 /**
+ * Localized human label for a leaderboard period.
+ * @param {string} period - Raw period value.
+ * @param {TFunction} t - i18next translator.
+ * @returns {string} Label such as `Last 7 days`.
+ */
+function periodLabel(period: string, t: TFunction): string {
+  const key = PERIOD_LABEL_KEYS[period as (typeof PERIODS)[number]] ?? PERIOD_LABEL_KEYS.weekly;
+  return t(`messageScore.${key}`);
+}
+
+/**
+ * Localized weekday label.
+ * @param {number} index - Weekday index, 0 (Sun) to 6 (Sat).
+ * @param {TFunction} t - i18next translator.
+ * @returns {string} Weekday name.
+ */
+function weekdayLabel(index: number, t: TFunction): string {
+  return t(`messageScore.${WEEKDAY_KEYS[index] ?? WEEKDAY_KEYS[1]}`);
+}
+
+/**
  * Humanizes the recurrence of a schedule row.
  * @param {ScheduleRow} row - Schedule row.
+ * @param {TFunction} t - i18next translator.
  * @returns {string} Label such as `Every day at 18:00`.
  */
-function recurrenceLabel(row: ScheduleRow): string {
+function recurrenceLabel(row: ScheduleRow, t: TFunction): string {
   const frequency = normalizeFrequency(row.frequency);
-  if (frequency === 'once') return `Once at ${row.run_at.replace('T', ' ').slice(0, 16)}`;
-  if (frequency === 'hourly') return 'Every hour';
+  if (frequency === 'once') return t('messageScore.onceAt', { time: formatDateTime(row.run_at) });
+  if (frequency === 'hourly') return t('messageScore.freqHourly');
   const time = row.time_of_day ?? '18:00';
-  if (frequency === 'daily') return `Every day at ${time}`;
-  const day = WEEKDAYS[row.day_of_week ?? 1];
-  return `Weekly on ${day} at ${time}`;
+  if (frequency === 'daily') return t('messageScore.dailyAt', { time });
+  const day = weekdayLabel(row.day_of_week ?? 1, t);
+  return t('messageScore.weeklyOn', { day, time });
 }

@@ -24,6 +24,7 @@ import AiKnowledgeDocsManager from '../components/AiKnowledgeDocsManager';
 import { LoadingState } from '../components/Feedback';
 import { useSnackbar } from '../context/SnackbarContext';
 import type { ConfigField, ModuleEntry } from '../registry/modules';
+import { localizedErrorMessage } from '../utils/errors';
 
 /**
  * Effective module state from the modules API.
@@ -76,7 +77,7 @@ export default function ModuleConfigPage({
           config: found?.config ?? {},
         });
       })
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => setError(localizedErrorMessage(err)));
   }, [botId, module.key]);
 
   if (!state) {
@@ -120,8 +121,8 @@ export default function ModuleConfigPage({
         showSuccess(msg);
       })
       .catch((err: Error) => {
-        setError(err.message);
-        showError(err.message);
+        setError(localizedErrorMessage(err));
+        showError(localizedErrorMessage(err));
       });
   }
 
@@ -196,7 +197,7 @@ export default function ModuleConfigPage({
             ))}
             {(module.configFields ?? []).length === 0 && (
               <Typography variant="body2" color="text.secondary">
-                This module has no configurable options.
+                {t('modules.noOptions')}
               </Typography>
             )}
             <Box>
@@ -233,6 +234,7 @@ function ConfigFieldInput({
   value: unknown;
   onChange: (value: unknown) => void;
 }): React.ReactElement {
+  const { t } = useTranslation();
   // Chat picks stay numeric when the id is numeric so numeric config keys
   // (support admin chat, VIP channel) keep their stored type.
   const onChatChange = (next: string): void => onChange(/^-?\d+$/.test(next) ? Number(next) : next);
@@ -252,7 +254,11 @@ function ConfigFieldInput({
   const helpAdornment = field.help ? (
     <InputAdornment position="end">
       <Tooltip title={field.help}>
-        <IconButton size="small" aria-label={`Help: ${field.label}`} edge="end">
+        <IconButton
+          size="small"
+          aria-label={t('common.helpFor', { field: field.label })}
+          edge="end"
+        >
           <InfoOutlinedIcon fontSize="small" />
         </IconButton>
       </Tooltip>
@@ -276,7 +282,7 @@ function ConfigFieldInput({
             </Typography>
             {field.help ? (
               <Tooltip title={field.help}>
-                <IconButton size="small" aria-label={`Help: ${field.label}`}>
+                <IconButton size="small" aria-label={t('common.helpFor', { field: field.label })}>
                   <InfoOutlinedIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
@@ -347,7 +353,7 @@ function ConfigFieldInput({
                 .filter(Boolean),
             )
           }
-          helperText="One entry per line"
+          helperText={t('modules.onePerLine')}
         />
       );
     default:

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { SupportMessage } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
+import { LiveEventsService } from '../common/live/live-events.service';
 
 /**
  * Domain shape for support message with number IDs.
@@ -35,7 +36,10 @@ export interface SupportThreadEntity {
  */
 @Injectable()
 export class SupportModel {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly live: LiveEventsService,
+  ) {}
 
   private toEntity(r: SupportMessage): SupportMessageEntity {
     return {
@@ -127,6 +131,7 @@ export class SupportModel {
         createdAt: new Date().toISOString(),
       },
     });
+    this.live.emit('support', data.botId);
     return this.toEntity(created);
   }
 

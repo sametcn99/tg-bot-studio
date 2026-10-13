@@ -32,7 +32,9 @@ import PageHeader from '../../components/PageHeader';
 import { LoadingState } from '../../components/Feedback';
 import ModuleHelpDialog from '../../components/ModuleHelpDialog';
 import { useSnackbar } from '../../context/SnackbarContext';
+import { formatDateTime } from '../../utils/format';
 import type { ModuleEntry } from '../../registry/modules';
+import { localizedErrorMessage } from '../../utils/errors';
 
 /**
  * CRM subscriber profile.
@@ -90,7 +92,7 @@ export default function UsersCrmPage({
   const reload = useCallback((): void => {
     apiFetch<CrmUser[]>(`/api/bots/${botId}/users?search=${encodeURIComponent(search)}`)
       .then(setUsers)
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => setError(localizedErrorMessage(err)));
   }, [botId, search]);
 
   useEffect(() => {
@@ -112,12 +114,12 @@ export default function UsersCrmPage({
     })
       .then(() => {
         setEditing(null);
-        showSuccess('Subscriber profile updated');
+        showSuccess(t('crm.profileUpdated'));
         reload();
       })
       .catch((err: Error) => {
-        setError(err.message);
-        showError(err.message);
+        setError(localizedErrorMessage(err));
+        showError(localizedErrorMessage(err));
       });
   }
 
@@ -204,11 +206,11 @@ export default function UsersCrmPage({
               />
               <Box sx={{ flexGrow: 1 }} />
               <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center' }}>
-                {(users ?? []).length} subscribers
+                {t('crm.subscriberCount', { count: (users ?? []).length })}
               </Typography>
             </Stack>
             <TableContainer sx={{ overflowX: 'auto' }}>
-              <Table size="small" aria-label="Audience CRM subscribers">
+              <Table size="small" aria-label={t('crm.tableAria')}>
                 <TableHead>
                   <TableRow>
                     <TableCell>
@@ -221,10 +223,10 @@ export default function UsersCrmPage({
                           setOrderBy('name');
                         }}
                       >
-                        User
+                        {t('crm.user')}
                       </TableSortLabel>
                     </TableCell>
-                    <TableCell>Language</TableCell>
+                    <TableCell>{t('crm.language')}</TableCell>
                     <TableCell align="right">
                       <TableSortLabel
                         active={orderBy === 'points'}
@@ -235,10 +237,10 @@ export default function UsersCrmPage({
                           setOrderBy('points');
                         }}
                       >
-                        Points
+                        {t('crm.points')}
                       </TableSortLabel>
                     </TableCell>
-                    <TableCell>Tags</TableCell>
+                    <TableCell>{t('crm.tags')}</TableCell>
                     <TableCell>
                       <TableSortLabel
                         active={orderBy === 'last_seen_at'}
@@ -249,7 +251,7 @@ export default function UsersCrmPage({
                           setOrderBy('last_seen_at');
                         }}
                       >
-                        Last seen
+                        {t('crm.lastSeen')}
                       </TableSortLabel>
                     </TableCell>
                     <TableCell align="right">{t('common.actions')}</TableCell>
@@ -260,7 +262,7 @@ export default function UsersCrmPage({
                     <TableRow key={user.telegram_id}>
                       <TableCell>
                         <Typography variant="body2" fontWeight={600}>
-                          {user.first_name ?? 'Unknown'} {user.last_name ?? ''}
+                          {user.first_name ?? t('crm.unknown')} {user.last_name ?? ''}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
                           {user.username ? `@${user.username} ` : ''}
@@ -276,9 +278,7 @@ export default function UsersCrmPage({
                           ))}
                         </Stack>
                       </TableCell>
-                      <TableCell>
-                        {user.last_seen_at?.slice(0, 19).replace('T', ' ') ?? '-'}
-                      </TableCell>
+                      <TableCell>{formatDateTime(user.last_seen_at)}</TableCell>
                       <TableCell align="right">
                         <IconButton size="small" onClick={() => setEditing(user)}>
                           <EditIcon fontSize="small" />
@@ -316,12 +316,12 @@ export default function UsersCrmPage({
 
       <Dialog open={Boolean(editing)} onClose={() => setEditing(null)} maxWidth="sm" fullWidth>
         <DialogTitle>
-          {editing?.first_name ?? 'Subscriber'} - {editing?.telegram_id}
+          {editing?.first_name ?? t('crm.subscriber')} - {editing?.telegram_id}
         </DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
             <TextField
-              label="Tags (comma separated)"
+              label={t('crm.tagsLabel')}
               value={editing?.tags.join(', ') ?? ''}
               onChange={(event) =>
                 setEditing((current) =>
@@ -340,7 +340,7 @@ export default function UsersCrmPage({
               size="small"
             />
             <TextField
-              label="Internal notes"
+              label={t('crm.internalNotes')}
               multiline
               minRows={3}
               value={editing?.notes ?? ''}

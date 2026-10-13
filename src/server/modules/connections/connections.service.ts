@@ -10,6 +10,7 @@ import type { ChatConnection } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { ChatConnectionModel } from '../../models/chat-connection.model';
 import { BotPoolService } from '../../bot-engine/bot-pool.service';
+import { StudioException } from '../../common/errors/studio-error';
 
 /**
  * Connection row shape.
@@ -106,7 +107,7 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
 
     const existing = await this.connectionModel.findConnectionByChatId(botId, chatId);
     if (existing) {
-      throw new BadRequestException(`${chatId} is already connected`);
+      throw new StudioException('CHAT_ALREADY_CONNECTED', `${chatId} is already connected`);
     }
 
     return this.connectionModel.createConnection({
@@ -137,7 +138,7 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
     if (chatId !== existing.chatId) {
       const duplicate = await this.connectionModel.findConnectionByChatId(botId, chatId);
       if (duplicate) {
-        throw new BadRequestException(`${chatId} is already connected`);
+        throw new StudioException('CHAT_ALREADY_CONNECTED', `${chatId} is already connected`);
       }
     }
 

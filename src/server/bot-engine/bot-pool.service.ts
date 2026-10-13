@@ -5,6 +5,7 @@ import { PrismaService } from '../database/prisma.service';
 import { ChatConnectionModel } from '../models/chat-connection.model';
 import { EngineHelpersService } from './engine-helpers.service';
 import { ModuleHandlerRegistry } from './module-handler-registry';
+import { PaymentEventsService } from './payment-events.service';
 import { findModule } from './module-registry';
 
 /**
@@ -54,6 +55,7 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
     private readonly chatConnectionModel: ChatConnectionModel,
     private readonly helpers: EngineHelpersService,
     private readonly handlerRegistry: ModuleHandlerRegistry,
+    private readonly paymentEvents: PaymentEventsService,
   ) {
     // Persist in-memory message volume counters to bot_settings every 30s.
     this.volumeFlushTimer = setInterval(() => void this.flushVolume(), 30_000);
@@ -126,6 +128,7 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
       });
       this.attachEngineMiddleware(bot, row.id);
       await this.attachModules(bot, row.id);
+      this.attachStarsPaymentHandlers(bot, row.id);
       await bot.init();
 
       this.runtimes.set(row.id, {
@@ -285,6 +288,52 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
         title: chat.title ?? String(chat.id),
         type: chat.type,
         isActive: active ? 1 : 0,
+      });
+    });
+  }
+
+  /**
+   * Attaches the global Telegram Stars payment handlers (pre-checkout
+   * validation + successful-payment routing). Fulfilment is delegated to
+   * feature modules through the {@link PaymentEventsService} bus.
+   * @param {Bot} bot - Target grammY instance.
+   * @param {number} botId - Studio bot identifier.
+   * @returns {void}
+   */
+  private attachStarsPaymentHandlers(bot: Bot, botId: number): void {
+    bot.on('pre_checkout_query', async (ctx) => {
+      const payload = ctx.preCheckoutQuery.invoice_payload;
+      let ok = true;
+      let errorMessage: string | undefined;
+      if (payload.startsWith('order:')) {
+        const orderId = Number(payload.slice('order:'.length));
+        const order = await this.prisma.miniAppOrder.findFirst({
+          where: { id: orderId, botId, status: 'pending_payment' },
+        });
+        if (!order) {
+          ok = false;
+          errorMessage = 'This order is no longer pending. Please restart the checkout.';
+        }
+      } else if (!payload.startsWith('vip:')) {
+        ok = false;
+        errorMessage = 'Unknown payment payload.';
+      }
+      if (ok) {
+        await ctx.answerPreCheckoutQuery(true);
+      } else {
+        await ctx.answerPreCheckoutQuery(false, errorMessage ?? 'Payment cannot be processed.');
+      }
+    });
+
+    bot.on('message:successful_payment', (ctx) => {
+      const payment = ctx.message.successful_payment;
+      this.paymentEvents.emitPayment({
+        botId,
+        telegramId: ctx.from?.id ?? 0,
+        invoicePayload: payment.invoice_payload,
+        telegramPaymentChargeId: payment.telegram_payment_charge_id,
+        totalAmount: payment.total_amount,
+        currency: payment.currency,
       });
     });
   }

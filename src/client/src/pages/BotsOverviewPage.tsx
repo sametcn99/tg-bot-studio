@@ -29,8 +29,10 @@ import VerifiedIcon from '@mui/icons-material/Verified';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../services/api';
 import { useBots } from '../context/BotContext';
+import { useSnackbar } from '../context/SnackbarContext';
 import StatusDot from '../components/StatusDot';
 import PageHeader from '../components/PageHeader';
+import OnboardingChecklist from '../components/OnboardingChecklist';
 import { EmptyState } from '../components/Feedback';
 
 /**
@@ -49,7 +51,7 @@ export default function BotsOverviewPage(): React.ReactElement {
     <Box>
       <PageHeader
         title={t('nav.overview')}
-        subtitle={`${bots.length} bot${bots.length === 1 ? '' : 's'} under management`}
+        subtitle={t('bots.overviewSubtitle', { n: bots.length })}
         actions={
           <Button variant="contained" startIcon={<AddIcon />} onClick={() => setWizardOpen(true)}>
             {t('bots.addTitle')}
@@ -58,20 +60,23 @@ export default function BotsOverviewPage(): React.ReactElement {
       />
 
       {bots.length === 0 ? (
-        <Card>
-          <EmptyState
-            message={t('bots.empty')}
-            action={
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => setWizardOpen(true)}
-              >
-                {t('bots.addTitle')}
-              </Button>
-            }
-          />
-        </Card>
+        <>
+          <OnboardingChecklist />
+          <Card>
+            <EmptyState
+              message={t('bots.empty')}
+              action={
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={() => setWizardOpen(true)}
+                >
+                  {t('bots.addTitle')}
+                </Button>
+              }
+            />
+          </Card>
+        </>
       ) : (
         <>
           <Card sx={{ mb: 3, display: { xs: 'none', md: 'block' } }}>
@@ -137,7 +142,10 @@ export default function BotsOverviewPage(): React.ReactElement {
                       <Typography variant="subtitle2">{bot.name}</Typography>
                       <StatusDot status={bot.status} />
                       <Typography variant="caption" color="text.secondary">
-                        {bot.activeModules} modules / {bot.subscribers} subscribers
+                        {t('bots.modulesSubscribers', {
+                          modules: bot.activeModules,
+                          subscribers: bot.subscribers,
+                        })}
                       </Typography>
                     </Stack>
                   </CardContent>
@@ -172,6 +180,7 @@ function AddBotWizard({
   onCreated: () => void;
 }): React.ReactElement {
   const { t } = useTranslation();
+  const { showError } = useSnackbar();
   const [token, setToken] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -197,10 +206,10 @@ function AddBotWizard({
       if (result.ok && result.bot) {
         setValidated(`@${result.bot.username}`);
       } else {
-        setError(result.description ?? 'Telegram rejected this token');
+        setError(result.description ?? t('bots.tokenRejected'));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Validation failed');
+      setError(err instanceof Error ? err.message : t('bots.validationFailed'));
     } finally {
       setBusy(false);
     }
@@ -221,9 +230,15 @@ function AddBotWizard({
         body: JSON.stringify({ token, name }),
       });
       if (selectedPreset !== 'none') {
+        // Bot creation succeeds even when the preset fails; surface the
+        // preset error instead of silently swallowing it.
         await apiFetch(`/api/bots/${created.id}/presets/${selectedPreset}`, {
           method: 'POST',
-        }).catch(() => undefined);
+        }).catch((err: unknown) => {
+          showError(
+            `${t('bots.presetFailed')}: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        });
       }
       onCreated();
       onClose();
@@ -232,7 +247,7 @@ function AddBotWizard({
       setValidated(null);
       setSelectedPreset('none');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Creation failed');
+      setError(err instanceof Error ? err.message : t('bots.creationFailed'));
     } finally {
       setBusy(false);
     }
@@ -258,7 +273,7 @@ function AddBotWizard({
               setValidated(null);
             }}
             fullWidth
-            helperText="Obtain from @BotFather with /newbot or /token"
+            helperText={t('bots.tokenHint')}
           />
           <Button
             variant="outlined"
@@ -273,26 +288,26 @@ function AddBotWizard({
             </Alert>
           )}
           <TextField
-            label={`${t('bots.name')} (optional)`}
+            label={`${t('bots.name')} ${t('common.optional')}`}
             value={name}
             onChange={(event) => setName(event.target.value)}
             fullWidth
           />
           {validated && (
             <TextField
-              label="Starter Feature Preset (optional)"
+              label={t('bots.presetLabel')}
               select
               size="small"
               value={selectedPreset}
               onChange={(event) => setSelectedPreset(event.target.value)}
               fullWidth
-              helperText="Automatically enables coordinated feature modules on creation"
+              helperText={t('bots.presetHint')}
             >
-              <MenuItem value="none">Blank (Configure modules manually)</MenuItem>
-              <MenuItem value="ecommerce">🛒 E-Commerce & Storefront</MenuItem>
-              <MenuItem value="community">👥 Community & Moderation</MenuItem>
-              <MenuItem value="support">💬 Customer Support & AI Helpdesk</MenuItem>
-              <MenuItem value="growth">🚀 Growth & Loyalty</MenuItem>
+              <MenuItem value="none">{t('bots.presetNone')}</MenuItem>
+              <MenuItem value="ecommerce">{t('bots.presetEcommerce')}</MenuItem>
+              <MenuItem value="community">{t('bots.presetCommunity')}</MenuItem>
+              <MenuItem value="support">{t('bots.presetSupport')}</MenuItem>
+              <MenuItem value="growth">{t('bots.presetGrowth')}</MenuItem>
             </TextField>
           )}
           {error && <Alert severity="error">{error}</Alert>}

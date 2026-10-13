@@ -25,7 +25,9 @@ import ModuleHelpDialog from '../../components/ModuleHelpDialog';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import { useSnackbar } from '../../context/SnackbarContext';
 import ModuleConfigPage from '../ModuleConfigPage';
-import { findModule, type ModuleEntry } from '../../registry/modules';
+import { useLocalizedModule } from '../../registry/localize';
+import type { ModuleEntry } from '../../registry/modules';
+import { localizedErrorMessage } from '../../utils/errors';
 
 /**
  * Quiz definition row.
@@ -69,7 +71,7 @@ export default function EngagementPage({
   const [form, setForm] = useState({ question: '', options: '', correctOptionId: 0, points: 1 });
   const [quizToDelete, setQuizToDelete] = useState<QuizRow | null>(null);
 
-  const reactionsModule = findModule('reactions');
+  const reactionsModule = useLocalizedModule('reactions');
   const totalReactions = Object.values(reactions).reduce((sum, count) => sum + count, 0);
 
   const reload = useCallback((): void => {
@@ -105,12 +107,12 @@ export default function EngagementPage({
     })
       .then(() => {
         setForm({ question: '', options: '', correctOptionId: 0, points: 1 });
-        showSuccess('Quiz created successfully');
+        showSuccess(t('engagement.quizCreated'));
         reload();
       })
       .catch((err: Error) => {
-        setError(err.message);
-        showError(err.message);
+        setError(localizedErrorMessage(err));
+        showError(localizedErrorMessage(err));
       });
   }
 
@@ -125,20 +127,20 @@ export default function EngagementPage({
       method: 'DELETE',
     })
       .then(() => {
-        showSuccess(t('common.deleted') || 'Quiz deleted');
+        showSuccess(t('common.deleted'));
         setQuizToDelete(null);
         reload();
       })
       .catch((err: Error) => {
-        showError(err.message);
+        showError(localizedErrorMessage(err));
       });
   }
 
   return (
     <Box>
       <PageHeader
-        title="Engagement"
-        subtitle="Interactive quizzes, polls, and reaction analytics"
+        title={t('engagement.title')}
+        subtitle={t('engagement.subtitle')}
         onDocs={() => setDocsOpen(true)}
       />
       {error && (
@@ -151,13 +153,13 @@ export default function EngagementPage({
         value={tab}
         onChange={(_event, value: number) => setTab(value)}
         sx={{ mb: 2 }}
-        aria-label="Engagement sections"
+        aria-label={t('engagement.sectionsAria')}
         variant="scrollable"
         scrollButtons="auto"
         allowScrollButtonsMobile
       >
-        <Tab label="Quizzes & Polls" />
-        <Tab label="Reaction Analytics" />
+        <Tab label={t('engagement.tabQuizzes')} />
+        <Tab label={t('engagement.tabReactions')} />
       </Tabs>
 
       {tab === 0 && (
@@ -166,13 +168,13 @@ export default function EngagementPage({
             <CardContent>
               <Stack spacing={2} sx={{ maxWidth: 520 }}>
                 <TextField
-                  label="Question"
+                  label={t('engagement.question')}
                   size="small"
                   value={form.question}
                   onChange={(event) => setForm({ ...form, question: event.target.value })}
                 />
                 <TextField
-                  label="Options (one per line)"
+                  label={t('engagement.optionsLabel')}
                   size="small"
                   multiline
                   minRows={3}
@@ -181,7 +183,7 @@ export default function EngagementPage({
                 />
                 <Stack direction="row" spacing={2}>
                   <TextField
-                    label="Correct option (0-based)"
+                    label={t('engagement.correctOption')}
                     type="number"
                     size="small"
                     value={form.correctOptionId}
@@ -190,7 +192,7 @@ export default function EngagementPage({
                     }
                   />
                   <TextField
-                    label="Points"
+                    label={t('engagement.points')}
                     type="number"
                     size="small"
                     value={form.points}
@@ -213,12 +215,12 @@ export default function EngagementPage({
 
           <Card>
             <TableContainer sx={{ overflowX: 'auto' }}>
-              <Table size="small" aria-label="Quiz records">
+              <Table size="small" aria-label={t('engagement.quizRecordsAria')}>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Question</TableCell>
-                    <TableCell>Options</TableCell>
-                    <TableCell align="right">Points</TableCell>
+                    <TableCell>{t('engagement.question')}</TableCell>
+                    <TableCell>{t('engagement.options')}</TableCell>
+                    <TableCell align="right">{t('engagement.points')}</TableCell>
                     <TableCell align="right">{t('common.actions')}</TableCell>
                   </TableRow>
                 </TableHead>
@@ -254,7 +256,7 @@ export default function EngagementPage({
           <Card>
             <CardContent>
               <Typography variant="subtitle2" sx={{ mb: 2 }} component="h3">
-                Quiz trigger configuration
+                {t('engagement.quizTriggerConfig')}
               </Typography>
               <ModuleConfigPage botId={botId} module={module} embedded={true} />
             </CardContent>
@@ -267,13 +269,13 @@ export default function EngagementPage({
           <Card>
             <CardContent>
               <Typography variant="subtitle2" sx={{ mb: 1 }} component="h3">
-                Reaction summary
+                {t('engagement.reactionSummary')}
               </Typography>
               <Typography variant="h5" fontWeight={700}>
                 {totalReactions}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                total tracked reactions
+                {t('engagement.totalReactions')}
               </Typography>
               <Stack direction="row" spacing={1} sx={{ mt: 2, flexWrap: 'wrap', gap: 1 }}>
                 {Object.entries(reactions).map(([emoji, count]) => (
@@ -293,7 +295,7 @@ export default function EngagementPage({
             <Card>
               <CardContent>
                 <Typography variant="subtitle2" sx={{ mb: 2 }} component="h3">
-                  Reaction points configuration
+                  {t('engagement.reactionPointsConfig')}
                 </Typography>
                 <ModuleConfigPage botId={botId} module={reactionsModule} embedded={true} />
               </CardContent>
@@ -304,8 +306,8 @@ export default function EngagementPage({
 
       <ConfirmDialog
         open={Boolean(quizToDelete)}
-        title={t('actions.delete') || 'Delete Quiz'}
-        message={`Are you sure you want to delete the quiz "${quizToDelete?.question}"? This action cannot be undone.`}
+        title={t('actions.delete')}
+        message={t('engagement.deleteQuizConfirm', { question: quizToDelete?.question ?? '' })}
         onConfirm={handleDeleteQuiz}
         onCancel={() => setQuizToDelete(null)}
       />

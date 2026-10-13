@@ -106,7 +106,9 @@ export default function ModuleHelpDialog({
               <PlaceholderChip
                 key={placeholder.tag}
                 tag={placeholder.tag}
-                description={placeholder.description}
+                description={t(`placeholders.${placeholder.tag.replace(/[{}]/g, '')}`, {
+                  defaultValue: placeholder.description,
+                })}
               />
             ))}
           </Box>

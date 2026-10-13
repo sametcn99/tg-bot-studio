@@ -18,7 +18,23 @@ async function bootstrap(): Promise<void> {
   // Security headers; CSP disabled so the dashboard can embed Mini App
   // previews and remote media without provider allowlists.
   app.use(helmet({ contentSecurityPolicy: false }));
-  app.enableCors();
+  // CORS is opt-in: the dashboard ships from the same origin in production.
+  // Set CORS_ORIGINS="https://a.example,https://b.example" for split hosting.
+  const corsOrigins = (process.env.CORS_ORIGINS ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  if (corsOrigins.length > 0) {
+    app.enableCors({
+      origin: (
+        origin: string | undefined,
+        callback: (err: Error | null, allow?: boolean) => void,
+      ) => {
+        if (!origin || corsOrigins.includes(origin)) callback(null, true);
+        else callback(new Error('Origin not allowed by CORS'));
+      },
+    });
+  }
 
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));

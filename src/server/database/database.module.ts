@@ -21,6 +21,9 @@ import {
 
 import { BackupService } from './backup.service';
 import { BackupController } from './backup.controller';
+import { RetentionService } from './retention.service';
+import { AuditService } from './audit.service';
+import { LiveEventsService } from '../common/live/live-events.service';
 
 const MODELS = [
   BotModel,
@@ -47,7 +50,22 @@ const MODELS = [
 @Global()
 @Module({
   controllers: [BackupController],
-  providers: [PrismaService, SystemSettingsService, BackupService, ...MODELS],
-  exports: [PrismaService, SystemSettingsService, BackupService, ...MODELS],
+  providers: [
+    PrismaService,
+    SystemSettingsService,
+    BackupService,
+    RetentionService,
+    AuditService,
+    LiveEventsService,
+    ...MODELS,
+  ],
+  exports: [
+    PrismaService,
+    SystemSettingsService,
+    BackupService,
+    AuditService,
+    LiveEventsService,
+    ...MODELS,
+  ],
 })
 export class DatabaseModule {}

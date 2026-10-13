@@ -22,6 +22,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../services/api';
+import { localizedErrorMessage } from '../utils/errors';
 
 interface DiagnosticCheck {
   key: string;
@@ -66,7 +67,7 @@ export default function BotDiagnosticsDialog({
     setError(null);
     apiFetch<DiagnosticReport>(`/api/bots/${botId}/diagnostics`)
       .then(setReport)
-      .catch((err: Error) => setError(err.message))
+      .catch((err: Error) => setError(localizedErrorMessage(err)))
       .finally(() => setLoading(false));
   }, [botId]);
 
@@ -118,15 +119,18 @@ export default function BotDiagnosticsDialog({
               <Stack direction="row" justifyContent="space-between" alignItems="center">
                 <Box>
                   <Typography variant="subtitle1" fontWeight={700}>
-                    {report.botInfo?.first_name ?? `Bot #${botId}`}
+                    {report.botInfo?.first_name ?? t('diagnostics.botFallback', { id: botId })}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    @{report.botInfo?.username ?? 'bot'} • Runtime: {report.runtimeStatus}
+                    @{report.botInfo?.username ?? 'bot'} • {t('diagnostics.runtime')}:{' '}
+                    {report.runtimeStatus}
                   </Typography>
                 </Box>
                 <Chip
                   label={
-                    report.checks.some((c) => c.status === 'error') ? 'Issues Found' : 'Healthy'
+                    report.checks.some((c) => c.status === 'error')
+                      ? t('diagnostics.issuesFound')
+                      : t('diagnostics.healthy')
                   }
                   color={report.checks.some((c) => c.status === 'error') ? 'error' : 'success'}
                   size="small"
@@ -137,7 +141,7 @@ export default function BotDiagnosticsDialog({
             {/* Checklist */}
             <Stack spacing={1.5}>
               <Typography variant="subtitle2" fontWeight={600}>
-                Diagnostic Inspections
+                {t('diagnostics.inspections')}
               </Typography>
               {report.checks.map((chk) => (
                 <Paper key={chk.key} variant="outlined" sx={{ p: 1.5, borderRadius: 1.5 }}>

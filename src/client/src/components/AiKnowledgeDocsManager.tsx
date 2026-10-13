@@ -5,6 +5,7 @@ import {
   Button,
   Card,
   CardContent,
+  Chip,
   CircularProgress,
   Dialog,
   DialogActions,
@@ -25,10 +26,14 @@ import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import SendIcon from '@mui/icons-material/Send';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import SourceIcon from '@mui/icons-material/Source';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../services/api';
 import ConfirmDialog from './ConfirmDialog';
+import AiGenerateButton from './AiGenerateButton';
 import { useSnackbar } from '../context/SnackbarContext';
+import { localizedErrorMessage } from '../utils/errors';
 
 interface KnowledgeDoc {
   id: number;
@@ -36,6 +41,23 @@ interface KnowledgeDoc {
   content: string;
   tags: string | null;
   created_at: string;
+}
+
+/** Matched knowledge chunk returned by the tester for citations. */
+interface TestSource {
+  docId: number;
+  docTitle: string;
+  content: string;
+  score: number;
+}
+
+/** Aggregate AI usage metrics from the metrics endpoint. */
+interface AiMetrics {
+  requests: number;
+  errors: number;
+  promptTokens: number;
+  completionTokens: number;
+  avgLatencyMs: number;
 }
 
 export default function AiKnowledgeDocsManager({ botId }: { botId: number }): React.ReactElement {
@@ -54,20 +76,30 @@ export default function AiKnowledgeDocsManager({ botId }: { botId: number }): Re
   // Interactive RAG test state
   const [testQuestion, setTestQuestion] = useState('');
   const [testAnswer, setTestAnswer] = useState<string | null>(null);
+  const [testSources, setTestSources] = useState<TestSource[]>([]);
   const [testLoading, setTestLoading] = useState(false);
+  const [reindexing, setReindexing] = useState(false);
+  const [metrics, setMetrics] = useState<AiMetrics | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const loadDocs = useCallback(() => {
     setLoading(true);
     apiFetch<KnowledgeDoc[]>(`/api/bots/${botId}/ai-assistant/docs`)
       .then(setDocs)
-      .catch((err: Error) => setError(err.message))
+      .catch((err: Error) => setError(localizedErrorMessage(err)))
       .finally(() => setLoading(false));
+  }, [botId]);
+
+  const loadMetrics = useCallback(() => {
+    apiFetch<AiMetrics>(`/api/bots/${botId}/ai-assistant/metrics?days=7`)
+      .then(setMetrics)
+      .catch(() => undefined);
   }, [botId]);
 
   useEffect(() => {
     loadDocs();
-  }, [loadDocs]);
+    loadMetrics();
+  }, [loadDocs, loadMetrics]);
 
   const openCreateDialog = () => {
     setEditingDocId(null);
@@ -97,7 +129,7 @@ export default function AiKnowledgeDocsManager({ botId }: { botId: number }): Re
             tags: newTags.trim(),
           }),
         });
-        showSuccess('Knowledge base document updated');
+        showSuccess(t('aiDocs.updated'));
       } else {
         await apiFetch(`/api/bots/${botId}/ai-assistant/docs`, {
           method: 'POST',
@@ -107,7 +139,7 @@ export default function AiKnowledgeDocsManager({ botId }: { botId: number }): Re
             tags: newTags.trim(),
           }),
         });
-        showSuccess('Knowledge base document added');
+        showSuccess(t('aiDocs.added'));
       }
       setDialogOpen(false);
       setEditingDocId(null);
@@ -129,7 +161,7 @@ export default function AiKnowledgeDocsManager({ botId }: { botId: number }): Re
       await apiFetch(`/api/bots/${botId}/ai-assistant/docs/${target.id}`, {
         method: 'DELETE',
       });
-      showSuccess('Document deleted');
+      showSuccess(t('aiDocs.deleted'));
       setDocToDelete(null);
       loadDocs();
     } catch (err: unknown) {
@@ -143,19 +175,40 @@ export default function AiKnowledgeDocsManager({ botId }: { botId: number }): Re
     if (!testQuestion.trim() || testLoading) return;
     setTestLoading(true);
     setTestAnswer(null);
+    setTestSources([]);
     setError(null);
     try {
-      const res = await apiFetch<{ reply: string }>(`/api/bots/${botId}/ai-assistant/test`, {
-        method: 'POST',
-        body: JSON.stringify({ message: testQuestion.trim() }),
-      });
+      const res = await apiFetch<{ reply: string; sources: TestSource[] }>(
+        `/api/bots/${botId}/ai-assistant/test`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ message: testQuestion.trim() }),
+        },
+      );
       setTestAnswer(res.reply);
+      setTestSources(res.sources ?? []);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
       showError(msg);
     } finally {
       setTestLoading(false);
+    }
+  };
+
+  const handleReindex = async () => {
+    setReindexing(true);
+    try {
+      const res = await apiFetch<{ chunks: number }>(
+        `/api/bots/${botId}/ai-assistant/docs/reindex`,
+        { method: 'POST' },
+      );
+      showSuccess(t('aiDocs.reindexed', { count: res.chunks }));
+      loadDocs();
+    } catch (err: unknown) {
+      showError(localizedErrorMessage(err));
+    } finally {
+      setReindexing(false);
     }
   };
 
@@ -168,11 +221,10 @@ export default function AiKnowledgeDocsManager({ botId }: { botId: number }): Re
               <MenuBookIcon color="primary" />
               <Box>
                 <Typography variant="subtitle1" fontWeight={700}>
-                  RAG Knowledge Base & FAQs
+                  {t('aiDocs.title')}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  Uploaded documents and FAQs are automatically searched to ground AI responses with
-                  enterprise truth.
+                  {t('aiDocs.subtitle')}
                 </Typography>
               </Box>
             </Stack>
@@ -182,9 +234,30 @@ export default function AiKnowledgeDocsManager({ botId }: { botId: number }): Re
               startIcon={<AddIcon />}
               onClick={openCreateDialog}
             >
-              Add Document / FAQ
+              {t('aiDocs.addDocument')}
             </Button>
           </Stack>
+
+          {metrics && (
+            <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+              <Chip size="small" label={t('aiDocs.metricRequests', { count: metrics.requests })} />
+              <Chip
+                size="small"
+                color={metrics.errors > 0 ? 'error' : 'default'}
+                label={t('aiDocs.metricErrors', { count: metrics.errors })}
+              />
+              <Chip
+                size="small"
+                label={t('aiDocs.metricTokens', {
+                  count: metrics.promptTokens + metrics.completionTokens,
+                })}
+              />
+              <Chip
+                size="small"
+                label={t('aiDocs.metricLatency', { count: metrics.avgLatencyMs })}
+              />
+            </Stack>
+          )}
 
           {error && <Alert severity="error">{error}</Alert>}
 
@@ -224,12 +297,12 @@ export default function AiKnowledgeDocsManager({ botId }: { botId: number }): Re
                           color="primary"
                           sx={{ mt: 1, display: 'block' }}
                         >
-                          Tags: {doc.tags}
+                          {t('aiDocs.tags', { tags: doc.tags })}
                         </Typography>
                       )}
                     </Box>
                     <Stack direction="row" spacing={0.5} alignItems="center">
-                      <Tooltip title="View full document">
+                      <Tooltip title={t('aiDocs.viewFull')}>
                         <IconButton size="small" onClick={() => setDocToView(doc)}>
                           <VisibilityOutlinedIcon fontSize="small" />
                         </IconButton>
@@ -250,14 +323,29 @@ export default function AiKnowledgeDocsManager({ botId }: { botId: number }): Re
               ))}
 
               {docs.length === 0 && (
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ py: 2, textAlign: 'center' }}
-                >
-                  No knowledge base documents added yet. Add company policies, pricing sheets, or
-                  FAQs to power RAG.
-                </Typography>
+                <Stack spacing={1.5} sx={{ py: 2, alignItems: 'center' }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
+                    {t('aiDocs.empty')}
+                  </Typography>
+                  <AiGenerateButton
+                    botId={botId}
+                    kind="knowledge-faq"
+                    onResult={(text) => {
+                      const titleMatch = text.match(/^#\s+(.+)$/m);
+                      const title = (titleMatch?.[1] ?? 'AI FAQ Draft').trim();
+                      const body = titleMatch ? text.replace(titleMatch[0], '').trim() : text;
+                      void apiFetch(`/api/bots/${botId}/ai-assistant/docs`, {
+                        method: 'POST',
+                        body: JSON.stringify({ title, content: body, tags: 'faq' }),
+                      })
+                        .then(() => {
+                          showSuccess(t('aiDocs.added'));
+                          loadDocs();
+                        })
+                        .catch((err: unknown) => showError(localizedErrorMessage(err)));
+                    }}
+                  />
+                </Stack>
               )}
             </Stack>
           )}
@@ -269,14 +357,14 @@ export default function AiKnowledgeDocsManager({ botId }: { botId: number }): Re
             <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.5 }}>
               <AutoAwesomeIcon color="secondary" fontSize="small" />
               <Typography variant="subtitle2" fontWeight={600}>
-                Interactive RAG & Tool Tester
+                {t('aiDocs.testerTitle')}
               </Typography>
             </Stack>
-            <Stack direction="row" spacing={1.5} alignItems="center">
+            <Stack direction="row" spacing={1} alignItems="center">
               <TextField
                 size="small"
                 fullWidth
-                placeholder="Ask a question to test knowledge retrieval (e.g. What is your refund policy?)..."
+                placeholder={t('aiDocs.testPlaceholder')}
                 value={testQuestion}
                 onChange={(e) => setTestQuestion(e.target.value)}
                 onKeyDown={(e) => {
@@ -291,8 +379,22 @@ export default function AiKnowledgeDocsManager({ botId }: { botId: number }): Re
                   testLoading ? <CircularProgress size={16} color="inherit" /> : <SendIcon />
                 }
               >
-                Test
+                {t('aiDocs.test')}
               </Button>
+              <Tooltip title={t('aiDocs.reindex')}>
+                <span>
+                  <Button
+                    variant="outlined"
+                    onClick={() => void handleReindex()}
+                    disabled={reindexing}
+                    startIcon={
+                      reindexing ? <CircularProgress size={16} color="inherit" /> : <RefreshIcon />
+                    }
+                  >
+                    {t('aiDocs.reindex')}
+                  </Button>
+                </span>
+              </Tooltip>
             </Stack>
 
             {testAnswer && (
@@ -307,11 +409,32 @@ export default function AiKnowledgeDocsManager({ botId }: { botId: number }): Re
                 }}
               >
                 <Typography variant="caption" color="text.secondary" fontWeight={700}>
-                  AI Assistant Output:
+                  {t('aiDocs.testOutput')}
                 </Typography>
                 <Typography variant="body2" sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}>
                   {testAnswer}
                 </Typography>
+                {testSources.length > 0 && (
+                  <Stack spacing={0.5} sx={{ mt: 1.5 }}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={700}>
+                      {t('aiDocs.sources')}
+                    </Typography>
+                    {testSources.map((source) => (
+                      <Stack
+                        key={`${source.docId}-${source.score}`}
+                        direction="row"
+                        spacing={0.5}
+                        alignItems="center"
+                      >
+                        <SourceIcon fontSize="small" color="primary" />
+                        <Typography variant="caption" color="text.secondary">
+                          {source.docTitle}
+                          {source.score > 0 ? ` · ${source.score}` : ''}
+                        </Typography>
+                      </Stack>
+                    ))}
+                  </Stack>
+                )}
               </Box>
             )}
           </Box>
@@ -320,34 +443,32 @@ export default function AiKnowledgeDocsManager({ botId }: { botId: number }): Re
 
       {/* Add / Edit Document Dialog */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          {editingDocId ? 'Edit Knowledge Base Document' : 'Add Knowledge Base Document / FAQ'}
-        </DialogTitle>
+        <DialogTitle>{editingDocId ? t('aiDocs.editTitle') : t('aiDocs.addTitle')}</DialogTitle>
         <DialogContent dividers>
           <Stack spacing={2} sx={{ pt: 1 }}>
             <TextField
-              label="Document / Topic Title"
+              label={t('aiDocs.titleLabel')}
               size="small"
               fullWidth
-              placeholder="e.g. Return & Refund Policy"
+              placeholder={t('aiDocs.titlePlaceholder')}
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
             />
             <TextField
-              label="Content or FAQ Answer"
+              label={t('aiDocs.contentLabel')}
               size="small"
               fullWidth
               multiline
               minRows={6}
-              placeholder="Paste full text, guidelines, or frequently asked questions here..."
+              placeholder={t('aiDocs.contentPlaceholder')}
               value={newContent}
               onChange={(e) => setNewContent(e.target.value)}
             />
             <TextField
-              label="Tags (optional, comma-separated)"
+              label={t('aiDocs.tagsLabel')}
               size="small"
               fullWidth
-              placeholder="refund, return, policy"
+              placeholder={t('aiDocs.tagsPlaceholder')}
               value={newTags}
               onChange={(e) => setNewTags(e.target.value)}
             />
@@ -372,7 +493,7 @@ export default function AiKnowledgeDocsManager({ botId }: { botId: number }): Re
           <Stack spacing={2}>
             {docToView?.tags && (
               <Typography variant="caption" color="primary" fontWeight={600}>
-                Tags: {docToView.tags}
+                {t('aiDocs.tags', { tags: docToView.tags })}
               </Typography>
             )}
             <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
@@ -381,7 +502,7 @@ export default function AiKnowledgeDocsManager({ botId }: { botId: number }): Re
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDocToView(null)}>Close</Button>
+          <Button onClick={() => setDocToView(null)}>{t('actions.close')}</Button>
           <Button
             variant="outlined"
             onClick={() => {
@@ -400,8 +521,8 @@ export default function AiKnowledgeDocsManager({ botId }: { botId: number }): Re
       {/* Confirm Delete Dialog */}
       <ConfirmDialog
         open={Boolean(docToDelete)}
-        title={t('actions.delete') || 'Delete Knowledge Document'}
-        message={`Are you sure you want to delete the document "${docToDelete?.title}"? This action cannot be undone.`}
+        title={t('aiDocs.deleteTitle')}
+        message={t('aiDocs.deleteConfirm', { title: docToDelete?.title ?? '' })}
         onConfirm={handleDeleteDoc}
         onCancel={() => setDocToDelete(null)}
       />

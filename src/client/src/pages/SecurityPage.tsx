@@ -18,8 +18,10 @@ import {
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../services/api';
+import { formatDateTime } from '../utils/format';
 import PageHeader from '../components/PageHeader';
 import DataTable from '../components/DataTable';
+import { localizedErrorMessage } from '../utils/errors';
 
 /**
  * Session row from the auth API.
@@ -119,7 +121,7 @@ export default function SecurityPage(): React.ReactElement {
    */
   function rotateKey(): void {
     if (newKey.length < 8) {
-      setError('The new master key must be at least 8 characters.');
+      setError(t('security.newKeyTooShort'));
       return;
     }
     setError(null);
@@ -132,7 +134,7 @@ export default function SecurityPage(): React.ReactElement {
         setCurrentKey('');
         setNewKey('');
       })
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => setError(localizedErrorMessage(err)));
   }
 
   return (
@@ -164,12 +166,12 @@ export default function SecurityPage(): React.ReactElement {
             <Table size="small" aria-label={t('security.sessions')}>
               <TableHead>
                 <TableRow>
-                  <TableCell>Browser</TableCell>
-                  <TableCell>OS</TableCell>
-                  <TableCell>Device</TableCell>
-                  <TableCell>IP</TableCell>
-                  <TableCell>Last active</TableCell>
-                  <TableCell>State</TableCell>
+                  <TableCell>{t('security.browser')}</TableCell>
+                  <TableCell>{t('security.os')}</TableCell>
+                  <TableCell>{t('security.device')}</TableCell>
+                  <TableCell>{t('security.ip')}</TableCell>
+                  <TableCell>{t('security.lastActive')}</TableCell>
+                  <TableCell>{t('security.state')}</TableCell>
                   <TableCell />
                 </TableRow>
               </TableHead>
@@ -180,12 +182,12 @@ export default function SecurityPage(): React.ReactElement {
                     <TableCell>{session.os}</TableCell>
                     <TableCell>{session.device_type}</TableCell>
                     <TableCell>{session.ip}</TableCell>
-                    <TableCell>{session.last_active_at?.slice(0, 19).replace('T', ' ')}</TableCell>
+                    <TableCell>{formatDateTime(session.last_active_at)}</TableCell>
                     <TableCell>
                       <Chip
                         size="small"
                         color={session.is_revoked ? 'default' : 'success'}
-                        label={session.is_revoked ? 'Revoked' : 'Active'}
+                        label={session.is_revoked ? t('security.revoked') : t('status.active')}
                       />
                     </TableCell>
                     <TableCell>
@@ -241,18 +243,23 @@ export default function SecurityPage(): React.ReactElement {
           <DataTable<SecurityLog>
             rows={logs}
             columns={[
-              { id: 'event', label: 'Event', sortable: true },
-              { id: 'ip', label: 'IP', sortable: true, render: (r) => r.ip ?? '-' },
-              { id: 'details', label: 'Details', sortable: true, render: (r) => r.details ?? '-' },
+              { id: 'event', label: t('security.event'), sortable: true },
+              { id: 'ip', label: t('security.ip'), sortable: true, render: (r) => r.ip ?? '-' },
+              {
+                id: 'details',
+                label: t('security.details'),
+                sortable: true,
+                render: (r) => r.details ?? '-',
+              },
               {
                 id: 'created_at',
-                label: 'Time',
+                label: t('security.time'),
                 sortable: true,
-                render: (r) => r.created_at?.slice(0, 19).replace('T', ' ') ?? '-',
+                render: (r) => formatDateTime(r.created_at),
               },
             ]}
             keyField="id"
-            searchPlaceholder="Search security audit logs..."
+            searchPlaceholder={t('security.searchPlaceholder')}
             emptyMessage={t('common.empty')}
             ariaLabel={t('security.logs')}
           />

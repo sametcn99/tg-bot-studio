@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useLiveStream } from '../../hooks/useLiveStream';
 import {
   Alert,
   Box,
@@ -16,9 +17,11 @@ import SendIcon from '@mui/icons-material/Send';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../../services/api';
 import PageHeader from '../../components/PageHeader';
+import { formatDateTime } from '../../utils/format';
 import ModuleHelpDialog from '../../components/ModuleHelpDialog';
 import VisualButtonBuilder from '../../components/VisualButtonBuilder';
 import type { ModuleEntry } from '../../registry/modules';
+import { localizedErrorMessage } from '../../utils/errors';
 
 /**
  * Broadcast history row.
@@ -67,13 +70,17 @@ export default function BroadcastPage({
   const [error, setError] = useState<string | null>(null);
   const [docsOpen, setDocsOpen] = useState(false);
 
+  // SSE pings trigger an instant refetch during send-outs; the slow
+  // interval is a backstop.
+  useLiveStream('broadcasts', botId, reload);
+
   useEffect(() => {
     reload();
     const timer = window.setInterval(() => {
       if (document.visibilityState === 'visible') {
         reload();
       }
-    }, 5000);
+    }, 15000);
     return () => window.clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [botId]);
@@ -94,7 +101,7 @@ export default function BroadcastPage({
   function cancelBroadcast(id: number): void {
     apiFetch(`/api/bots/${botId}/broadcasts/${id}/cancel`, { method: 'POST' })
       .then(reload)
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => setError(localizedErrorMessage(err)));
   }
 
   /**
@@ -110,7 +117,7 @@ export default function BroadcastPage({
       try {
         payload.buttons = JSON.parse(buttons);
       } catch {
-        setError('Buttons must be a valid JSON array.');
+        setError(t('broadcast.invalidButtonsJson'));
         return;
       }
     }
@@ -121,7 +128,7 @@ export default function BroadcastPage({
         setButtons('');
         reload();
       })
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => setError(localizedErrorMessage(err)));
   }
 
   return (
@@ -142,19 +149,19 @@ export default function BroadcastPage({
           <Stack spacing={2}>
             <TextField
               select
-              label="Target audience"
+              label={t('broadcast.targetAudience')}
               value={targetType}
               onChange={(event) => setTargetType(event.target.value)}
               size="small"
               sx={{ maxWidth: 300 }}
             >
-              <MenuItem value="all">All subscribers</MenuItem>
-              <MenuItem value="language">By language</MenuItem>
-              <MenuItem value="recent">Recently active</MenuItem>
+              <MenuItem value="all">{t('broadcast.audienceAll')}</MenuItem>
+              <MenuItem value="language">{t('broadcast.audienceLanguage')}</MenuItem>
+              <MenuItem value="recent">{t('broadcast.audienceRecent')}</MenuItem>
             </TextField>
             {targetType === 'language' && (
               <TextField
-                label="Language code"
+                label={t('broadcast.languageCode')}
                 value={language}
                 onChange={(event) => setLanguage(event.target.value)}
                 size="small"
@@ -163,7 +170,7 @@ export default function BroadcastPage({
             )}
             {targetType === 'recent' && (
               <TextField
-                label="Active within days"
+                label={t('broadcast.activeWithinDays')}
                 type="number"
                 value={recentDays}
                 onChange={(event) => setRecentDays(Number(event.target.value))}
@@ -172,15 +179,15 @@ export default function BroadcastPage({
               />
             )}
             <TextField
-              label="Message text"
+              label={t('broadcast.messageText')}
               multiline
               minRows={4}
               value={messageText}
               onChange={(event) => setMessageText(event.target.value)}
-              helperText="Placeholders: {first_name}, {username}, {user_id}, {mention}"
+              helperText={t('broadcast.placeholdersHelp')}
             />
             <TextField
-              label="Photo URL (optional)"
+              label={t('broadcast.photoUrl')}
               value={mediaUrl}
               onChange={(event) => setMediaUrl(event.target.value)}
               size="small"
@@ -188,8 +195,8 @@ export default function BroadcastPage({
             <VisualButtonBuilder
               value={buttons}
               onChange={setButtons}
-              label="Inline Buttons"
-              helperText='[{"text":"Open","url":"https://example.com"}]'
+              label={t('broadcast.inlineButtons')}
+              helperText={t('broadcast.buttonsExample')}
             />
             <Box>
               <Button
@@ -198,7 +205,7 @@ export default function BroadcastPage({
                 onClick={queue}
                 disabled={messageText.trim().length === 0}
               >
-                Queue broadcast
+                {t('broadcast.queue')}
               </Button>
             </Box>
           </Stack>
@@ -208,7 +215,7 @@ export default function BroadcastPage({
       <Card>
         <CardContent>
           <Typography variant="subtitle2" sx={{ mb: 1 }} component="h3">
-            History
+            {t('broadcast.history')}
           </Typography>
           <Stack spacing={2}>
             {(rows ?? []).map((row) => {
@@ -242,13 +249,16 @@ export default function BroadcastPage({
                             label={row.status}
                           />
                           <Typography variant="caption" color="text.secondary">
-                            {row.created_at?.slice(0, 19).replace('T', ' ')}
+                            {formatDateTime(row.created_at)}
                           </Typography>
                         </Stack>
                         <Stack direction="row" spacing={1} alignItems="center">
                           <Typography variant="caption">
-                            {row.success_count} sent / {row.failed_count} failed /{' '}
-                            {row.total_recipients} total
+                            {t('broadcast.counters', {
+                              sent: row.success_count,
+                              failed: row.failed_count,
+                              total: row.total_recipients,
+                            })}
                           </Typography>
                           {(row.status === 'running' || row.status === 'queued') && (
                             <Button

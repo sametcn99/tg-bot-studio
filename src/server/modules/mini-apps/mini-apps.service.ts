@@ -6,6 +6,7 @@ import { SystemSettingsService } from '../../database/system-settings.service';
 import { BotPoolService } from '../../bot-engine/bot-pool.service';
 import { WebhooksService } from '../webhooks/webhooks.service';
 import { calculatePrizeWeights, drawPrizeByRoll } from '../../common/utils/spin.util';
+import { StudioException } from '../../common/errors/studio-error';
 
 /**
  * Mini App row shape.
@@ -60,11 +61,11 @@ export class MiniAppsService {
     const slug = String(data.slug ?? '')
       .toLowerCase()
       .replace(/[^a-z0-9-]/g, '-');
-    if (!slug) throw new BadRequestException('slug is required');
+    if (!slug) throw new StudioException('SLUG_REQUIRED', 'slug is required');
 
     const existing = await this.miniAppModel.findBySlug(slug);
     if (existing) {
-      throw new BadRequestException('slug is already in use');
+      throw new StudioException('SLUG_IN_USE', 'slug is already in use');
     }
 
     const created = await this.miniAppModel.create({
@@ -135,7 +136,7 @@ export class MiniAppsService {
     const app = await this.miniAppModel.findById(id);
     if (!app) throw new NotFoundException(`Mini app ${id} not found`);
     const bot = this.pool.getBot(botId);
-    if (!bot) throw new BadRequestException('Bot is not running');
+    if (!bot) throw new StudioException('BOT_NOT_RUNNING', 'Bot is not running');
     const base = publicBaseUrl.replace(/\/+$/, '');
     const menuUrl = `${base}/tma/${app.slug}`;
     try {
@@ -155,7 +156,8 @@ export class MiniAppsService {
    */
   async getPublicConfig(slug: string): Promise<Record<string, unknown>> {
     const app = await this.miniAppModel.findBySlug(slug);
-    if (!app || app.isActive !== 1) throw new NotFoundException('Mini App not found');
+    if (!app || app.isActive !== 1)
+      throw new StudioException('MINI_APP_NOT_FOUND', 'Mini App not found');
     return {
       slug: app.slug,
       templateType: app.templateType,
@@ -194,7 +196,7 @@ export class MiniAppsService {
     const today = new Date().toISOString().slice(0, 10);
     const key = `checkin_${telegramId}`;
     if (this.settings.getBotJson<string>(botId, key) === today) {
-      throw new BadRequestException('Already checked in today');
+      throw new StudioException('ALREADY_CHECKED_IN', 'Already checked in today');
     }
     this.settings.setBotJson(botId, key, today);
     const award = 5;
@@ -221,7 +223,7 @@ export class MiniAppsService {
   async spin(botId: number, appId: number, telegramId: number): Promise<Record<string, unknown>> {
     const app = await this.miniAppModel.findById(appId);
     if (!app || app.botId !== botId || app.isActive !== 1) {
-      throw new BadRequestException('Mini App not found or inactive');
+      throw new StudioException('MINI_APP_NOT_FOUND', 'Mini App not found or inactive');
     }
 
     let prizes: Array<{ label: string; points: number; weight?: number }> = [];
@@ -234,11 +236,11 @@ export class MiniAppsService {
       } catch {}
     }
 
-    if (prizes.length === 0) throw new BadRequestException('No prizes configured');
+    if (prizes.length === 0) throw new StudioException('NO_PRIZES', 'No prizes configured');
     const today = new Date().toISOString().slice(0, 10);
     const key = `spin_${appId}_${telegramId}`;
     if (this.settings.getBotJson<string>(botId, key) === today) {
-      throw new BadRequestException('Already spun today');
+      throw new StudioException('ALREADY_SPUN', 'Already spun today');
     }
     this.settings.setBotJson(botId, key, today);
 
@@ -265,19 +267,19 @@ export class MiniAppsService {
   }
 
   /**
-   * Records a Mini App order with total calculated securely from server-side catalog.
+   * Verifies client-submitted order items against the server-side catalog.
+   * @param {Record<string, unknown>} app - Mini App row (configJson parsed here).
+   * @param {Array<{id: string; quantity: number}>} clientItems - Client cart.
+   * @returns {{verifiedItems: Array<{id: string; title: string; price: number; quantity: number}>, total: number}} Verified cart.
+   * @throws {StudioException} When nothing in the cart matches the catalog.
    */
-  async createOrder(
-    botId: number,
-    appId: number,
-    telegramId: number,
-    clientItems: Array<{ id: string; title?: string; price?: number; quantity: number }>,
-  ): Promise<Record<string, unknown>> {
-    const app = await this.miniAppModel.findById(appId);
-    if (!app || app.botId !== botId || app.isActive !== 1) {
-      throw new BadRequestException('Mini App not found or inactive');
-    }
-
+  private verifyCatalogOrder(
+    app: { configJson: string | null },
+    clientItems: Array<{ id: string; quantity: number }>,
+  ): {
+    verifiedItems: Array<{ id: string; title: string; price: number; quantity: number }>;
+    total: number;
+  } {
     let catalog: Array<{ id: string; title: string; price: number }> = [];
     if (app.configJson) {
       try {
@@ -306,8 +308,26 @@ export class MiniAppsService {
     }
 
     if (verifiedItems.length === 0) {
-      throw new BadRequestException('No valid products found in order');
+      throw new StudioException('ORDER_NO_PRODUCTS', 'No valid products found in order');
     }
+    return { verifiedItems, total };
+  }
+
+  /**
+   * Records a Mini App order with total calculated securely from server-side catalog.
+   */
+  async createOrder(
+    botId: number,
+    appId: number,
+    telegramId: number,
+    clientItems: Array<{ id: string; title?: string; price?: number; quantity: number }>,
+  ): Promise<Record<string, unknown>> {
+    const app = await this.miniAppModel.findById(appId);
+    if (!app || app.botId !== botId || app.isActive !== 1) {
+      throw new StudioException('MINI_APP_NOT_FOUND', 'Mini App not found or inactive');
+    }
+
+    const { verifiedItems, total } = this.verifyCatalogOrder(app, clientItems);
 
     const order = await this.miniAppModel.createOrder({
       botId,
@@ -325,6 +345,103 @@ export class MiniAppsService {
       items: verifiedItems,
     });
     return { orderId: order.id, total, currency: 'XTR' };
+  }
+
+  /**
+   * Creates a Telegram Stars invoice for a verified cart and stores the
+   * order as `pending_payment`. The engine's pre-checkout handler validates
+   * the payload (`order:<id>`) before Telegram collects the payment.
+   * @returns {Promise<{orderId: number, invoiceLink: string, total: number}>} Checkout payload.
+   */
+  async createStarsCheckout(
+    botId: number,
+    appId: number,
+    telegramId: number,
+    clientItems: Array<{ id: string; quantity: number }>,
+  ): Promise<{ orderId: number; invoiceLink: string; total: number }> {
+    const bot = this.pool.getBot(botId);
+    if (!bot) {
+      throw new StudioException('BOT_NOT_RUNNING', 'Bot is not running');
+    }
+    const app = await this.miniAppModel.findById(appId);
+    if (!app || app.botId !== botId || app.isActive !== 1) {
+      throw new StudioException('MINI_APP_NOT_FOUND', 'Mini App not found or inactive');
+    }
+    const { verifiedItems, total } = this.verifyCatalogOrder(app, clientItems);
+
+    const order = await this.miniAppModel.createOrder({
+      botId,
+      appId,
+      telegramId,
+      totalAmount: total,
+      currency: 'XTR',
+      itemsJson: JSON.stringify(verifiedItems),
+    });
+    await this.miniAppModel.updateOrderStatus(order.id, 'pending_payment');
+
+    const invoiceLink = await (
+      bot.api.raw as unknown as {
+        createInvoiceLink: (args: Record<string, unknown>) => Promise<string>;
+      }
+    ).createInvoiceLink({
+      title: `${app.title} — Order #${order.id}`.slice(0, 32),
+      description: verifiedItems
+        .map((item) => `${item.quantity}× ${item.title}`)
+        .join(', ')
+        .slice(0, 255),
+      payload: `order:${order.id}`,
+      provider_token: '',
+      currency: 'XTR',
+      prices: [{ label: 'Total', amount: total }],
+    });
+
+    void this.webhooks.dispatch(botId, 'order_created', {
+      orderId: order.id,
+      telegramId,
+      total,
+      items: verifiedItems,
+      status: 'pending_payment',
+    });
+
+    return { orderId: order.id, invoiceLink, total };
+  }
+
+  /**
+   * Marks a paid order and records the charge id (Stars fulfilment).
+   * @param {number} orderId - Order id from the invoice payload.
+   * @param {string} chargeId - Telegram payment charge id.
+   * @returns {Promise<void>}
+   */
+  async markOrderPaid(orderId: number, chargeId: string): Promise<void> {
+    const order = await this.prisma.miniAppOrder.findFirst({
+      where: { id: orderId, status: 'pending_payment' },
+    });
+    if (!order) return;
+    await this.miniAppModel.updateOrderStatus(orderId, 'paid');
+    void this.webhooks.dispatch(order.botId, 'order_paid', {
+      orderId,
+      telegramId: Number(order.telegramId),
+      chargeId,
+      total: order.totalAmount,
+      currency: order.currency,
+    });
+  }
+
+  /**
+   * Public order status for the TMA shell after an invoice is opened.
+   * Only visible to the owning Telegram user.
+   */
+  async getOrderStatus(
+    botId: number,
+    appId: number,
+    orderId: number,
+    telegramId: number,
+  ): Promise<{ id: number; status: string; totalAmount: number } | null> {
+    const order = await this.prisma.miniAppOrder.findFirst({
+      where: { id: orderId, botId, appId, telegramId: BigInt(telegramId) },
+      select: { id: true, status: true, totalAmount: true },
+    });
+    return order;
   }
 
   /**
