@@ -8,7 +8,7 @@ import Typography from '@mui/material/Typography';
  * @param {string} status - Runtime status string.
  * @returns {string} CSS color.
  */
-function colorFor(status: string): string {
+export function colorFor(status: string): string {
   switch (status) {
     case 'active':
       return '#16a34a';
