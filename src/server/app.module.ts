@@ -20,6 +20,7 @@ import { WelcomeModule } from './modules/welcome/welcome.module';
 import { ModerationModule } from './modules/moderation/moderation.module';
 import { GiveawaysModule } from './modules/giveaways/giveaways.module';
 import { EngagementModule } from './modules/engagement/engagement.module';
+import { MessageScoreModule } from './modules/message-score/message-score.module';
 import { BroadcastModule } from './modules/broadcast/broadcast.module';
 import { AutoresponderModule } from './modules/autoresponder/autoresponder.module';
 import { AiAssistantModule } from './modules/ai-assistant/ai-assistant.module';
@@ -68,6 +69,7 @@ import { MiniAppsModule } from './modules/mini-apps/mini-apps.module';
     ModerationModule,
     GiveawaysModule,
     EngagementModule,
+    MessageScoreModule,
     BroadcastModule,
     AutoresponderModule,
     AiAssistantModule,

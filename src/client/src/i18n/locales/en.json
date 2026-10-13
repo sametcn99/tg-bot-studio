@@ -91,7 +91,7 @@
     "manualEntry": "Manual entry",
     "backToSelect": "Pick from connections",
     "empty": "No connections yet. Add your groups and channels here once and every module will offer them as dropdown targets.",
-    "emptyHint": "Tip: press \"Sync from bot\" to import chats the bot was already added to.",
+    "emptyHint": "Tip: chats the bot is added to are discovered and imported automatically; press \"Sync from bot\" to import them right away.",
     "chatIdHelp": "Numeric id (-100…) or public @username",
     "deleteConfirm": "Delete the connection \"{{title}}\"? Modules using it keep their stored ids."
   },

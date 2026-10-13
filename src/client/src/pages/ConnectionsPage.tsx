@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Box,
@@ -77,8 +77,39 @@ export default function ConnectionsPage({
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [docsOpen, setDocsOpen] = useState(false);
+  const [autoSync, setAutoSync] = useState(true);
+  const [moduleEnabled, setModuleEnabled] = useState(false);
+  const [moduleConfig, setModuleConfig] = useState<Record<string, unknown>>({});
   const theme = useTheme();
   const compactDialogs = useMediaQuery(theme.breakpoints.down('sm'));
+
+  useEffect(() => {
+    apiFetch<Array<{ key: string; isEnabled: boolean; config: Record<string, unknown> }>>(
+      `/api/bots/${botId}/modules`,
+    )
+      .then((modules) => {
+        const found = modules.find((entry) => entry.key === 'connections');
+        setModuleEnabled(found?.isEnabled ?? false);
+        setModuleConfig(found?.config ?? {});
+        if (found && found.config.autoSync !== undefined) {
+          setAutoSync(Boolean(found.config.autoSync));
+        }
+      })
+      .catch(() => undefined);
+  }, [botId]);
+
+  /**
+   * Persists the auto-sync preference in the connections module config.
+   * @param {boolean} next - Next auto-sync state.
+   * @returns {void}
+   */
+  function toggleAutoSync(next: boolean): void {
+    setAutoSync(next);
+    apiFetch(`/api/bots/${botId}/modules/connections`, {
+      method: 'PUT',
+      body: JSON.stringify({ isEnabled: moduleEnabled, config: { ...moduleConfig, autoSync: next } }),
+    }).catch((err: Error) => setError(err.message));
+  }
 
   /**
    * Opens the create dialog.
@@ -180,7 +211,20 @@ export default function ConnectionsPage({
         subtitle={module.description}
         onDocs={() => setDocsOpen(true)}
         actions={
-          <Stack direction="row" spacing={1}>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Tooltip title="Automatically import every group and channel the bot is added to">
+              <Stack direction="row" alignItems="center" spacing={0.5}>
+                <Typography variant="body2" color="text.secondary">
+                  Auto-sync
+                </Typography>
+                <Switch
+                  size="small"
+                  checked={autoSync}
+                  onChange={(event) => toggleAutoSync(event.target.checked)}
+                  inputProps={{ 'aria-label': 'Auto-sync discovered chats' }}
+                />
+              </Stack>
+            </Tooltip>
             <Button startIcon={<SyncIcon />} onClick={sync}>
               {t('connections.sync')}
             </Button>

@@ -21,6 +21,7 @@ import MonetizationPage from './pages/modules/MonetizationPage';
 import WebhooksPage from './pages/modules/WebhooksPage';
 import EngagementPage from './pages/modules/EngagementPage';
 import ReferralsPage from './pages/modules/ReferralsPage';
+import MessageScorePage from './pages/modules/MessageScorePage';
 import { findModule } from './registry/modules';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import ScrollToTop from './components/ScrollToTop';
@@ -68,6 +69,8 @@ function ModulePageDispatcher({
       return <ReferralsPage botId={botId} module={module} />;
     case 'connections':
       return <ConnectionsPage botId={botId} module={module} />;
+    case 'message-score':
+      return <MessageScorePage botId={botId} module={module} />;
     default:
       return <ModuleConfigPage botId={botId} module={module} />;
   }

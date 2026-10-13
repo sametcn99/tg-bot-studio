@@ -36,11 +36,11 @@ export class ConnectionsController {
   /**
    * Imports chats the bot runtime already discovered.
    * @param {number} botId - Owning bot id.
-   * @returns {{synced: number}} Number of chats processed.
+   * @returns {Promise<{synced: number}>} Number of chats processed.
    */
   @Post('sync')
   sync(@Param('botId', ParseIntPipe) botId: number) {
-    return this.service.syncFromBot(botId);
+    return this.service.syncFromBot(botId, true);
   }
 
   /**

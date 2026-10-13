@@ -171,7 +171,7 @@ export class BotsService {
       'bot_modules', 'mini_apps', 'mini_app_orders', 'bot_settings', 'bot_users',
       'links', 'broadcasts', 'support_messages', 'drip_campaigns', 'drip_subscribers',
       'giveaways', 'scheduled_posts', 'blocked_users', 'bot_groups', 'chat_connections',
-      'autoresponders', 'vip_subscriptions',
+      'autoresponders', 'vip_subscriptions', 'chat_activity', 'score_schedules',
     ] as const;
     for (const table of tables) {
       this.db.run(`DELETE FROM ${table} WHERE bot_id = ?`, id);

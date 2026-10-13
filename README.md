@@ -72,14 +72,20 @@ telegram-bot-studio/
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | Directory & Content       | Chat Connections, Start Menu, Channel Post Scheduler                                                                                |
 | Communication & CRM       | Support Desk (Livegram), Business Secretary, Drip Sequences, Broadcast Engine, Audience CRM                                          |
-| Community & Moderation    | Welcome & Clean Chat, Captcha Gatekeeper, Anti-Spam Moderation, Giveaways, Referral Leaderboard, Quizzes & Polls, Reaction Analytics |
+| Community & Moderation    | Welcome & Clean Chat, Captcha Gatekeeper, Anti-Spam Moderation, Giveaways, Referral Leaderboard, Quizzes & Polls, Reaction Analytics, Message Score & Activity Leaderboard |
 | Automation & Monetization | AI Assistant, Custom Commands & Auto-Responder, Paid Media Paywall, VIP Subscriptions, Webhooks Hub                                  |
 
 Every module ships with an integrated Documentation & Setup Guide dialog (Overview & Use Cases, Step-by-Step Setup, Placeholders Dictionary, Troubleshooting & Rate Limits) available from its dashboard page.
 
 ### Chat Connections
 
-Register groups and channels once in the Connections module; every target-chat field across the studio (Scheduler, Support Desk, Giveaways, VIP Subscriptions, Paid Media, Webhooks) becomes a dropdown powered by that shared list. Chats the bot is added to are discovered automatically and importable with one click (Sync from bot), and numeric ids (`-100…`) as well as public `@usernames` are supported. Modules without any matching connection show an inline notice linking straight to the Connections page while still allowing manual id entry.
+Register groups and channels once in the Connections module; every target-chat field across the studio (Scheduler, Support Desk, Giveaways, VIP Subscriptions, Paid Media, Webhooks) becomes a dropdown powered by that shared list. Chats the bot is added to are learned automatically — the engine records every group/channel the bot operates in and a 30-second auto-sync imports them into the address book (titles and usernames enriched via `getChat`), so the Connections list stays current without any manual action. Auto-sync can be turned off per bot from the Connections page, and numeric ids (`-100…`) as well as public `@usernames` are supported. Modules without any matching connection show an inline notice linking straight to the Connections page while still allowing manual id entry.
+
+### Message Score & Activity Leaderboard
+
+Scores member activity in every group the bot operates in (messages, replies to others, and media, each with a configurable weight) and ranks the most active members per period (today, 7 days, 30 days, all time). The rich message composer selects one or many target chats, defines header, per-member row template, and footer with placeholders (`{rank}`, `{medal}`, `{mention}`, `{score}`, `{messages}`, `{group_name}`, ...), parse mode, medal emojis, and silent delivery — with a server-rendered live preview. Postings can be sent instantly or automated through schedules (once, hourly, daily, weekly in UTC) managed from the module page.
+
+> **Group privacy note:** Telegram hides regular member messages from bots unless the bot is a group administrator or bot privacy mode is disabled via BotFather. Enable one of the two so the module can score activity.
 
 ## Documentation
 

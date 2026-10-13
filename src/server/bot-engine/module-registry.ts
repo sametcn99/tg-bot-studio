@@ -22,7 +22,7 @@ export interface ModuleDefinition {
 }
 
 /**
- * The full module catalog (20 toggleable modules).
+ * The full module catalog (21 toggleable modules).
  * @type {readonly ModuleDefinition[]}
  */
 export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
@@ -32,7 +32,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     category: 'Directory & Content',
     description:
       'Central address book of the groups and channels the bot operates in; every target-chat picker across the studio is powered from this list.',
-    defaultConfig: {},
+    defaultConfig: { autoSync: true },
   },
   {
     key: 'start-menu',
@@ -172,6 +172,14 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     description:
       'Tracks emoji reactions on channel posts and rewards active members with points.',
     defaultConfig: { pointsPerReaction: 1 },
+  },
+  {
+    key: 'message-score',
+    name: 'Message Score & Activity Leaderboard',
+    category: 'Community & Moderation',
+    description:
+      'Scores group member activity (messages, replies, media), publishes rich leaderboards to one or many chats, fully schedulable.',
+    defaultConfig: { messageWeight: 1, replyWeight: 1, mediaWeight: 2 },
   },
   {
     key: 'ai-assistant',

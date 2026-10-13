@@ -238,6 +238,40 @@ export const MIGRATIONS: readonly string[] = [
     value TEXT NOT NULL
   )`,
 
+  `CREATE TABLE IF NOT EXISTS chat_activity (
+    bot_id INTEGER NOT NULL,
+    chat_id TEXT NOT NULL,
+    telegram_id INTEGER NOT NULL,
+    day TEXT NOT NULL,
+    message_count INTEGER DEFAULT 0,
+    reply_count INTEGER DEFAULT 0,
+    media_count INTEGER DEFAULT 0,
+    PRIMARY KEY (bot_id, chat_id, telegram_id, day)
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS score_schedules (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    bot_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    chat_ids_json TEXT NOT NULL,
+    period TEXT NOT NULL DEFAULT 'weekly',
+    frequency TEXT NOT NULL DEFAULT 'weekly',
+    time_of_day TEXT DEFAULT '18:00',
+    day_of_week INTEGER DEFAULT 1,
+    run_at TEXT NOT NULL,
+    top_limit INTEGER DEFAULT 10,
+    header_text TEXT,
+    row_template TEXT,
+    footer_text TEXT,
+    parse_mode TEXT DEFAULT 'HTML',
+    medals INTEGER DEFAULT 1,
+    disable_notification INTEGER DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'active',
+    last_run_at TEXT,
+    last_result TEXT,
+    created_at TEXT
+  )`,
+
   // 2026-10: the "Directory & Chat Folder Hub" (links) module became the
   // consolidated "Start Menu" module — remap stored toggles and configs.
   `UPDATE bot_modules SET module_key = 'start-menu' WHERE module_key = 'links'`,

@@ -73,7 +73,7 @@ export interface CrudResource {
 
 /**
  * Dashboard page type dispatching for a module.
- * @typedef {'config'|'crud'|'broadcast'|'crm'|'support'|'monetization'|'webhooks'|'engagement'|'referrals'|'connections'} ModulePageType
+ * @typedef {'config'|'crud'|'broadcast'|'crm'|'support'|'monetization'|'webhooks'|'engagement'|'referrals'|'connections'|'message-score'} ModulePageType
  */
 export type ModulePageType =
   | 'config'
@@ -85,7 +85,8 @@ export type ModulePageType =
   | 'webhooks'
   | 'engagement'
   | 'referrals'
-  | 'connections';
+  | 'connections'
+  | 'message-score';
 
 /**
  * Client module catalog entry.
@@ -582,6 +583,39 @@ export const MODULES: ModuleEntry[] = [
       troubleshooting: [
         'Anonymous reactor identities cannot be attributed and are skipped.',
         'Emoji-only reactions are counted; paid and custom reactions are ignored.',
+      ],
+    },
+  },
+  {
+    key: 'message-score',
+    name: 'Message Score & Leaderboard',
+    category: 'Community & Moderation',
+    description:
+      'Scores member activity in groups (messages, replies, media), lists the most active members, and posts rich leaderboards to one or many chats on a schedule.',
+    pageType: 'message-score',
+    configFields: [
+      { key: 'messageWeight', label: 'Score per message', type: 'number', help: 'Weight added for every regular member message' },
+      { key: 'replyWeight', label: 'Score per reply', type: 'number', help: 'Extra weight when a member replies to someone else' },
+      { key: 'mediaWeight', label: 'Score per media message', type: 'number', help: 'Weight for photos, videos, stickers, voice, and files' },
+    ],
+    docs: {
+      overview: [
+        'Every member message in your groups builds a per-day activity record: messages, replies to others, and media count separately.',
+        'The weighted score ranks the most active members for any period (today, 7 days, 30 days, or all time).',
+        'Rich leaderboard messages (header, per-member row template, footer, medals, parse mode, silent flag) can be sent instantly or on a recurring schedule to one or many connected chats.',
+        'Schedules support once, hourly, daily, and weekly recurrences in UTC.',
+      ],
+      setup: [
+        'Disable bot privacy mode via BotFather (or make the bot an admin) so it can see member messages in groups.',
+        'Enable the module and tune the score weights in the configuration card.',
+        'Pick one or more target chats, design the message format with placeholders, and check the live preview.',
+        'Press Send now for a one-off posting, or Save as schedule to automate it.',
+      ],
+      troubleshooting: [
+        'No members on the leaderboard usually means privacy mode is hiding group messages from the bot.',
+        'Service messages (joins, pins, title changes) never count towards the score.',
+        'Sending fails with 403 when the bot is not a member of the target chat or lacks posting rights.',
+        'Scheduled times use UTC; daily/weekly runs fire at the configured HH:mm.',
       ],
     },
   },

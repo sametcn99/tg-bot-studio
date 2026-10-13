@@ -50,6 +50,7 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
   private readonly logger = new Logger(BotPoolService.name);
   private readonly runtimes = new Map<number, BotRuntime>();
   private readonly volume = new Map<number, number>();
+  private readonly discoveredChats = new Set<string>();
   private readonly volumeFlushTimer: ReturnType<typeof setInterval>;
 
   /**
@@ -160,6 +161,28 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
       }
       if (ctx.msg) {
         this.volume.set(botId, (this.volume.get(botId) ?? 0) + 1);
+      }
+      // Learn every group/supergroup/channel the bot operates in, including
+      // chats it already belonged to before this boot (my_chat_member only
+      // fires on membership changes). The Connections address book picks
+      // these rows up through its auto-sync.
+      const chat = ctx.chat;
+      if (chat && (chat.type === 'group' || chat.type === 'supergroup' || chat.type === 'channel')) {
+        const key = `${botId}:${chat.id}`;
+        if (!this.discoveredChats.has(key)) {
+          this.discoveredChats.add(key);
+          this.db.run(
+            `INSERT INTO bot_groups (bot_id, chat_id, title, type, member_count, is_active, created_at)
+             VALUES (?, ?, ?, ?, 0, 1, ?)
+             ON CONFLICT(bot_id, chat_id) DO UPDATE SET
+               title = excluded.title, type = excluded.type, is_active = 1`,
+            botId,
+            chat.id,
+            chat.title || String(chat.id),
+            chat.type,
+            new Date().toISOString(),
+          );
+        }
       }
       // Private chats from banned users are dropped entirely.
       if (ctx.chat?.type === 'private' && ctx.from && this.helpers.isBlocked(botId, ctx.from.id)) {
