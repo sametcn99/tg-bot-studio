@@ -28,7 +28,10 @@ interface Product {
  * @returns {React.ReactElement} The storefront view.
  */
 export default function Ecommerce({ config }: { config: TmaAppConfig }): React.ReactElement {
-  const products = (config.config.products as Product[]) ?? [];
+  const products = useMemo(
+    () => (config.config.products as Product[]) ?? [],
+    [config.config.products],
+  );
   const categories = useMemo(() => {
     const map = new Map<string, Product[]>();
     for (const product of products) {
@@ -149,7 +152,9 @@ export default function Ecommerce({ config }: { config: TmaAppConfig }): React.R
         </div>
       )}
       {status && (
-        <div className="success-text" role="status" aria-live="polite">{status}</div>
+        <div className="success-text" role="status" aria-live="polite">
+          {status}
+        </div>
       )}
     </>
   );

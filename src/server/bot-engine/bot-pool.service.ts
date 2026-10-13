@@ -1,24 +1,14 @@
-import {
-  Injectable,
-  Logger,
-  OnApplicationBootstrap,
-  OnApplicationShutdown,
-} from '@nestjs/common';
+import { Injectable, Logger, OnApplicationBootstrap, OnApplicationShutdown } from '@nestjs/common';
 import { Bot } from 'grammy';
 import { autoRetry } from '@grammyjs/auto-retry';
-import { DatabaseService } from '../database/database.service';
+import { PrismaService } from '../database/prisma.service';
+import { ChatConnectionModel } from '../models/chat-connection.model';
 import { EngineHelpersService } from './engine-helpers.service';
 import { ModuleHandlerRegistry } from './module-handler-registry';
 import { findModule } from './module-registry';
 
 /**
- * Bot row in the `bots` table.
- * @interface BotRow
- * @property {number} id - Studio bot identifier.
- * @property {string} name - Display name chosen by the operator.
- * @property {string} token - Telegram bot API token.
- * @property {string} username - Bot @username from getMe.
- * @property {number} is_active - 1 when the bot should be running.
+ * Bot row shape.
  */
 interface BotRow {
   id: number;
@@ -31,13 +21,13 @@ interface BotRow {
 
 /**
  * Runtime state of a bot managed by the pool.
- * @interface BotRuntime
- * @property {Bot} bot - Live grammY instance.
- * @property {'starting'|'active'|'failed'|'stopped'} status - Poller health.
  */
 interface BotRuntime {
   bot: Bot;
-  status: 'starting' | 'active' | 'failed' | 'stopped';
+  status: 'starting' | 'active' | 'failed' | 'stopped' | 'retrying';
+  retryCount: number;
+  lastError?: string;
+  errorReason?: 'token_revoked' | 'conflict' | 'network' | 'unknown';
 }
 
 /**
@@ -54,17 +44,19 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
   private readonly volumeFlushTimer: ReturnType<typeof setInterval>;
 
   /**
-   * @param {DatabaseService} db - SQLite access service.
+   * @param {PrismaService} prisma - Prisma ORM access service.
+   * @param {ChatConnectionModel} chatConnectionModel - Model for chat connections and groups.
    * @param {EngineHelpersService} helpers - Shared audience operations.
    * @param {ModuleHandlerRegistry} handlerRegistry - Registered module handlers.
    */
   constructor(
-    private readonly db: DatabaseService,
+    private readonly prisma: PrismaService,
+    private readonly chatConnectionModel: ChatConnectionModel,
     private readonly helpers: EngineHelpersService,
     private readonly handlerRegistry: ModuleHandlerRegistry,
   ) {
     // Persist in-memory message volume counters to bot_settings every 30s.
-    this.volumeFlushTimer = setInterval(() => this.flushVolume(), 30_000);
+    this.volumeFlushTimer = setInterval(() => void this.flushVolume(), 30_000);
   }
 
   /**
@@ -72,9 +64,19 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
    * @returns {Promise<void>} Resolves once all pollers have been launched.
    */
   async onApplicationBootstrap(): Promise<void> {
-    const bots = this.db.query<BotRow>('SELECT * FROM bots WHERE is_active = 1');
+    const bots = await this.prisma.bot.findMany({
+      where: { isActive: 1 },
+      orderBy: { id: 'asc' },
+    });
     for (const bot of bots) {
-      await this.startBot(bot);
+      await this.startBot({
+        id: bot.id,
+        name: bot.name,
+        token: bot.token,
+        username: bot.username,
+        first_name: bot.firstName,
+        is_active: bot.isActive,
+      });
     }
     this.logger.log(`Bot pool started with ${bots.length} active bot(s)`);
   }
@@ -85,19 +87,36 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
    */
   async onApplicationShutdown(): Promise<void> {
     clearInterval(this.volumeFlushTimer);
-    this.flushVolume();
-    await Promise.allSettled(
-      [...this.runtimes.values()].map((runtime) => runtime.bot.stop()),
-    );
+    await this.flushVolume();
+    await Promise.allSettled([...this.runtimes.values()].map((runtime) => runtime.bot.stop()));
     this.logger.log('Bot pool shut down');
+  }
+
+  /**
+   * Classifies an error into actionable operational categories.
+   */
+  private parseErrorReason(msg: string): 'token_revoked' | 'conflict' | 'network' | 'unknown' {
+    const lower = msg.toLowerCase();
+    if (lower.includes('401') || lower.includes('unauthorized')) return 'token_revoked';
+    if (lower.includes('409') || lower.includes('conflict')) return 'conflict';
+    if (
+      lower.includes('etimedout') ||
+      lower.includes('econnrefused') ||
+      lower.includes('fetch failed') ||
+      lower.includes('network')
+    ) {
+      return 'network';
+    }
+    return 'unknown';
   }
 
   /**
    * Builds and launches a bot instance with engine + module middleware.
    * @param {BotRow} row - Database row of the bot.
+   * @param {number} attempt - Current restart attempt (0 = initial).
    * @returns {Promise<void>} Resolves once the poller launched (not stopped).
    */
-  private async startBot(row: BotRow): Promise<void> {
+  private async startBot(row: BotRow, attempt = 0): Promise<void> {
     try {
       this.stopExisting(row.id);
       const bot = new Bot(row.token);
@@ -109,27 +128,91 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
       await this.attachModules(bot, row.id);
       await bot.init();
 
-      this.runtimes.set(row.id, { bot, status: 'starting' });
+      this.runtimes.set(row.id, {
+        bot,
+        status: 'starting',
+        retryCount: attempt,
+      });
+
       void bot
         .start({
           onStart: () => {
             const runtime = this.runtimes.get(row.id);
-            if (runtime) runtime.status = 'active';
+            if (runtime) {
+              runtime.status = 'active';
+              runtime.retryCount = 0;
+              runtime.lastError = undefined;
+              runtime.errorReason = undefined;
+            }
             this.logger.log(`Bot @${bot.botInfo?.username} polling started`);
           },
         })
         .catch((error: Error) => {
-          const runtime = this.runtimes.get(row.id);
-          if (runtime) runtime.status = 'failed';
-          this.logger.error(`Bot ${row.id} polling failed: ${error.message}`);
+          this.handleBotCrash(row, error, attempt);
         });
     } catch (error) {
-      this.runtimes.set(row.id, {
-        bot: new Bot(row.token),
-        status: 'failed',
-      });
+      const err = error instanceof Error ? error : new Error(String(error));
+      this.handleBotCrash(row, err, attempt);
+    }
+  }
+
+  /**
+   * Supervised error recovery with exponential backoff and 401/409 diagnostic classification.
+   */
+  private handleBotCrash(row: BotRow, error: Error, attempt: number): void {
+    const reason = this.parseErrorReason(error.message);
+    const retries = attempt + 1;
+    const runtime = this.runtimes.get(row.id) ?? {
+      bot: new Bot(row.token),
+      status: 'failed',
+      retryCount: retries,
+    };
+
+    runtime.lastError = error.message;
+    runtime.errorReason = reason;
+    runtime.retryCount = retries;
+    this.runtimes.set(row.id, runtime);
+
+    this.logger.error(`Bot ${row.id} failure (${reason}): ${error.message} (attempt ${retries})`);
+
+    // 401: Token is permanently invalid or revoked. Do not attempt restart loop.
+    if (reason === 'token_revoked') {
+      runtime.status = 'failed';
+      this.logger.warn(`Bot ${row.id} token revoked/invalid. Auto-restart aborted.`);
+      return;
+    }
+
+    // Recoverable errors (network, 409 conflict, transient): retry up to 3 times
+    if (retries <= 3) {
+      runtime.status = 'retrying';
+      const delayMs = Math.pow(2, retries) * 1500; // 3s, 6s, 12s
+      this.logger.log(
+        `Bot ${row.id} will attempt auto-restart in ${delayMs / 1000}s (retry ${retries}/3)`,
+      );
+
+      setTimeout(async () => {
+        const current = this.runtimes.get(row.id);
+        if (current && current.status === 'stopped') return;
+
+        const freshBot = await this.prisma.bot.findUnique({ where: { id: row.id } });
+        if (freshBot && freshBot.isActive === 1) {
+          await this.startBot(
+            {
+              id: freshBot.id,
+              name: freshBot.name,
+              token: freshBot.token,
+              username: freshBot.username,
+              first_name: freshBot.firstName,
+              is_active: freshBot.isActive,
+            },
+            retries,
+          );
+        }
+      }, delayMs);
+    } else {
+      runtime.status = 'failed';
       this.logger.error(
-        `Bot ${row.id} failed to start: ${error instanceof Error ? error.message : String(error)}`,
+        `Bot ${row.id} reached maximum auto-restart attempts (3). Marked as failed.`,
       );
     }
   }
@@ -157,35 +240,35 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
   private attachEngineMiddleware(bot: Bot, botId: number): void {
     bot.use(async (ctx, next) => {
       if (ctx.from) {
-        this.helpers.upsertUser(botId, ctx.from);
+        void this.helpers.upsertUser(botId, ctx.from);
       }
       if (ctx.msg) {
         this.volume.set(botId, (this.volume.get(botId) ?? 0) + 1);
       }
-      // Learn every group/supergroup/channel the bot operates in, including
-      // chats it already belonged to before this boot (my_chat_member only
-      // fires on membership changes). The Connections address book picks
-      // these rows up through its auto-sync.
+      // Learn every group/supergroup/channel the bot operates in.
       const chat = ctx.chat;
-      if (chat && (chat.type === 'group' || chat.type === 'supergroup' || chat.type === 'channel')) {
+      if (
+        chat &&
+        (chat.type === 'group' || chat.type === 'supergroup' || chat.type === 'channel')
+      ) {
         const key = `${botId}:${chat.id}`;
         if (!this.discoveredChats.has(key)) {
           this.discoveredChats.add(key);
-          this.db.run(
-            `INSERT INTO bot_groups (bot_id, chat_id, title, type, member_count, is_active, created_at)
-             VALUES (?, ?, ?, ?, 0, 1, ?)
-             ON CONFLICT(bot_id, chat_id) DO UPDATE SET
-               title = excluded.title, type = excluded.type, is_active = 1`,
+          void this.chatConnectionModel.upsertGroup({
             botId,
-            chat.id,
-            chat.title || String(chat.id),
-            chat.type,
-            new Date().toISOString(),
-          );
+            chatId: chat.id,
+            title: chat.title || String(chat.id),
+            type: chat.type,
+            isActive: 1,
+          });
         }
       }
       // Private chats from banned users are dropped entirely.
-      if (ctx.chat?.type === 'private' && ctx.from && this.helpers.isBlocked(botId, ctx.from.id)) {
+      if (
+        ctx.chat?.type === 'private' &&
+        ctx.from &&
+        (await this.helpers.isBlocked(botId, ctx.from.id))
+      ) {
         return;
       }
       await next();
@@ -196,18 +279,13 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
       const active = ['member', 'administrator', 'creator'].includes(
         ctx.myChatMember.new_chat_member.status,
       );
-      this.db.run(
-        `INSERT INTO bot_groups (bot_id, chat_id, title, type, member_count, is_active, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT(bot_id, chat_id) DO UPDATE SET title = excluded.title, is_active = excluded.is_active`,
+      void this.chatConnectionModel.upsertGroup({
         botId,
-        chat.id,
-        chat.title ?? String(chat.id),
-        chat.type,
-        0,
-        active ? 1 : 0,
-        new Date().toISOString(),
-      );
+        chatId: chat.id,
+        title: chat.title ?? String(chat.id),
+        type: chat.type,
+        isActive: active ? 1 : 0,
+      });
     });
   }
 
@@ -218,22 +296,20 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
    * @returns {Promise<void>} Resolves once all handlers registered.
    */
   private async attachModules(bot: Bot, botId: number): Promise<void> {
-    const rows = this.db.query<{ module_key: string; is_enabled: number; config_json: string | null }>(
-      'SELECT module_key, is_enabled, config_json FROM bot_modules WHERE bot_id = ?',
-      botId,
-    );
+    const rows = await this.prisma.botModule.findMany({
+      where: { botId, isEnabled: 1 },
+    });
     for (const row of rows) {
-      if (!row.is_enabled) continue;
-      const handler = this.handlerRegistry.get(row.module_key);
-      const definition = findModule(row.module_key);
+      const handler = this.handlerRegistry.get(row.moduleKey);
+      const definition = findModule(row.moduleKey);
       if (!handler || !definition) continue;
-      const stored = row.config_json ? (JSON.parse(row.config_json) as Record<string, unknown>) : {};
+      const stored = row.configJson ? (JSON.parse(row.configJson) as Record<string, unknown>) : {};
       const config = { ...definition.defaultConfig, ...stored };
       try {
         await handler.register({ bot, botId, config });
       } catch (error) {
         this.logger.error(
-          `Module ${row.module_key} failed to attach on bot ${botId}: ${error instanceof Error ? error.message : String(error)}`,
+          `Module ${row.moduleKey} failed to attach on bot ${botId}: ${error instanceof Error ? error.message : String(error)}`,
         );
       }
     }
@@ -258,10 +334,17 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
    * @returns {Promise<void>} Resolves once the restart completed.
    */
   async restartBot(botId: number): Promise<void> {
-    const row = this.db.get<BotRow>('SELECT * FROM bots WHERE id = ?', botId);
+    const row = await this.prisma.bot.findUnique({ where: { id: botId } });
     if (!row) return;
-    if (row.is_active) {
-      await this.startBot(row);
+    if (row.isActive === 1) {
+      await this.startBot({
+        id: row.id,
+        name: row.name,
+        token: row.token,
+        username: row.username,
+        first_name: row.firstName,
+        is_active: row.isActive,
+      });
     } else {
       this.stopExisting(botId);
     }
@@ -288,39 +371,63 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
   /**
    * Reports the runtime health of a bot for the dashboard status dot.
    * @param {number} botId - Studio bot identifier.
-   * @returns {'active'|'starting'|'failed'|'stopped'|'inactive'} Health state.
+   * @returns {'active'|'starting'|'failed'|'stopped'|'inactive'|'retrying'} Health state.
    */
-  getStatus(botId: number, isActive: boolean): 'active' | 'starting' | 'failed' | 'stopped' | 'inactive' {
+  getStatus(
+    botId: number,
+    isActive: boolean,
+  ): 'active' | 'starting' | 'failed' | 'stopped' | 'inactive' | 'retrying' {
     if (!isActive) return 'inactive';
     return this.runtimes.get(botId)?.status ?? 'inactive';
   }
 
   /**
-   * Reads the persisted daily volume for a bot (UTC day bucket).
+   * Returns extended runtime diagnostic state for the bot.
+   */
+  getRuntimeInfo(botId: number): {
+    status: 'active' | 'starting' | 'failed' | 'stopped' | 'inactive' | 'retrying';
+    retryCount: number;
+    lastError?: string;
+    errorReason?: 'token_revoked' | 'conflict' | 'network' | 'unknown';
+  } {
+    const runtime = this.runtimes.get(botId);
+    return {
+      status: runtime?.status ?? 'stopped',
+      retryCount: runtime?.retryCount ?? 0,
+      lastError: runtime?.lastError,
+      errorReason: runtime?.errorReason,
+    };
+  }
+
+  /**
+   * Reads the in-memory volume for a bot.
    * @param {number} botId - Studio bot identifier.
    * @returns {number} Messages recorded for the current UTC day.
    */
   getDailyVolume(botId: number): number {
-    const key = `msg_volume_${new Date().toISOString().slice(0, 10)}`;
-    const row = this.db.get<{ value: string }>(
-      'SELECT value FROM bot_settings WHERE bot_id = ? AND key = ?',
-      botId,
-      key,
-    );
-    return (row ? Number(row.value) : 0) + (this.volume.get(botId) ?? 0);
+    return this.volume.get(botId) ?? 0;
   }
 
   /**
    * Flushes in-memory volume counters into `bot_settings`.
-   * @returns {void}
+   * @returns {Promise<void>}
    */
-  private flushVolume(): void {
+  private async flushVolume(): Promise<void> {
     if (this.volume.size === 0) return;
     const key = `msg_volume_${new Date().toISOString().slice(0, 10)}`;
-    const statement = `INSERT INTO bot_settings (bot_id, key, value) VALUES (?, ?, ?)
-      ON CONFLICT(bot_id, key) DO UPDATE SET value = CAST(CAST(bot_settings.value AS INTEGER) + ? AS TEXT)`;
+
     for (const [botId, pending] of this.volume) {
-      this.db.run(statement, botId, key, String(pending), String(pending));
+      const existing = await this.prisma.botSetting.findUnique({
+        where: { botId_key: { botId, key } },
+      });
+      const current = existing ? Number(existing.value) || 0 : 0;
+      const total = current + pending;
+
+      await this.prisma.botSetting.upsert({
+        where: { botId_key: { botId, key } },
+        create: { botId, key, value: String(total) },
+        update: { value: String(total) },
+      });
     }
     this.volume.clear();
   }

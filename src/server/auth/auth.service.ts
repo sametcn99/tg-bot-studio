@@ -1,4 +1,6 @@
 import {
+  HttpException,
+  HttpStatus,
   Injectable,
   Logger,
   OnModuleInit,
@@ -7,48 +9,19 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { argon2id, argon2Verify } from 'hash-wasm';
 import { randomUUID } from 'node:crypto';
-import { DatabaseService } from '../database/database.service';
+import { PrismaService } from '../database/prisma.service';
+import { SessionModel, type SecurityLogEntity, type SessionEntity } from '../models/session.model';
 import { parseUserAgent } from '../common/utils/user-agent.util';
 
 /**
  * Session row persisted in the `sessions` table.
- * @interface SessionRow
- * @property {string} id - Session identifier (JWT `sessionId` claim).
- * @property {string} ip - Client IP address at login time.
- * @property {string} browser - Parsed browser name.
- * @property {string} os - Parsed operating system.
- * @property {string} device_type - `desktop` | `mobile` | `tablet`.
- * @property {string} created_at - ISO creation timestamp.
- * @property {string} last_active_at - ISO last-seen timestamp.
- * @property {number} is_revoked - 1 when the session was revoked.
  */
-export interface SessionRow {
-  id: string;
-  ip: string;
-  user_agent: string | null;
-  browser: string;
-  os: string;
-  device_type: string;
-  created_at: string;
-  last_active_at: string;
-  is_revoked: number;
-}
+export type SessionRow = SessionEntity;
 
 /**
  * Security audit log row persisted in the `security_logs` table.
- * @interface SecurityLogRow
- * @property {number} id - Auto-incremented identifier.
- * @property {string} event - Stable event name (e.g. `login_success`).
- * @property {string} created_at - ISO creation timestamp.
  */
-export interface SecurityLogRow {
-  id: number;
-  event: string;
-  ip: string | null;
-  user_agent: string | null;
-  details: string | null;
-  created_at: string;
-}
+export type SecurityLogRow = SecurityLogEntity;
 
 /** Argon2id parameters used for master key hashing (OWASP baseline). */
 const ARGON2_PARAMS = {
@@ -69,13 +42,16 @@ const ARGON2_PARAMS = {
 @Injectable()
 export class AuthService implements OnModuleInit {
   private readonly logger = new Logger(AuthService.name);
+  private readonly failedAttempts = new Map<string, { count: number; lockedUntil: number }>();
 
   /**
-   * @param {DatabaseService} db - SQLite access service.
+   * @param {PrismaService} prisma - Prisma ORM access service.
+   * @param {SessionModel} sessionModel - Domain model for session and security logs.
    * @param {JwtService} jwtService - JWT signing service.
    */
   constructor(
-    private readonly db: DatabaseService,
+    private readonly prisma: PrismaService,
+    private readonly sessionModel: SessionModel,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -84,27 +60,28 @@ export class AuthService implements OnModuleInit {
    * @returns {Promise<void>} Resolves once seeding is checked/applied.
    */
   async onModuleInit(): Promise<void> {
-    const existing = this.db.get<{ value: string }>(
-      "SELECT value FROM system_settings WHERE key = 'master_key_hash'",
-    );
+    const existing = await this.prisma.systemSetting.findUnique({
+      where: { key: 'master_key_hash' },
+    });
     if (existing) return;
     const masterKey = process.env.ADMIN_MASTER_KEY || 'admin123';
     const salt = new Uint8Array(16);
     crypto.getRandomValues(salt);
     const hash = await argon2id({ password: masterKey, salt, ...ARGON2_PARAMS });
-    this.db.run(
-      "INSERT INTO system_settings (key, value) VALUES ('master_key_hash', ?)",
-      hash,
-    );
+    await this.prisma.systemSetting.create({
+      data: { key: 'master_key_hash', value: hash },
+    });
     this.logger.log('Master key seeded and hashed with Argon2id on first boot');
   }
 
   /**
    * Authenticates the master key and issues a JWT bound to a new session row.
+   * Rate limited: 3 failed attempts incur 30s delay; 5 failed attempts lock out for 5 minutes.
    * @param {string} masterKey - Submitted master key.
    * @param {string} ip - Client IP address.
    * @param {string} userAgent - Raw User-Agent header value.
    * @returns {Promise<{token: string; session: SessionRow}>} Signed JWT and session record.
+   * @throws {HttpException} When the IP is temporarily throttled.
    * @throws {UnauthorizedException} When the master key does not verify.
    */
   async login(
@@ -112,33 +89,60 @@ export class AuthService implements OnModuleInit {
     ip: string,
     userAgent: string,
   ): Promise<{ token: string; session: SessionRow }> {
-    const stored = this.db.get<{ value: string }>(
-      "SELECT value FROM system_settings WHERE key = 'master_key_hash'",
-    );
+    const attempt = this.failedAttempts.get(ip);
+    const now = Date.now();
+    if (attempt && attempt.lockedUntil > now) {
+      const remainingSeconds = Math.ceil((attempt.lockedUntil - now) / 1000);
+      await this.logSecurityEvent(
+        'login_throttled',
+        ip,
+        userAgent,
+        `IP throttled for ${remainingSeconds}s`,
+      );
+      throw new HttpException(
+        `Too many failed attempts. Please try again in ${remainingSeconds} seconds.`,
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
+    const stored = await this.prisma.systemSetting.findUnique({
+      where: { key: 'master_key_hash' },
+    });
     const ok = stored
       ? await argon2Verify({ password: masterKey, hash: stored.value })
       : masterKey === (process.env.ADMIN_MASTER_KEY || 'admin123');
     if (!ok) {
-      await this.logSecurityEvent('login_failed', ip, userAgent, 'Invalid master key');
+      const currentCount = (attempt?.count ?? 0) + 1;
+      let lockedUntil = 0;
+      if (currentCount >= 5) {
+        lockedUntil = now + 5 * 60 * 1000; // 5 min lockout
+      } else if (currentCount >= 3) {
+        lockedUntil = now + 30 * 1000; // 30s delay
+      }
+      this.failedAttempts.set(ip, { count: currentCount, lockedUntil });
+      await this.logSecurityEvent(
+        'login_failed',
+        ip,
+        userAgent,
+        `Invalid master key (attempt ${currentCount})`,
+      );
       throw new UnauthorizedException('Invalid master key');
     }
 
+    // Reset failed counter on successful authentication
+    this.failedAttempts.delete(ip);
+
     const { browser, os, deviceType } = parseUserAgent(userAgent);
     const sessionId = randomUUID();
-    const now = new Date().toISOString();
-    this.db.run(
-      `INSERT INTO sessions (id, ip, user_agent, browser, os, device_type, created_at, last_active_at, is_revoked)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
-      sessionId,
+    const session = await this.sessionModel.createSession({
+      id: sessionId,
       ip,
       userAgent,
       browser,
       os,
       deviceType,
-      now,
-      now,
-    );
-    const session = this.getSession(sessionId)!;
+    });
+
     await this.logSecurityEvent('login_success', ip, userAgent, `Session ${sessionId}`);
     const token = this.jwtService.sign({ sessionId });
     return { token, session };
@@ -147,10 +151,10 @@ export class AuthService implements OnModuleInit {
   /**
    * Loads a session row by identifier.
    * @param {string} sessionId - Session identifier.
-   * @returns {SessionRow | undefined} The row when found.
+   * @returns {Promise<SessionRow | null>} The row when found.
    */
-  getSession(sessionId: string): SessionRow | undefined {
-    return this.db.get<SessionRow>('SELECT * FROM sessions WHERE id = ?', sessionId);
+  async getSession(sessionId: string): Promise<SessionRow | null> {
+    return this.sessionModel.findSession(sessionId);
   }
 
   /**
@@ -159,41 +163,36 @@ export class AuthService implements OnModuleInit {
    * @returns {Promise<boolean>} True when the session exists and is active.
    */
   async isSessionValid(sessionId: string): Promise<boolean> {
-    const session = this.getSession(sessionId);
+    const session = await this.getSession(sessionId);
     if (!session || session.is_revoked) return false;
-    this.db.run('UPDATE sessions SET last_active_at = ? WHERE id = ?', new Date().toISOString(), sessionId);
+    await this.sessionModel.updateLastActive(sessionId, new Date().toISOString());
     return true;
   }
 
   /**
    * Revokes a single session (logout).
    * @param {string} sessionId - Session identifier to revoke.
-   * @returns {void}
+   * @returns {Promise<void>}
    */
-  logout(sessionId: string): void {
-    this.db.run('UPDATE sessions SET is_revoked = 1 WHERE id = ?', sessionId);
+  async logout(sessionId: string): Promise<void> {
+    await this.sessionModel.revokeSession(sessionId);
   }
 
   /**
    * Revokes every session except the currently authenticated one.
    * @param {string} currentSessionId - Session to keep alive.
-   * @returns {void}
+   * @returns {Promise<void>}
    */
-  revokeOtherSessions(currentSessionId: string): void {
-    this.db.run(
-      'UPDATE sessions SET is_revoked = 1 WHERE id != ? AND is_revoked = 0',
-      currentSessionId,
-    );
+  async revokeOtherSessions(currentSessionId: string): Promise<void> {
+    await this.sessionModel.revokeOtherSessions(currentSessionId);
   }
 
   /**
    * Lists all sessions, newest first.
-   * @returns {SessionRow[]} All session rows.
+   * @returns {Promise<SessionRow[]>} All session rows.
    */
-  listSessions(): SessionRow[] {
-    return this.db.query<SessionRow>(
-      'SELECT * FROM sessions ORDER BY created_at DESC',
-    );
+  async listSessions(): Promise<SessionRow[]> {
+    return this.sessionModel.listSessions();
   }
 
   /**
@@ -205,9 +204,9 @@ export class AuthService implements OnModuleInit {
    * @throws {UnauthorizedException} When the current key does not verify.
    */
   async changeMasterKey(currentKey: string, newKey: string, ip: string): Promise<void> {
-    const stored = this.db.get<{ value: string }>(
-      "SELECT value FROM system_settings WHERE key = 'master_key_hash'",
-    );
+    const stored = await this.prisma.systemSetting.findUnique({
+      where: { key: 'master_key_hash' },
+    });
     const ok = stored
       ? await argon2Verify({ password: currentKey, hash: stored.value })
       : currentKey === (process.env.ADMIN_MASTER_KEY || 'admin123');
@@ -218,23 +217,21 @@ export class AuthService implements OnModuleInit {
     const salt = new Uint8Array(16);
     crypto.getRandomValues(salt);
     const hash = await argon2id({ password: newKey, salt, ...ARGON2_PARAMS });
-    this.db.run(
-      "INSERT INTO system_settings (key, value) VALUES ('master_key_hash', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-      hash,
-    );
+    await this.prisma.systemSetting.upsert({
+      where: { key: 'master_key_hash' },
+      create: { key: 'master_key_hash', value: hash },
+      update: { value: hash },
+    });
     await this.logSecurityEvent('master_key_changed', ip, null, 'Master key rotated');
   }
 
   /**
    * Lists the most recent security audit log entries.
    * @param {number} [limit=100] - Maximum number of entries.
-   * @returns {SecurityLogRow[]} Newest entries first.
+   * @returns {Promise<SecurityLogRow[]>} Newest entries first.
    */
-  listSecurityLogs(limit = 100): SecurityLogRow[] {
-    return this.db.query<SecurityLogRow>(
-      'SELECT * FROM security_logs ORDER BY id DESC LIMIT ?',
-      limit,
-    );
+  async listSecurityLogs(limit = 100): Promise<SecurityLogRow[]> {
+    return this.sessionModel.listSecurityLogs(limit);
   }
 
   /**
@@ -251,13 +248,40 @@ export class AuthService implements OnModuleInit {
     userAgent: string | null,
     details?: string,
   ): Promise<void> {
-    this.db.run(
-      'INSERT INTO security_logs (event, ip, user_agent, details, created_at) VALUES (?, ?, ?, ?, ?)',
+    await this.sessionModel.createSecurityLog({
       event,
       ip,
       userAgent,
-      details ?? null,
-      new Date().toISOString(),
-    );
+      details,
+    });
+  }
+
+  /**
+   * Evaluates deployment security posture and returns warning flags for default credentials.
+   */
+  async getSecurityStatus(): Promise<{
+    isDefaultMasterKey: boolean;
+    isDefaultJwtSecret: boolean;
+  }> {
+    const isDefaultJwtSecret =
+      !process.env.JWT_SECRET ||
+      process.env.JWT_SECRET === 'tg-bot-studio-dev-secret-key-change-in-prod';
+    const stored = await this.prisma.systemSetting.findUnique({
+      where: { key: 'master_key_hash' },
+    });
+    let isDefaultMasterKey: boolean;
+    if (stored) {
+      try {
+        isDefaultMasterKey = await argon2Verify({ password: 'admin123', hash: stored.value });
+      } catch {
+        isDefaultMasterKey = false;
+      }
+    } else {
+      isDefaultMasterKey = (process.env.ADMIN_MASTER_KEY || 'admin123') === 'admin123';
+    }
+    return {
+      isDefaultMasterKey,
+      isDefaultJwtSecret,
+    };
   }
 }

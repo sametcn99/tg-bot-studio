@@ -1,14 +1,7 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  ParseIntPipe,
-  Post,
-} from '@nestjs/common';
-import { DatabaseService } from '../../database/database.service';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
 import { EngineHelpersService } from '../../bot-engine/engine-helpers.service';
+import { BotUserModel } from '../../models/bot-user.model';
+import { ChatConnectionModel } from '../../models/chat-connection.model';
 
 /**
  * Banned user management endpoints backing the moderation module UI.
@@ -16,36 +9,35 @@ import { EngineHelpersService } from '../../bot-engine/engine-helpers.service';
 @Controller('bots/:botId/moderation')
 export class ModerationController {
   /**
-   * @param {DatabaseService} db - SQLite access service.
+   * @param {BotUserModel} botUserModel - Audience & ban model.
+   * @param {ChatConnectionModel} chatConnectionModel - Connection and group model.
    * @param {EngineHelpersService} helpers - Shared audience operations.
    */
   constructor(
-    private readonly db: DatabaseService,
+    private readonly botUserModel: BotUserModel,
+    private readonly chatConnectionModel: ChatConnectionModel,
     private readonly helpers: EngineHelpersService,
   ) {}
 
   /**
    * Lists banned users for the bot.
    * @param {number} botId - Owning bot id.
-   * @returns {object[]} Banned user rows.
+   * @returns {Promise<object[]>} Banned user rows.
    */
   @Get('blocked')
   blocked(@Param('botId', ParseIntPipe) botId: number) {
-    return this.db.query(
-      'SELECT * FROM blocked_users WHERE bot_id = ? ORDER BY blocked_at DESC',
-      botId,
-    );
+    return this.botUserModel.listBlocked(botId);
   }
 
   /**
    * Manually bans a user studio-wide for the bot.
    * @param {number} botId - Owning bot id.
    * @param {object} body - `{ telegramId, username?, firstName?, reason? }`.
-   * @returns {{success: boolean}} Confirmation payload.
+   * @returns {Promise<{success: boolean}>} Confirmation payload.
    */
   @Post('blocked')
-  block(@Param('botId', ParseIntPipe) botId: number, @Body() body: Record<string, unknown>) {
-    this.helpers.blockUser(
+  async block(@Param('botId', ParseIntPipe) botId: number, @Body() body: Record<string, unknown>) {
+    await this.helpers.blockUser(
       botId,
       {
         id: Number(body.telegramId),
@@ -63,27 +55,24 @@ export class ModerationController {
    * Lifts a ban.
    * @param {number} botId - Owning bot id.
    * @param {number} telegramId - User Telegram id.
-   * @returns {{success: boolean}} Confirmation payload.
+   * @returns {Promise<{success: boolean}>} Confirmation payload.
    */
   @Delete('blocked/:telegramId')
-  unblock(
+  async unblock(
     @Param('botId', ParseIntPipe) botId: number,
     @Param('telegramId', ParseIntPipe) telegramId: number,
   ) {
-    this.helpers.unblockUser(botId, telegramId);
+    await this.helpers.unblockUser(botId, telegramId);
     return { success: true };
   }
 
   /**
    * Lists known groups and channels for the bot.
    * @param {number} botId - Owning bot id.
-   * @returns {object[]} Group rows.
+   * @returns {Promise<object[]>} Group rows.
    */
   @Get('groups')
   groups(@Param('botId', ParseIntPipe) botId: number) {
-    return this.db.query(
-      'SELECT * FROM bot_groups WHERE bot_id = ? ORDER BY is_active DESC, title',
-      botId,
-    );
+    return this.chatConnectionModel.listGroups(botId);
   }
 }

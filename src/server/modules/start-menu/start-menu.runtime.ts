@@ -43,7 +43,7 @@ export class StartMenuRuntime extends BotModuleHandler {
       await this.sendMenu(ctx, update);
     });
 
-    if (Boolean(ctx.config.enableMenuCommand)) {
+    if (ctx.config.enableMenuCommand) {
       bot.command('menu', async (update: Context) => {
         if (update.chat?.type !== 'private') return;
         await this.sendMenu(ctx, update);
@@ -58,7 +58,7 @@ export class StartMenuRuntime extends BotModuleHandler {
    * @returns {Promise<void>} Resolves once the menu is delivered.
    */
   private async sendMenu(ctx: ModuleRuntimeContext, update: Context): Promise<void> {
-    const items = this.menuService.list(ctx.botId).filter((item) => item.is_active);
+    const items = (await this.menuService.list(ctx.botId)).filter((item) => item.is_active);
     if (items.length === 0) return;
 
     const from = update.from;

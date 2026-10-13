@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   Box,
-  Button,
   Chip,
   Dialog,
   DialogContent,
@@ -52,7 +51,10 @@ export default function ModuleHelpDialog({
       fullWidth
       aria-labelledby={DIALOG_TITLE_ID}
     >
-      <DialogTitle id={DIALOG_TITLE_ID} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2 }}>
+      <DialogTitle
+        id={DIALOG_TITLE_ID}
+        sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2 }}
+      >
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="subtitle1" fontWeight={700} noWrap>
             {module?.name}
@@ -130,8 +132,13 @@ export default function ModuleHelpDialog({
  * @param {string} props.description - Explanation shown in the tooltip.
  * @returns {React.ReactElement} The chip button.
  */
-function PlaceholderChip({ tag, description }: { tag: string; description: string }): React.ReactElement {
-  const { t } = useTranslation();
+function PlaceholderChip({
+  tag,
+  description,
+}: {
+  tag: string;
+  description: string;
+}): React.ReactElement {
   const [copied, setCopied] = useState(false);
 
   /**

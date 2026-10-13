@@ -84,10 +84,7 @@ export interface InitDataValidation {
  * @example
  * const check = validateInitData(initData, botToken);
  */
-export function validateInitData(
-  initData: string,
-  botToken: string,
-): InitDataValidation {
+export function validateInitData(initData: string, botToken: string): InitDataValidation {
   try {
     const params = new URLSearchParams(initData);
     const providedHash = params.get('hash');
@@ -100,9 +97,7 @@ export function validateInitData(
       .join('\n');
 
     const secretKey = createHmac('sha256', 'WebAppData').update(botToken).digest();
-    const computedHash = createHmac('sha256', secretKey)
-      .update(dataCheckString)
-      .digest('hex');
+    const computedHash = createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
 
     if (computedHash !== providedHash) return { valid: false };
 

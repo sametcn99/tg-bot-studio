@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   Alert,
@@ -36,7 +36,7 @@ import PhonePreview from '../components/PhonePreview';
 import ModuleHelpDialog from '../components/ModuleHelpDialog';
 import VisualMiniAppConfigBuilder from '../components/VisualMiniAppConfigBuilder';
 import { EmptyState } from '../components/Feedback';
-import { MINI_APPS_DOCS_ENTRY, type ModuleEntry } from '../registry/modules';
+import { MINI_APPS_DOCS_ENTRY } from '../registry/modules';
 
 /**
  * Mini App row from the studio API (config and theme parsed).
@@ -84,25 +84,22 @@ export default function MiniAppsPage(): React.ReactElement {
   const [docsOpen, setDocsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [publicBaseUrl, setPublicBaseUrl] = useState(
-    window.location.origin.includes('5173') ? 'http://localhost:3000' : window.location.origin,
+    (import.meta as unknown as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL ||
+      window.location.origin,
   );
 
-  useEffect(() => {
-    reload();
-  }, [botId]);
-
-  /**
-   * Reloads the app list.
-   * @returns {void}
-   */
-  function reload(): void {
+  const reload = useCallback((): void => {
     apiFetch<MiniApp[]>(`/api/bots/${botId}/mini-apps`)
       .then((list) => {
         setApps(list);
         setSelected((current) => list.find((app) => app.id === current?.id) ?? list[0] ?? null);
       })
       .catch((err: Error) => setError(err.message));
-  }
+  }, [botId]);
+
+  useEffect(() => {
+    reload();
+  }, [reload]);
 
   /**
    * Persists edits to the selected app.
@@ -146,7 +143,11 @@ export default function MiniAppsPage(): React.ReactElement {
         }
       />
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, md: 7 }}>
@@ -277,7 +278,11 @@ function AppDataViewer({ botId, app }: { botId: number; app: MiniApp }): React.R
 
   return (
     <Box sx={{ pt: 1 }}>
-      <Tabs value={tab} onChange={(_event, value: number) => setTab(value)} aria-label="Mini App data sections">
+      <Tabs
+        value={tab}
+        onChange={(_event, value: number) => setTab(value)}
+        aria-label="Mini App data sections"
+      >
         <Tab label={t('miniApps.orders')} />
         <Tab label={t('miniApps.forms')} />
       </Tabs>
@@ -383,7 +388,13 @@ function CreateMiniAppDialog({
       <DialogTitle id="create-mini-app-title">{t('miniApps.addTitle')}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
-          <TextField label={t('common.name')} value={name} onChange={(event) => setName(event.target.value)} fullWidth size="small" />
+          <TextField
+            label={t('common.name')}
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            fullWidth
+            size="small"
+          />
           <TextField
             label={t('miniApps.slug')}
             value={slug}
@@ -456,9 +467,9 @@ function sampleConfigFor(templateType: string): Record<string, unknown> {
     case 'spin':
       return {
         prizes: [
-          { label: '10 points', points: 10 },
-          { label: '50 points', points: 50 },
-          { label: 'Try again', points: 0 },
+          { label: '10 points', points: 10, weight: 50 },
+          { label: '50 points', points: 50, weight: 10 },
+          { label: 'Try again', points: 0, weight: 40 },
         ],
       };
     case 'webview':

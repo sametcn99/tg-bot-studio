@@ -7,41 +7,31 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Put,
 } from '@nestjs/common';
-import { DatabaseService } from '../../database/database.service';
 import { AiAssistantService, type AiConfig } from './ai-assistant.service';
+import { BotModel } from '../../models/bot.model';
 
 /**
  * AI assistant testing and Knowledge Base RAG document management endpoints.
  */
 @Controller('bots/:botId/ai-assistant')
 export class AiAssistantController {
-  /**
-   * @param {AiAssistantService} service - Provider gateway.
-   * @param {DatabaseService} db - SQLite access service.
-   */
   constructor(
     private readonly service: AiAssistantService,
-    private readonly db: DatabaseService,
+    private readonly botModel: BotModel,
   ) {}
 
   /**
    * Sends a test message through the configured provider with RAG context.
-   * @param {number} botId - Owning bot id.
-   * @param {object} body - `{ message: string }`.
-   * @returns {Promise<{reply: string}>} Assistant reply.
-   * @throws {BadRequestException} When the provider call fails.
    */
   @Post('test')
   async test(
     @Param('botId', ParseIntPipe) botId: number,
     @Body() body: { message?: string },
   ): Promise<{ reply: string }> {
-    const row = this.db.get<{ config_json: string | null }>(
-      "SELECT config_json FROM bot_modules WHERE bot_id = ? AND module_key = 'ai-assistant'",
-      botId,
-    );
-    const stored = row?.config_json ? (JSON.parse(row.config_json) as Partial<AiConfig>) : {};
+    const row = await this.botModel.getModule(botId, 'ai-assistant');
+    const stored = row?.configJson ? (JSON.parse(row.configJson) as Partial<AiConfig>) : {};
     const config: AiConfig = {
       provider: 'openai',
       apiKey: '',
@@ -72,7 +62,7 @@ export class AiAssistantController {
    * Lists all knowledge base documents for this bot.
    */
   @Get('docs')
-  listDocs(@Param('botId', ParseIntPipe) botId: number) {
+  async listDocs(@Param('botId', ParseIntPipe) botId: number) {
     return this.service.listDocs(botId);
   }
 
@@ -80,7 +70,7 @@ export class AiAssistantController {
    * Adds a new knowledge document for RAG retrieval.
    */
   @Post('docs')
-  addDoc(
+  async addDoc(
     @Param('botId', ParseIntPipe) botId: number,
     @Body() body: { title: string; content: string; tags?: string },
   ) {
@@ -91,14 +81,30 @@ export class AiAssistantController {
   }
 
   /**
+   * Updates an existing knowledge document.
+   */
+  @Put('docs/:docId')
+  async updateDoc(
+    @Param('botId', ParseIntPipe) botId: number,
+    @Param('docId', ParseIntPipe) docId: number,
+    @Body() body: { title: string; content: string; tags?: string },
+  ) {
+    if (!body.title || !body.content) {
+      throw new BadRequestException('Title and content are required');
+    }
+    await this.service.updateDoc(botId, docId, body.title, body.content, body.tags);
+    return { success: true };
+  }
+
+  /**
    * Deletes a knowledge base document.
    */
   @Delete('docs/:docId')
-  removeDoc(
+  async removeDoc(
     @Param('botId', ParseIntPipe) botId: number,
     @Param('docId', ParseIntPipe) docId: number,
   ) {
-    this.service.removeDoc(botId, docId);
+    await this.service.removeDoc(botId, docId);
     return { success: true };
   }
 }

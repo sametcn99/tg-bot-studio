@@ -112,7 +112,6 @@ export default function Layout(): React.ReactElement {
   };
 
   const pathParts = location.pathname.split('/').filter(Boolean);
-  const botId = pathParts[0] === 'bots' ? Number(pathParts[1]) : null;
   const moduleKey = pathParts[2] === 'm' ? pathParts[3] : null;
   const sectionTitle = moduleKey
     ? MODULES.find((module) => module.key === moduleKey)?.name
@@ -189,9 +188,7 @@ export default function Layout(): React.ReactElement {
           </List>
           <ModuleNavSections
             activeModuleKey={moduleKey}
-            onNavigate={(key) =>
-              navigateAndClose(() => navigate(`/bots/${activeBot.id}/m/${key}`))
-            }
+            onNavigate={(key) => navigateAndClose(() => navigate(`/bots/${activeBot.id}/m/${key}`))}
           />
         </>
       )}
@@ -255,7 +252,11 @@ export default function Layout(): React.ReactElement {
         {sidebar}
       </Drawer>
 
-      <Box component="main" id="main-content" sx={{ flexGrow: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+      <Box
+        component="main"
+        id="main-content"
+        sx={{ flexGrow: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}
+      >
         <AppBar
           position="sticky"
           elevation={0}
@@ -311,7 +312,9 @@ export default function Layout(): React.ReactElement {
             </Box>
             <Box sx={{ flexGrow: { xs: 1, sm: 0 } }} />
             <BotSwitcher />
-            <Tooltip title={currentLang.startsWith('tr') ? 'Switch to English' : 'Türkçe Dilini Seç'}>
+            <Tooltip
+              title={currentLang.startsWith('tr') ? 'Switch to English' : 'Türkçe Dilini Seç'}
+            >
               <IconButton size="small" onClick={toggleLanguage} aria-label="Toggle language">
                 <LanguageIcon fontSize="small" />
                 <Typography variant="caption" sx={{ ml: 0.5, fontWeight: 700 }}>
@@ -321,7 +324,11 @@ export default function Layout(): React.ReactElement {
             </Tooltip>
             <Tooltip title={mode === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}>
               <IconButton size="small" onClick={toggle} aria-label={t('nav.toggleTheme')}>
-                {mode === 'dark' ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />}
+                {mode === 'dark' ? (
+                  <LightModeIcon fontSize="small" />
+                ) : (
+                  <DarkModeIcon fontSize="small" />
+                )}
               </IconButton>
             </Tooltip>
             <Tooltip title={t('nav.signOut')}>
@@ -371,10 +378,7 @@ function NavItem({
       <ListItemIcon sx={{ minWidth: 36 }} aria-hidden="true">
         {icon}
       </ListItemIcon>
-      <ListItemText
-        primary={label}
-        primaryTypographyProps={{ variant: 'body2', noWrap: true }}
-      />
+      <ListItemText primary={label} primaryTypographyProps={{ variant: 'body2', noWrap: true }} />
     </ListItemButton>
   );
 }
@@ -468,13 +472,7 @@ function ModuleNavSections({
               />
             </ListItemButton>
             <Collapse in={open} id={categorySlug(category)}>
-              <List
-                dense
-                disablePadding
-                role="group"
-                aria-label={category}
-                sx={{ pl: 1 }}
-              >
+              <List dense disablePadding role="group" aria-label={category} sx={{ pl: 1 }}>
                 {modules.map((module) => (
                   <NavItem
                     key={module.key}

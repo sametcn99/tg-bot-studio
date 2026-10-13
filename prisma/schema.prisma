@@ -1,0 +1,405 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Bot {
+  id        Int     @id @default(autoincrement())
+  name      String
+  token     String  @unique
+  username  String?
+  firstName String? @map("first_name")
+  isActive  Int     @default(1) @map("is_active")
+  createdAt String? @map("created_at")
+  updatedAt String? @map("updated_at")
+
+  modules          BotModule[]
+  miniApps         MiniApp[]
+  miniAppOrders    MiniAppOrder[]
+  settings         BotSetting[]
+  users            BotUser[]
+  links            Link[]
+  broadcasts       Broadcast[]
+  supportMessages  SupportMessage[]
+  dripCampaigns    DripCampaign[]
+  dripSubscribers  DripSubscriber[]
+  giveaways        Giveaway[]
+  scheduledPosts   ScheduledPost[]
+  blockedUsers     BlockedUser[]
+  groups           BotGroup[]
+  connections      ChatConnection[]
+  autoresponders   Autoresponder[]
+  vipSubscriptions VipSubscription[]
+  chatActivities   ChatActivity[]
+  scoreSchedules   ScoreSchedule[]
+  aiChatHistories  AiChatHistory[]
+  aiKnowledgeDocs  AiKnowledgeDoc[]
+
+  @@map("bots")
+}
+
+model BotModule {
+  botId      Int     @map("bot_id")
+  moduleKey  String  @map("module_key")
+  isEnabled  Int     @default(0) @map("is_enabled")
+  configJson String? @map("config_json")
+
+  bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@id([botId, moduleKey])
+  @@map("bot_modules")
+}
+
+model MiniApp {
+  id           Int     @id @default(autoincrement())
+  botId        Int     @map("bot_id")
+  name         String
+  slug         String  @unique
+  templateType String  @map("template_type")
+  title        String
+  description  String?
+  iconUrl      String? @map("icon_url")
+  configJson   String? @map("config_json")
+  themeJson    String? @map("theme_json")
+  isActive     Int     @default(1) @map("is_active")
+  createdAt    String? @map("created_at")
+  updatedAt    String? @map("updated_at")
+
+  bot    Bot            @relation(fields: [botId], references: [id], onDelete: Cascade)
+  orders MiniAppOrder[]
+
+  @@map("mini_apps")
+}
+
+model MiniAppOrder {
+  id          Int     @id @default(autoincrement())
+  botId       Int     @map("bot_id")
+  appId       Int     @map("app_id")
+  telegramId  BigInt  @map("telegram_id")
+  totalAmount Float   @map("total_amount")
+  currency    String
+  itemsJson   String  @map("items_json")
+  status      String
+  createdAt   String? @map("created_at")
+
+  bot Bot     @relation(fields: [botId], references: [id], onDelete: Cascade)
+  app MiniApp @relation(fields: [appId], references: [id], onDelete: Cascade)
+
+  @@map("mini_app_orders")
+}
+
+model BotSetting {
+  botId Int    @map("bot_id")
+  key   String
+  value String
+
+  bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@id([botId, key])
+  @@map("bot_settings")
+}
+
+model BotUser {
+  botId        Int     @map("bot_id")
+  telegramId   BigInt  @map("telegram_id")
+  username     String?
+  firstName    String? @map("first_name")
+  lastName     String? @map("last_name")
+  languageCode String? @default("en") @map("language_code")
+  points       Int     @default(0)
+  referrerId   BigInt? @map("referrer_id")
+  tagsJson     String? @map("tags_json")
+  firstSeenAt  String? @map("first_seen_at")
+  lastSeenAt   String? @map("last_seen_at")
+
+  bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@id([botId, telegramId])
+  @@map("bot_users")
+}
+
+model Link {
+  id          Int     @id @default(autoincrement())
+  botId       Int     @map("bot_id")
+  title       String
+  description String?
+  url         String
+  type        String
+  orderIndex  Int     @default(0) @map("order_index")
+  isActive    Int     @default(1) @map("is_active")
+  clickCount  Int     @default(0) @map("click_count")
+  createdAt   String? @map("created_at")
+
+  bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@map("links")
+}
+
+model Broadcast {
+  id              Int     @id @default(autoincrement())
+  botId           Int     @map("bot_id")
+  targetType      String  @map("target_type")
+  messageText     String  @map("message_text")
+  mediaUrl        String? @map("media_url")
+  buttonsJson     String? @map("buttons_json")
+  totalRecipients Int     @default(0) @map("total_recipients")
+  successCount    Int     @default(0) @map("success_count")
+  failedCount     Int     @default(0) @map("failed_count")
+  status          String
+  createdAt       String? @map("created_at")
+
+  bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@map("broadcasts")
+}
+
+model SupportMessage {
+  id            Int     @id @default(autoincrement())
+  botId         Int     @map("bot_id")
+  telegramId    BigInt  @map("telegram_id")
+  userMessageId Int?    @map("user_message_id")
+  adminChatId   BigInt? @map("admin_chat_id")
+  forumTopicId  Int?    @map("forum_topic_id")
+  direction     String
+  senderName    String? @map("sender_name")
+  messageText   String? @map("message_text")
+  mediaType     String? @map("media_type")
+  createdAt     String? @map("created_at")
+
+  bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@map("support_messages")
+}
+
+model DripCampaign {
+  id        Int    @id @default(autoincrement())
+  botId     Int    @map("bot_id")
+  name      String
+  stepsJson String @map("steps_json")
+  isActive  Int    @default(1) @map("is_active")
+
+  bot         Bot              @relation(fields: [botId], references: [id], onDelete: Cascade)
+  subscribers DripSubscriber[]
+
+  @@map("drip_campaigns")
+}
+
+model DripSubscriber {
+  botId       Int     @map("bot_id")
+  campaignId  Int     @map("campaign_id")
+  telegramId  BigInt  @map("telegram_id")
+  currentStep Int     @default(0) @map("current_step")
+  nextRunAt   String? @map("next_run_at")
+
+  bot      Bot          @relation(fields: [botId], references: [id], onDelete: Cascade)
+  campaign DripCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@id([campaignId, telegramId])
+  @@map("drip_subscribers")
+}
+
+model Giveaway {
+  id                   Int     @id @default(autoincrement())
+  botId                Int     @map("bot_id")
+  title                String
+  requiredChannelsJson String? @map("required_channels_json")
+  winnersCount         Int     @default(1) @map("winners_count")
+  prizeDetails         String? @map("prize_details")
+  endsAt               String? @map("ends_at")
+  status               String
+
+  bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@map("giveaways")
+}
+
+model ScheduledPost {
+  id           Int     @id @default(autoincrement())
+  botId        Int     @map("bot_id")
+  targetChatId String  @map("target_chat_id")
+  messageText  String  @map("message_text")
+  mediaUrl     String? @map("media_url")
+  buttonsJson  String? @map("buttons_json")
+  scheduledAt  String  @map("scheduled_at")
+  status       String
+
+  bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@map("scheduled_posts")
+}
+
+model BlockedUser {
+  botId      Int     @map("bot_id")
+  telegramId BigInt  @map("telegram_id")
+  username   String?
+  firstName  String? @map("first_name")
+  reason     String?
+  blockedAt  String? @map("blocked_at")
+
+  bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@id([botId, telegramId])
+  @@map("blocked_users")
+}
+
+model BotGroup {
+  botId       Int     @map("bot_id")
+  chatId      BigInt  @map("chat_id")
+  title       String
+  type        String
+  memberCount Int     @default(0) @map("member_count")
+  isActive    Int     @default(1) @map("is_active")
+  createdAt   String? @map("created_at")
+
+  bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@id([botId, chatId])
+  @@map("bot_groups")
+}
+
+model ChatConnection {
+  id        Int     @id @default(autoincrement())
+  botId     Int     @map("bot_id")
+  chatId    String  @map("chat_id")
+  title     String
+  type      String
+  username  String?
+  isActive  Int     @default(1) @map("is_active")
+  createdAt String? @map("created_at")
+
+  bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@unique([botId, chatId])
+  @@map("chat_connections")
+}
+
+model Autoresponder {
+  id           Int     @id @default(autoincrement())
+  botId        Int     @map("bot_id")
+  command      String
+  responseText String  @map("response_text")
+  mediaUrl     String? @map("media_url")
+  buttonsJson  String? @map("buttons_json")
+  isActive     Int     @default(1) @map("is_active")
+
+  bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@map("autoresponders")
+}
+
+model VipSubscription {
+  id         Int    @id @default(autoincrement())
+  botId      Int    @map("bot_id")
+  telegramId BigInt @map("telegram_id")
+  channelId  BigInt @map("channel_id")
+  expiresAt  String @map("expires_at")
+  isActive   Int    @default(1) @map("is_active")
+
+  bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@map("vip_subscriptions")
+}
+
+model Session {
+  id           String  @id
+  ip           String
+  userAgent    String? @map("user_agent")
+  browser      String
+  os           String
+  deviceType   String  @map("device_type")
+  createdAt    String? @map("created_at")
+  lastActiveAt String? @map("last_active_at")
+  isRevoked    Int     @default(0) @map("is_revoked")
+
+  @@map("sessions")
+}
+
+model SecurityLog {
+  id        Int     @id @default(autoincrement())
+  event     String
+  ip        String?
+  userAgent String? @map("user_agent")
+  details   String?
+  createdAt String? @map("created_at")
+
+  @@map("security_logs")
+}
+
+model SystemSetting {
+  key   String @id
+  value String
+
+  @@map("system_settings")
+}
+
+model ChatActivity {
+  botId        Int    @map("bot_id")
+  chatId       String @map("chat_id")
+  telegramId   BigInt @map("telegram_id")
+  day          String
+  messageCount Int    @default(0) @map("message_count")
+  replyCount   Int    @default(0) @map("reply_count")
+  mediaCount   Int    @default(0) @map("media_count")
+
+  bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@id([botId, chatId, telegramId, day])
+  @@map("chat_activity")
+}
+
+model ScoreSchedule {
+  id                  Int     @id @default(autoincrement())
+  botId               Int     @map("bot_id")
+  name                String
+  chatIdsJson         String  @map("chat_ids_json")
+  period              String  @default("weekly")
+  frequency           String  @default("weekly")
+  timeOfDay           String? @default("18:00") @map("time_of_day")
+  dayOfWeek           Int?    @default(1) @map("day_of_week")
+  runAt               String  @map("run_at")
+  topLimit            Int     @default(10) @map("top_limit")
+  headerText          String? @map("header_text")
+  rowTemplate         String? @map("row_template")
+  footerText          String? @map("footer_text")
+  parseMode           String? @default("HTML") @map("parse_mode")
+  medals              Int     @default(1)
+  disableNotification Int     @default(0) @map("disable_notification")
+  status              String  @default("active")
+  lastRunAt           String? @map("last_run_at")
+  lastResult          String? @map("last_result")
+  createdAt           String? @map("created_at")
+
+  bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@map("score_schedules")
+}
+
+model AiChatHistory {
+  id         Int    @id @default(autoincrement())
+  botId      Int    @map("bot_id")
+  telegramId BigInt @map("telegram_id")
+  role       String
+  content    String
+  createdAt  String @map("created_at")
+
+  bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@map("ai_chat_history")
+}
+
+model AiKnowledgeDoc {
+  id        Int     @id @default(autoincrement())
+  botId     Int     @map("bot_id")
+  title     String
+  content   String
+  tags      String?
+  createdAt String  @map("created_at")
+
+  bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@map("ai_knowledge_docs")
+}

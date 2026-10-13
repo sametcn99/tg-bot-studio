@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   Box,
@@ -22,6 +22,8 @@ import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../../services/api';
 import PageHeader from '../../components/PageHeader';
 import ModuleHelpDialog from '../../components/ModuleHelpDialog';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import { useSnackbar } from '../../context/SnackbarContext';
 import ModuleConfigPage from '../ModuleConfigPage';
 import { findModule, type ModuleEntry } from '../../registry/modules';
 
@@ -58,30 +60,30 @@ export default function EngagementPage({
   module: ModuleEntry;
 }): React.ReactElement {
   const { t } = useTranslation();
+  const { showSuccess, showError } = useSnackbar();
   const [tab, setTab] = useState(0);
   const [quizzes, setQuizzes] = useState<QuizRow[]>([]);
   const [reactions, setReactions] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
   const [docsOpen, setDocsOpen] = useState(false);
   const [form, setForm] = useState({ question: '', options: '', correctOptionId: 0, points: 1 });
+  const [quizToDelete, setQuizToDelete] = useState<QuizRow | null>(null);
 
   const reactionsModule = findModule('reactions');
   const totalReactions = Object.values(reactions).reduce((sum, count) => sum + count, 0);
 
-  useEffect(() => {
-    reload();
-  }, [botId]);
-
-  /**
-   * Reloads quizzes and the reaction summary.
-   * @returns {void}
-   */
-  function reload(): void {
-    apiFetch<QuizRow[]>(`/api/bots/${botId}/engagement/quizzes`).then(setQuizzes).catch(() => undefined);
+  const reload = useCallback((): void => {
+    apiFetch<QuizRow[]>(`/api/bots/${botId}/engagement/quizzes`)
+      .then(setQuizzes)
+      .catch(() => undefined);
     apiFetch<Record<string, number>>(`/api/bots/${botId}/engagement/reactions/summary`)
       .then(setReactions)
       .catch(() => undefined);
-  }
+  }, [botId]);
+
+  useEffect(() => {
+    reload();
+  }, [reload]);
 
   /**
    * Creates a quiz from the form state.
@@ -103,9 +105,33 @@ export default function EngagementPage({
     })
       .then(() => {
         setForm({ question: '', options: '', correctOptionId: 0, points: 1 });
+        showSuccess('Quiz created successfully');
         reload();
       })
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => {
+        setError(err.message);
+        showError(err.message);
+      });
+  }
+
+  /**
+   * Confirms and deletes a quiz.
+   * @returns {void}
+   */
+  function handleDeleteQuiz(): void {
+    if (!quizToDelete) return;
+    const target = quizToDelete;
+    apiFetch(`/api/bots/${botId}/engagement/quizzes/${target.id}`, {
+      method: 'DELETE',
+    })
+      .then(() => {
+        showSuccess(t('common.deleted') || 'Quiz deleted');
+        setQuizToDelete(null);
+        reload();
+      })
+      .catch((err: Error) => {
+        showError(err.message);
+      });
   }
 
   return (
@@ -115,7 +141,11 @@ export default function EngagementPage({
         subtitle="Interactive quizzes, polls, and reaction analytics"
         onDocs={() => setDocsOpen(true)}
       />
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
       <Tabs
         value={tab}
@@ -155,7 +185,9 @@ export default function EngagementPage({
                     type="number"
                     size="small"
                     value={form.correctOptionId}
-                    onChange={(event) => setForm({ ...form, correctOptionId: Number(event.target.value) })}
+                    onChange={(event) =>
+                      setForm({ ...form, correctOptionId: Number(event.target.value) })
+                    }
                   />
                   <TextField
                     label="Points"
@@ -181,52 +213,42 @@ export default function EngagementPage({
 
           <Card>
             <TableContainer sx={{ overflowX: 'auto' }}>
-            <Table size="small" aria-label="Quiz records">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Question</TableCell>
-                  <TableCell>Options</TableCell>
-                  <TableCell align="right">Points</TableCell>
-                  <TableCell align="right">{t('common.actions')}</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {quizzes.map((quiz) => (
-                  <TableRow key={quiz.id}>
-                    <TableCell>{quiz.question}</TableCell>
-                    <TableCell>
-                      <Typography variant="caption">
-                        {quiz.options.join(' / ')}
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="right">{quiz.points}</TableCell>
-                    <TableCell align="right">
-                      <Button
-                        size="small"
-                        color="error"
-                        onClick={() => {
-                          void apiFetch(`/api/bots/${botId}/engagement/quizzes/${quiz.id}`, {
-                            method: 'DELETE',
-                          }).then(reload);
-                        }}
-                      >
-                        {t('actions.delete')}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {quizzes.length === 0 && (
+              <Table size="small" aria-label="Quiz records">
+                <TableHead>
                   <TableRow>
-                    <TableCell colSpan={4}>
-                      <Typography color="text.secondary" align="center" sx={{ py: 2 }}>
-                        {t('common.empty')}
-                      </Typography>
-                    </TableCell>
+                    <TableCell>Question</TableCell>
+                    <TableCell>Options</TableCell>
+                    <TableCell align="right">Points</TableCell>
+                    <TableCell align="right">{t('common.actions')}</TableCell>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                </TableHead>
+                <TableBody>
+                  {quizzes.map((quiz) => (
+                    <TableRow key={quiz.id}>
+                      <TableCell>{quiz.question}</TableCell>
+                      <TableCell>
+                        <Typography variant="caption">{quiz.options.join(' / ')}</Typography>
+                      </TableCell>
+                      <TableCell align="right">{quiz.points}</TableCell>
+                      <TableCell align="right">
+                        <Button size="small" color="error" onClick={() => setQuizToDelete(quiz)}>
+                          {t('actions.delete')}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {quizzes.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={4}>
+                        <Typography color="text.secondary" align="center" sx={{ py: 2 }}>
+                          {t('common.empty')}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
           </Card>
 
           <Card>
@@ -234,7 +256,7 @@ export default function EngagementPage({
               <Typography variant="subtitle2" sx={{ mb: 2 }} component="h3">
                 Quiz trigger configuration
               </Typography>
-              <ModuleConfigPage botId={botId} module={module} />
+              <ModuleConfigPage botId={botId} module={module} embedded={true} />
             </CardContent>
           </Card>
         </Stack>
@@ -273,12 +295,20 @@ export default function EngagementPage({
                 <Typography variant="subtitle2" sx={{ mb: 2 }} component="h3">
                   Reaction points configuration
                 </Typography>
-                <ModuleConfigPage botId={botId} module={reactionsModule} />
+                <ModuleConfigPage botId={botId} module={reactionsModule} embedded={true} />
               </CardContent>
             </Card>
           )}
         </Stack>
       )}
+
+      <ConfirmDialog
+        open={Boolean(quizToDelete)}
+        title={t('actions.delete') || 'Delete Quiz'}
+        message={`Are you sure you want to delete the quiz "${quizToDelete?.question}"? This action cannot be undone.`}
+        onConfirm={handleDeleteQuiz}
+        onCancel={() => setQuizToDelete(null)}
+      />
 
       <ModuleHelpDialog module={docsOpen ? module : null} onClose={() => setDocsOpen(false)} />
     </Box>

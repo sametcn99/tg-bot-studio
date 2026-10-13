@@ -1,12 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  ParseIntPipe,
-  Post,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
 import { EngagementService } from './engagement.service';
 
 /**
@@ -52,10 +44,7 @@ export class EngagementController {
    * @returns {{success: boolean}} Confirmation payload.
    */
   @Delete('quizzes/:quizId')
-  removeQuiz(
-    @Param('botId', ParseIntPipe) botId: number,
-    @Param('quizId') quizId: string,
-  ) {
+  removeQuiz(@Param('botId', ParseIntPipe) botId: number, @Param('quizId') quizId: string) {
     this.service.removeQuiz(botId, quizId);
     return { success: true };
   }
@@ -67,10 +56,7 @@ export class EngagementController {
    * @returns {Record<string, number>} Correct answers per Telegram id.
    */
   @Get('quizzes/:quizId/scoreboard')
-  scoreboard(
-    @Param('botId', ParseIntPipe) botId: number,
-    @Param('quizId') quizId: string,
-  ) {
+  scoreboard(@Param('botId', ParseIntPipe) botId: number, @Param('quizId') quizId: string) {
     return this.service.getScoreboard(botId, quizId);
   }
 

@@ -1,13 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { DatabaseService } from '../../database/database.service';
+import { BotUserModel } from '../../models/bot-user.model';
 import type { BotUserRow } from '../../bot-engine/engine-helpers.service';
 
 /**
  * CRM profile shape returned to the dashboard (tags parsed from JSON).
  * @interface CrmUser
- * @property {number} telegram_id - Subscriber Telegram id.
- * @property {string[]} tags - Operator-assigned tags.
- * @property {string} notes - Operator internal notes.
  */
 export interface CrmUser extends Omit<BotUserRow, 'tags_json'> {
   tags: string[];
@@ -16,13 +13,14 @@ export interface CrmUser extends Omit<BotUserRow, 'tags_json'> {
 
 /**
  * Audience CRM: subscriber search, tag/note management, and export.
+ * Backed by typed BotUserModel.
  */
 @Injectable()
 export class UsersCrmService {
   /**
-   * @param {DatabaseService} db - SQLite access service.
+   * @param {BotUserModel} userModel - Typed audience model.
    */
-  constructor(private readonly db: DatabaseService) {}
+  constructor(private readonly userModel: BotUserModel) {}
 
   /**
    * Decodes a raw bot_users row into the CRM shape.
@@ -41,15 +39,10 @@ export class UsersCrmService {
    * Lists subscribers with optional search and tag filters.
    * @param {number} botId - Owning bot id.
    * @param {object} [filters] - Optional filters.
-   * @param {string} [filters.search] - Matches username/name/telegram id.
-   * @param {string} [filters.tag] - Requires the tag to be present.
-   * @returns {CrmUser[]} Matching subscriber profiles.
+   * @returns {Promise<CrmUser[]>} Matching subscriber profiles.
    */
-  list(botId: number, filters?: { search?: string; tag?: string }): CrmUser[] {
-    const rows = this.db.query<BotUserRow>(
-      'SELECT * FROM bot_users WHERE bot_id = ? ORDER BY last_seen_at DESC LIMIT 2000',
-      botId,
-    );
+  async list(botId: number, filters?: { search?: string; tag?: string }): Promise<CrmUser[]> {
+    const rows = await this.userModel.listUsers(botId, 2000);
     let users = rows.map((row) => this.decode(row));
     if (filters?.search) {
       const needle = filters.search.toLowerCase();
@@ -71,15 +64,11 @@ export class UsersCrmService {
    * Fetches one subscriber profile.
    * @param {number} botId - Owning bot id.
    * @param {number} telegramId - Subscriber Telegram id.
-   * @returns {CrmUser} Decoded profile.
+   * @returns {Promise<CrmUser>} Decoded profile.
    * @throws {NotFoundException} When the subscriber is unknown.
    */
-  findOne(botId: number, telegramId: number): CrmUser {
-    const row = this.db.get<BotUserRow>(
-      'SELECT * FROM bot_users WHERE bot_id = ? AND telegram_id = ?',
-      botId,
-      telegramId,
-    );
+  async findOne(botId: number, telegramId: number): Promise<CrmUser> {
+    const row = await this.userModel.getUser(botId, telegramId);
     if (!row) throw new NotFoundException(`Subscriber ${telegramId} not found`);
     return this.decode(row);
   }
@@ -90,29 +79,34 @@ export class UsersCrmService {
    * @param {number} telegramId - Subscriber Telegram id.
    * @param {string[]} tags - Full replacement tag list.
    * @param {string} notes - Internal notes text.
-   * @returns {CrmUser} Updated profile.
+   * @returns {Promise<CrmUser>} Updated profile.
    */
-  updateTags(botId: number, telegramId: number, tags: string[], notes: string): CrmUser {
-    this.findOne(botId, telegramId);
-    this.db.run(
-      'UPDATE bot_users SET tags_json = ? WHERE bot_id = ? AND telegram_id = ?',
-      JSON.stringify({ tags, notes }),
+  async updateTags(
+    botId: number,
+    telegramId: number,
+    tags: string[],
+    notes: string,
+  ): Promise<CrmUser> {
+    await this.findOne(botId, telegramId);
+    const updated = await this.userModel.updateTags(
       botId,
       telegramId,
+      JSON.stringify({ tags, notes }),
     );
-    return this.findOne(botId, telegramId);
+    return this.decode(updated);
   }
 
   /**
    * Exports subscribers as CSV or JSON.
    * @param {number} botId - Owning bot id.
    * @param {'csv'|'json'} format - Export format.
-   * @returns {string} Serialized export document.
+   * @returns {Promise<string>} Serialized export document.
    */
-  export(botId: number, format: 'csv' | 'json'): string {
-    const users = this.list(botId);
+  async export(botId: number, format: 'csv' | 'json'): Promise<string> {
+    const users = await this.list(botId);
     if (format === 'json') return JSON.stringify(users, null, 2);
-    const header = 'telegram_id,username,first_name,last_name,language_code,points,referrer_id,tags,notes,first_seen_at,last_seen_at';
+    const header =
+      'telegram_id,username,first_name,last_name,language_code,points,referrer_id,tags,notes,first_seen_at,last_seen_at';
     const lines = users.map((user) =>
       [
         user.telegram_id,
@@ -127,7 +121,9 @@ export class UsersCrmService {
         user.first_seen_at ?? '',
         user.last_seen_at ?? '',
       ]
-        .map((cell) => /[",]/.test(String(cell)) ? `"${String(cell).replace(/"/g, '""')}"` : String(cell))
+        .map((cell) =>
+          /[",]/.test(String(cell)) ? `"${String(cell).replace(/"/g, '""')}"` : String(cell),
+        )
         .join(','),
     );
     return [header, ...lines].join('\r\n');
@@ -136,10 +132,10 @@ export class UsersCrmService {
   /**
    * Aggregated tag inventory for filter chips.
    * @param {number} botId - Owning bot id.
-   * @returns {string[]} Distinct tags in use.
+   * @returns {Promise<string[]>} Distinct tags in use.
    */
-  distinctTags(botId: number): string[] {
-    const users = this.list(botId);
+  async distinctTags(botId: number): Promise<string[]> {
+    const users = await this.list(botId);
     return [...new Set(users.flatMap((user) => user.tags))].sort();
   }
 }

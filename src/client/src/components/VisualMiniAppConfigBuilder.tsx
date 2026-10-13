@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import {
   Box,
   Button,
-  Chip,
   FormControlLabel,
   IconButton,
   MenuItem,
@@ -78,10 +77,7 @@ export default function VisualMiniAppConfigBuilder({
     onChange({ ...config, fields: next });
   };
   const addField = () => {
-    updateFields([
-      ...fields,
-      { label: 'Full Name', type: 'text', required: true },
-    ]);
+    updateFields([...fields, { label: 'Full Name', type: 'text', required: true }]);
   };
   const removeField = (idx: number) => {
     updateFields(fields.filter((_, i) => i !== idx));
@@ -98,7 +94,7 @@ export default function VisualMiniAppConfigBuilder({
     onChange({ ...config, prizes: next });
   };
   const addPrize = () => {
-    updatePrizes([...prizes, { label: '50 Points', points: 50 }]);
+    updatePrizes([...prizes, { label: '50 Points', points: 50, weight: 10 }]);
   };
   const removePrize = (idx: number) => {
     updatePrizes(prizes.filter((_, i) => i !== idx));
@@ -127,7 +123,15 @@ export default function VisualMiniAppConfigBuilder({
   };
 
   return (
-    <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, p: 2, bgcolor: 'background.paper' }}>
+    <Box
+      sx={{
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: 2,
+        p: 2,
+        bgcolor: 'background.paper',
+      }}
+    >
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
         <Typography variant="subtitle2" fontWeight={600}>
           {t('miniApps.config')} ({templateType})
@@ -135,10 +139,23 @@ export default function VisualMiniAppConfigBuilder({
         <Tabs
           value={tab}
           onChange={(_, v) => setTab(v)}
-          sx={{ minHeight: 32, '& .MuiTab-root': { minHeight: 32, py: 0.5, px: 1.5, fontSize: '0.75rem' } }}
+          sx={{
+            minHeight: 32,
+            '& .MuiTab-root': { minHeight: 32, py: 0.5, px: 1.5, fontSize: '0.75rem' },
+          }}
         >
-          <Tab icon={<ViewQuiltIcon sx={{ fontSize: 16 }} />} iconPosition="start" label={t('miniApps.visualEditor')} value="visual" />
-          <Tab icon={<CodeIcon sx={{ fontSize: 16 }} />} iconPosition="start" label={t('miniApps.rawJsonEditor')} value="json" />
+          <Tab
+            icon={<ViewQuiltIcon sx={{ fontSize: 16 }} />}
+            iconPosition="start"
+            label={t('miniApps.visualEditor')}
+            value="visual"
+          />
+          <Tab
+            icon={<CodeIcon sx={{ fontSize: 16 }} />}
+            iconPosition="start"
+            label={t('miniApps.rawJsonEditor')}
+            value="json"
+          />
         </Tabs>
       </Stack>
 
@@ -150,7 +167,11 @@ export default function VisualMiniAppConfigBuilder({
                 Configure your product catalog. Items are shown in the Telegram storefront.
               </Typography>
               {products.map((prod, idx) => (
-                <Paper key={idx} variant="outlined" sx={{ p: 1.5, borderRadius: 2, bgcolor: 'background.default' }}>
+                <Paper
+                  key={idx}
+                  variant="outlined"
+                  sx={{ p: 1.5, borderRadius: 2, bgcolor: 'background.default' }}
+                >
                   <Stack spacing={1.5}>
                     <Stack direction="row" spacing={1} alignItems="center">
                       <TextField
@@ -194,7 +215,13 @@ export default function VisualMiniAppConfigBuilder({
                   </Stack>
                 </Paper>
               ))}
-              <Button size="small" variant="outlined" startIcon={<AddIcon />} onClick={addProduct} sx={{ alignSelf: 'flex-start' }}>
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<AddIcon />}
+                onClick={addProduct}
+                sx={{ alignSelf: 'flex-start' }}
+              >
                 Add Product
               </Button>
             </Stack>
@@ -206,7 +233,11 @@ export default function VisualMiniAppConfigBuilder({
                 Configure form inputs. Responses are recorded in the forms table.
               </Typography>
               {fields.map((f, idx) => (
-                <Paper key={idx} variant="outlined" sx={{ p: 1.5, borderRadius: 2, bgcolor: 'background.default' }}>
+                <Paper
+                  key={idx}
+                  variant="outlined"
+                  sx={{ p: 1.5, borderRadius: 2, bgcolor: 'background.default' }}
+                >
                   <Stack direction="row" spacing={1.5} alignItems="center">
                     <TextField
                       size="small"
@@ -246,7 +277,13 @@ export default function VisualMiniAppConfigBuilder({
                   </Stack>
                 </Paper>
               ))}
-              <Button size="small" variant="outlined" startIcon={<AddIcon />} onClick={addField} sx={{ alignSelf: 'flex-start' }}>
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<AddIcon />}
+                onClick={addField}
+                sx={{ alignSelf: 'flex-start' }}
+              >
                 Add Form Field
               </Button>
             </Stack>
@@ -258,7 +295,11 @@ export default function VisualMiniAppConfigBuilder({
                 Configure wheel slices and point prizes.
               </Typography>
               {prizes.map((prz, idx) => (
-                <Paper key={idx} variant="outlined" sx={{ p: 1.5, borderRadius: 2, bgcolor: 'background.default' }}>
+                <Paper
+                  key={idx}
+                  variant="outlined"
+                  sx={{ p: 1.5, borderRadius: 2, bgcolor: 'background.default' }}
+                >
                   <Stack direction="row" spacing={1.5} alignItems="center">
                     <TextField
                       size="small"
@@ -275,6 +316,16 @@ export default function VisualMiniAppConfigBuilder({
                       onChange={(e) => updatePrizeField(idx, 'points', Number(e.target.value))}
                       sx={{ flex: 1 }}
                     />
+                    <TextField
+                      size="small"
+                      label="Weight (Odds)"
+                      type="number"
+                      value={Number(prz.weight ?? 10)}
+                      onChange={(e) =>
+                        updatePrizeField(idx, 'weight', Math.max(1, Number(e.target.value)))
+                      }
+                      sx={{ flex: 1 }}
+                    />
                     <Tooltip title={t('actions.delete')}>
                       <IconButton size="small" color="error" onClick={() => removePrize(idx)}>
                         <DeleteOutlineIcon fontSize="small" />
@@ -283,7 +334,13 @@ export default function VisualMiniAppConfigBuilder({
                   </Stack>
                 </Paper>
               ))}
-              <Button size="small" variant="outlined" startIcon={<AddIcon />} onClick={addPrize} sx={{ alignSelf: 'flex-start' }}>
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<AddIcon />}
+                onClick={addPrize}
+                sx={{ alignSelf: 'flex-start' }}
+              >
                 Add Prize Slice
               </Button>
             </Stack>
@@ -295,7 +352,11 @@ export default function VisualMiniAppConfigBuilder({
                 Configure loyalty rank tiers.
               </Typography>
               {tiers.map((tr, idx) => (
-                <Paper key={idx} variant="outlined" sx={{ p: 1.5, borderRadius: 2, bgcolor: 'background.default' }}>
+                <Paper
+                  key={idx}
+                  variant="outlined"
+                  sx={{ p: 1.5, borderRadius: 2, bgcolor: 'background.default' }}
+                >
                   <Stack direction="row" spacing={1.5} alignItems="center">
                     <TextField
                       size="small"
@@ -320,7 +381,13 @@ export default function VisualMiniAppConfigBuilder({
                   </Stack>
                 </Paper>
               ))}
-              <Button size="small" variant="outlined" startIcon={<AddIcon />} onClick={addTier} sx={{ alignSelf: 'flex-start' }}>
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<AddIcon />}
+                onClick={addTier}
+                sx={{ alignSelf: 'flex-start' }}
+              >
                 Add Tier Level
               </Button>
             </Stack>

@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  verify:
+    name: Lint, Format, Typecheck, Test & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile || bun install
+
+      - name: Generate Prisma Client
+        run: bun run prisma:generate
+
+      - name: Check Code Formatting (Prettier)
+        run: bun run format:check
+
+      - name: Run Linter (ESLint)
+        run: bun run lint
+
+      - name: Run Typecheck
+        run: bun run typecheck
+
+      - name: Run Unit Tests
+        run: bun test
+
+      - name: Build Application
+        run: bun run build

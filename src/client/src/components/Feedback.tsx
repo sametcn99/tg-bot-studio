@@ -9,11 +9,7 @@ import InboxOutlinedIcon from '@mui/icons-material/InboxOutlined';
  * @param {string} [props.label='Loading'] - Accessible description.
  * @returns {React.ReactElement} The loading state.
  */
-export function LoadingState({
-  label = 'Loading',
-}: {
-  label?: string;
-}): React.ReactElement {
+export function LoadingState({ label = 'Loading' }: { label?: string }): React.ReactElement {
   return (
     <Box
       role="status"
@@ -54,7 +50,10 @@ export function EmptyState({
         textAlign: 'center',
       }}
     >
-      <InboxOutlinedIcon aria-hidden="true" sx={{ fontSize: 44, color: 'text.secondary', opacity: 0.6 }} />
+      <InboxOutlinedIcon
+        aria-hidden="true"
+        sx={{ fontSize: 44, color: 'text.secondary', opacity: 0.6 }}
+      />
       <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 420 }}>
         {message}
       </Typography>

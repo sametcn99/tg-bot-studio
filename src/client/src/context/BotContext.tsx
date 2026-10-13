@@ -69,9 +69,7 @@ export function BotProvider({ children }: { children: React.ReactNode }): React.
       .then((list) => {
         setBots(list);
         setActiveBotIdState((current) =>
-          current && list.some((bot) => bot.id === current)
-            ? current
-            : (list[0]?.id ?? null),
+          current && list.some((bot) => bot.id === current) ? current : (list[0]?.id ?? null),
         );
       })
       .catch(() => undefined);

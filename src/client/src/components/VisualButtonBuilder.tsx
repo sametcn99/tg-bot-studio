@@ -125,7 +125,15 @@ export default function VisualButtonBuilder({
   };
 
   return (
-    <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, p: 2, bgcolor: 'background.paper' }}>
+    <Box
+      sx={{
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: 2,
+        p: 2,
+        bgcolor: 'background.paper',
+      }}
+    >
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
         <Typography variant="subtitle2" fontWeight={600}>
           {label ?? t('buttons.builderTitle')}
@@ -133,10 +141,23 @@ export default function VisualButtonBuilder({
         <Tabs
           value={tab}
           onChange={(_, v) => setTab(v)}
-          sx={{ minHeight: 32, '& .MuiTab-root': { minHeight: 32, py: 0.5, px: 1.5, fontSize: '0.75rem' } }}
+          sx={{
+            minHeight: 32,
+            '& .MuiTab-root': { minHeight: 32, py: 0.5, px: 1.5, fontSize: '0.75rem' },
+          }}
         >
-          <Tab icon={<ViewModuleIcon sx={{ fontSize: 16 }} />} iconPosition="start" label={t('buttons.visualMode')} value="visual" />
-          <Tab icon={<CodeIcon sx={{ fontSize: 16 }} />} iconPosition="start" label={t('buttons.jsonMode')} value="json" />
+          <Tab
+            icon={<ViewModuleIcon sx={{ fontSize: 16 }} />}
+            iconPosition="start"
+            label={t('buttons.visualMode')}
+            value="visual"
+          />
+          <Tab
+            icon={<CodeIcon sx={{ fontSize: 16 }} />}
+            iconPosition="start"
+            label={t('buttons.jsonMode')}
+            value="json"
+          />
         </Tabs>
       </Stack>
 
@@ -144,12 +165,31 @@ export default function VisualButtonBuilder({
         <Stack spacing={2}>
           {/* Preset Suggestions */}
           <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center', mr: 0.5 }}>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ alignSelf: 'center', mr: 0.5 }}
+            >
               Presets:
             </Typography>
-            <Chip size="small" label="🌐 Website" variant="outlined" onClick={() => addPreset('Visit Website', 'https://example.com')} />
-            <Chip size="small" label="📢 Channel" variant="outlined" onClick={() => addPreset('Join Channel', 'https://t.me/example')} />
-            <Chip size="small" label="💬 Support" variant="outlined" onClick={() => addPreset('Contact Support', 'https://t.me/support_bot')} />
+            <Chip
+              size="small"
+              label="🌐 Website"
+              variant="outlined"
+              onClick={() => addPreset('Visit Website', 'https://example.com')}
+            />
+            <Chip
+              size="small"
+              label="📢 Channel"
+              variant="outlined"
+              onClick={() => addPreset('Join Channel', 'https://t.me/example')}
+            />
+            <Chip
+              size="small"
+              label="💬 Support"
+              variant="outlined"
+              onClick={() => addPreset('Contact Support', 'https://t.me/support_bot')}
+            />
           </Stack>
 
           {/* List of buttons */}
@@ -182,7 +222,12 @@ export default function VisualButtonBuilder({
                 placeholder="https://..."
               />
               <Tooltip title={t('actions.delete')}>
-                <IconButton size="small" color="error" onClick={() => removeButton(idx)} aria-label="Delete button">
+                <IconButton
+                  size="small"
+                  color="error"
+                  onClick={() => removeButton(idx)}
+                  aria-label="Delete button"
+                >
                   <DeleteOutlineIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
@@ -211,7 +256,11 @@ export default function VisualButtonBuilder({
                 borderColor: 'divider',
               }}
             >
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 600 }}>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ display: 'block', mb: 1, fontWeight: 600 }}
+              >
                 {t('buttons.preview')}
               </Typography>
               <Stack spacing={0.75}>

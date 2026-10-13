@@ -45,10 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     window.location.href = '/login';
   }, []);
 
-  const value = useMemo(
-    () => ({ authenticated, login, logout }),
-    [authenticated, login, logout],
-  );
+  const value = useMemo(() => ({ authenticated, login, logout }), [authenticated, login, logout]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

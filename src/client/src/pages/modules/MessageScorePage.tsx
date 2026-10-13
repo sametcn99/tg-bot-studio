@@ -37,6 +37,8 @@ import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../../services/api';
 import PageHeader from '../../components/PageHeader';
 import ModuleHelpDialog from '../../components/ModuleHelpDialog';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import { useSnackbar } from '../../context/SnackbarContext';
 import ModuleConfigPage from '../ModuleConfigPage';
 import { ConnectionMultiSelect, ConnectionSelect } from '../../components/ConnectionSelect';
 import { LoadingState } from '../../components/Feedback';
@@ -84,7 +86,8 @@ const DEFAULT_COMPOSER = {
   period: 'weekly',
   topLimit: 10,
   headerText: '🏆 <b>Most Active Members</b> — {group_name}\n<b>{period_label}</b>',
-  rowTemplate: '{medal} {rank}. {mention} — <b>{score}</b> pts ({messages} msgs, {replies} replies)',
+  rowTemplate:
+    '{medal} {rank}. {mention} — <b>{score}</b> pts ({messages} msgs, {replies} replies)',
   footerText: '💡 Keep chatting to climb the ranks!',
   parseMode: 'HTML',
   medals: true,
@@ -180,6 +183,7 @@ export default function MessageScorePage({
   module: ModuleEntry;
 }): React.ReactElement {
   const { t } = useTranslation();
+  const { showSuccess, showError } = useSnackbar();
   const [leaders, setLeaders] = useState<LeaderRow[]>([]);
   const [lbChat, setLbChat] = useState('');
   const [lbPeriod, setLbPeriod] = useState<(typeof PERIODS)[number]>('weekly');
@@ -191,6 +195,7 @@ export default function MessageScorePage({
   const [schedulesLoading, setSchedulesLoading] = useState(true);
   const [draft, setDraft] = useState<ScheduleDraft | null>(null);
   const [editingScheduleId, setEditingScheduleId] = useState<number | null>(null);
+  const [scheduleToDelete, setScheduleToDelete] = useState<ScheduleRow | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [docsOpen, setDocsOpen] = useState(false);
@@ -342,10 +347,15 @@ export default function MessageScorePage({
       .then(() => {
         setDraft(null);
         setEditingScheduleId(null);
-        setStatus(editingScheduleId ? 'Schedule updated.' : 'Schedule created.');
+        const msg = editingScheduleId ? 'Schedule updated.' : 'Schedule created.';
+        setStatus(msg);
+        showSuccess(msg);
         loadSchedules();
       })
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => {
+        setError(err.message);
+        showError(err.message);
+      });
   }
 
   /**
@@ -358,25 +368,42 @@ export default function MessageScorePage({
     setStatus(null);
     apiFetch(`/api/bots/${botId}/message-score/schedules/${row.id}/run`, { method: 'POST' })
       .then(() => {
-        setStatus(`Schedule "${row.name}" dispatched.`);
+        const msg = `Schedule "${row.name}" dispatched.`;
+        setStatus(msg);
+        showSuccess(msg);
         loadSchedules();
       })
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => {
+        setError(err.message);
+        showError(err.message);
+      });
   }
 
   /**
-   * Deletes a schedule after confirmation from the table icon.
-   * @param {ScheduleRow} row - Schedule to delete.
+   * Confirms and deletes a schedule.
    * @returns {void}
    */
-  function deleteSchedule(row: ScheduleRow): void {
-    apiFetch(`/api/bots/${botId}/message-score/schedules/${row.id}`, { method: 'DELETE' })
-      .then(loadSchedules)
-      .catch((err: Error) => setError(err.message));
+  function handleDeleteSchedule(): void {
+    if (!scheduleToDelete) return;
+    const target = scheduleToDelete;
+    apiFetch(`/api/bots/${botId}/message-score/schedules/${target.id}`, { method: 'DELETE' })
+      .then(() => {
+        showSuccess(`Schedule "${target.name}" deleted.`);
+        setScheduleToDelete(null);
+        loadSchedules();
+      })
+      .catch((err: Error) => {
+        setError(err.message);
+        showError(err.message);
+      });
   }
 
   const targetsSummary = useMemo(
-    () => (chatIds: string[]): string => (chatIds.length <= 2 ? chatIds.join(', ') : `${chatIds.slice(0, 2).join(', ')} +${chatIds.length - 2}`),
+    () =>
+      (chatIds: string[]): string =>
+        chatIds.length <= 2
+          ? chatIds.join(', ')
+          : `${chatIds.slice(0, 2).join(', ')} +${chatIds.length - 2}`,
     [],
   );
 
@@ -388,11 +415,19 @@ export default function MessageScorePage({
         onDocs={() => setDocsOpen(true)}
       />
 
-      {status && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setStatus(null)}>{status}</Alert>}
-      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
+      {status && (
+        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setStatus(null)}>
+          {status}
+        </Alert>
+      )}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
 
       <Stack spacing={3}>
-        <ModuleConfigPage botId={botId} module={module} />
+        <ModuleConfigPage botId={botId} module={module} embedded={true} />
 
         <Card>
           <CardContent>
@@ -477,8 +512,8 @@ export default function MessageScorePage({
                     <TableRow>
                       <TableCell colSpan={6}>
                         <Typography color="text.secondary" align="center" sx={{ py: 2 }}>
-                          No activity recorded yet. Make sure the bot can see group messages
-                          (admin rights or privacy mode disabled in BotFather).
+                          No activity recorded yet. Make sure the bot can see group messages (admin
+                          rights or privacy mode disabled in BotFather).
                         </Typography>
                       </TableCell>
                     </TableRow>
@@ -510,7 +545,9 @@ export default function MessageScorePage({
                     size="small"
                     fullWidth
                     value={composer.period}
-                    onChange={(event) => setComposerField('period', normalizePeriod(event.target.value))}
+                    onChange={(event) =>
+                      setComposerField('period', normalizePeriod(event.target.value))
+                    }
                   >
                     {PERIODS.map((period) => (
                       <MenuItem key={period} value={period}>
@@ -568,7 +605,9 @@ export default function MessageScorePage({
                       <Switch
                         size="small"
                         checked={composer.disableNotification}
-                        onChange={(event) => setComposerField('disableNotification', event.target.checked)}
+                        onChange={(event) =>
+                          setComposerField('disableNotification', event.target.checked)
+                        }
                         inputProps={{ 'aria-label': 'Send silently' }}
                       />
                     </Stack>
@@ -619,7 +658,11 @@ export default function MessageScorePage({
               ) : (
                 previews.map((preview) => (
                   <Box key={preview.chatId}>
-                    <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ mb: 0.5, display: 'block' }}
+                    >
                       {preview.title} · {preview.chatId}
                     </Typography>
                     <Paper variant="outlined" sx={{ p: 1.5, bgcolor: 'action.hover' }}>
@@ -663,7 +706,12 @@ export default function MessageScorePage({
 
         <Card>
           <CardContent>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              alignItems="center"
+              sx={{ mb: 2 }}
+            >
               <Typography variant="subtitle2" component="h3">
                 Schedules
               </Typography>
@@ -711,9 +759,18 @@ export default function MessageScorePage({
                           </TableCell>
                           <TableCell>{PERIOD_LABELS[normalizePeriod(row.period)]}</TableCell>
                           <TableCell>{recurrenceLabel(row)}</TableCell>
-                          <TableCell>{row.status === 'active' ? row.run_at.replace('T', ' ').slice(0, 16) : '—'}</TableCell>
                           <TableCell>
-                            <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 220, display: 'block' }}>
+                            {row.status === 'active'
+                              ? row.run_at.replace('T', ' ').slice(0, 16)
+                              : '—'}
+                          </TableCell>
+                          <TableCell>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              noWrap
+                              sx={{ maxWidth: 220, display: 'block' }}
+                            >
                               {row.last_result ?? 'Not run yet'}
                             </Typography>
                           </TableCell>
@@ -739,7 +796,7 @@ export default function MessageScorePage({
                             <Tooltip title={t('actions.delete')}>
                               <IconButton
                                 size="small"
-                                onClick={() => deleteSchedule(row)}
+                                onClick={() => setScheduleToDelete(row)}
                                 aria-label={`${t('actions.delete')} ${row.name}`}
                               >
                                 <DeleteIcon fontSize="small" />
@@ -753,7 +810,8 @@ export default function MessageScorePage({
                       <TableRow>
                         <TableCell colSpan={7}>
                           <Typography color="text.secondary" align="center" sx={{ py: 2 }}>
-                            No schedules yet. Compose the message above and press “Save as schedule”.
+                            No schedules yet. Compose the message above and press “Save as
+                            schedule”.
                           </Typography>
                         </TableCell>
                       </TableRow>
@@ -783,7 +841,11 @@ export default function MessageScorePage({
               size="small"
               fullWidth
               value={draft?.name ?? ''}
-              onChange={(event) => setDraft((current) => (current ? { ...current, name: event.target.value } : current))}
+              onChange={(event) =>
+                setDraft((current) =>
+                  current ? { ...current, name: event.target.value } : current,
+                )
+              }
             />
             <TextField
               select
@@ -793,7 +855,9 @@ export default function MessageScorePage({
               value={draft?.frequency ?? 'daily'}
               onChange={(event) =>
                 setDraft((current) =>
-                  current ? { ...current, frequency: normalizeFrequency(event.target.value) } : current,
+                  current
+                    ? { ...current, frequency: normalizeFrequency(event.target.value) }
+                    : current,
                 )
               }
             >
@@ -816,7 +880,11 @@ export default function MessageScorePage({
                 fullWidth
                 type="datetime-local"
                 value={draft.runAt}
-                onChange={(event) => setDraft((current) => (current ? { ...current, runAt: event.target.value } : current))}
+                onChange={(event) =>
+                  setDraft((current) =>
+                    current ? { ...current, runAt: event.target.value } : current,
+                  )
+                }
                 helperText="Converted to UTC for the dispatcher"
               />
             )}
@@ -828,7 +896,9 @@ export default function MessageScorePage({
                 type="time"
                 value={draft?.timeOfDay ?? '18:00'}
                 onChange={(event) =>
-                  setDraft((current) => (current ? { ...current, timeOfDay: event.target.value } : current))
+                  setDraft((current) =>
+                    current ? { ...current, timeOfDay: event.target.value } : current,
+                  )
                 }
               />
             )}
@@ -853,7 +923,8 @@ export default function MessageScorePage({
               </TextField>
             )}
             <Typography variant="caption" color="text.secondary">
-              Targets and message format come from the composer above ({composer.chatIds.length} chat(s) selected).
+              Targets and message format come from the composer above ({composer.chatIds.length}{' '}
+              chat(s) selected).
             </Typography>
           </Stack>
         </DialogContent>
@@ -864,6 +935,14 @@ export default function MessageScorePage({
           </Button>
         </DialogActions>
       </Dialog>
+
+      <ConfirmDialog
+        open={Boolean(scheduleToDelete)}
+        title={t('actions.delete') || 'Delete Schedule'}
+        message={`Are you sure you want to delete the schedule "${scheduleToDelete?.name}"? This action cannot be undone.`}
+        onConfirm={handleDeleteSchedule}
+        onCancel={() => setScheduleToDelete(null)}
+      />
 
       <ModuleHelpDialog module={docsOpen ? module : null} onClose={() => setDocsOpen(false)} />
     </Box>

@@ -21,9 +21,7 @@ async function bootstrap(): Promise<void> {
   app.enableCors();
 
   app.setGlobalPrefix('api');
-  app.useGlobalPipes(
-    new ValidationPipe({ whitelist: true, transform: true }),
-  );
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalInterceptors(new TransformInterceptor());
 

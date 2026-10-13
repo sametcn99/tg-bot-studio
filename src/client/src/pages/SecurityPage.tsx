@@ -19,6 +19,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../services/api';
 import PageHeader from '../components/PageHeader';
+import DataTable from '../components/DataTable';
 
 /**
  * Session row from the auth API.
@@ -83,8 +84,12 @@ export default function SecurityPage(): React.ReactElement {
    * @returns {void}
    */
   function reload(): void {
-    apiFetch<SessionInfo[]>('/api/auth/sessions').then(setSessions).catch(() => undefined);
-    apiFetch<SecurityLog[]>('/api/auth/security-logs').then(setLogs).catch(() => undefined);
+    apiFetch<SessionInfo[]>('/api/auth/sessions')
+      .then(setSessions)
+      .catch(() => undefined);
+    apiFetch<SecurityLog[]>('/api/auth/security-logs')
+      .then(setLogs)
+      .catch(() => undefined);
   }
 
   /**
@@ -93,7 +98,9 @@ export default function SecurityPage(): React.ReactElement {
    * @returns {void}
    */
   function revoke(id: string): void {
-    apiFetch(`/api/auth/sessions/${id}`, { method: 'DELETE' }).then(reload).catch(() => undefined);
+    apiFetch(`/api/auth/sessions/${id}`, { method: 'DELETE' })
+      .then(reload)
+      .catch(() => undefined);
   }
 
   /**
@@ -101,7 +108,9 @@ export default function SecurityPage(): React.ReactElement {
    * @returns {void}
    */
   function revokeOthers(): void {
-    apiFetch('/api/auth/sessions/revoke-others', { method: 'POST' }).then(reload).catch(() => undefined);
+    apiFetch('/api/auth/sessions/revoke-others', { method: 'POST' })
+      .then(reload)
+      .catch(() => undefined);
   }
 
   /**
@@ -130,13 +139,23 @@ export default function SecurityPage(): React.ReactElement {
     <Box>
       <PageHeader title={t('nav.security')} />
 
-      {status && <Alert severity="success" sx={{ mb: 2 }}>{status}</Alert>}
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {status && (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          {status}
+        </Alert>
+      )}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-            <Typography variant="subtitle2" component="h3">{t('security.sessions')}</Typography>
+            <Typography variant="subtitle2" component="h3">
+              {t('security.sessions')}
+            </Typography>
             <Button size="small" onClick={revokeOthers}>
               {t('security.revokeOthers')}
             </Button>
@@ -154,32 +173,32 @@ export default function SecurityPage(): React.ReactElement {
                   <TableCell />
                 </TableRow>
               </TableHead>
-            <TableBody>
-              {sessions.map((session) => (
-                <TableRow key={session.id}>
-                  <TableCell>{session.browser}</TableCell>
-                  <TableCell>{session.os}</TableCell>
-                  <TableCell>{session.device_type}</TableCell>
-                  <TableCell>{session.ip}</TableCell>
-                  <TableCell>{session.last_active_at?.slice(0, 19).replace('T', ' ')}</TableCell>
-                  <TableCell>
-                    <Chip
-                      size="small"
-                      color={session.is_revoked ? 'default' : 'success'}
-                      label={session.is_revoked ? 'Revoked' : 'Active'}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    {!session.is_revoked && (
-                      <Button size="small" color="error" onClick={() => revoke(session.id)}>
-                        {t('security.revoke')}
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              <TableBody>
+                {sessions.map((session) => (
+                  <TableRow key={session.id}>
+                    <TableCell>{session.browser}</TableCell>
+                    <TableCell>{session.os}</TableCell>
+                    <TableCell>{session.device_type}</TableCell>
+                    <TableCell>{session.ip}</TableCell>
+                    <TableCell>{session.last_active_at?.slice(0, 19).replace('T', ' ')}</TableCell>
+                    <TableCell>
+                      <Chip
+                        size="small"
+                        color={session.is_revoked ? 'default' : 'success'}
+                        label={session.is_revoked ? 'Revoked' : 'Active'}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {!session.is_revoked && (
+                        <Button size="small" color="error" onClick={() => revoke(session.id)}>
+                          {t('security.revoke')}
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </TableContainer>
         </CardContent>
       </Card>
@@ -216,40 +235,27 @@ export default function SecurityPage(): React.ReactElement {
 
       <Card>
         <CardContent>
-          <Typography variant="subtitle2" sx={{ mb: 1 }} component="h3">
+          <Typography variant="subtitle2" sx={{ mb: 2 }} component="h3">
             {t('security.logs')}
           </Typography>
-          <TableContainer sx={{ overflowX: 'auto' }}>
-            <Table size="small" aria-label={t('security.logs')}>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Event</TableCell>
-                  <TableCell>IP</TableCell>
-                  <TableCell>Details</TableCell>
-                  <TableCell>Time</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {logs.map((log) => (
-                  <TableRow key={log.id}>
-                    <TableCell>{log.event}</TableCell>
-                    <TableCell>{log.ip ?? '-'}</TableCell>
-                    <TableCell>{log.details ?? '-'}</TableCell>
-                    <TableCell>{log.created_at?.slice(0, 19).replace('T', ' ')}</TableCell>
-                  </TableRow>
-                ))}
-              {logs.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={4}>
-                    <Typography color="text.secondary" align="center" sx={{ py: 2 }}>
-                      {t('common.empty')}
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-          </TableContainer>
+          <DataTable<SecurityLog>
+            rows={logs}
+            columns={[
+              { id: 'event', label: 'Event', sortable: true },
+              { id: 'ip', label: 'IP', sortable: true, render: (r) => r.ip ?? '-' },
+              { id: 'details', label: 'Details', sortable: true, render: (r) => r.details ?? '-' },
+              {
+                id: 'created_at',
+                label: 'Time',
+                sortable: true,
+                render: (r) => r.created_at?.slice(0, 19).replace('T', ' ') ?? '-',
+              },
+            ]}
+            keyField="id"
+            searchPlaceholder="Search security audit logs..."
+            emptyMessage={t('common.empty')}
+            ariaLabel={t('security.logs')}
+          />
         </CardContent>
       </Card>
     </Box>

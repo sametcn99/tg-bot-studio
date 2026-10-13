@@ -14,6 +14,8 @@ function colorFor(status: string): string {
       return '#16a34a';
     case 'starting':
       return '#d97706';
+    case 'retrying':
+      return '#eab308';
     case 'failed':
       return '#dc2626';
     default:

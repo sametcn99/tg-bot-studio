@@ -10,12 +10,7 @@ import {
   Put,
 } from '@nestjs/common';
 import { BotsService } from './bots.service';
-import {
-  CreateBotDto,
-  UpdateBotDto,
-  UpdateModuleStateDto,
-  ValidateTokenDto,
-} from './dto/bots.dto';
+import { CreateBotDto, UpdateBotDto, UpdateModuleStateDto, ValidateTokenDto } from './dto/bots.dto';
 import { callGetMe } from '../common/utils/telegram.util';
 
 /**
@@ -140,10 +135,7 @@ export class BotsController {
    * @returns {Promise<object>} Result.
    */
   @Post(':id/presets/:presetKey')
-  applyPreset(
-    @Param('id', ParseIntPipe) id: number,
-    @Param('presetKey') presetKey: string,
-  ) {
+  applyPreset(@Param('id', ParseIntPipe) id: number, @Param('presetKey') presetKey: string) {
     return this.botsService.applyPreset(id, presetKey);
   }
 
@@ -154,12 +146,31 @@ export class BotsController {
    * @returns {Promise<object>} Bot simulated response.
    */
   @Post(':id/simulator/send')
-  simulateMessage(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() body: { message: string },
-  ) {
+  simulateMessage(@Param('id', ParseIntPipe) id: number, @Body() body: { message: string }) {
     return this.botsService.simulateMessage(id, body.message);
   }
+
+  /**
+   * Clones a bot configuration to a new bot.
+   */
+  @Post(':id/clone')
+  clone(@Param('id', ParseIntPipe) id: number, @Body() body: { name?: string; token: string }) {
+    return this.botsService.cloneBot(id, body);
+  }
+
+  /**
+   * Exports a bot configuration bundle as JSON.
+   */
+  @Get(':id/export')
+  export(@Param('id', ParseIntPipe) id: number) {
+    return this.botsService.exportConfig(id);
+  }
+
+  /**
+   * Imports a bot configuration bundle into an existing bot.
+   */
+  @Post(':id/import')
+  import(@Param('id', ParseIntPipe) id: number, @Body() bundle: Record<string, unknown>) {
+    return this.botsService.importConfig(id, bundle);
+  }
 }
-
-

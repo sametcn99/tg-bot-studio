@@ -1,11 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  ParseIntPipe,
-  Post,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
 import { BroadcastService } from './broadcast.service';
 
 /**
@@ -49,5 +42,16 @@ export class BroadcastController {
   @Get(':id')
   findOne(@Param('botId', ParseIntPipe) botId: number, @Param('id', ParseIntPipe) id: number) {
     return this.service.findOne(botId, id);
+  }
+
+  /**
+   * Cancels a running or queued broadcast.
+   * @param {number} botId - Owning bot id.
+   * @param {number} id - Broadcast identifier.
+   * @returns {object} Broadcast row.
+   */
+  @Post(':id/cancel')
+  cancel(@Param('botId', ParseIntPipe) botId: number, @Param('id', ParseIntPipe) id: number) {
+    return this.service.cancel(botId, id);
   }
 }

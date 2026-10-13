@@ -28,7 +28,7 @@ export class StartMenuController {
   /**
    * Lists all start menu items for a bot.
    * @param {number} botId - Owning bot id.
-   * @returns {object[]} Ordered menu item rows.
+   * @returns {Promise<object[]>} Ordered menu item rows.
    */
   @Get('bots/:botId/menu-items')
   list(@Param('botId', ParseIntPipe) botId: number) {
@@ -39,7 +39,7 @@ export class StartMenuController {
    * Creates a start menu item.
    * @param {number} botId - Owning bot id.
    * @param {Record<string, unknown>} body - title, url, type, description, orderIndex.
-   * @returns {object} Created menu item row.
+   * @returns {Promise<object>} Created menu item row.
    */
   @Post('bots/:botId/menu-items')
   create(@Param('botId', ParseIntPipe) botId: number, @Body() body: Record<string, unknown>) {
@@ -51,7 +51,7 @@ export class StartMenuController {
    * @param {number} botId - Owning bot id.
    * @param {number} id - Item identifier.
    * @param {Record<string, unknown>} body - Patch fields.
-   * @returns {object} Updated menu item row.
+   * @returns {Promise<object>} Updated menu item row.
    */
   @Patch('bots/:botId/menu-items/:id')
   update(
@@ -66,14 +66,11 @@ export class StartMenuController {
    * Deletes a start menu item.
    * @param {number} botId - Owning bot id.
    * @param {number} id - Item identifier.
-   * @returns {{success: boolean}} Confirmation payload.
+   * @returns {Promise<{success: boolean}>} Confirmation payload.
    */
   @Delete('bots/:botId/menu-items/:id')
-  remove(
-    @Param('botId', ParseIntPipe) botId: number,
-    @Param('id', ParseIntPipe) id: number,
-  ) {
-    this.menuService.remove(botId, id);
+  async remove(@Param('botId', ParseIntPipe) botId: number, @Param('id', ParseIntPipe) id: number) {
+    await this.menuService.remove(botId, id);
     return { success: true };
   }
 
@@ -82,12 +79,12 @@ export class StartMenuController {
    * operator configured a public base URL.
    * @param {number} id - Item identifier.
    * @param {Response} res - Express response used for the 302 redirect.
-   * @returns {void}
+   * @returns {Promise<void>}
    */
   @Public()
   @Get('go/:id')
-  go(@Param('id', ParseIntPipe) id: number, @Res() res: Response): void {
-    const url = this.menuService.trackClick(id);
+  async go(@Param('id', ParseIntPipe) id: number, @Res() res: Response): Promise<void> {
+    const url = await this.menuService.trackClick(id);
     if (!url) {
       res.status(HttpStatus.NOT_FOUND).send('Link not found');
       return;

@@ -1,20 +1,11 @@
-import {
-  CanActivate,
-  ExecutionContext,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import type { Request } from 'express';
-import { DatabaseService } from '../../database/database.service';
+import { PrismaService } from '../../database/prisma.service';
 import { validateInitData } from '../utils/telegram.util';
 
 /**
  * Authenticated Mini App user attached to the request after validation.
  * @interface TmaUser
- * @property {number} id - Telegram user id.
- * @property {string} [first_name] - Telegram first name.
- * @property {string} [username] - Telegram @username.
- * @property {string} [language_code] - Client language.
  */
 export interface TmaUser {
   id: number;
@@ -32,9 +23,9 @@ export interface TmaUser {
 @Injectable()
 export class TmaInitDataGuard implements CanActivate {
   /**
-   * @param {DatabaseService} db - SQLite access service.
+   * @param {PrismaService} prisma - Prisma ORM access service.
    */
-  constructor(private readonly db: DatabaseService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
    * Validates the initData signature for the app resolved from `:slug`.
@@ -51,16 +42,13 @@ export class TmaInitDataGuard implements CanActivate {
     const slug = String(request.params.slug ?? '');
     if (!slug) throw new UnauthorizedException('Missing Mini App slug');
 
-    const app = this.db.get<{ bot_id: number }>(
-      'SELECT bot_id FROM mini_apps WHERE slug = ? AND is_active = 1',
-      slug,
-    );
-    if (!app) throw new UnauthorizedException('Unknown Mini App');
+    const app = await this.prisma.miniApp.findFirst({
+      where: { slug, isActive: 1 },
+      include: { bot: true },
+    });
+    if (!app || !app.bot) throw new UnauthorizedException('Unknown Mini App');
 
-    const bot = this.db.get<{ token: string }>('SELECT token FROM bots WHERE id = ?', app.bot_id);
-    if (!bot) throw new UnauthorizedException('Owning bot not found');
-
-    const validation = validateInitData(initData, bot.token);
+    const validation = validateInitData(initData, app.bot.token);
     if (!validation.valid || !validation.userId) {
       throw new UnauthorizedException('Invalid initData signature');
     }

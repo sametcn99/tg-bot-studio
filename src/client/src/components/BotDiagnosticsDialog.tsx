@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   Box,
@@ -60,7 +60,7 @@ export default function BotDiagnosticsDialog({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const runCheck = () => {
+  const runCheck = useCallback(() => {
     if (!botId) return;
     setLoading(true);
     setError(null);
@@ -68,13 +68,13 @@ export default function BotDiagnosticsDialog({
       .then(setReport)
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
-  };
+  }, [botId]);
 
   useEffect(() => {
     if (open) {
       runCheck();
     }
-  }, [open, botId]);
+  }, [open, runCheck]);
 
   const renderStatusIcon = (status: DiagnosticCheck['status']) => {
     switch (status) {
@@ -105,7 +105,11 @@ export default function BotDiagnosticsDialog({
           </Box>
         )}
 
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
 
         {report && !loading && (
           <Stack spacing={2.5}>
@@ -121,7 +125,9 @@ export default function BotDiagnosticsDialog({
                   </Typography>
                 </Box>
                 <Chip
-                  label={report.checks.some((c) => c.status === 'error') ? 'Issues Found' : 'Healthy'}
+                  label={
+                    report.checks.some((c) => c.status === 'error') ? 'Issues Found' : 'Healthy'
+                  }
                   color={report.checks.some((c) => c.status === 'error') ? 'error' : 'success'}
                   size="small"
                 />
@@ -141,7 +147,11 @@ export default function BotDiagnosticsDialog({
                       <Typography variant="body2" fontWeight={600}>
                         {chk.title}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ display: 'block', mt: 0.25 }}
+                      >
                         {chk.details}
                       </Typography>
                     </Box>
@@ -154,7 +164,12 @@ export default function BotDiagnosticsDialog({
             {report.recommendations.length > 0 && (
               <Box>
                 <Divider sx={{ my: 1.5 }} />
-                <Typography variant="subtitle2" color="warning.main" fontWeight={600} sx={{ mb: 1 }}>
+                <Typography
+                  variant="subtitle2"
+                  color="warning.main"
+                  fontWeight={600}
+                  sx={{ mb: 1 }}
+                >
                   {t('diagnostics.advice')}
                 </Typography>
                 <Stack spacing={1}>

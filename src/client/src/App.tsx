@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { StudioThemeProvider } from './theme';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { SnackbarProvider } from './context/SnackbarContext';
 import { BotProvider } from './context/BotContext';
 import { ConnectionsProvider } from './context/ConnectionsContext';
 import Layout from './components/Layout';
@@ -101,10 +102,7 @@ function AppRoutes(): React.ReactElement {
         <Route path="/bots/:botId" element={<BotDashboardPage />} />
         <Route path="/bots/:botId/modules" element={<ModulesManagerPage />} />
         <Route path="/bots/:botId/mini-apps" element={<MiniAppsPage />} />
-        <Route
-          path="/bots/:botId/m/:moduleKey"
-          element={<ModuleRoute />}
-        />
+        <Route path="/bots/:botId/m/:moduleKey" element={<ModuleRoute />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
@@ -129,14 +127,16 @@ export default function App(): React.ReactElement {
     <ErrorBoundary>
       <StudioThemeProvider>
         <AuthProvider>
-          <BotProvider>
-            <ConnectionsProvider>
-              <BrowserRouter>
-                <ScrollToTop />
-                <AppRoutes />
-              </BrowserRouter>
-            </ConnectionsProvider>
-          </BotProvider>
+          <SnackbarProvider>
+            <BotProvider>
+              <ConnectionsProvider>
+                <BrowserRouter>
+                  <ScrollToTop />
+                  <AppRoutes />
+                </BrowserRouter>
+              </ConnectionsProvider>
+            </BotProvider>
+          </SnackbarProvider>
         </AuthProvider>
       </StudioThemeProvider>
     </ErrorBoundary>

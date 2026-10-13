@@ -66,10 +66,7 @@ export class CaptchaRuntime extends BotModuleHandler {
             captchaMessageId: sent.message_id,
           });
         } else {
-          const keyboard = new InlineKeyboard().text(
-            'Verify',
-            `captcha:${member.id}:${nonce}`,
-          );
+          const keyboard = new InlineKeyboard().text('Verify', `captcha:${member.id}:${nonce}`);
           const sent = await update.reply(
             `Welcome ${member.first_name}. Tap the button below within ${timeoutSeconds} seconds to verify you are human.`,
             { reply_markup: keyboard },
@@ -115,9 +112,7 @@ export class CaptchaRuntime extends BotModuleHandler {
         this.pending.delete(key);
         clearTimeout(this.timers.get(key));
         this.timers.delete(key);
-        void bot.api
-          .deleteMessage(update.chat.id, pending.captchaMessageId)
-          .catch(() => undefined);
+        void bot.api.deleteMessage(update.chat.id, pending.captchaMessageId).catch(() => undefined);
         void update.reply(successText);
       }
     });

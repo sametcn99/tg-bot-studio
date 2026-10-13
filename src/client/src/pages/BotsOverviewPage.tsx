@@ -62,7 +62,11 @@ export default function BotsOverviewPage(): React.ReactElement {
           <EmptyState
             message={t('bots.empty')}
             action={
-              <Button variant="contained" startIcon={<AddIcon />} onClick={() => setWizardOpen(true)}>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => setWizardOpen(true)}
+              >
                 {t('bots.addTitle')}
               </Button>
             }
@@ -73,43 +77,43 @@ export default function BotsOverviewPage(): React.ReactElement {
           <Card sx={{ mb: 3, display: { xs: 'none', md: 'block' } }}>
             <TableContainer sx={{ overflowX: 'auto' }}>
               <Table size="small" aria-label={t('nav.overview')}>
-              <TableHead>
-                <TableRow>
-                  <TableCell>{t('common.name')}</TableCell>
-                  <TableCell>{t('common.status')}</TableCell>
-                  <TableCell align="right">{t('bots.activeModules')}</TableCell>
-                  <TableCell align="right">{t('bots.miniApps')}</TableCell>
-                  <TableCell align="right">{t('bots.subscribers')}</TableCell>
-                  <TableCell align="right">{t('bots.volume24h')}</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {bots.map((bot) => (
-                  <TableRow
-                    key={bot.id}
-                    hover
-                    sx={{ cursor: 'pointer' }}
-                    onClick={() => navigate(`/bots/${bot.id}`)}
-                  >
-                    <TableCell>
-                      <Typography variant="body2" fontWeight={600}>
-                        {bot.name}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {bot.username ? `@${bot.username}` : `ID ${bot.id}`}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <StatusDot status={bot.status} />
-                    </TableCell>
-                    <TableCell align="right">{bot.activeModules}</TableCell>
-                    <TableCell align="right">{bot.miniApps}</TableCell>
-                    <TableCell align="right">{bot.subscribers}</TableCell>
-                    <TableCell align="right">{bot.dailyVolume}</TableCell>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>{t('common.name')}</TableCell>
+                    <TableCell>{t('common.status')}</TableCell>
+                    <TableCell align="right">{t('bots.activeModules')}</TableCell>
+                    <TableCell align="right">{t('bots.miniApps')}</TableCell>
+                    <TableCell align="right">{t('bots.subscribers')}</TableCell>
+                    <TableCell align="right">{t('bots.volume24h')}</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHead>
+                <TableBody>
+                  {bots.map((bot) => (
+                    <TableRow
+                      key={bot.id}
+                      hover
+                      sx={{ cursor: 'pointer' }}
+                      onClick={() => navigate(`/bots/${bot.id}`)}
+                    >
+                      <TableCell>
+                        <Typography variant="body2" fontWeight={600}>
+                          {bot.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {bot.username ? `@${bot.username}` : `ID ${bot.id}`}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <StatusDot status={bot.status} />
+                      </TableCell>
+                      <TableCell align="right">{bot.activeModules}</TableCell>
+                      <TableCell align="right">{bot.miniApps}</TableCell>
+                      <TableCell align="right">{bot.subscribers}</TableCell>
+                      <TableCell align="right">{bot.dailyVolume}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </TableContainer>
           </Card>
 
@@ -185,10 +189,11 @@ function AddBotWizard({
     setError(null);
     setValidated(null);
     try {
-      const result = await apiFetch<{ ok: boolean; bot?: { username: string }; description?: string }>(
-        '/api/bots/validate',
-        { method: 'POST', body: JSON.stringify({ token }) },
-      );
+      const result = await apiFetch<{
+        ok: boolean;
+        bot?: { username: string };
+        description?: string;
+      }>('/api/bots/validate', { method: 'POST', body: JSON.stringify({ token }) });
       if (result.ok && result.bot) {
         setValidated(`@${result.bot.username}`);
       } else {
@@ -211,9 +216,14 @@ function AddBotWizard({
     setBusy(true);
     setError(null);
     try {
-      const created = await apiFetch<{ id: number }>('/api/bots', { method: 'POST', body: JSON.stringify({ token, name }) });
+      const created = await apiFetch<{ id: number }>('/api/bots', {
+        method: 'POST',
+        body: JSON.stringify({ token, name }),
+      });
       if (selectedPreset !== 'none') {
-        await apiFetch(`/api/bots/${created.id}/presets/${selectedPreset}`, { method: 'POST' }).catch(() => undefined);
+        await apiFetch(`/api/bots/${created.id}/presets/${selectedPreset}`, {
+          method: 'POST',
+        }).catch(() => undefined);
       }
       onCreated();
       onClose();

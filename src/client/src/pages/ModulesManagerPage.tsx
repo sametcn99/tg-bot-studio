@@ -63,14 +63,18 @@ export default function ModulesManagerPage(): React.ReactElement {
    */
   function toggle(state: ModuleState, enabled: boolean): void {
     setStates((current) =>
-      (current ?? []).map((entry) => (entry.key === state.key ? { ...entry, isEnabled: enabled } : entry)),
+      (current ?? []).map((entry) =>
+        entry.key === state.key ? { ...entry, isEnabled: enabled } : entry,
+      ),
     );
     apiFetch(`/api/bots/${botId}/modules/${state.key}`, {
       method: 'PUT',
       body: JSON.stringify({ isEnabled: enabled, config: state.config }),
     }).catch(() => {
       setStates((current) =>
-        (current ?? []).map((entry) => (entry.key === state.key ? { ...entry, isEnabled: !enabled } : entry)),
+        (current ?? []).map((entry) =>
+          entry.key === state.key ? { ...entry, isEnabled: !enabled } : entry,
+        ),
       );
       setError(t('modules.toggleFailed'));
     });
@@ -84,66 +88,83 @@ export default function ModulesManagerPage(): React.ReactElement {
         title={t('modules.managerTitle')}
         subtitle={t('modules.enabled', { count: enabledCount, total: MODULES.length })}
       />
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
       {states === null ? (
         <LoadingState label={t('common.loading')} />
       ) : (
         categories.map((category) => (
-        <Box key={category} sx={{ mb: 3 }} component="section" aria-label={category}>
-          <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }} component="h3">
-            {category}
-          </Typography>
-          <Grid container spacing={2}>
-            {(states ?? [])
-              .filter((state) => state.category === category)
-              .map((state) => {
-                const entry = MODULES.find((module) => module.key === state.key);
-                return (
-                  <Grid size={{ xs: 12, md: 6, lg: 4 }} key={state.key}>
-                    <Card sx={{ height: '100%' }}>
-                      <CardContent>
-                        <Stack spacing={1} sx={{ height: '100%' }}>
-                          <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
-                            <Typography variant="subtitle2" component="h4">{state.name}</Typography>
-                            <Switch
-                              size="small"
-                              checked={state.isEnabled}
-                              onChange={(event) => toggle(state, event.target.checked)}
-                              inputProps={{ 'aria-label': `${state.name} ${t('status.enabled')}` }}
-                            />
-                          </Stack>
-                          <Typography variant="caption" color="text.secondary" sx={{ flexGrow: 1 }}>
-                            {state.description}
-                          </Typography>
-                          <Stack direction="row" spacing={2}>
-                            <Link
-                              component="button"
-                              type="button"
-                              variant="caption"
-                              fontWeight={600}
-                              onClick={() => setDocsModule(entry ?? null)}
+          <Box key={category} sx={{ mb: 3 }} component="section" aria-label={category}>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }} component="h3">
+              {category}
+            </Typography>
+            <Grid container spacing={2}>
+              {(states ?? [])
+                .filter((state) => state.category === category)
+                .map((state) => {
+                  const entry = MODULES.find((module) => module.key === state.key);
+                  return (
+                    <Grid size={{ xs: 12, md: 6, lg: 4 }} key={state.key}>
+                      <Card sx={{ height: '100%' }}>
+                        <CardContent>
+                          <Stack spacing={1} sx={{ height: '100%' }}>
+                            <Stack
+                              direction="row"
+                              justifyContent="space-between"
+                              alignItems="flex-start"
+                              spacing={1}
                             >
-                              Docs
-                            </Link>
-                            <Link
-                              component="button"
-                              type="button"
+                              <Typography variant="subtitle2" component="h4">
+                                {state.name}
+                              </Typography>
+                              <Switch
+                                size="small"
+                                checked={state.isEnabled}
+                                onChange={(event) => toggle(state, event.target.checked)}
+                                inputProps={{
+                                  'aria-label': `${state.name} ${t('status.enabled')}`,
+                                }}
+                              />
+                            </Stack>
+                            <Typography
                               variant="caption"
-                              fontWeight={600}
-                              onClick={() => navigate(`/bots/${botId}/m/${state.key}`)}
+                              color="text.secondary"
+                              sx={{ flexGrow: 1 }}
                             >
-                              Configure
-                            </Link>
+                              {state.description}
+                            </Typography>
+                            <Stack direction="row" spacing={2}>
+                              <Link
+                                component="button"
+                                type="button"
+                                variant="caption"
+                                fontWeight={600}
+                                onClick={() => setDocsModule(entry ?? null)}
+                              >
+                                Docs
+                              </Link>
+                              <Link
+                                component="button"
+                                type="button"
+                                variant="caption"
+                                fontWeight={600}
+                                onClick={() => navigate(`/bots/${botId}/m/${state.key}`)}
+                              >
+                                Configure
+                              </Link>
+                            </Stack>
                           </Stack>
-                        </Stack>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                );
-              })}
-          </Grid>
-        </Box>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  );
+                })}
+            </Grid>
+          </Box>
         ))
       )}
 

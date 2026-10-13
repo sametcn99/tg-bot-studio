@@ -1,12 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  ParseIntPipe,
-  Post,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
 import { MonetizationService } from './monetization.service';
 
 /**
@@ -40,10 +32,7 @@ export class MonetizationController {
    * @returns {Promise<{inviteLink: string; expiresAt: string}>} Link and expiry.
    */
   @Post('vip/grant')
-  grantVip(
-    @Param('botId', ParseIntPipe) botId: number,
-    @Body() body: Record<string, unknown>,
-  ) {
+  grantVip(@Param('botId', ParseIntPipe) botId: number, @Body() body: Record<string, unknown>) {
     return this.service.grantVip(botId, body);
   }
 

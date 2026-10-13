@@ -108,11 +108,7 @@ export class WebhooksService {
    * @param {Record<string, unknown>} payload - Event payload.
    * @returns {Promise<void>} Resolves once delivery was attempted everywhere.
    */
-  async dispatch(
-    botId: number,
-    event: string,
-    payload: Record<string, unknown>,
-  ): Promise<void> {
+  async dispatch(botId: number, event: string, payload: Record<string, unknown>): Promise<void> {
     const endpoints = this.list(botId).filter(
       (endpoint) => endpoint.events.length === 0 || endpoint.events.includes(event),
     );
@@ -131,12 +127,22 @@ export class WebhooksService {
           },
           body,
         });
-        this.logDelivery(botId, { event, url: endpoint.url, status: response.status, at: new Date().toISOString() });
+        this.logDelivery(botId, {
+          event,
+          url: endpoint.url,
+          status: response.status,
+          at: new Date().toISOString(),
+        });
       } catch (error) {
         this.logger.warn(
           `Webhook delivery to ${endpoint.url} failed: ${error instanceof Error ? error.message : String(error)}`,
         );
-        this.logDelivery(botId, { event, url: endpoint.url, status: 'error', at: new Date().toISOString() });
+        this.logDelivery(botId, {
+          event,
+          url: endpoint.url,
+          status: 'error',
+          at: new Date().toISOString(),
+        });
       }
     }
   }
@@ -211,7 +217,9 @@ export class WebhooksService {
     // Connections may reference public chats by @username; numeric ids stay numbers.
     const rawTarget = data.targetChatId;
     const targetChatId =
-      typeof rawTarget === 'string' && rawTarget.startsWith('@') ? rawTarget : Number(rawTarget ?? 0);
+      typeof rawTarget === 'string' && rawTarget.startsWith('@')
+        ? rawTarget
+        : Number(rawTarget ?? 0);
     const action: InboundAction = {
       hookId: `in_${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`,
       targetChatId,

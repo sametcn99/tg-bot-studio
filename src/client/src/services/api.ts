@@ -88,7 +88,7 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   if (!response.ok || payload.success === false) {
     const message = Array.isArray(payload.message)
       ? payload.message.join(', ')
-      : payload.message ?? `Request failed (${response.status})`;
+      : (payload.message ?? `Request failed (${response.status})`);
     throw new ApiError(message, response.status);
   }
   return (payload.data ?? (payload as T)) as T;

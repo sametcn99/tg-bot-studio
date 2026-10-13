@@ -123,7 +123,15 @@ export default function VisualDripStepsBuilder({
   };
 
   return (
-    <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, p: 2, bgcolor: 'background.paper' }}>
+    <Box
+      sx={{
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: 2,
+        p: 2,
+        bgcolor: 'background.paper',
+      }}
+    >
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
         <Typography variant="subtitle2" fontWeight={600}>
           {label ?? 'Drip Sequence Steps'}
@@ -131,10 +139,23 @@ export default function VisualDripStepsBuilder({
         <Tabs
           value={tab}
           onChange={(_, v) => setTab(v)}
-          sx={{ minHeight: 32, '& .MuiTab-root': { minHeight: 32, py: 0.5, px: 1.5, fontSize: '0.75rem' } }}
+          sx={{
+            minHeight: 32,
+            '& .MuiTab-root': { minHeight: 32, py: 0.5, px: 1.5, fontSize: '0.75rem' },
+          }}
         >
-          <Tab icon={<TimelineIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Visual Timeline" value="visual" />
-          <Tab icon={<CodeIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="JSON" value="json" />
+          <Tab
+            icon={<TimelineIcon sx={{ fontSize: 16 }} />}
+            iconPosition="start"
+            label="Visual Timeline"
+            value="visual"
+          />
+          <Tab
+            icon={<CodeIcon sx={{ fontSize: 16 }} />}
+            iconPosition="start"
+            label="JSON"
+            value="json"
+          />
         </Tabs>
       </Stack>
 
@@ -163,12 +184,22 @@ export default function VisualDripStepsBuilder({
                   borderLeftColor: 'primary.main',
                 }}
               >
-                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  sx={{ mb: 1.5 }}
+                >
                   <Typography variant="subtitle2" fontWeight={700}>
                     Step {idx + 1}
                   </Typography>
                   <Tooltip title={t('actions.delete')}>
-                    <IconButton size="small" color="error" onClick={() => removeStep(idx)} aria-label="Delete step">
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={() => removeStep(idx)}
+                      aria-label="Delete step"
+                    >
                       <DeleteOutlineIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>
@@ -185,10 +216,26 @@ export default function VisualDripStepsBuilder({
                       sx={{ width: 220 }}
                     />
                     <Stack direction="row" spacing={0.5}>
-                      <Chip size="small" label="15m" onClick={() => updateField(idx, 'delayMinutes', 15)} />
-                      <Chip size="small" label="1h" onClick={() => updateField(idx, 'delayMinutes', 60)} />
-                      <Chip size="small" label="24h" onClick={() => updateField(idx, 'delayMinutes', 1440)} />
-                      <Chip size="small" label="3d" onClick={() => updateField(idx, 'delayMinutes', 4320)} />
+                      <Chip
+                        size="small"
+                        label="15m"
+                        onClick={() => updateField(idx, 'delayMinutes', 15)}
+                      />
+                      <Chip
+                        size="small"
+                        label="1h"
+                        onClick={() => updateField(idx, 'delayMinutes', 60)}
+                      />
+                      <Chip
+                        size="small"
+                        label="24h"
+                        onClick={() => updateField(idx, 'delayMinutes', 1440)}
+                      />
+                      <Chip
+                        size="small"
+                        label="3d"
+                        onClick={() => updateField(idx, 'delayMinutes', 4320)}
+                      />
                     </Stack>
                   </Stack>
 
@@ -228,7 +275,9 @@ export default function VisualDripStepsBuilder({
             onChange={(e) => setJsonText(e.target.value)}
             onBlur={(e) => handleJsonBlur(e.target.value)}
             error={Boolean(jsonError)}
-            helperText={jsonError ?? helperText ?? '[{"delayMinutes":60,"text":"Welcome {first_name}"}]'}
+            helperText={
+              jsonError ?? helperText ?? '[{"delayMinutes":60,"text":"Welcome {first_name}"}]'
+            }
           />
         </Stack>
       )}

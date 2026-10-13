@@ -1,18 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { DatabaseService } from '../../database/database.service';
+import type { Link } from '@prisma/client';
+import { StartMenuModel } from '../../models/start-menu.model';
 
 /**
  * Menu item row in the `links` table backing the Start Menu module.
- * @interface MenuItemRow
- * @property {number} id - Item identifier.
- * @property {number} bot_id - Owning bot id.
- * @property {string} title - Button label shown in the start menu.
- * @property {string} [description] - Optional description (sectioned style).
- * @property {string} url - Destination URL (t.me/addlist, channel, group, or web).
- * @property {string} type - `folder` | `channel` | `group` | `link`.
- * @property {number} order_index - Sort position.
- * @property {number} is_active - Visibility flag.
- * @property {number} click_count - Registered clicks.
  */
 export interface MenuItemRow {
   id: number;
@@ -29,108 +20,91 @@ export interface MenuItemRow {
 
 /**
  * CRUD service for Start Menu items (chat folders, channels, groups, web links).
+ * Backed by StartMenuModel and Prisma.
  */
 @Injectable()
 export class StartMenuService {
   /**
-   * @param {DatabaseService} db - SQLite access service.
+   * @param {StartMenuModel} menuModel - Domain model for start menu items.
    */
-  constructor(private readonly db: DatabaseService) {}
+  constructor(private readonly menuModel: StartMenuModel) {}
+
+  private toRow(r: Link): MenuItemRow {
+    return {
+      id: r.id,
+      bot_id: r.botId,
+      title: r.title,
+      description: r.description,
+      url: r.url,
+      type: r.type,
+      order_index: r.orderIndex,
+      is_active: r.isActive,
+      click_count: r.clickCount,
+      created_at: r.createdAt,
+    };
+  }
 
   /**
    * Lists menu items for a bot ordered by position.
-   * @param {number} botId - Owning bot id.
-   * @returns {MenuItemRow[]} All menu items for the bot.
    */
-  list(botId: number): MenuItemRow[] {
-    return this.db.query<MenuItemRow>(
-      'SELECT * FROM links WHERE bot_id = ? ORDER BY order_index ASC, id ASC',
-      botId,
-    );
+  async list(botId: number): Promise<MenuItemRow[]> {
+    const rows = await this.menuModel.list(botId);
+    return rows.map((r) => this.toRow(r));
   }
 
   /**
    * Creates a menu item.
-   * @param {number} botId - Owning bot id.
-   * @param {Record<string, unknown>} data - title, url, type, description, orderIndex.
-   * @returns {MenuItemRow} Created row.
    */
-  create(botId: number, data: Record<string, unknown>): MenuItemRow {
-    const result = this.db.run(
-      'INSERT INTO links (bot_id, title, description, url, type, order_index, is_active, click_count, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)',
+  async create(botId: number, data: Record<string, unknown>): Promise<MenuItemRow> {
+    const created = await this.menuModel.create({
       botId,
-      String(data.title ?? ''),
-      (data.description as string) ?? null,
-      String(data.url ?? ''),
-      String(data.type ?? 'link'),
-      Number(data.orderIndex ?? 0),
-      data.isActive === false ? 0 : 1,
-      new Date().toISOString(),
-    );
-    return this.findOne(botId, Number(result.lastInsertRowid));
+      title: String(data.title ?? ''),
+      description: (data.description as string) ?? null,
+      url: String(data.url ?? ''),
+      type: String(data.type ?? 'link'),
+      orderIndex: Number(data.orderIndex ?? 0),
+      isActive: data.isActive === false ? 0 : 1,
+    });
+    return this.toRow(created);
   }
 
   /**
    * Updates a menu item.
-   * @param {number} botId - Owning bot id.
-   * @param {number} id - Item identifier.
-   * @param {Record<string, unknown>} data - Patch fields.
-   * @returns {MenuItemRow} Updated row.
-   * @throws {NotFoundException} When the item does not exist.
    */
-  update(botId: number, id: number, data: Record<string, unknown>): MenuItemRow {
-    const existing = this.findOne(botId, id);
-    this.db.run(
-      'UPDATE links SET title = ?, description = ?, url = ?, type = ?, order_index = ?, is_active = ? WHERE id = ?',
-      String(data.title ?? existing.title),
-      (data.description as string) ?? existing.description,
-      String(data.url ?? existing.url),
-      String(data.type ?? existing.type),
-      Number(data.orderIndex ?? existing.order_index),
-      data.isActive === undefined ? existing.is_active : data.isActive ? 1 : 0,
-      id,
-    );
-    return this.findOne(botId, id);
+  async update(botId: number, id: number, data: Record<string, unknown>): Promise<MenuItemRow> {
+    await this.findOne(botId, id);
+    const updated = await this.menuModel.update(id, {
+      title: data.title !== undefined ? String(data.title) : undefined,
+      description: data.description !== undefined ? (data.description as string) : undefined,
+      url: data.url !== undefined ? String(data.url) : undefined,
+      type: data.type !== undefined ? String(data.type) : undefined,
+      orderIndex: data.orderIndex !== undefined ? Number(data.orderIndex) : undefined,
+      isActive: data.isActive === undefined ? undefined : data.isActive ? 1 : 0,
+    });
+    return this.toRow(updated);
   }
 
   /**
    * Deletes a menu item.
-   * @param {number} botId - Owning bot id.
-   * @param {number} id - Item identifier.
-   * @returns {void}
-   * @throws {NotFoundException} When the item does not exist.
    */
-  remove(botId: number, id: number): void {
-    this.findOne(botId, id);
-    this.db.run('DELETE FROM links WHERE id = ?', id);
+  async remove(botId: number, id: number): Promise<void> {
+    await this.findOne(botId, id);
+    await this.menuModel.delete(id);
   }
 
   /**
    * Registers a click and returns the redirect target.
-   * @param {number} id - Item identifier.
-   * @returns {string | undefined} Destination URL when the item exists.
    */
-  trackClick(id: number): string | undefined {
-    const row = this.db.get<{ url: string }>('SELECT url FROM links WHERE id = ?', id);
-    if (!row) return undefined;
-    this.db.run('UPDATE links SET click_count = click_count + 1 WHERE id = ?', id);
-    return row.url;
+  async trackClick(id: number): Promise<string | null> {
+    return this.menuModel.trackClick(id);
   }
 
   /**
    * Fetches a single menu item scoped to a bot.
-   * @param {number} botId - Owning bot id.
-   * @param {number} id - Item identifier.
-   * @returns {MenuItemRow} The item row.
-   * @throws {NotFoundException} When not found.
    */
-  findOne(botId: number, id: number): MenuItemRow {
-    const row = this.db.get<MenuItemRow>(
-      'SELECT * FROM links WHERE bot_id = ? AND id = ?',
-      botId,
-      id,
-    );
+  async findOne(botId: number, id: number): Promise<MenuItemRow> {
+    const row = await this.menuModel.findById(botId, id);
     if (!row) throw new NotFoundException(`Menu item ${id} not found`);
-    return row;
+    return this.toRow(row);
   }
 }

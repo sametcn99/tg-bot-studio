@@ -1,36 +1,15 @@
-import {
-  Injectable,
-  Logger,
-  NotFoundException,
-  OnApplicationShutdown,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, OnApplicationShutdown } from '@nestjs/common';
 import { InlineKeyboard } from 'grammy';
-import { DatabaseService } from '../../database/database.service';
 import { BotPoolService } from '../../bot-engine/bot-pool.service';
 import { renderTemplate } from '../../common/utils/template.util';
+import {
+  SchedulerModel,
+  toScheduledPostRow,
+  type ScheduledPostRow,
+} from '../../models/scheduler.model';
+import { BotModel } from '../../models/bot.model';
 
-/**
- * Scheduled post row in the `scheduled_posts` table.
- * @interface ScheduledPostRow
- * @property {number} id - Post identifier.
- * @property {number} bot_id - Owning bot id.
- * @property {number | string} target_chat_id - Destination chat id or `@username`.
- * @property {string} message_text - Post body (placeholders allowed).
- * @property {string} [media_url] - Optional photo/video URL.
- * @property {string} [buttons_json] - JSON rows of `{text, url}` buttons.
- * @property {string} scheduled_at - ISO dispatch timestamp.
- * @property {string} status - `pending` | `done` | `failed`.
- */
-export interface ScheduledPostRow {
-  id: number;
-  bot_id: number;
-  target_chat_id: number | string;
-  message_text: string;
-  media_url: string | null;
-  buttons_json: string | null;
-  scheduled_at: string;
-  status: string;
-}
+export { ScheduledPostRow };
 
 /** Dispatch interval for the due-post ticker (30 seconds). */
 const TICK_INTERVAL_MS = 30_000;
@@ -45,12 +24,9 @@ export class SchedulerService implements OnApplicationShutdown {
   private readonly logger = new Logger(SchedulerService.name);
   private readonly ticker: ReturnType<typeof setInterval>;
 
-  /**
-   * @param {DatabaseService} db - SQLite access service.
-   * @param {BotPoolService} pool - Multi-bot runtime pool.
-   */
   constructor(
-    private readonly db: DatabaseService,
+    private readonly schedulerModel: SchedulerModel,
+    private readonly botModel: BotModel,
     private readonly pool: BotPoolService,
   ) {
     this.ticker = setInterval(() => {
@@ -60,126 +36,135 @@ export class SchedulerService implements OnApplicationShutdown {
     }, TICK_INTERVAL_MS);
   }
 
-  /**
-   * Stops the dispatch ticker on shutdown.
-   * @returns {void}
-   */
   onApplicationShutdown(): void {
     clearInterval(this.ticker);
   }
 
   /**
    * Lists scheduled posts for a bot.
-   * @param {number} botId - Owning bot id.
-   * @returns {ScheduledPostRow[]} Newest first.
    */
-  list(botId: number): ScheduledPostRow[] {
-    return this.db.query<ScheduledPostRow>(
-      'SELECT * FROM scheduled_posts WHERE bot_id = ? ORDER BY scheduled_at DESC',
-      botId,
-    );
+  async list(botId: number): Promise<ScheduledPostRow[]> {
+    const posts = await this.schedulerModel.list(botId);
+    return posts.map(toScheduledPostRow);
+  }
+
+  /**
+   * Reads module configuration for scheduler.
+   */
+  private async configFor(
+    botId: number,
+  ): Promise<{ watermarkText: string; timezoneOffsetMinutes: number }> {
+    const row = await this.botModel.getModule(botId, 'scheduler');
+    const config = row?.configJson ? (JSON.parse(row.configJson) as Record<string, unknown>) : {};
+    return {
+      watermarkText: String(config.watermarkText ?? ''),
+      timezoneOffsetMinutes: Number(config.timezoneOffsetMinutes ?? 0),
+    };
   }
 
   /**
    * Creates a scheduled post.
-   * @param {number} botId - Owning bot id.
-   * @param {Record<string, unknown>} data - targetChatId, messageText, mediaUrl, buttons, scheduledAt.
-   * @returns {ScheduledPostRow} Created row.
    */
-  create(botId: number, data: Record<string, unknown>): ScheduledPostRow {
-    // Connections may reference public channels by @username; numeric ids stay numbers.
+  async create(botId: number, data: Record<string, unknown>): Promise<ScheduledPostRow> {
+    const config = await this.configFor(botId);
+    const offsetMs = config.timezoneOffsetMinutes * 60_000;
+    let scheduledAt = String(data.scheduledAt ?? new Date().toISOString());
+    if (!scheduledAt.endsWith('Z') && !/[+-]\d{2}:\d{2}$/.test(scheduledAt)) {
+      const parsed = new Date(scheduledAt).getTime();
+      if (!Number.isNaN(parsed)) {
+        scheduledAt = new Date(parsed - offsetMs).toISOString();
+      }
+    }
+
     const target = data.targetChatId;
-    const result = this.db.run(
-      `INSERT INTO scheduled_posts (bot_id, target_chat_id, message_text, media_url, buttons_json, scheduled_at, status)
-       VALUES (?, ?, ?, ?, ?, ?, 'pending')`,
+    const targetChatId =
+      typeof target === 'string' && target.startsWith('@') ? target : String(target ?? 0);
+    const created = await this.schedulerModel.create({
       botId,
-      typeof target === 'string' && target.startsWith('@') ? target : Number(target ?? 0),
-      String(data.messageText ?? ''),
-      (data.mediaUrl as string) || null,
-      data.buttons ? JSON.stringify(data.buttons) : null,
-      String(data.scheduledAt ?? new Date().toISOString()),
-    );
-    return this.findOne(botId, Number(result.lastInsertRowid));
+      targetChatId,
+      messageText: String(data.messageText ?? ''),
+      mediaUrl: (data.mediaUrl as string) || null,
+      buttonsJson: data.buttons ? JSON.stringify(data.buttons) : null,
+      scheduledAt,
+    });
+    return toScheduledPostRow(created);
   }
 
   /**
    * Updates a scheduled post (only while pending).
-   * @param {number} botId - Owning bot id.
-   * @param {number} id - Post identifier.
-   * @param {Record<string, unknown>} data - Patch fields.
-   * @returns {ScheduledPostRow} Updated row.
-   * @throws {NotFoundException} When the post does not exist.
    */
-  update(botId: number, id: number, data: Record<string, unknown>): ScheduledPostRow {
-    const existing = this.findOne(botId, id);
-    const target = data.targetChatId;
-    this.db.run(
-      'UPDATE scheduled_posts SET target_chat_id = ?, message_text = ?, media_url = ?, buttons_json = ?, scheduled_at = ? WHERE id = ?',
-      typeof target === 'string' && target.startsWith('@')
-        ? target
-        : Number(target ?? existing.target_chat_id),
-      String(data.messageText ?? existing.message_text),
-      (data.mediaUrl as string) ?? existing.media_url,
-      data.buttons ? JSON.stringify(data.buttons) : existing.buttons_json,
-      String(data.scheduledAt ?? existing.scheduled_at),
-      id,
-    );
-    return this.findOne(botId, id);
+  async update(
+    botId: number,
+    id: number,
+    data: Record<string, unknown>,
+  ): Promise<ScheduledPostRow> {
+    const existing = await this.findOne(botId, id);
+    const config = await this.configFor(botId);
+    const offsetMs = config.timezoneOffsetMinutes * 60_000;
+    let scheduledAt =
+      data.scheduledAt !== undefined ? String(data.scheduledAt) : existing.scheduled_at;
+    if (data.scheduledAt && !scheduledAt.endsWith('Z') && !/[+-]\d{2}:\d{2}$/.test(scheduledAt)) {
+      const parsed = new Date(scheduledAt).getTime();
+      if (!Number.isNaN(parsed)) {
+        scheduledAt = new Date(parsed - offsetMs).toISOString();
+      }
+    }
+
+    const target = data.targetChatId !== undefined ? data.targetChatId : existing.target_chat_id;
+    const targetChatId =
+      typeof target === 'string' && target.startsWith('@') ? target : String(target ?? 0);
+    const updated = await this.schedulerModel.update(id, {
+      targetChatId,
+      messageText:
+        data.messageText !== undefined ? String(data.messageText) : existing.message_text,
+      mediaUrl:
+        data.mediaUrl !== undefined ? (data.mediaUrl as string) || null : existing.media_url,
+      buttonsJson: data.buttons ? JSON.stringify(data.buttons) : existing.buttons_json,
+      scheduledAt,
+    });
+    return toScheduledPostRow(updated);
   }
 
   /**
    * Cancels a scheduled post.
-   * @param {number} botId - Owning bot id.
-   * @param {number} id - Post identifier.
-   * @returns {void}
-   * @throws {NotFoundException} When the post does not exist.
    */
-  remove(botId: number, id: number): void {
-    this.findOne(botId, id);
-    this.db.run('DELETE FROM scheduled_posts WHERE id = ?', id);
+  async remove(botId: number, id: number): Promise<void> {
+    await this.findOne(botId, id);
+    await this.schedulerModel.delete(id);
   }
 
   /**
    * Fetches one scheduled post.
-   * @param {number} botId - Owning bot id.
-   * @param {number} id - Post identifier.
-   * @returns {ScheduledPostRow} The post row.
-   * @throws {NotFoundException} When not found.
    */
-  findOne(botId: number, id: number): ScheduledPostRow {
-    const row = this.db.get<ScheduledPostRow>(
-      'SELECT * FROM scheduled_posts WHERE bot_id = ? AND id = ?',
-      botId,
-      id,
-    );
+  async findOne(botId: number, id: number): Promise<ScheduledPostRow> {
+    const row = await this.schedulerModel.findById(botId, id);
     if (!row) throw new NotFoundException(`Scheduled post ${id} not found`);
-    return row;
+    return toScheduledPostRow(row);
   }
 
   /**
    * Dispatches every pending post whose time has arrived.
-   * @returns {Promise<void>} Resolves once all due posts were processed.
    */
   private async dispatchDue(): Promise<void> {
     const now = new Date().toISOString();
-    const due = this.db.query<ScheduledPostRow>(
-      "SELECT * FROM scheduled_posts WHERE status = 'pending' AND scheduled_at <= ?",
-      now,
-    );
+    const due = await this.schedulerModel.findDue(now);
     for (const post of due) {
-      const bot = this.pool.getBot(post.bot_id);
+      const bot = this.pool.getBot(post.botId);
       if (!bot) continue; // Bot offline; retry on next tick.
       try {
-        const watermark = await this.watermarkFor(post.bot_id);
-        const body = renderTemplate(post.message_text, {
+        const config = await this.configFor(post.botId);
+        const offsetMs = config.timezoneOffsetMinutes * 60_000;
+        const localNow = new Date(Date.now() + offsetMs);
+
+        const body = renderTemplate(post.messageText, {
           group_name: '',
           bot_name: bot.botInfo?.first_name ?? '',
-          date: new Date().toISOString().slice(0, 10),
-          time: new Date().toISOString().slice(11, 16),
+          date: localNow.toISOString().slice(0, 10),
+          time: localNow.toISOString().slice(11, 16),
         });
-        const text = watermark ? `${body}\n\n${watermark}` : body;
-        const buttons = post.buttons_json
-          ? (JSON.parse(post.buttons_json) as Array<{ text: string; url: string }>)
+        const text = config.watermarkText ? `${body}\n\n${config.watermarkText}` : body;
+        const buttons = post.buttonsJson
+          ? (JSON.parse(post.buttonsJson) as Array<{ text: string; url: string }>)
           : [];
         const keyboard = new InlineKeyboard();
         for (const button of buttons) {
@@ -187,45 +172,35 @@ export class SchedulerService implements OnApplicationShutdown {
         }
         const options = buttons.length > 0 ? { reply_markup: keyboard } : {};
 
-        if (post.media_url && /\.(mp4|mov|webm)$/i.test(post.media_url)) {
-          await bot.api.sendVideo(post.target_chat_id, post.media_url, {
+        const target = post.targetChatId;
+        const targetChat =
+          target.startsWith('@') || Number.isNaN(Number(target)) ? target : Number(target);
+
+        if (post.mediaUrl && /\.(mp4|mov|webm)$/i.test(post.mediaUrl)) {
+          await bot.api.sendVideo(targetChat, post.mediaUrl, {
             caption: text,
             parse_mode: 'HTML',
             ...options,
           });
-        } else if (post.media_url) {
-          await bot.api.sendPhoto(post.target_chat_id, post.media_url, {
+        } else if (post.mediaUrl) {
+          await bot.api.sendPhoto(targetChat, post.mediaUrl, {
             caption: text,
             parse_mode: 'HTML',
             ...options,
           });
         } else {
-          await bot.api.sendMessage(post.target_chat_id, text, {
+          await bot.api.sendMessage(targetChat, text, {
             parse_mode: 'HTML',
             ...options,
           });
         }
-        this.db.run("UPDATE scheduled_posts SET status = 'done' WHERE id = ?", post.id);
+        await this.schedulerModel.updateStatus(post.id, 'done');
       } catch (error) {
         this.logger.warn(
           `Scheduled post ${post.id} failed: ${error instanceof Error ? error.message : String(error)}`,
         );
-        this.db.run("UPDATE scheduled_posts SET status = 'failed' WHERE id = ?", post.id);
+        await this.schedulerModel.updateStatus(post.id, 'failed');
       }
     }
-  }
-
-  /**
-   * Reads the watermark branding text from the module configuration.
-   * @param {number} botId - Owning bot id.
-   * @returns {Promise<string>} Watermark suffix (empty when disabled).
-   */
-  private async watermarkFor(botId: number): Promise<string> {
-    const row = this.db.get<{ config_json: string | null }>(
-      "SELECT config_json FROM bot_modules WHERE bot_id = ? AND module_key = 'scheduler'",
-      botId,
-    );
-    const config = row?.config_json ? (JSON.parse(row.config_json) as Record<string, unknown>) : {};
-    return String(config.watermarkText ?? '');
   }
 }

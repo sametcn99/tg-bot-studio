@@ -68,13 +68,32 @@ export class ModerationRuntime extends BotModuleHandler {
         return text.toLowerCase().includes(trimmed.toLowerCase());
       });
       if (wordHit) {
-        await this.punish(ctx, update, update.chat.id, update.from, key, `Blacklisted word: ${wordHit}`, autoBanAfterStrikes);
+        await this.punish(
+          ctx,
+          update,
+          update.chat.id,
+          update.from,
+          key,
+          `Blacklisted word: ${wordHit}`,
+          autoBanAfterStrikes,
+        );
         return;
       }
 
       // Link blocking (URL entities or bare http).
-      if (blockLinks && (text.includes('http://') || text.includes('https://') || text.includes('t.me/'))) {
-        await this.punish(ctx, update, update.chat.id, update.from, key, 'Link posting', autoBanAfterStrikes);
+      if (
+        blockLinks &&
+        (text.includes('http://') || text.includes('https://') || text.includes('t.me/'))
+      ) {
+        await this.punish(
+          ctx,
+          update,
+          update.chat.id,
+          update.from,
+          key,
+          'Link posting',
+          autoBanAfterStrikes,
+        );
         return;
       }
 
@@ -87,7 +106,15 @@ export class ModerationRuntime extends BotModuleHandler {
         this.floodWindow.set(key, timestamps);
         if (timestamps.length > floodLimit) {
           this.floodWindow.set(key, []);
-          await this.punish(ctx, update, update.chat.id, update.from, key, 'Flooding', autoBanAfterStrikes);
+          await this.punish(
+            ctx,
+            update,
+            update.chat.id,
+            update.from,
+            key,
+            'Flooding',
+            autoBanAfterStrikes,
+          );
           return;
         }
       }

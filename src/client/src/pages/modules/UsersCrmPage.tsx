@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   Box,
@@ -19,6 +19,7 @@ import {
   TableHead,
   TablePagination,
   TableRow,
+  TableSortLabel,
   TextField,
   Typography,
 } from '@mui/material';
@@ -30,6 +31,7 @@ import { apiDownload, apiFetch } from '../../services/api';
 import PageHeader from '../../components/PageHeader';
 import { LoadingState } from '../../components/Feedback';
 import ModuleHelpDialog from '../../components/ModuleHelpDialog';
+import { useSnackbar } from '../../context/SnackbarContext';
 import type { ModuleEntry } from '../../registry/modules';
 
 /**
@@ -74,6 +76,7 @@ export default function UsersCrmPage({
   module: ModuleEntry;
 }): React.ReactElement {
   const { t } = useTranslation();
+  const { showSuccess, showError } = useSnackbar();
   const [users, setUsers] = useState<CrmUser[] | null>(null);
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<CrmUser | null>(null);
@@ -81,20 +84,21 @@ export default function UsersCrmPage({
   const [docsOpen, setDocsOpen] = useState(false);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [orderBy, setOrderBy] = useState<'name' | 'points' | 'last_seen_at'>('last_seen_at');
+  const [order, setOrder] = useState<'asc' | 'desc'>('desc');
 
-  useEffect(() => {
-    reload();
-  }, [botId, search]);
-
-  /**
-   * Reloads the audience with the current search filter.
-   * @returns {void}
-   */
-  function reload(): void {
+  const reload = useCallback((): void => {
     apiFetch<CrmUser[]>(`/api/bots/${botId}/users?search=${encodeURIComponent(search)}`)
       .then(setUsers)
       .catch((err: Error) => setError(err.message));
-  }
+  }, [botId, search]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      reload();
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [reload]);
 
   /**
    * Saves tags and notes for a subscriber.
@@ -108,12 +112,36 @@ export default function UsersCrmPage({
     })
       .then(() => {
         setEditing(null);
+        showSuccess('Subscriber profile updated');
         reload();
       })
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => {
+        setError(err.message);
+        showError(err.message);
+      });
   }
 
-  const paged = (users ?? []).slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  const sorted = React.useMemo(() => {
+    if (!users) return [];
+    return [...users].sort((a, b) => {
+      if (orderBy === 'points') {
+        const diff = a.points - b.points;
+        return order === 'desc' ? -diff : diff;
+      }
+      if (orderBy === 'last_seen_at') {
+        const aVal = a.last_seen_at ?? '';
+        const bVal = b.last_seen_at ?? '';
+        const diff = aVal.localeCompare(bVal);
+        return order === 'desc' ? -diff : diff;
+      }
+      const aName = `${a.first_name ?? ''} ${a.last_name ?? ''}`.trim();
+      const bName = `${b.first_name ?? ''} ${b.last_name ?? ''}`.trim();
+      const diff = aName.localeCompare(bName);
+      return order === 'desc' ? -diff : diff;
+    });
+  }, [users, orderBy, order]);
+
+  const paged = sorted.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   return (
     <Box>
@@ -126,14 +154,18 @@ export default function UsersCrmPage({
             <Button
               size="small"
               startIcon={<DownloadIcon />}
-              onClick={() => void apiDownload(`/api/bots/${botId}/users/export/csv`, 'audience.csv')}
+              onClick={() =>
+                void apiDownload(`/api/bots/${botId}/users/export/csv`, 'audience.csv')
+              }
             >
               CSV
             </Button>
             <Button
               size="small"
               startIcon={<DownloadIcon />}
-              onClick={() => void apiDownload(`/api/bots/${botId}/users/export/json`, 'audience.json')}
+              onClick={() =>
+                void apiDownload(`/api/bots/${botId}/users/export/json`, 'audience.json')
+              }
             >
               JSON
             </Button>
@@ -141,102 +173,144 @@ export default function UsersCrmPage({
         }
       />
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
       <Card>
         {users === null ? (
           <LoadingState label={t('common.loading')} />
         ) : (
-        <>
-        <Stack direction="row" sx={{ p: 2 }}>
-          <TextField
-            size="small"
-            placeholder={t('common.search')}
-            value={search}
-            onChange={(event) => {
-              setSearch(event.target.value);
-              setPage(0);
-            }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon fontSize="small" />
-                </InputAdornment>
-              ),
-            }}
-            sx={{ maxWidth: 360 }}
-          />
-          <Box sx={{ flexGrow: 1 }} />
-          <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center' }}>
-            {(users ?? []).length} subscribers
-          </Typography>
-        </Stack>
-        <TableContainer sx={{ overflowX: 'auto' }}>
-            <Table size="small" aria-label="Audience CRM subscribers">
-          <TableHead>
-            <TableRow>
-              <TableCell>User</TableCell>
-              <TableCell>Language</TableCell>
-              <TableCell align="right">Points</TableCell>
-              <TableCell>Tags</TableCell>
-              <TableCell>Last seen</TableCell>
-              <TableCell align="right">{t('common.actions')}</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {paged.map((user) => (
-              <TableRow key={user.telegram_id}>
-                <TableCell>
-                  <Typography variant="body2" fontWeight={600}>
-                    {user.first_name ?? 'Unknown'} {user.last_name ?? ''}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {user.username ? `@${user.username} ` : ''}
-                    {user.telegram_id}
-                  </Typography>
-                </TableCell>
-                <TableCell>{user.language_code ?? '-'}</TableCell>
-                <TableCell align="right">{user.points}</TableCell>
-                <TableCell>
-                  <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
-                    {user.tags.map((tag) => (
-                      <Chip key={tag} size="small" label={tag} />
-                    ))}
-                  </Stack>
-                </TableCell>
-                <TableCell>{user.last_seen_at?.slice(0, 19).replace('T', ' ') ?? '-'}</TableCell>
-                <TableCell align="right">
-                  <IconButton size="small" onClick={() => setEditing(user)}>
-                    <EditIcon fontSize="small" />
-                  </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-            {users !== null && users.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={6}>
-                  <Typography color="text.secondary" align="center" sx={{ py: 3 }}>
-                    {t('common.empty')}
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-          </TableContainer>
-        <TablePagination
-          component="div"
-          count={(users ?? []).length}
-          page={page}
-          onPageChange={(_event, value: number) => setPage(value)}
-          rowsPerPage={rowsPerPage}
-          onRowsPerPageChange={(event) => {
-            setRowsPerPage(Number(event.target.value));
-            setPage(0);
-          }}
-          rowsPerPageOptions={[10, 25, 50, 100]}
-        />
-        </>
+          <>
+            <Stack direction="row" sx={{ p: 2 }}>
+              <TextField
+                size="small"
+                placeholder={t('common.search')}
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setPage(0);
+                }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon fontSize="small" />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{ maxWidth: 360 }}
+              />
+              <Box sx={{ flexGrow: 1 }} />
+              <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center' }}>
+                {(users ?? []).length} subscribers
+              </Typography>
+            </Stack>
+            <TableContainer sx={{ overflowX: 'auto' }}>
+              <Table size="small" aria-label="Audience CRM subscribers">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>
+                      <TableSortLabel
+                        active={orderBy === 'name'}
+                        direction={orderBy === 'name' ? order : 'asc'}
+                        onClick={() => {
+                          const isAsc = orderBy === 'name' && order === 'asc';
+                          setOrder(isAsc ? 'desc' : 'asc');
+                          setOrderBy('name');
+                        }}
+                      >
+                        User
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell>Language</TableCell>
+                    <TableCell align="right">
+                      <TableSortLabel
+                        active={orderBy === 'points'}
+                        direction={orderBy === 'points' ? order : 'asc'}
+                        onClick={() => {
+                          const isAsc = orderBy === 'points' && order === 'asc';
+                          setOrder(isAsc ? 'desc' : 'asc');
+                          setOrderBy('points');
+                        }}
+                      >
+                        Points
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell>Tags</TableCell>
+                    <TableCell>
+                      <TableSortLabel
+                        active={orderBy === 'last_seen_at'}
+                        direction={orderBy === 'last_seen_at' ? order : 'asc'}
+                        onClick={() => {
+                          const isAsc = orderBy === 'last_seen_at' && order === 'asc';
+                          setOrder(isAsc ? 'desc' : 'asc');
+                          setOrderBy('last_seen_at');
+                        }}
+                      >
+                        Last seen
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell align="right">{t('common.actions')}</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {paged.map((user) => (
+                    <TableRow key={user.telegram_id}>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight={600}>
+                          {user.first_name ?? 'Unknown'} {user.last_name ?? ''}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {user.username ? `@${user.username} ` : ''}
+                          {user.telegram_id}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>{user.language_code ?? '-'}</TableCell>
+                      <TableCell align="right">{user.points}</TableCell>
+                      <TableCell>
+                        <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
+                          {user.tags.map((tag) => (
+                            <Chip key={tag} size="small" label={tag} />
+                          ))}
+                        </Stack>
+                      </TableCell>
+                      <TableCell>
+                        {user.last_seen_at?.slice(0, 19).replace('T', ' ') ?? '-'}
+                      </TableCell>
+                      <TableCell align="right">
+                        <IconButton size="small" onClick={() => setEditing(user)}>
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {users !== null && users.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6}>
+                        <Typography color="text.secondary" align="center" sx={{ py: 3 }}>
+                          {t('common.empty')}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <TablePagination
+              component="div"
+              count={(users ?? []).length}
+              page={page}
+              onPageChange={(_event, value: number) => setPage(value)}
+              rowsPerPage={rowsPerPage}
+              onRowsPerPageChange={(event) => {
+                setRowsPerPage(Number(event.target.value));
+                setPage(0);
+              }}
+              rowsPerPageOptions={[10, 25, 50, 100]}
+            />
+          </>
         )}
       </Card>
 
@@ -254,7 +328,10 @@ export default function UsersCrmPage({
                   current
                     ? {
                         ...current,
-                        tags: event.target.value.split(',').map((tag) => tag.trim()).filter(Boolean),
+                        tags: event.target.value
+                          .split(',')
+                          .map((tag) => tag.trim())
+                          .filter(Boolean),
                       }
                     : current,
                 )
@@ -268,7 +345,9 @@ export default function UsersCrmPage({
               minRows={3}
               value={editing?.notes ?? ''}
               onChange={(event) =>
-                setEditing((current) => (current ? { ...current, notes: event.target.value } : current))
+                setEditing((current) =>
+                  current ? { ...current, notes: event.target.value } : current,
+                )
               }
               fullWidth
               size="small"

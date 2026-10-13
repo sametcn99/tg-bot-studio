@@ -97,8 +97,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     key: 'crm',
     name: 'Audience CRM & Segmentation',
     category: 'Communication & CRM',
-    description:
-      'Subscriber profiles, tags, internal notes, search, and CSV/JSON export.',
+    description: 'Subscriber profiles, tags, internal notes, search, and CSV/JSON export.',
     defaultConfig: {},
   },
   {
@@ -145,32 +144,28 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     key: 'giveaways',
     name: 'Giveaways & Contest Engine',
     category: 'Community & Moderation',
-    description:
-      'Giveaways requiring channel membership with verifiable winner selection.',
+    description: 'Giveaways requiring channel membership with verifiable winner selection.',
     defaultConfig: { announceWinners: true },
   },
   {
     key: 'referrals',
     name: 'Affiliate & Referral Leaderboard',
     category: 'Community & Moderation',
-    description:
-      'Deep-link referral tracking with point rewards and a public leaderboard.',
+    description: 'Deep-link referral tracking with point rewards and a public leaderboard.',
     defaultConfig: { pointsPerReferral: 10, leaderboardSize: 10 },
   },
   {
     key: 'quizzes',
     name: 'Interactive Quizzes & Polls',
     category: 'Community & Moderation',
-    description:
-      'Timed trivia quizzes delivered via sendPoll with persistent scoreboards.',
+    description: 'Timed trivia quizzes delivered via sendPoll with persistent scoreboards.',
     defaultConfig: { defaultCommand: 'quiz' },
   },
   {
     key: 'reactions',
     name: 'Reaction Analytics & Gamification',
     category: 'Community & Moderation',
-    description:
-      'Tracks emoji reactions on channel posts and rewards active members with points.',
+    description: 'Tracks emoji reactions on channel posts and rewards active members with points.',
     defaultConfig: { pointsPerReaction: 1 },
   },
   {
@@ -201,24 +196,21 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     key: 'autoresponder',
     name: 'Custom Commands & Auto-Responder',
     category: 'Automation & Monetization',
-    description:
-      'Custom commands (/pricing, /faq) and keyword trigger rules with media support.',
+    description: 'Custom commands (/pricing, /faq) and keyword trigger rules with media support.',
     defaultConfig: { startMessage: '' },
   },
   {
     key: 'paid-media',
     name: 'Paid Media Paywall',
     category: 'Automation & Monetization',
-    description:
-      'Locks photos and videos behind Telegram Stars paywalls via sendPaidMedia.',
+    description: 'Locks photos and videos behind Telegram Stars paywalls via sendPaidMedia.',
     defaultConfig: { starCount: 25, protectCaption: true },
   },
   {
     key: 'vip-subs',
     name: 'VIP Channel Subscriptions',
     category: 'Automation & Monetization',
-    description:
-      'Star-based recurring invite links with automatic removal of expired members.',
+    description: 'Star-based recurring invite links with automatic removal of expired members.',
     defaultConfig: { channelChatId: 0, subscriptionPeriodDays: 30, starPrice: 50 },
   },
   {

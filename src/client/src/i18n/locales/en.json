@@ -27,6 +27,9 @@
     "darkMode": "Switch to dark mode",
     "toggleTheme": "Toggle color theme",
     "signOut": "Sign out",
+    "language": "Language",
+    "diagnostics": "Bot Diagnostics & Health",
+    "simulator": "Live Test Simulator",
     "categories": {
       "Directory & Content": "Directory & Content",
       "Communication & CRM": "Communication & CRM",
@@ -48,7 +51,11 @@
     "copied": "Copied",
     "export": "Export",
     "test": "Send test",
-    "publish": "Publish"
+    "publish": "Publish",
+    "reply": "Reply",
+    "send": "Send",
+    "applyPreset": "Apply Preset",
+    "runDiagnostics": "Run Diagnostics"
   },
   "status": {
     "active": "Active",

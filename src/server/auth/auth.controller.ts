@@ -1,13 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  HttpCode,
-  Param,
-  Post,
-  Req,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Req } from '@nestjs/common';
 import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { ChangeMasterKeyDto, LoginDto } from './dto/auth.dto';
@@ -36,7 +27,8 @@ export class AuthController {
   @Post('login')
   @HttpCode(200)
   login(@Body() body: LoginDto, @Req() req: Request) {
-    const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
+    const ip =
+      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
     const userAgent = (req.headers['user-agent'] as string) || 'unknown';
     return this.authService.login(body.masterKey, ip, userAgent);
   }
@@ -108,7 +100,8 @@ export class AuthController {
   @Post('change-key')
   @HttpCode(200)
   async changeKey(@Body() body: ChangeMasterKeyDto, @Req() req: Request) {
-    const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
+    const ip =
+      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
     await this.authService.changeMasterKey(body.currentKey, body.newKey, ip);
     return { success: true };
   }
@@ -120,5 +113,13 @@ export class AuthController {
   @Get('security-logs')
   securityLogs() {
     return this.authService.listSecurityLogs();
+  }
+
+  /**
+   * Evaluates deployment posture and returns warning flags.
+   */
+  @Get('security-status')
+  securityStatus() {
+    return this.authService.getSecurityStatus();
   }
 }

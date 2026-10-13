@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   Box,
@@ -68,7 +68,7 @@ export default function SupportPage({
   const [copilotLoading, setCopilotLoading] = useState(false);
   const [docsOpen, setDocsOpen] = useState(false);
 
-  const loadData = (): void => {
+  const loadData = useCallback((): void => {
     apiFetch<SupportThread[]>(`/api/bots/${botId}/support/threads`)
       .then(setThreads)
       .catch(() => undefined);
@@ -76,15 +76,21 @@ export default function SupportPage({
     apiFetch<SupportMessage[]>(`/api/bots/${botId}/support/messages${query}`)
       .then(setMessages)
       .catch((err: Error) => setError(err.message));
-  };
+  }, [botId, selectedUser]);
 
   useEffect(() => {
     loadData();
-    const timer = window.setInterval(loadData, 4000);
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        loadData();
+      }
+    }, 4000);
     return () => window.clearInterval(timer);
-  }, [botId, selectedUser]);
+  }, [loadData]);
 
-  const visible = selectedUser ? messages.filter((message) => message.telegram_id === selectedUser) : messages;
+  const visible = selectedUser
+    ? messages.filter((message) => message.telegram_id === selectedUser)
+    : messages;
 
   const handleSendReply = async (): Promise<void> => {
     if (!selectedUser || !replyText.trim() || sending) return;
@@ -130,10 +136,14 @@ export default function SupportPage({
         subtitle={module.description}
         onDocs={() => setDocsOpen(true)}
       />
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
       <Box sx={{ mb: 3 }}>
-        <ModuleConfigPage botId={botId} module={module} />
+        <ModuleConfigPage botId={botId} module={module} embedded={true} />
       </Box>
 
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="stretch">
@@ -154,14 +164,20 @@ export default function SupportPage({
                     cursor: 'pointer',
                     border: '1px solid',
                     borderColor: selectedUser === thread.telegram_id ? 'primary.main' : 'divider',
-                    bgcolor: selectedUser === thread.telegram_id ? 'action.selected' : 'background.paper',
+                    bgcolor:
+                      selectedUser === thread.telegram_id ? 'action.selected' : 'background.paper',
                     '&:hover': { bgcolor: 'action.hover' },
                   }}
                 >
                   <Typography variant="body2" fontWeight={600} noWrap>
                     {thread.sender_name ?? `User #${thread.telegram_id}`}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    noWrap
+                    sx={{ display: 'block' }}
+                  >
                     {thread.last_message ?? '[media]'}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
@@ -181,16 +197,17 @@ export default function SupportPage({
         {/* Messages and Web Reply Composer */}
         <Card sx={{ flexGrow: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
           <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              alignItems="center"
+              sx={{ mb: 2 }}
+            >
               <Typography variant="subtitle2" component="h3">
                 {selectedUser ? `Thread #${selectedUser}` : 'All Messages'}
               </Typography>
               {selectedUser && (
-                <Chip
-                  size="small"
-                  label="Clear filter"
-                  onClick={() => setSelectedUser(null)}
-                />
+                <Chip size="small" label="Clear filter" onClick={() => setSelectedUser(null)} />
               )}
             </Stack>
 
@@ -202,7 +219,8 @@ export default function SupportPage({
                 maxHeight: 450,
                 overflowY: 'auto',
                 p: 1.5,
-                bgcolor: (th) => (th.palette.mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)'),
+                bgcolor: (th) =>
+                  th.palette.mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)',
                 borderRadius: 2,
                 mb: 2,
               }}
@@ -240,12 +258,19 @@ export default function SupportPage({
             {selectedUser ? (
               <Box sx={{ mt: 'auto', pt: 1, borderTop: '1px solid', borderColor: 'divider' }}>
                 {/* Copilot and Canned Replies bar */}
-                <Stack direction="row" spacing={1} sx={{ mb: 1.5, flexWrap: 'wrap', gap: 0.5 }} alignItems="center">
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{ mb: 1.5, flexWrap: 'wrap', gap: 0.5 }}
+                  alignItems="center"
+                >
                   <Button
                     size="small"
                     variant="outlined"
                     color="secondary"
-                    startIcon={copilotLoading ? <CircularProgress size={14} /> : <AutoAwesomeIcon />}
+                    startIcon={
+                      copilotLoading ? <CircularProgress size={14} /> : <AutoAwesomeIcon />
+                    }
                     onClick={handleCopilotDraft}
                     disabled={copilotLoading}
                     sx={{ textTransform: 'none', fontWeight: 600 }}
@@ -302,7 +327,9 @@ export default function SupportPage({
                 />
               </Box>
             ) : (
-              <Box sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default', borderRadius: 2 }}>
+              <Box
+                sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default', borderRadius: 2 }}
+              >
                 <Typography variant="body2" color="text.secondary">
                   Select a user conversation from the left to reply directly from the web dashboard.
                 </Typography>

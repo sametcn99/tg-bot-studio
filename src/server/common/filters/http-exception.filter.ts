@@ -24,9 +24,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost): void {
     const response = host.switchToHttp().getResponse();
     const status =
-      exception instanceof HttpException
-        ? exception.getStatus()
-        : HttpStatus.INTERNAL_SERVER_ERROR;
+      exception instanceof HttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
 
     const payload =
       exception instanceof HttpException
@@ -39,10 +37,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
       );
     }
 
-    response.status(status).json(
-      typeof payload === 'string'
-        ? { statusCode: status, message: payload }
-        : { statusCode: status, ...(payload as Record<string, unknown>) },
-    );
+    response
+      .status(status)
+      .json(
+        typeof payload === 'string'
+          ? { statusCode: status, message: payload }
+          : { statusCode: status, ...(payload as Record<string, unknown>) },
+      );
   }
 }

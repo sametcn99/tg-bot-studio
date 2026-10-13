@@ -140,7 +140,14 @@ export default function BotSimulatorDrawer(): React.ReactElement {
         }}
       >
         {/* Header */}
-        <Box sx={{ p: 2, bgcolor: 'background.paper', borderBottom: '1px solid', borderColor: 'divider' }}>
+        <Box
+          sx={{
+            p: 2,
+            bgcolor: 'background.paper',
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
           <Stack direction="row" justifyContent="space-between" alignItems="center">
             <Stack direction="row" spacing={1.5} alignItems="center">
               <Avatar sx={{ bgcolor: 'primary.main', width: 36, height: 36 }}>
@@ -177,7 +184,16 @@ export default function BotSimulatorDrawer(): React.ReactElement {
         </Box>
 
         {/* Message Stream */}
-        <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+        <Box
+          sx={{
+            flexGrow: 1,
+            overflowY: 'auto',
+            p: 2,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 1.5,
+          }}
+        >
           {messages.map((msg) => (
             <Box
               key={msg.id}
@@ -200,10 +216,19 @@ export default function BotSimulatorDrawer(): React.ReactElement {
                     component="img"
                     src={msg.mediaUrl}
                     alt="Media"
-                    sx={{ width: '100%', borderRadius: 1, mb: 1, maxHeight: 180, objectFit: 'cover' }}
+                    sx={{
+                      width: '100%',
+                      borderRadius: 1,
+                      mb: 1,
+                      maxHeight: 180,
+                      objectFit: 'cover',
+                    }}
                   />
                 )}
-                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                <Typography
+                  variant="body2"
+                  sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+                >
                   {msg.text}
                 </Typography>
                 <Typography
@@ -259,7 +284,9 @@ export default function BotSimulatorDrawer(): React.ReactElement {
           ))}
 
           {loading && (
-            <Box sx={{ alignSelf: 'flex-start', p: 1.5, borderRadius: 2, bgcolor: 'background.paper' }}>
+            <Box
+              sx={{ alignSelf: 'flex-start', p: 1.5, borderRadius: 2, bgcolor: 'background.paper' }}
+            >
               <CircularProgress size={16} sx={{ mr: 1, verticalAlign: 'middle' }} />
               <Typography variant="caption" color="text.secondary">
                 Bot is typing...

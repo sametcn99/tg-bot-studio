@@ -51,9 +51,11 @@ export class BusinessRuntime extends BotModuleHandler {
       if (!target) return;
 
       try {
-        await (bot.api.raw as unknown as {
-          sendMessage: (params: Record<string, unknown>) => Promise<unknown>;
-        }).sendMessage({
+        await (
+          bot.api.raw as unknown as {
+            sendMessage: (params: Record<string, unknown>) => Promise<unknown>;
+          }
+        ).sendMessage({
           chat_id: target,
           business_connection_id: message.business_connection_id,
           text: autoReplyText,

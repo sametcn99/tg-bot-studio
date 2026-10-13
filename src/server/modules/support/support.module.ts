@@ -12,4 +12,3 @@ import { AiAssistantModule } from '../ai-assistant/ai-assistant.module';
   providers: [SupportRuntime],
 })
 export class SupportModule {}
-

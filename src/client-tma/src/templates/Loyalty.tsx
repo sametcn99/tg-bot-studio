@@ -25,8 +25,7 @@ export default function Loyalty({ config }: { config: TmaAppConfig }): React.Rea
   const [state, setState] = useState<LoyaltyState | null>(null);
   const [status, setStatus] = useState<string | null>(null);
 
-  const tiers =
-    (config.config.tiers as Array<{ name: string; minPoints: number }>) ?? [];
+  const tiers = (config.config.tiers as Array<{ name: string; minPoints: number }>) ?? [];
   const referralUrl = String(
     config.config.referralUrl ??
       `https://t.me/${config.config.botUsername ?? ''}?startapp=${config.slug}`,
@@ -106,7 +105,9 @@ export default function Loyalty({ config }: { config: TmaAppConfig }): React.Rea
       </div>
 
       {status && (
-        <div className="success-text" role="status" aria-live="polite">{status}</div>
+        <div className="success-text" role="status" aria-live="polite">
+          {status}
+        </div>
       )}
     </>
   );

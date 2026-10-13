@@ -1,11 +1,4 @@
-import {
-  IsBoolean,
-  IsObject,
-  IsOptional,
-  IsString,
-  MaxLength,
-  MinLength,
-} from 'class-validator';
+import { IsBoolean, IsObject, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
 /**
  * Request body for registering a new bot obtained from BotFather.

@@ -64,7 +64,9 @@ export class QuizzesRuntime extends BotModuleHandler {
         const entries = Object.entries(scores)
           .sort((a, b) => b[1] - a[1])
           .slice(0, 10)
-          .map(([telegramId, count], index) => `${index + 1}. <code>${telegramId}</code> - ${count}`)
+          .map(
+            ([telegramId, count], index) => `${index + 1}. <code>${telegramId}</code> - ${count}`,
+          )
           .join('\n');
         blocks.push(`<b>${quiz.question}</b>\n${entries || 'No answers yet.'}`);
       }

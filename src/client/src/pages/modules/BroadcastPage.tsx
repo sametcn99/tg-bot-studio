@@ -69,7 +69,11 @@ export default function BroadcastPage({
 
   useEffect(() => {
     reload();
-    const timer = window.setInterval(reload, 5000);
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        reload();
+      }
+    }, 5000);
     return () => window.clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [botId]);
@@ -82,6 +86,15 @@ export default function BroadcastPage({
     apiFetch<BroadcastRow[]>(`/api/bots/${botId}/broadcasts`)
       .then(setRows)
       .catch(() => undefined);
+  }
+
+  /**
+   * Cancels an active or queued broadcast.
+   */
+  function cancelBroadcast(id: number): void {
+    apiFetch(`/api/bots/${botId}/broadcasts/${id}/cancel`, { method: 'POST' })
+      .then(reload)
+      .catch((err: Error) => setError(err.message));
   }
 
   /**
@@ -118,7 +131,11 @@ export default function BroadcastPage({
         subtitle={module.description}
         onDocs={() => setDocsOpen(true)}
       />
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
       <Card sx={{ mb: 3 }}>
         <CardContent>
@@ -203,23 +220,52 @@ export default function BroadcastPage({
                 <Card key={row.id} variant="outlined">
                   <CardContent sx={{ py: 2 }}>
                     <Stack spacing={1}>
-                      <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        alignItems="center"
+                        justifyContent="space-between"
+                      >
                         <Stack direction="row" spacing={1} alignItems="center">
                           <Chip size="small" label={row.target_type} />
                           <Chip
                             size="small"
-                            color={row.status === 'done' ? 'success' : row.status === 'failed' ? 'error' : 'primary'}
+                            color={
+                              row.status === 'done'
+                                ? 'success'
+                                : row.status === 'failed' || row.status === 'cancelled'
+                                  ? 'error'
+                                  : row.status === 'interrupted'
+                                    ? 'warning'
+                                    : 'primary'
+                            }
                             label={row.status}
                           />
                           <Typography variant="caption" color="text.secondary">
                             {row.created_at?.slice(0, 19).replace('T', ' ')}
                           </Typography>
                         </Stack>
-                        <Typography variant="caption">
-                          {row.success_count} sent / {row.failed_count} failed / {row.total_recipients} total
-                        </Typography>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Typography variant="caption">
+                            {row.success_count} sent / {row.failed_count} failed /{' '}
+                            {row.total_recipients} total
+                          </Typography>
+                          {(row.status === 'running' || row.status === 'queued') && (
+                            <Button
+                              size="small"
+                              color="error"
+                              variant="outlined"
+                              onClick={() => cancelBroadcast(row.id)}
+                              sx={{ py: 0, px: 1, minHeight: 24, fontSize: '0.75rem' }}
+                            >
+                              {t('actions.cancel')}
+                            </Button>
+                          )}
+                        </Stack>
                       </Stack>
-                      {row.status === 'running' && <LinearProgress variant="determinate" value={progress} />}
+                      {row.status === 'running' && (
+                        <LinearProgress variant="determinate" value={progress} />
+                      )}
                     </Stack>
                   </CardContent>
                 </Card>

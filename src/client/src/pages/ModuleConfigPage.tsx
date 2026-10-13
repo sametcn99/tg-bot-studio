@@ -22,6 +22,7 @@ import ModuleHelpDialog from '../components/ModuleHelpDialog';
 import { ConnectionSelect } from '../components/ConnectionSelect';
 import AiKnowledgeDocsManager from '../components/AiKnowledgeDocsManager';
 import { LoadingState } from '../components/Feedback';
+import { useSnackbar } from '../context/SnackbarContext';
 import type { ConfigField, ModuleEntry } from '../registry/modules';
 
 /**
@@ -44,16 +45,20 @@ interface ModuleState {
  * @param {object} props - Component props.
  * @param {number} props.botId - Active bot id.
  * @param {ModuleEntry} props.module - Module catalog entry.
+ * @param {boolean} [props.embedded] - If true, omits outer PageHeader.
  * @returns {React.ReactElement} The configuration page.
  */
 export default function ModuleConfigPage({
   botId,
   module,
+  embedded = false,
 }: {
   botId: number;
   module: ModuleEntry;
+  embedded?: boolean;
 }): React.ReactElement {
   const { t } = useTranslation();
+  const { showSuccess, showError } = useSnackbar();
   const [state, setState] = useState<ModuleState | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -92,9 +97,7 @@ export default function ModuleConfigPage({
    */
   function setConfig(key: string, value: unknown): void {
     setState((current) =>
-      current
-        ? { ...current, config: { ...current.config, [key]: value } }
-        : current,
+      current ? { ...current, config: { ...current.config, [key]: value } } : current,
     );
   }
 
@@ -111,36 +114,74 @@ export default function ModuleConfigPage({
       method: 'PUT',
       body: JSON.stringify({ isEnabled: snapshot.isEnabled, config: snapshot.config }),
     })
-      .then(() => setStatus(t('modules.configSaved')))
-      .catch((err: Error) => setError(err.message));
+      .then(() => {
+        const msg = t('modules.configSaved') || 'Module configuration saved';
+        setStatus(msg);
+        showSuccess(msg);
+      })
+      .catch((err: Error) => {
+        setError(err.message);
+        showError(err.message);
+      });
   }
 
   return (
     <Box>
-      <PageHeader
-        title={module.name}
-        subtitle={module.description}
-        onDocs={() => setDocsOpen(true)}
-        actions={
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Typography variant="caption" color="text.secondary">
-              {state.isEnabled ? t('status.enabled') : t('status.disabled')}
-            </Typography>
-            <Switch
-              checked={state.isEnabled}
-              onChange={(event) =>
-                setState((current) =>
-                  current ? { ...current, isEnabled: event.target.checked } : current,
-                )
-              }
-              inputProps={{ 'aria-label': `${module.name} ${t('status.enabled')}` }}
-            />
-          </Stack>
-        }
-      />
+      {!embedded ? (
+        <PageHeader
+          title={module.name}
+          subtitle={module.description}
+          onDocs={() => setDocsOpen(true)}
+          actions={
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Typography variant="caption" color="text.secondary">
+                {state.isEnabled ? t('status.enabled') : t('status.disabled')}
+              </Typography>
+              <Switch
+                checked={state.isEnabled}
+                onChange={(event) =>
+                  setState((current) =>
+                    current ? { ...current, isEnabled: event.target.checked } : current,
+                  )
+                }
+                inputProps={{ 'aria-label': `${module.name} ${t('status.enabled')}` }}
+              />
+            </Stack>
+          }
+        />
+      ) : (
+        <Stack
+          direction="row"
+          spacing={1}
+          alignItems="center"
+          justifyContent="flex-end"
+          sx={{ mb: 1.5 }}
+        >
+          <Typography variant="caption" color="text.secondary">
+            {state.isEnabled ? t('status.enabled') : t('status.disabled')}
+          </Typography>
+          <Switch
+            checked={state.isEnabled}
+            onChange={(event) =>
+              setState((current) =>
+                current ? { ...current, isEnabled: event.target.checked } : current,
+              )
+            }
+            inputProps={{ 'aria-label': `${module.name} ${t('status.enabled')}` }}
+          />
+        </Stack>
+      )}
 
-      {status && <Alert severity="success" sx={{ mb: 2 }}>{status}</Alert>}
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {status && (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          {status}
+        </Alert>
+      )}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
       <Card>
         <CardContent>
@@ -299,7 +340,12 @@ function ConfigFieldInput({
           minRows={3}
           value={Array.isArray(value) ? value.join('\n') : ''}
           onChange={(event) =>
-            onChange(event.target.value.split('\n').map((line) => line.trim()).filter(Boolean))
+            onChange(
+              event.target.value
+                .split('\n')
+                .map((line) => line.trim())
+                .filter(Boolean),
+            )
           }
           helperText="One entry per line"
         />

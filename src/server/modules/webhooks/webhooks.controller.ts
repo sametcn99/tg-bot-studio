@@ -85,7 +85,10 @@ export class WebhooksController {
    * @returns {object} Created action with its receiver URL.
    */
   @Post('bots/:botId/webhooks/inbound')
-  createInbound(@Param('botId', ParseIntPipe) botId: number, @Body() body: Record<string, unknown>) {
+  createInbound(
+    @Param('botId', ParseIntPipe) botId: number,
+    @Body() body: Record<string, unknown>,
+  ) {
     return this.service.createInbound(botId, body);
   }
 
@@ -118,7 +121,11 @@ export class WebhooksController {
     @Param('hookId') hookId: string,
     @Req() req: Request,
   ) {
-    const handled = await this.service.handleInbound(botId, hookId, (req.body ?? {}) as Record<string, unknown>);
+    const handled = await this.service.handleInbound(
+      botId,
+      hookId,
+      (req.body ?? {}) as Record<string, unknown>,
+    );
     if (!handled) throw new NotFoundException('Unknown hook');
     return { success: true };
   }

@@ -73,8 +73,7 @@ export default function App(): React.ReactElement {
       {!insideTelegram && (
         <div className="card">
           <span className="muted">
-            Open this app inside Telegram to enable personalized features and
-            secure data access.
+            Open this app inside Telegram to enable personalized features and secure data access.
           </span>
         </div>
       )}

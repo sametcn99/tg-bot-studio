@@ -107,7 +107,10 @@ export default function ConnectionsPage({
     setAutoSync(next);
     apiFetch(`/api/bots/${botId}/modules/connections`, {
       method: 'PUT',
-      body: JSON.stringify({ isEnabled: moduleEnabled, config: { ...moduleConfig, autoSync: next } }),
+      body: JSON.stringify({
+        isEnabled: moduleEnabled,
+        config: { ...moduleConfig, autoSync: next },
+      }),
     }).catch((err: Error) => setError(err.message));
   }
 
@@ -148,7 +151,9 @@ export default function ConnectionsPage({
       chatId: form.chatId,
       username: form.username || undefined,
     };
-    const url = editingId ? `/api/bots/${botId}/connections/${editingId}` : `/api/bots/${botId}/connections`;
+    const url = editingId
+      ? `/api/bots/${botId}/connections/${editingId}`
+      : `/api/bots/${botId}/connections`;
     apiFetch(url, { method: editingId ? 'PATCH' : 'POST', body: JSON.stringify(payload) })
       .then(() => {
         setForm(null);
@@ -235,8 +240,16 @@ export default function ConnectionsPage({
         }
       />
 
-      {status && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setStatus(null)}>{status}</Alert>}
-      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
+      {status && (
+        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setStatus(null)}>
+          {status}
+        </Alert>
+      )}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
 
       <Card>
         {loading ? (
@@ -343,7 +356,11 @@ export default function ConnectionsPage({
               size="small"
               fullWidth
               value={form?.title ?? ''}
-              onChange={(event) => setForm((current) => (current ? { ...current, title: event.target.value } : current))}
+              onChange={(event) =>
+                setForm((current) =>
+                  current ? { ...current, title: event.target.value } : current,
+                )
+              }
             />
             <TextField
               select
@@ -351,7 +368,9 @@ export default function ConnectionsPage({
               size="small"
               fullWidth
               value={form?.type ?? 'channel'}
-              onChange={(event) => setForm((current) => (current ? { ...current, type: event.target.value } : current))}
+              onChange={(event) =>
+                setForm((current) => (current ? { ...current, type: event.target.value } : current))
+              }
               helperText="Forum-enabled supergroups power the Support Desk"
             >
               <MenuItem value="channel">Channel</MenuItem>
@@ -365,7 +384,11 @@ export default function ConnectionsPage({
               required
               placeholder="-1001234567890 or @username"
               value={form?.chatId ?? ''}
-              onChange={(event) => setForm((current) => (current ? { ...current, chatId: event.target.value } : current))}
+              onChange={(event) =>
+                setForm((current) =>
+                  current ? { ...current, chatId: event.target.value } : current,
+                )
+              }
               helperText={t('connections.chatIdHelp')}
             />
             <TextField
@@ -374,7 +397,11 @@ export default function ConnectionsPage({
               fullWidth
               placeholder="mychannel"
               value={form?.username ?? ''}
-              onChange={(event) => setForm((current) => (current ? { ...current, username: event.target.value } : current))}
+              onChange={(event) =>
+                setForm((current) =>
+                  current ? { ...current, username: event.target.value } : current,
+                )
+              }
             />
           </Stack>
         </DialogContent>

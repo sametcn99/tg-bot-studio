@@ -1,13 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bot-module-handler';
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
-import { DatabaseService } from '../../database/database.service';
-import { AiAssistantService, type AiConfig, type ChatMessage } from './ai-assistant.service';
+import { AiAssistantService, type AiConfig } from './ai-assistant.service';
+import { BotModel } from '../../models/bot.model';
+import { AutoresponderModel } from '../../models/autoresponder.model';
+import { SupportModel } from '../../models/support.model';
+import { SystemSettingsService } from '../../database/system-settings.service';
 
 /**
  * Runtime for the AI Knowledge Assistant module.
  * Answers private text and voice messages around the clock using RAG knowledge,
- * persistent SQLite history, and intelligent human handoff triage.
+ * persistent history, and intelligent human handoff triage.
  */
 @Injectable()
 export class AiAssistantRuntime extends BotModuleHandler {
@@ -16,14 +19,12 @@ export class AiAssistantRuntime extends BotModuleHandler {
 
   private readonly logger = new Logger(AiAssistantRuntime.name);
 
-  /**
-   * @param {AiAssistantService} service - Provider gateway.
-   * @param {DatabaseService} db - SQLite access service.
-   * @param {ModuleHandlerRegistry} registry - Handler registry (self sign-up).
-   */
   constructor(
     private readonly service: AiAssistantService,
-    private readonly db: DatabaseService,
+    private readonly botModel: BotModel,
+    private readonly autoresponderModel: AutoresponderModel,
+    private readonly supportModel: SupportModel,
+    private readonly settings: SystemSettingsService,
     registry: ModuleHandlerRegistry,
   ) {
     super();
@@ -32,8 +33,6 @@ export class AiAssistantRuntime extends BotModuleHandler {
 
   /**
    * Attaches text and voice AI handlers to the bot.
-   * @param {ModuleRuntimeContext} ctx - Runtime context with bot and config.
-   * @returns {void}
    */
   register(ctx: ModuleRuntimeContext): void {
     const { bot } = ctx;
@@ -46,9 +45,9 @@ export class AiAssistantRuntime extends BotModuleHandler {
       if (!update.from) return;
 
       // The support desk owns private conversations when active.
-      if (this.moduleEnabled(ctx.botId, 'support')) return;
+      if (await this.moduleEnabled(ctx.botId, 'support')) return;
       // Autoresponder keyword rules take precedence.
-      if (this.matchedAutoresponder(ctx.botId, update.msg.text)) return;
+      if (await this.matchedAutoresponder(ctx.botId, update.msg.text)) return;
 
       await this.handleUserTurn(ctx, update, update.msg.text);
     });
@@ -57,7 +56,7 @@ export class AiAssistantRuntime extends BotModuleHandler {
     bot.on(['message:voice', 'message:audio'], async (update) => {
       if (update.chat?.type !== 'private') return;
       if (!update.from) return;
-      if (this.moduleEnabled(ctx.botId, 'support')) return;
+      if (await this.moduleEnabled(ctx.botId, 'support')) return;
 
       try {
         const file = await update.getFile();
@@ -80,13 +79,15 @@ export class AiAssistantRuntime extends BotModuleHandler {
           await this.handleUserTurn(ctx, update, transcribed.trim());
         }
       } catch (err) {
-        this.logger.warn(`Voice processing error: ${err instanceof Error ? err.message : String(err)}`);
+        this.logger.warn(
+          `Voice processing error: ${err instanceof Error ? err.message : String(err)}`,
+        );
       }
     });
   }
 
   /**
-   * Processes a user turn: checks smart human handoff, loads persistent SQLite history,
+   * Processes a user turn: checks smart human handoff, loads persistent history,
    * queries RAG context, and replies.
    */
   private async handleUserTurn(
@@ -113,32 +114,61 @@ export class AiAssistantRuntime extends BotModuleHandler {
     ];
     const wantsHuman = handoffTriggers.some((t) => lower.includes(t));
 
-    if (wantsHuman && this.moduleEnabled(ctx.botId, 'support')) {
+    if (wantsHuman) {
+      this.settings.setBotSetting(ctx.botId, `escalation_${telegramId}`, new Date().toISOString());
+
+      const senderName = update.from
+        ? `${(update.from as { first_name?: string }).first_name ?? ''} ${(update.from as { last_name?: string }).last_name ?? ''}`.trim()
+        : String(telegramId);
+
+      const supportModule = await this.botModel.getModule(ctx.botId, 'support');
+      const supportConfig = supportModule?.configJson
+        ? (JSON.parse(supportModule.configJson) as Record<string, unknown>)
+        : {};
+      const adminChatId = Number(supportConfig.adminChatId ?? 0);
+
+      await this.supportModel.createMessage({
+        botId: ctx.botId,
+        telegramId,
+        userMessageId: 0,
+        adminChatId,
+        forumTopicId: 0,
+        direction: 'in',
+        senderName: senderName || String(telegramId),
+        messageText: `[AI Escalation] ${text}`,
+        mediaType: 'text',
+      });
+
+      if (adminChatId) {
+        void ctx.bot.api
+          .sendMessage(
+            adminChatId,
+            `🚨 <b>[AI Escalation to Human Agent]</b>\nUser: <b>${senderName}</b> (ID: <code>${telegramId}</code>)\nInquiry: "${text}"`,
+            { parse_mode: 'HTML' },
+          )
+          .catch(() => undefined);
+      }
+
       await update.reply(
-        'Talebinizi yetkili destek ekibimize ilettim. En kısa sürede bir müşteri temsilcimiz sizinle iletişime geçecektir. / I have escalated your request to a human support agent.',
+        'Talebinizi yetkili destek ekibimize ilettim ve önceliklendirdim. Bir müşteri temsilcimiz sizinle en kısa sürede iletişime geçecektir. / I have escalated your inquiry to our human support team. An agent will follow up shortly.',
       );
       return;
     }
 
-    // 2. Load Persistent Chat History from SQLite
+    // 2. Load Persistent Chat History
     const limit = (config.historyLimit || 6) * 2;
-    const history = this.service.getHistory(ctx.botId, telegramId, limit);
+    const history = await this.service.getHistory(ctx.botId, telegramId, limit);
     history.push({ role: 'user', content: text });
 
     // 3. Save incoming turn
-    this.service.saveMessage(ctx.botId, telegramId, 'user', text);
+    await this.service.saveMessage(ctx.botId, telegramId, 'user', text);
 
     try {
       // 4. Generate RAG & Tool-enriched Completion
-      const reply = await this.service.completeWithContext(
-        ctx.botId,
-        telegramId,
-        config,
-        history,
-      );
+      const reply = await this.service.completeWithContext(ctx.botId, telegramId, config, history);
 
-      // 5. Save assistant reply to SQLite
-      this.service.saveMessage(ctx.botId, telegramId, 'assistant', reply);
+      // 5. Save assistant reply
+      await this.service.saveMessage(ctx.botId, telegramId, 'assistant', reply);
 
       // 6. Send to Telegram user
       await update.reply(reply);
@@ -155,27 +185,20 @@ export class AiAssistantRuntime extends BotModuleHandler {
   /**
    * Checks whether a module is enabled for the bot.
    */
-  private moduleEnabled(botId: number, moduleKey: string): boolean {
-    return Boolean(
-      this.db.get<{ is_enabled: number }>(
-        'SELECT is_enabled FROM bot_modules WHERE bot_id = ? AND module_key = ?',
-        botId,
-        moduleKey,
-      )?.is_enabled,
-    );
+  private async moduleEnabled(botId: number, moduleKey: string): Promise<boolean> {
+    const mod = await this.botModel.getModule(botId, moduleKey);
+    return Boolean(mod?.isEnabled);
   }
 
   /**
    * Checks whether an autoresponder rule claims the message text.
    */
-  private matchedAutoresponder(botId: number, text: string): boolean {
-    if (!this.moduleEnabled(botId, 'autoresponder')) return false;
-    const rules = this.db.query<{ command: string }>(
-      'SELECT command FROM autoresponders WHERE bot_id = ? AND is_active = 1',
-      botId,
-    );
+  private async matchedAutoresponder(botId: number, text: string): Promise<boolean> {
+    if (!(await this.moduleEnabled(botId, 'autoresponder'))) return false;
+    const rules = await this.autoresponderModel.list(botId);
     return rules.some(
       (rule) =>
+        rule.isActive === 1 &&
         !rule.command.startsWith('/') &&
         text.toLowerCase().includes(rule.command.toLowerCase()),
     );

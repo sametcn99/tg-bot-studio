@@ -3,7 +3,7 @@ import { InlineKeyboard, type Context } from 'grammy';
 import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bot-module-handler';
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
 import { AutoresponderService, type AutoresponderRow } from './autoresponder.service';
-import { DatabaseService } from '../../database/database.service';
+import { BotModel } from '../../models/bot.model';
 import { renderTemplate, type TemplateContext } from '../../common/utils/template.util';
 
 /**
@@ -29,12 +29,12 @@ export class AutoresponderRuntime extends BotModuleHandler {
 
   /**
    * @param {AutoresponderService} service - Rule CRUD service.
-   * @param {DatabaseService} db - SQLite access service.
+   * @param {BotModel} botModel - Bot domain model.
    * @param {ModuleHandlerRegistry} registry - Handler registry (self sign-up).
    */
   constructor(
     private readonly service: AutoresponderService,
-    private readonly db: DatabaseService,
+    private readonly botModel: BotModel,
     registry: ModuleHandlerRegistry,
   ) {
     super();
@@ -71,7 +71,7 @@ export class AutoresponderRuntime extends BotModuleHandler {
       // Default /start message (skipped when the Start Menu module owns /start).
       if (text.startsWith('/start')) {
         const startMessage = String(ctx.config.startMessage ?? '');
-        if (startMessage && !this.startMenuOwnsStart(ctx.botId)) {
+        if (startMessage && !(await this.startMenuOwnsStart(ctx.botId))) {
           await update.reply(renderTemplate(startMessage, templateCtx), {
             parse_mode: 'HTML',
           });
@@ -79,11 +79,17 @@ export class AutoresponderRuntime extends BotModuleHandler {
         return;
       }
 
-      const rules = this.service.list(ctx.botId).filter((rule) => rule.is_active);
+      const rules = (await this.service.list(ctx.botId)).filter((rule) => rule.is_active);
       const commandText = text.split(/[\s@]/)[0].toLowerCase();
       const matched =
-        rules.find((rule) => rule.command.startsWith('/') && rule.command.toLowerCase() === commandText) ??
-        rules.find((rule) => !rule.command.startsWith('/') && text.toLowerCase().includes(rule.command.toLowerCase()));
+        rules.find(
+          (rule) => rule.command.startsWith('/') && rule.command.toLowerCase() === commandText,
+        ) ??
+        rules.find(
+          (rule) =>
+            !rule.command.startsWith('/') &&
+            text.toLowerCase().includes(rule.command.toLowerCase()),
+        );
       if (!matched) return;
 
       await this.sendRule(update, matched, templateCtx);
@@ -126,13 +132,10 @@ export class AutoresponderRuntime extends BotModuleHandler {
   /**
    * Checks whether the Start Menu module is enabled (it owns the /start reply).
    * @param {number} botId - Owning bot id.
-   * @returns {boolean} True when the Start Menu module is active on the bot.
+   * @returns {Promise<boolean>} True when the Start Menu module is active on the bot.
    */
-  private startMenuOwnsStart(botId: number): boolean {
-    const row = this.db.get<{ is_enabled: number; config_json: string | null }>(
-      "SELECT is_enabled, config_json FROM bot_modules WHERE bot_id = ? AND module_key = 'start-menu'",
-      botId,
-    );
-    return Boolean(row?.is_enabled);
+  private async startMenuOwnsStart(botId: number): Promise<boolean> {
+    const row = await this.botModel.getModule(botId, 'start-menu');
+    return Boolean(row?.isEnabled);
   }
 }

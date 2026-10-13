@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { MessageScoreService, type ScorePeriod } from './message-score.service';
 
 /**
@@ -74,7 +84,10 @@ export class MessageScoreController {
    * @returns {object} Created schedule.
    */
   @Post('schedules')
-  createSchedule(@Param('botId', ParseIntPipe) botId: number, @Body() body: Record<string, unknown>) {
+  createSchedule(
+    @Param('botId', ParseIntPipe) botId: number,
+    @Body() body: Record<string, unknown>,
+  ) {
     return this.service.createSchedule(botId, body);
   }
 
@@ -116,10 +129,7 @@ export class MessageScoreController {
    * @returns {Promise<object>} Updated schedule.
    */
   @Post('schedules/:id/run')
-  runSchedule(
-    @Param('botId', ParseIntPipe) botId: number,
-    @Param('id', ParseIntPipe) id: number,
-  ) {
+  runSchedule(@Param('botId', ParseIntPipe) botId: number, @Param('id', ParseIntPipe) id: number) {
     return this.service.runScheduleNow(botId, id);
   }
 

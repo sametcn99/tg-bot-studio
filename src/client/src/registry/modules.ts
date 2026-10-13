@@ -18,7 +18,8 @@
 export interface ConfigField {
   key: string;
   label: string;
-  type: 'text' | 'number' | 'switch' | 'select' | 'textarea' | 'stringList' | 'password' | 'chatSelect';
+  type:
+    'text' | 'number' | 'switch' | 'select' | 'textarea' | 'stringList' | 'password' | 'chatSelect';
   options?: string[];
   help?: string;
   connectionTypes?: string[];
@@ -50,7 +51,16 @@ export interface CrudColumn {
 export interface CrudField {
   key: string;
   label: string;
-  type: 'text' | 'number' | 'textarea' | 'datetime' | 'json' | 'stringList' | 'select' | 'chatSelect' | 'chatMultiSelect';
+  type:
+    | 'text'
+    | 'number'
+    | 'textarea'
+    | 'datetime'
+    | 'json'
+    | 'stringList'
+    | 'select'
+    | 'chatSelect'
+    | 'chatMultiSelect';
   options?: string[];
   help?: string;
   connectionTypes?: string[];
@@ -166,12 +176,38 @@ export const MODULES: ModuleEntry[] = [
       'Unified /start menu: chat folder (addlist), channel, group, and web buttons with sections, layout control, click analytics, and /menu re-open.',
     pageType: 'crud',
     configFields: [
-      { key: 'menuStyle', label: 'Menu style', type: 'select', options: ['flat', 'categorized'], help: 'Flat shows one button list; categorized groups destinations with headers' },
-      { key: 'startMessage', label: 'Start message', type: 'textarea', help: 'Supports placeholders such as {first_name} and {mention}' },
-      { key: 'buttonsPerRow', label: 'Buttons per row', type: 'number', help: 'Inline button columns, 1-4' },
-      { key: 'enableMenuCommand', label: 'Enable /menu command', type: 'switch', help: 'Users can re-open the menu anytime with /menu' },
+      {
+        key: 'menuStyle',
+        label: 'Menu style',
+        type: 'select',
+        options: ['flat', 'categorized'],
+        help: 'Flat shows one button list; categorized groups destinations with headers',
+      },
+      {
+        key: 'startMessage',
+        label: 'Start message',
+        type: 'textarea',
+        help: 'Supports placeholders such as {first_name} and {mention}',
+      },
+      {
+        key: 'buttonsPerRow',
+        label: 'Buttons per row',
+        type: 'number',
+        help: 'Inline button columns, 1-4',
+      },
+      {
+        key: 'enableMenuCommand',
+        label: 'Enable /menu command',
+        type: 'switch',
+        help: 'Users can re-open the menu anytime with /menu',
+      },
       { key: 'trackClicks', label: 'Track clicks via redirect', type: 'switch' },
-      { key: 'publicBaseUrl', label: 'Public base URL', type: 'text', help: 'Required for click tracking, e.g. https://studio.example.com' },
+      {
+        key: 'publicBaseUrl',
+        label: 'Public base URL',
+        type: 'text',
+        help: 'Required for click tracking, e.g. https://studio.example.com',
+      },
     ],
     crud: {
       endpoint: '/bots/{botId}/menu-items',
@@ -185,7 +221,13 @@ export const MODULES: ModuleEntry[] = [
       ],
       formFields: [
         { key: 'title', label: 'Title', type: 'text' },
-        { key: 'type', label: 'Type', type: 'select', options: ['folder', 'channel', 'group', 'link'], help: 'folder = chat folder (t.me/addlist/...) share link' },
+        {
+          key: 'type',
+          label: 'Type',
+          type: 'select',
+          options: ['folder', 'channel', 'group', 'link'],
+          help: 'folder = chat folder (t.me/addlist/...) share link',
+        },
         { key: 'url', label: 'URL', type: 'text' },
         { key: 'description', label: 'Description', type: 'text' },
         { key: 'orderIndex', label: 'Order', type: 'number' },
@@ -219,7 +261,20 @@ export const MODULES: ModuleEntry[] = [
     category: 'Directory & Content',
     description: 'Timed channel posts with inline buttons and caption watermark.',
     pageType: 'crud',
-    configFields: [{ key: 'watermarkText', label: 'Watermark text', type: 'text', help: 'Appended to every scheduled caption' }],
+    configFields: [
+      {
+        key: 'watermarkText',
+        label: 'Watermark text',
+        type: 'text',
+        help: 'Appended to every scheduled caption',
+      },
+      {
+        key: 'timezoneOffsetMinutes',
+        label: 'Timezone offset (minutes, e.g. 180 for UTC+3)',
+        type: 'number',
+        help: 'Local time offset for {date} and {time} placeholders and scheduling',
+      },
+    ],
     crud: {
       endpoint: '/bots/{botId}/scheduler/posts',
       columns: [
@@ -229,13 +284,29 @@ export const MODULES: ModuleEntry[] = [
         { key: 'status', label: 'Status' },
       ],
       formFields: [
-        { key: 'targetChatId', label: 'Target chat', type: 'chatSelect', help: 'Pick a connected channel or group; manage the list in Chat Connections' },
+        {
+          key: 'targetChatId',
+          label: 'Target chat',
+          type: 'chatSelect',
+          help: 'Pick a connected channel or group; manage the list in Chat Connections',
+        },
         { key: 'messageText', label: 'Message text', type: 'textarea' },
         { key: 'mediaUrl', label: 'Media URL (photo/video)', type: 'text' },
-        { key: 'buttons', label: 'Buttons (JSON array)', type: 'json', help: '[{"text":"Open","url":"https://..."}]' },
+        {
+          key: 'buttons',
+          label: 'Buttons (JSON array)',
+          type: 'json',
+          help: '[{"text":"Open","url":"https://..."}]',
+        },
         { key: 'scheduledAt', label: 'Dispatch at (UTC ISO)', type: 'datetime' },
       ],
-      initialForm: { targetChatId: '', messageText: '', mediaUrl: '', buttons: '', scheduledAt: '' },
+      initialForm: {
+        targetChatId: '',
+        messageText: '',
+        mediaUrl: '',
+        buttons: '',
+        scheduledAt: '',
+      },
     },
     docs: {
       overview: [
@@ -260,7 +331,13 @@ export const MODULES: ModuleEntry[] = [
     description: 'Per-user forum topics in an admin supergroup with two-way relay.',
     pageType: 'config',
     configFields: [
-      { key: 'adminChatId', label: 'Admin supergroup', type: 'chatSelect', connectionTypes: ['supergroup', 'group'], help: 'Forum-enabled admin group; manage the list in Chat Connections' },
+      {
+        key: 'adminChatId',
+        label: 'Admin supergroup',
+        type: 'chatSelect',
+        connectionTypes: ['supergroup', 'group'],
+        help: 'Forum-enabled admin group; manage the list in Chat Connections',
+      },
       { key: 'welcomeText', label: 'Auto-reply text', type: 'textarea' },
       { key: 'autoReplyThrottleMinutes', label: 'Auto-reply throttle (minutes)', type: 'number' },
     ],
@@ -288,7 +365,12 @@ export const MODULES: ModuleEntry[] = [
     description: 'Auto-answers clients writing to a Telegram Business account.',
     pageType: 'config',
     configFields: [
-      { key: 'connectionId', label: 'Business connection id', type: 'text', help: 'Leave empty to answer every connection' },
+      {
+        key: 'connectionId',
+        label: 'Business connection id',
+        type: 'text',
+        help: 'Leave empty to answer every connection',
+      },
       { key: 'autoReplyText', label: 'Auto-reply text', type: 'textarea' },
     ],
     docs: {
@@ -323,7 +405,12 @@ export const MODULES: ModuleEntry[] = [
       ],
       formFields: [
         { key: 'name', label: 'Campaign name', type: 'text' },
-        { key: 'steps', label: 'Steps (JSON)', type: 'json', help: '[{"delayMinutes":60,"text":"Welcome {first_name}"}]' },
+        {
+          key: 'steps',
+          label: 'Steps (JSON)',
+          type: 'json',
+          help: '[{"delayMinutes":60,"text":"Welcome {first_name}"}]',
+        },
       ],
       initialForm: { name: '', steps: '' },
     },
@@ -397,7 +484,11 @@ export const MODULES: ModuleEntry[] = [
     pageType: 'config',
     configFields: [
       { key: 'template', label: 'Welcome template', type: 'textarea' },
-      { key: 'autoDeleteSeconds', label: 'Auto-delete after seconds (15-120, 0 = off)', type: 'number' },
+      {
+        key: 'autoDeleteSeconds',
+        label: 'Auto-delete after seconds (15-120, 0 = off)',
+        type: 'number',
+      },
       { key: 'deleteServiceMessages', label: 'Delete join service messages', type: 'switch' },
       { key: 'deleteLeaveMessages', label: 'Delete leave service messages', type: 'switch' },
     ],
@@ -494,11 +585,23 @@ export const MODULES: ModuleEntry[] = [
       formFields: [
         { key: 'title', label: 'Title', type: 'text' },
         { key: 'prizeDetails', label: 'Prize details', type: 'textarea' },
-        { key: 'requiredChannels', label: 'Required channels', type: 'chatMultiSelect', connectionTypes: ['channel'], help: 'Membership gates verified on join; manage the list in Chat Connections' },
+        {
+          key: 'requiredChannels',
+          label: 'Required channels',
+          type: 'chatMultiSelect',
+          connectionTypes: ['channel'],
+          help: 'Membership gates verified on join; manage the list in Chat Connections',
+        },
         { key: 'winnersCount', label: 'Winners count', type: 'number' },
         { key: 'endsAt', label: 'Ends at (UTC ISO, empty = manual)', type: 'datetime' },
       ],
-      initialForm: { title: '', prizeDetails: '', requiredChannels: [], winnersCount: 1, endsAt: '' },
+      initialForm: {
+        title: '',
+        prizeDetails: '',
+        requiredChannels: [],
+        winnersCount: 1,
+        endsAt: '',
+      },
     },
     docs: {
       overview: [
@@ -594,9 +697,24 @@ export const MODULES: ModuleEntry[] = [
       'Scores member activity in groups (messages, replies, media), lists the most active members, and posts rich leaderboards to one or many chats on a schedule.',
     pageType: 'message-score',
     configFields: [
-      { key: 'messageWeight', label: 'Score per message', type: 'number', help: 'Weight added for every regular member message' },
-      { key: 'replyWeight', label: 'Score per reply', type: 'number', help: 'Extra weight when a member replies to someone else' },
-      { key: 'mediaWeight', label: 'Score per media message', type: 'number', help: 'Weight for photos, videos, stickers, voice, and files' },
+      {
+        key: 'messageWeight',
+        label: 'Score per message',
+        type: 'number',
+        help: 'Weight added for every regular member message',
+      },
+      {
+        key: 'replyWeight',
+        label: 'Score per reply',
+        type: 'number',
+        help: 'Extra weight when a member replies to someone else',
+      },
+      {
+        key: 'mediaWeight',
+        label: 'Score per media message',
+        type: 'number',
+        help: 'Weight for photos, videos, stickers, voice, and files',
+      },
     ],
     docs: {
       overview: [
@@ -627,6 +745,12 @@ export const MODULES: ModuleEntry[] = [
     pageType: 'config',
     configFields: [
       { key: 'provider', label: 'Provider', type: 'select', options: ['openai', 'gemini'] },
+      {
+        key: 'baseUrl',
+        label: 'Base URL (Optional, for DeepSeek/Ollama/OpenRouter)',
+        type: 'text',
+        help: 'Leave empty for official OpenAI, or set e.g. http://localhost:11434/v1',
+      },
       { key: 'apiKey', label: 'API key', type: 'password' },
       { key: 'model', label: 'Model', type: 'text', help: 'gpt-4o-mini or gemini-2.0-flash' },
       { key: 'systemPrompt', label: 'System prompt', type: 'textarea' },
@@ -700,7 +824,7 @@ export const MODULES: ModuleEntry[] = [
     docs: {
       overview: [
         'Sends media that users unlock by paying Telegram Stars.',
-        'Funds settle to the bot owner\'s Fragment balance.',
+        "Funds settle to the bot owner's Fragment balance.",
       ],
       setup: [
         'Send paid media from the monetization tab to any chat id.',
@@ -719,7 +843,13 @@ export const MODULES: ModuleEntry[] = [
     description: 'Star-priced channel invites with expiry enforcement.',
     pageType: 'monetization',
     configFields: [
-      { key: 'channelChatId', label: 'VIP channel', type: 'chatSelect', connectionTypes: ['channel'], help: 'Private channel the bot administrates; manage the list in Chat Connections' },
+      {
+        key: 'channelChatId',
+        label: 'VIP channel',
+        type: 'chatSelect',
+        connectionTypes: ['channel'],
+        help: 'Private channel the bot administrates; manage the list in Chat Connections',
+      },
       { key: 'subscriptionPeriodDays', label: 'Period (days)', type: 'number' },
       { key: 'starPrice', label: 'Price (Stars)', type: 'number' },
     ],

@@ -34,7 +34,7 @@ export class GiveawaysRuntime extends BotModuleHandler {
     const { bot } = ctx;
 
     bot.command('giveaway', async (update) => {
-      const active = this.service.list(ctx.botId).filter(
+      const active = (await this.service.list(ctx.botId)).filter(
         (giveaway) => giveaway.status === 'active',
       );
       if (active.length === 0) {
@@ -58,9 +58,8 @@ export class GiveawaysRuntime extends BotModuleHandler {
       if (!update.callbackQuery.data.startsWith('giveaway:')) return;
       const [, giveawayIdRaw] = update.callbackQuery.data.split(':');
       const giveawayId = Number(giveawayIdRaw);
-      const giveaway = this.service
-        .list(ctx.botId)
-        .find((row) => row.id === giveawayId && row.status === 'active');
+      const list = await this.service.list(ctx.botId);
+      const giveaway = list.find((row) => row.id === giveawayId && row.status === 'active');
       if (!giveaway) {
         await update.answerCallbackQuery({ text: 'This giveaway is no longer active.' });
         return;
@@ -79,7 +78,7 @@ export class GiveawaysRuntime extends BotModuleHandler {
         });
         return;
       }
-      const added = this.service.addParticipant(
+      const added = await this.service.addParticipant(
         ctx.botId,
         giveawayId,
         update.callbackQuery.from.id,

@@ -5,35 +5,21 @@ import {
   NotFoundException,
   OnApplicationShutdown,
 } from '@nestjs/common';
-import { DatabaseService } from '../../database/database.service';
+import { PrismaService } from '../../database/prisma.service';
+import { MonetizationModel, type VipSubscriptionEntity } from '../../models/monetization.model';
 import { BotPoolService } from '../../bot-engine/bot-pool.service';
 
 /**
- * VIP subscription row in the `vip_subscriptions` table.
- * @interface VipSubscriptionRow
- * @property {number} id - Subscription identifier.
- * @property {number} bot_id - Owning bot id.
- * @property {number} telegram_id - Subscriber Telegram id.
- * @property {number} channel_id - Protected channel id.
- * @property {string} expires_at - ISO expiry timestamp.
- * @property {number} is_active - Active flag.
+ * VIP subscription row shape.
  */
-export interface VipSubscriptionRow {
-  id: number;
-  bot_id: number;
-  telegram_id: number;
-  channel_id: number;
-  expires_at: string;
-  is_active: number;
-}
+export type VipSubscriptionRow = VipSubscriptionEntity;
 
 /** Expiry sweep interval (60 seconds). */
 const TICK_INTERVAL_MS = 60_000;
 
 /**
  * Monetization service: Telegram Stars paid-media paywall sends and VIP
- * channel subscription lifecycle (Star-priced invite links plus an expiry
- * sweeper that removes lapsed members).
+ * channel subscription lifecycle. Backed by MonetizationModel and Prisma.
  */
 @Injectable()
 export class MonetizationService implements OnApplicationShutdown {
@@ -41,11 +27,13 @@ export class MonetizationService implements OnApplicationShutdown {
   private readonly ticker: ReturnType<typeof setInterval>;
 
   /**
-   * @param {DatabaseService} db - SQLite access service.
+   * @param {MonetizationModel} monetizationModel - Domain model for VIP subscriptions.
+   * @param {PrismaService} prisma - Prisma ORM access service.
    * @param {BotPoolService} pool - Multi-bot runtime pool.
    */
   constructor(
-    private readonly db: DatabaseService,
+    private readonly monetizationModel: MonetizationModel,
+    private readonly prisma: PrismaService,
     private readonly pool: BotPoolService,
   ) {
     this.ticker = setInterval(() => {
@@ -57,7 +45,6 @@ export class MonetizationService implements OnApplicationShutdown {
 
   /**
    * Stops the expiry sweeper on shutdown.
-   * @returns {void}
    */
   onApplicationShutdown(): void {
     clearInterval(this.ticker);
@@ -65,10 +52,6 @@ export class MonetizationService implements OnApplicationShutdown {
 
   /**
    * Sends a Stars-locked paid media message to a chat.
-   * @param {number} botId - Owning bot id.
-   * @param {object} data - chatId, mediaType ('photo'|'video'), mediaUrl, caption, starCount.
-   * @returns {Promise<{messageId: number}>} Sent message identifier.
-   * @throws {BadRequestException} When the module is disabled or Telegram rejects the call.
    */
   async sendPaidMedia(
     botId: number,
@@ -78,10 +61,11 @@ export class MonetizationService implements OnApplicationShutdown {
     if (!bot) throw new BadRequestException('Bot is not running');
 
     const mediaType = String(data.mediaType ?? 'photo');
-    // Connections may reference public chats by @username; numeric ids stay numbers.
     const rawChatId = data.chatId;
     const chatId =
-      typeof rawChatId === 'string' && rawChatId.startsWith('@') ? rawChatId : Number(rawChatId ?? 0);
+      typeof rawChatId === 'string' && rawChatId.startsWith('@')
+        ? rawChatId
+        : Number(rawChatId ?? 0);
     const params: Record<string, unknown> = {
       chat_id: chatId,
       star_count: Number(data.starCount ?? 25),
@@ -92,9 +76,11 @@ export class MonetizationService implements OnApplicationShutdown {
     };
 
     try {
-      const result = (await (bot.api.raw as unknown as {
-        sendPaidMedia: (params: Record<string, unknown>) => Promise<{ message_id: number }>;
-      }).sendPaidMedia(params)) as { message_id: number };
+      const result = (await (
+        bot.api.raw as unknown as {
+          sendPaidMedia: (params: Record<string, unknown>) => Promise<{ message_id: number }>;
+        }
+      ).sendPaidMedia(params)) as { message_id: number };
       return { messageId: result.message_id };
     } catch (error) {
       throw new BadRequestException(
@@ -104,12 +90,7 @@ export class MonetizationService implements OnApplicationShutdown {
   }
 
   /**
-   * Grants a VIP subscription by creating a Star-priced invite link and
-   * sending it to the user.
-   * @param {number} botId - Owning bot id.
-   * @param {object} data - telegramId, channelChatId?, periodDays?, starPrice?.
-   * @returns {Promise<{inviteLink: string; expiresAt: string}>} Link and expiry.
-   * @throws {BadRequestException} When the bot is offline or Telegram rejects the call.
+   * Grants a VIP subscription by creating a Star-priced invite link.
    */
   async grantVip(
     botId: number,
@@ -118,11 +99,14 @@ export class MonetizationService implements OnApplicationShutdown {
     const bot = this.pool.getBot(botId);
     if (!bot) throw new BadRequestException('Bot is not running');
 
-    const moduleRow = this.db.get<{ config_json: string | null }>(
-      "SELECT config_json FROM bot_modules WHERE bot_id = ? AND module_key = 'vip-subs'",
-      botId,
-    );
-    const stored = moduleRow?.config_json ? (JSON.parse(moduleRow.config_json) as Record<string, unknown>) : {};
+    const moduleRow = await this.prisma.botModule.findUnique({
+      where: {
+        botId_moduleKey: { botId, moduleKey: 'vip-subs' },
+      },
+    });
+    const stored = moduleRow?.configJson
+      ? (JSON.parse(moduleRow.configJson) as Record<string, unknown>)
+      : {};
     const channelChatId = Number(data.channelChatId ?? stored.channelChatId ?? 0);
     const periodDays = Number(data.periodDays ?? stored.subscriptionPeriodDays ?? 30);
     const starPrice = Number(data.starPrice ?? stored.starPrice ?? 50);
@@ -132,11 +116,13 @@ export class MonetizationService implements OnApplicationShutdown {
     }
 
     try {
-      const link = (await (bot.api.raw as unknown as {
-        createChatSubscriptionInviteLink: (params: Record<string, unknown>) => Promise<{
-          invite_link: { link: string };
-        }>;
-      }).createChatSubscriptionInviteLink({
+      const link = (await (
+        bot.api.raw as unknown as {
+          createChatSubscriptionInviteLink: (params: Record<string, unknown>) => Promise<{
+            invite_link: { link: string };
+          }>;
+        }
+      ).createChatSubscriptionInviteLink({
         chat_id: channelChatId,
         subscription_period: periodDays * 86_400,
         subscription_price: starPrice,
@@ -144,13 +130,13 @@ export class MonetizationService implements OnApplicationShutdown {
       })) as { invite_link: { link: string } };
 
       const expiresAt = new Date(Date.now() + periodDays * 86_400_000).toISOString();
-      this.db.run(
-        'INSERT INTO vip_subscriptions (bot_id, telegram_id, channel_id, expires_at, is_active) VALUES (?, ?, ?, ?, 1)',
+      await this.monetizationModel.createSubscription({
         botId,
         telegramId,
-        channelChatId,
+        channelId: channelChatId,
         expiresAt,
-      );
+      });
+
       await bot.api
         .sendMessage(
           telegramId,
@@ -167,62 +153,44 @@ export class MonetizationService implements OnApplicationShutdown {
 
   /**
    * Lists VIP subscriptions for a bot.
-   * @param {number} botId - Owning bot id.
-   * @returns {VipSubscriptionRow[]} Subscription rows.
    */
-  listVip(botId: number): VipSubscriptionRow[] {
-    return this.db.query<VipSubscriptionRow>(
-      'SELECT * FROM vip_subscriptions WHERE bot_id = ? ORDER BY id DESC',
-      botId,
-    );
+  async listVip(botId: number): Promise<VipSubscriptionRow[]> {
+    return this.monetizationModel.listSubscriptions(botId);
   }
 
   /**
    * Revokes a subscription and removes the member from the channel.
-   * @param {number} botId - Owning bot id.
-   * @param {number} id - Subscription identifier.
-   * @returns {Promise<void>} Resolves once revoked.
-   * @throws {NotFoundException} When the subscription does not exist.
    */
   async revokeVip(botId: number, id: number): Promise<void> {
-    const row = this.db.get<VipSubscriptionRow>(
-      'SELECT * FROM vip_subscriptions WHERE bot_id = ? AND id = ?',
-      botId,
-      id,
-    );
+    const row = await this.monetizationModel.findById(botId, id);
     if (!row) throw new NotFoundException(`Subscription ${id} not found`);
     await this.removeMember(botId, row);
-    this.db.run('UPDATE vip_subscriptions SET is_active = 0 WHERE id = ?', id);
+    await this.monetizationModel.deactivate(id);
   }
 
   /**
    * Sweeps expired subscriptions, removing members and deactivating rows.
-   * @returns {Promise<void>} Resolves once the sweep completed.
    */
   private async sweepExpired(): Promise<void> {
-    const expired = this.db.query<VipSubscriptionRow>(
-      'SELECT * FROM vip_subscriptions WHERE is_active = 1 AND expires_at <= ?',
-      new Date().toISOString(),
-    );
+    const expired = await this.monetizationModel.findExpired(new Date().toISOString());
     for (const row of expired) {
       await this.removeMember(row.bot_id, row);
-      this.db.run('UPDATE vip_subscriptions SET is_active = 0 WHERE id = ?', row.id);
+      await this.monetizationModel.deactivate(row.id);
       this.logger.log(`VIP subscription ${row.id} expired and removed`);
     }
   }
 
   /**
-   * Removes a subscriber from the protected channel (kick without ban).
-   * @param {number} botId - Owning bot id.
-   * @param {VipSubscriptionRow} row - Subscription row.
-   * @returns {Promise<void>} Resolves once attempted.
+   * Removes a subscriber from the protected channel.
    */
   private async removeMember(botId: number, row: VipSubscriptionRow): Promise<void> {
     const bot = this.pool.getBot(botId);
     if (!bot) return;
     await bot.api
       .banChatMember(row.channel_id, row.telegram_id, { until_date: 0 })
-      .then(() => bot.api.unbanChatMember(row.channel_id, row.telegram_id, { only_if_banned: true }))
+      .then(() =>
+        bot.api.unbanChatMember(row.channel_id, row.telegram_id, { only_if_banned: true }),
+      )
       .catch(() => undefined);
   }
 }

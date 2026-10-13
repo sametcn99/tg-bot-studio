@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bot-module-handler';
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
 import { EngineHelpersService } from '../../bot-engine/engine-helpers.service';
-import { DatabaseService } from '../../database/database.service';
+import { BotUserModel } from '../../models/bot-user.model';
 
 /**
  * Runtime for the Affiliate & Referral Leaderboard module. Parses `ref_<id>`
@@ -16,12 +16,12 @@ export class ReferralsRuntime extends BotModuleHandler {
 
   /**
    * @param {EngineHelpersService} helpers - Shared audience operations.
-   * @param {DatabaseService} db - SQLite access service.
+   * @param {BotUserModel} userModel - Typed audience model.
    * @param {ModuleHandlerRegistry} registry - Handler registry (self sign-up).
    */
   constructor(
     private readonly helpers: EngineHelpersService,
-    private readonly db: DatabaseService,
+    private readonly userModel: BotUserModel,
     registry: ModuleHandlerRegistry,
   ) {
     super();
@@ -38,36 +38,31 @@ export class ReferralsRuntime extends BotModuleHandler {
     const pointsPerReferral = Number(ctx.config.pointsPerReferral ?? 10);
     const leaderboardSize = Number(ctx.config.leaderboardSize ?? 10);
 
-    bot.command('start', (update) => {
+    bot.command('start', async (update) => {
       const payload = update.msg?.text?.replace(/^\/start(@\S+)?\s*/, '').trim() ?? '';
       const match = /^ref_(\d+)$/.exec(payload);
       if (!match || !update.from) return;
-      const attributed = this.helpers.setReferrer(
+      const attributed = await this.helpers.setReferrer(
         ctx.botId,
         update.from.id,
         Number(match[1]),
         pointsPerReferral,
       );
       if (attributed) {
-        void update.reply(
-          'You were referred successfully. Your friend earned bonus points.',
-        );
+        void update.reply('You were referred successfully. Your friend earned bonus points.');
       }
     });
 
     bot.command('top', async (update) => {
-      const rows = this.db.query<{ telegram_id: number; first_name: string | null; username: string | null; points: number }>(
-        `SELECT telegram_id, first_name, username, points FROM bot_users
-         WHERE bot_id = ? AND points > 0 ORDER BY points DESC LIMIT ?`,
-        ctx.botId,
-        leaderboardSize,
-      );
+      const rows = await this.userModel.getReferralTop(ctx.botId, leaderboardSize);
       if (rows.length === 0) {
         await update.reply('The leaderboard is empty.');
         return;
       }
       const lines = rows.map((row, index) => {
-        const name = row.username ? `@${row.username}` : row.first_name ?? String(row.telegram_id);
+        const name = row.username
+          ? `@${row.username}`
+          : (row.first_name ?? String(row.telegram_id));
         return `${index + 1}. ${name} - ${row.points} pts`;
       });
       await update.reply(`<b>Referral Leaderboard</b>\n\n${lines.join('\n')}`, {

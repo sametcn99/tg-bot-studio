@@ -86,9 +86,7 @@ export default function Forms({ config }: { config: TmaAppConfig }): React.React
             ) : (
               <input
                 type={field.type === 'phone' ? 'tel' : 'text'}
-                placeholder={
-                  field.type === 'file' ? 'Paste a file link (https://...)' : undefined
-                }
+                placeholder={field.type === 'file' ? 'Paste a file link (https://...)' : undefined}
                 value={answers[field.label] ?? ''}
                 onChange={(event) =>
                   setAnswers((current) => ({ ...current, [field.label]: event.target.value }))
@@ -107,7 +105,9 @@ export default function Forms({ config }: { config: TmaAppConfig }): React.React
         {busy ? 'Submitting...' : 'Submit'}
       </button>
       {status && (
-        <div className="success-text" role="status" aria-live="polite">{status}</div>
+        <div className="success-text" role="status" aria-live="polite">
+          {status}
+        </div>
       )}
     </>
   );

@@ -68,8 +68,19 @@ export default function MonetizationPage({
   const [docsOpen, setDocsOpen] = useState(false);
   const [vip, setVip] = useState<VipRow[]>([]);
 
-  const [mediaForm, setMediaForm] = useState({ chatId: '', mediaType: 'photo', mediaUrl: '', caption: '', starCount: 25 });
-  const [vipForm, setVipForm] = useState({ telegramId: '', channelChatId: '', periodDays: 30, starPrice: 50 });
+  const [mediaForm, setMediaForm] = useState({
+    chatId: '',
+    mediaType: 'photo',
+    mediaUrl: '',
+    caption: '',
+    starCount: 25,
+  });
+  const [vipForm, setVipForm] = useState({
+    telegramId: '',
+    channelChatId: '',
+    periodDays: 30,
+    starPrice: 50,
+  });
 
   useEffect(() => {
     apiFetch<VipRow[]>(`/api/bots/${botId}/monetization/vip`)
@@ -129,8 +140,16 @@ export default function MonetizationPage({
         subtitle="Telegram Stars paywalls and VIP channel subscriptions"
         onDocs={() => setDocsOpen(true)}
       />
-      {status && <Alert severity="success" sx={{ mb: 2 }}>{status}</Alert>}
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {status && (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          {status}
+        </Alert>
+      )}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
       <Tabs
         value={tab}
@@ -160,45 +179,49 @@ export default function MonetizationPage({
                   onChange={(value) => setMediaForm({ ...mediaForm, chatId: value })}
                   helperText="Chat that receives the Stars-locked media"
                 />
-              <TextField
-                select
-                label="Media type"
-                size="small"
-                value={mediaForm.mediaType}
-                onChange={(event) => setMediaForm({ ...mediaForm, mediaType: event.target.value })}
-              >
-                <MenuItem value="photo">Photo</MenuItem>
-                <MenuItem value="video">Video</MenuItem>
-              </TextField>
-              <TextField
-                label="Media URL"
-                size="small"
-                value={mediaForm.mediaUrl}
-                onChange={(event) => setMediaForm({ ...mediaForm, mediaUrl: event.target.value })}
-              />
-              <TextField
-                label="Caption"
-                size="small"
-                multiline
-                minRows={2}
-                value={mediaForm.caption}
-                onChange={(event) => setMediaForm({ ...mediaForm, caption: event.target.value })}
-              />
-              <TextField
-                label="Price (Stars)"
-                type="number"
-                size="small"
-                value={mediaForm.starCount}
-                onChange={(event) => setMediaForm({ ...mediaForm, starCount: Number(event.target.value) })}
-              />
-              <Box>
-                <Button variant="contained" startIcon={<PaidIcon />} onClick={sendPaidMedia}>
-                  Send paid media
-                </Button>
-              </Box>
-            </Stack>
-          </CardContent>
-        </Card>
+                <TextField
+                  select
+                  label="Media type"
+                  size="small"
+                  value={mediaForm.mediaType}
+                  onChange={(event) =>
+                    setMediaForm({ ...mediaForm, mediaType: event.target.value })
+                  }
+                >
+                  <MenuItem value="photo">Photo</MenuItem>
+                  <MenuItem value="video">Video</MenuItem>
+                </TextField>
+                <TextField
+                  label="Media URL"
+                  size="small"
+                  value={mediaForm.mediaUrl}
+                  onChange={(event) => setMediaForm({ ...mediaForm, mediaUrl: event.target.value })}
+                />
+                <TextField
+                  label="Caption"
+                  size="small"
+                  multiline
+                  minRows={2}
+                  value={mediaForm.caption}
+                  onChange={(event) => setMediaForm({ ...mediaForm, caption: event.target.value })}
+                />
+                <TextField
+                  label="Price (Stars)"
+                  type="number"
+                  size="small"
+                  value={mediaForm.starCount}
+                  onChange={(event) =>
+                    setMediaForm({ ...mediaForm, starCount: Number(event.target.value) })
+                  }
+                />
+                <Box>
+                  <Button variant="contained" startIcon={<PaidIcon />} onClick={sendPaidMedia}>
+                    Send paid media
+                  </Button>
+                </Box>
+              </Stack>
+            </CardContent>
+          </Card>
         </Stack>
       )}
 
@@ -230,14 +253,18 @@ export default function MonetizationPage({
                     type="number"
                     size="small"
                     value={vipForm.periodDays}
-                    onChange={(event) => setVipForm({ ...vipForm, periodDays: Number(event.target.value) })}
+                    onChange={(event) =>
+                      setVipForm({ ...vipForm, periodDays: Number(event.target.value) })
+                    }
                   />
                   <TextField
                     label="Price (Stars)"
                     type="number"
                     size="small"
                     value={vipForm.starPrice}
-                    onChange={(event) => setVipForm({ ...vipForm, starPrice: Number(event.target.value) })}
+                    onChange={(event) =>
+                      setVipForm({ ...vipForm, starPrice: Number(event.target.value) })
+                    }
                   />
                 </Stack>
                 <Box>
@@ -251,42 +278,42 @@ export default function MonetizationPage({
 
           <Card>
             <TableContainer sx={{ overflowX: 'auto' }}>
-            <Table size="small" aria-label="VIP subscriptions">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Subscriber</TableCell>
-                  <TableCell>Channel</TableCell>
-                  <TableCell>Expires</TableCell>
-                  <TableCell>State</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {vip.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell>{row.telegram_id}</TableCell>
-                    <TableCell>{row.channel_id}</TableCell>
-                    <TableCell>{row.expires_at?.slice(0, 19).replace('T', ' ')}</TableCell>
-                    <TableCell>
-                      <Chip
-                        size="small"
-                        color={row.is_active ? 'success' : 'default'}
-                        label={row.is_active ? 'Active' : 'Expired'}
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {vip.length === 0 && (
+              <Table size="small" aria-label="VIP subscriptions">
+                <TableHead>
                   <TableRow>
-                    <TableCell colSpan={4}>
-                      <Typography color="text.secondary" align="center" sx={{ py: 2 }}>
-                        {t('common.empty')}
-                      </Typography>
-                    </TableCell>
+                    <TableCell>Subscriber</TableCell>
+                    <TableCell>Channel</TableCell>
+                    <TableCell>Expires</TableCell>
+                    <TableCell>State</TableCell>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                </TableHead>
+                <TableBody>
+                  {vip.map((row) => (
+                    <TableRow key={row.id}>
+                      <TableCell>{row.telegram_id}</TableCell>
+                      <TableCell>{row.channel_id}</TableCell>
+                      <TableCell>{row.expires_at?.slice(0, 19).replace('T', ' ')}</TableCell>
+                      <TableCell>
+                        <Chip
+                          size="small"
+                          color={row.is_active ? 'success' : 'default'}
+                          label={row.is_active ? 'Active' : 'Expired'}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {vip.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={4}>
+                        <Typography color="text.secondary" align="center" sx={{ py: 2 }}>
+                          {t('common.empty')}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
           </Card>
         </Stack>
       )}

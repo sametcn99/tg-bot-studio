@@ -1,18 +1,9 @@
-import {
-  Body,
-  Controller,
-  Get,
-  HttpCode,
-  Param,
-  Post,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Post, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 import { MiniAppsService } from './mini-apps.service';
 import { Public } from '../../common/decorators/public.decorator';
 import { TmaInitDataGuard, type TmaUser } from '../../common/guards/tma-init-data.guard';
-import { DatabaseService } from '../../database/database.service';
+import { MiniAppModel } from '../../models/mini-app.model';
 
 /**
  * Public Mini App runtime endpoints consumed by the TMA webview shell. The
@@ -23,17 +14,17 @@ import { DatabaseService } from '../../database/database.service';
 export class TmaController {
   /**
    * @param {MiniAppsService} service - Mini App studio service.
-   * @param {DatabaseService} db - SQLite access service.
+   * @param {MiniAppModel} miniAppModel - Domain model for mini apps.
    */
   constructor(
     private readonly service: MiniAppsService,
-    private readonly db: DatabaseService,
+    private readonly miniAppModel: MiniAppModel,
   ) {}
 
   /**
    * Returns the public runtime configuration for an app slug.
    * @param {string} slug - Mini App slug.
-   * @returns {object} Template type, title, config, and theme.
+   * @returns {Promise<object>} Template type, title, config, and theme.
    */
   @Public()
   @Get(':slug')
@@ -43,112 +34,89 @@ export class TmaController {
 
   /**
    * Returns loyalty balance and check-in status for the Mini App user.
-   * @param {string} slug - Mini App slug.
-   * @param {Request} req - Request carrying the validated user.
-   * @returns {object} Points and check-in state.
    */
   @Public()
   @UseGuards(TmaInitDataGuard)
   @Get(':slug/me')
-  me(@Param('slug') slug: string, @Req() req: Request & { tmaUser?: TmaUser }) {
-    const botId = this.botIdForSlug(slug);
+  async me(@Param('slug') slug: string, @Req() req: Request & { tmaUser?: TmaUser }) {
+    const botId = await this.botIdForSlug(slug);
     return this.service.getLoyalty(botId, req.tmaUser!.id);
   }
 
   /**
    * Performs the daily loyalty check-in.
-   * @param {string} slug - Mini App slug.
-   * @param {Request} req - Request carrying the validated user.
-   * @returns {object} Award and updated balance.
    */
   @Public()
   @UseGuards(TmaInitDataGuard)
   @Post(':slug/checkin')
   @HttpCode(200)
-  checkin(@Param('slug') slug: string, @Req() req: Request & { tmaUser?: TmaUser }) {
-    const botId = this.botIdForSlug(slug);
+  async checkin(@Param('slug') slug: string, @Req() req: Request & { tmaUser?: TmaUser }) {
+    const botId = await this.botIdForSlug(slug);
     return this.service.checkin(botId, req.tmaUser!.id);
   }
 
   /**
    * Records a shopping cart checkout.
-   * @param {string} slug - Mini App slug.
-   * @param {Request} req - Request carrying the validated user.
-   * @param {object} body - `{ items: Array<{id, title, price, quantity}> }`.
-   * @returns {object} Created order summary.
    */
   @Public()
   @UseGuards(TmaInitDataGuard)
   @Post(':slug/order')
   @HttpCode(200)
-  order(
+  async order(
     @Param('slug') slug: string,
     @Req() req: Request & { tmaUser?: TmaUser },
     @Body() body: { items?: Array<{ id: string; title: string; price: number; quantity: number }> },
   ) {
-    const app = this.appForSlug(slug);
+    const app = await this.appForSlug(slug);
     return this.service.createOrder(app.bot_id, app.id, req.tmaUser!.id, body.items ?? []);
   }
 
   /**
    * Performs the daily reward-wheel spin.
-   * @param {string} slug - Mini App slug.
-   * @param {Request} req - Request carrying the validated user.
-   * @param {object} body - `{ prizes: Array<{label, points}> }` from app config.
-   * @returns {object} Drawn prize and updated balance.
    */
   @Public()
   @UseGuards(TmaInitDataGuard)
   @Post(':slug/spin')
   @HttpCode(200)
-  spin(
+  async spin(
     @Param('slug') slug: string,
     @Req() req: Request & { tmaUser?: TmaUser },
-    @Body() body: { prizes?: Array<{ label: string; points: number }> },
+    @Body() _body: { prizes?: Array<{ label: string; points: number }> },
   ) {
-    const botId = this.botIdForSlug(slug);
-    return this.service.spin(botId, req.tmaUser!.id, body.prizes ?? []);
+    const app = await this.appForSlug(slug);
+    return this.service.spin(app.bot_id, app.id, req.tmaUser!.id);
   }
 
   /**
    * Stores a form submission.
-   * @param {string} slug - Mini App slug.
-   * @param {Request} req - Request carrying the validated user.
-   * @param {object} body - `{ answers: Record<string, unknown> }`.
-   * @returns {{received: boolean}} Acknowledgement.
    */
   @Public()
   @UseGuards(TmaInitDataGuard)
   @Post(':slug/form-submit')
   @HttpCode(200)
-  formSubmit(
+  async formSubmit(
     @Param('slug') slug: string,
     @Req() req: Request & { tmaUser?: TmaUser },
     @Body() body: { answers?: Record<string, unknown> },
   ) {
-    const app = this.appForSlug(slug);
+    const app = await this.appForSlug(slug);
     return this.service.submitForm(app.bot_id, app.id, req.tmaUser!.id, body.answers ?? {});
   }
 
   /**
    * Resolves the owning bot id for a slug.
-   * @param {string} slug - Mini App slug.
-   * @returns {number} Bot id.
    */
-  private botIdForSlug(slug: string): number {
-    return this.appForSlug(slug).bot_id;
+  private async botIdForSlug(slug: string): Promise<number> {
+    const app = await this.appForSlug(slug);
+    return app.bot_id;
   }
 
   /**
    * Loads the active app row for a slug.
-   * @param {string} slug - Mini App slug.
-   * @returns {{id: number; bot_id: number}} App identifiers.
    */
-  private appForSlug(slug: string): { id: number; bot_id: number } {
-    const app = this.db.get<{ id: number; bot_id: number }>(
-      'SELECT id, bot_id FROM mini_apps WHERE slug = ? AND is_active = 1',
-      slug,
-    );
-    return app ?? { id: 0, bot_id: 0 };
+  private async appForSlug(slug: string): Promise<{ id: number; bot_id: number }> {
+    const app = await this.miniAppModel.findBySlug(slug);
+    if (!app || app.isActive !== 1) return { id: 0, bot_id: 0 };
+    return { id: app.id, bot_id: app.botId };
   }
 }

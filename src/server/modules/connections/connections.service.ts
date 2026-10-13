@@ -6,45 +6,21 @@ import {
   OnApplicationBootstrap,
   OnApplicationShutdown,
 } from '@nestjs/common';
-import { DatabaseService } from '../../database/database.service';
+import type { ChatConnection } from '@prisma/client';
+import { PrismaService } from '../../database/prisma.service';
+import { ChatConnectionModel } from '../../models/chat-connection.model';
 import { BotPoolService } from '../../bot-engine/bot-pool.service';
 
 /**
- * Connection row in the `chat_connections` table.
- * @interface ChatConnectionRow
- * @property {number} id - Connection identifier.
- * @property {number} bot_id - Owning bot id.
- * @property {string} chat_id - Numeric Telegram chat id (with leading `-100…`) or `@username`.
- * @property {string} title - Human-readable chat title.
- * @property {string} type - One of `channel`, `group`, `supergroup`.
- * @property {string | null} username - Public @username without the @, when known.
- * @property {number} is_active - Active flag.
- * @property {string | null} created_at - Creation timestamp.
+ * Connection row shape.
  */
-export interface ChatConnectionRow {
-  id: number;
-  bot_id: number;
-  chat_id: string;
-  title: string;
-  type: string;
-  username: string | null;
-  is_active: number;
-  created_at: string | null;
-}
+export type ChatConnectionRow = ChatConnection;
 
 /** Allowed connection type values. */
 const CHAT_TYPES: readonly string[] = ['channel', 'group', 'supergroup'];
 
 /** Auto-sync interval for discovered chats (30 seconds). */
 const AUTO_SYNC_INTERVAL_MS = 30_000;
-
-/** Extracted row shape of the auto-tracked `bot_groups` table. */
-interface BotGroupRow {
-  chat_id: number;
-  title: string;
-  type: string;
-  is_active: number;
-}
 
 /** Minimal chat payload returned by `getChat` enrichment. */
 interface DiscoveredChatInfo {
@@ -54,11 +30,7 @@ interface DiscoveredChatInfo {
 }
 
 /**
- * Normalizes a user-supplied chat reference: numeric ids pass through,
- * bare or @-prefixed usernames become canonical `@username` form.
- * @param {unknown} value - Raw input.
- * @returns {string} Normalized chat id.
- * @throws {BadRequestException} When the reference is neither a numeric id nor a username.
+ * Normalizes a user-supplied chat reference.
  */
 function normalizeChatId(value: unknown): string {
   const raw = String(value ?? '').trim();
@@ -71,9 +43,7 @@ function normalizeChatId(value: unknown): string {
 }
 
 /**
- * Maps a grammY chat type onto a connection type, defaulting to `group`.
- * @param {unknown} type - Raw chat type.
- * @returns {string} One of the {@link CHAT_TYPES} values.
+ * Maps a chat type onto a valid connection type.
  */
 function normalizeType(type: unknown): string {
   return CHAT_TYPES.includes(String(type)) ? String(type) : 'group';
@@ -81,10 +51,7 @@ function normalizeType(type: unknown): string {
 
 /**
  * Chat Connections: the shared group/channel address book backing every
- * target-chat dropdown in the studio. Chats the bot operates in are learned
- * by the engine automatically and imported into the address book by a
- * 30-second auto-sync ticker (configurable per bot), so the list stays
- * current without any manual action.
+ * target-chat dropdown in the studio. Backed by ChatConnectionModel and Prisma.
  */
 @Injectable()
 export class ConnectionsService implements OnApplicationBootstrap, OnApplicationShutdown {
@@ -92,11 +59,13 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
   private readonly ticker: ReturnType<typeof setInterval>;
 
   /**
-   * @param {DatabaseService} db - SQLite access service.
+   * @param {ChatConnectionModel} connectionModel - Model for chat connections and groups.
+   * @param {PrismaService} prisma - Prisma ORM access service.
    * @param {BotPoolService} pool - Multi-bot runtime pool (getChat enrichment).
    */
   constructor(
-    private readonly db: DatabaseService,
+    private readonly connectionModel: ChatConnectionModel,
+    private readonly prisma: PrismaService,
     private readonly pool: BotPoolService,
   ) {
     this.ticker = setInterval(() => {
@@ -108,7 +77,6 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
 
   /**
    * Runs one auto-sync pass right after boot so the address book is fresh.
-   * @returns {Promise<void>} Resolves once the first pass completes.
    */
   async onApplicationBootstrap(): Promise<void> {
     await this.autoSyncAll().catch(() => undefined);
@@ -116,7 +84,6 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
 
   /**
    * Stops the auto-sync ticker on shutdown.
-   * @returns {void}
    */
   onApplicationShutdown(): void {
     clearInterval(this.ticker);
@@ -124,114 +91,101 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
 
   /**
    * Lists every connection of a bot.
-   * @param {number} botId - Owning bot id.
-   * @returns {ChatConnectionRow[]} Connection rows ordered by type then title.
    */
-  list(botId: number): ChatConnectionRow[] {
-    return this.db.query<ChatConnectionRow>(
-      'SELECT * FROM chat_connections WHERE bot_id = ? ORDER BY type, title',
-      botId,
-    );
+  async list(botId: number): Promise<ChatConnectionRow[]> {
+    return this.connectionModel.listConnections(botId);
   }
 
   /**
    * Creates a connection.
-   * @param {number} botId - Owning bot id.
-   * @param {Record<string, unknown>} data - title, type, chatId, username?, isActive?.
-   * @returns {ChatConnectionRow} Created row.
-   * @throws {BadRequestException} When the chat id is malformed or duplicated.
    */
-  create(botId: number, data: Record<string, unknown>): ChatConnectionRow {
+  async create(botId: number, data: Record<string, unknown>): Promise<ChatConnectionRow> {
     const chatId = normalizeChatId(data.chatId);
     const type = normalizeType(data.type);
     const title = String(data.title ?? '').trim() || chatId;
-    if (this.db.get('SELECT 1 FROM chat_connections WHERE bot_id = ? AND chat_id = ?', botId, chatId)) {
+
+    const existing = await this.connectionModel.findConnectionByChatId(botId, chatId);
+    if (existing) {
       throw new BadRequestException(`${chatId} is already connected`);
     }
-    const result = this.db.run(
-      `INSERT INTO chat_connections (bot_id, chat_id, title, type, username, is_active, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+
+    return this.connectionModel.createConnection({
       botId,
       chatId,
       title,
       type,
-      data.username ? String(data.username).replace(/^@/, '') : chatId.startsWith('@') ? chatId.slice(1) : null,
-      data.isActive === false ? 0 : 1,
-      new Date().toISOString(),
-    );
-    return this.getOrFail(botId, Number(result.lastInsertRowid));
+      username: data.username
+        ? String(data.username).replace(/^@/, '')
+        : chatId.startsWith('@')
+          ? chatId.slice(1)
+          : null,
+      isActive: data.isActive === false ? 0 : 1,
+    });
   }
 
   /**
    * Updates a connection.
-   * @param {number} botId - Owning bot id.
-   * @param {number} id - Connection identifier.
-   * @param {Record<string, unknown>} data - Patch fields.
-   * @returns {ChatConnectionRow} Updated row.
-   * @throws {NotFoundException} When the connection does not exist.
    */
-  update(botId: number, id: number, data: Record<string, unknown>): ChatConnectionRow {
-    const existing = this.getOrFail(botId, id);
-    const chatId = data.chatId === undefined ? existing.chat_id : normalizeChatId(data.chatId);
-    if (
-      chatId !== existing.chat_id &&
-      this.db.get('SELECT 1 FROM chat_connections WHERE bot_id = ? AND chat_id = ?', botId, chatId)
-    ) {
-      throw new BadRequestException(`${chatId} is already connected`);
+  async update(
+    botId: number,
+    id: number,
+    data: Record<string, unknown>,
+  ): Promise<ChatConnectionRow> {
+    const existing = await this.getOrFail(botId, id);
+    const chatId = data.chatId === undefined ? existing.chatId : normalizeChatId(data.chatId);
+
+    if (chatId !== existing.chatId) {
+      const duplicate = await this.connectionModel.findConnectionByChatId(botId, chatId);
+      if (duplicate) {
+        throw new BadRequestException(`${chatId} is already connected`);
+      }
     }
+
     const username =
       data.username !== undefined
         ? data.username
           ? String(data.username).replace(/^@/, '')
           : null
         : existing.username;
-    this.db.run(
-      'UPDATE chat_connections SET chat_id = ?, title = ?, type = ?, username = ?, is_active = ? WHERE id = ?',
+
+    return this.connectionModel.updateConnection(id, {
       chatId,
-      data.title === undefined ? existing.title : String(data.title).trim() || chatId,
-      data.type === undefined ? existing.type : normalizeType(data.type),
+      title: data.title === undefined ? existing.title : String(data.title).trim() || chatId,
+      type: data.type === undefined ? existing.type : normalizeType(data.type),
       username,
-      data.isActive === undefined ? existing.is_active : data.isActive ? 1 : 0,
-      id,
-    );
-    return this.getOrFail(botId, id);
+      isActive: data.isActive === undefined ? existing.isActive : data.isActive ? 1 : 0,
+    });
   }
 
   /**
    * Deletes a connection.
-   * @param {number} botId - Owning bot id.
-   * @param {number} id - Connection identifier.
-   * @returns {void}
-   * @throws {NotFoundException} When the connection does not exist.
    */
-  remove(botId: number, id: number): void {
-    this.getOrFail(botId, id);
-    this.db.run('DELETE FROM chat_connections WHERE bot_id = ? AND id = ?', botId, id);
+  async remove(botId: number, id: number): Promise<void> {
+    await this.getOrFail(botId, id);
+    await this.connectionModel.deleteConnection(id);
   }
 
   /**
    * Reads the per-bot auto-sync flag from the connections module config.
-   * @param {number} botId - Owning bot id.
-   * @returns {boolean} True when discovered chats should import automatically.
    */
-  private autoSyncEnabled(botId: number): boolean {
-    const row = this.db.get<{ config_json: string | null }>(
-      "SELECT config_json FROM bot_modules WHERE bot_id = ? AND module_key = 'connections'",
-      botId,
-    );
-    if (!row?.config_json) return true;
-    const config = JSON.parse(row.config_json) as Record<string, unknown>;
+  private async autoSyncEnabled(botId: number): Promise<boolean> {
+    const row = await this.prisma.botModule.findUnique({
+      where: {
+        botId_moduleKey: { botId, moduleKey: 'connections' },
+      },
+    });
+    if (!row?.configJson) return true;
+    const config = JSON.parse(row.configJson) as Record<string, unknown>;
     return config.autoSync !== false;
   }
 
   /**
    * Imports discovered chats for every bot whose auto-sync stays enabled.
-   * @returns {Promise<void>} Resolves once all bots were processed.
    */
   private async autoSyncAll(): Promise<void> {
-    const bots = this.db.query<{ id: number }>('SELECT id FROM bots');
+    const bots = await this.prisma.bot.findMany({ select: { id: true } });
     for (const bot of bots) {
-      if (!this.autoSyncEnabled(bot.id)) continue;
+      if (!(await this.autoSyncEnabled(bot.id))) continue;
       await this.syncFromBot(bot.id, true).catch((error: Error) =>
         this.logger.warn(`Auto-sync skipped for bot ${bot.id}: ${error.message}`),
       );
@@ -239,26 +193,13 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
   }
 
   /**
-   * Imports every chat the bot runtime auto-discovered (bot_groups) into the
-   * connection list, refreshing titles and active state of known rows.
-   * New rows are enriched through `getChat` when the bot runtime is online.
-   * Manual deactivation wins: only rows the bot actually left are deactivated.
-   * @param {number} botId - Owning bot id.
-   * @param {boolean} [enrich] - Fetch fresh chat info for newly discovered rows.
-   * @returns {Promise<{synced: number}>} Number of chats processed.
+   * Imports every chat the bot runtime auto-discovered into the connection list.
    */
   async syncFromBot(botId: number, enrich = false): Promise<{ synced: number }> {
-    const groups = this.db.query<BotGroupRow>(
-      'SELECT chat_id, title, type, is_active FROM bot_groups WHERE bot_id = ?',
-      botId,
-    );
+    const groups = await this.connectionModel.listGroups(botId);
     for (const group of groups) {
       const chatId = String(group.chat_id);
-      const known = this.db.get(
-        'SELECT 1 FROM chat_connections WHERE bot_id = ? AND chat_id = ?',
-        botId,
-        chatId,
-      );
+      const known = await this.connectionModel.findConnectionByChatId(botId, chatId);
       let title = group.title;
       let type = normalizeType(group.type);
       let username: string | null = null;
@@ -270,29 +211,32 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
           username = info.username ?? null;
         }
       }
-      this.db.run(
-        `INSERT INTO chat_connections (bot_id, chat_id, title, type, username, is_active, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT(bot_id, chat_id) DO UPDATE SET
-           title = excluded.title, type = excluded.type,
-           is_active = CASE WHEN excluded.is_active = 0 THEN 0 ELSE chat_connections.is_active END`,
-        botId,
-        chatId,
-        title,
-        type,
-        username,
-        group.is_active ? 1 : 0,
-        new Date().toISOString(),
-      );
+
+      await this.prisma.chatConnection.upsert({
+        where: {
+          botId_chatId: { botId, chatId },
+        },
+        create: {
+          botId,
+          chatId,
+          title,
+          type,
+          username,
+          isActive: group.is_active ? 1 : 0,
+          createdAt: new Date().toISOString(),
+        },
+        update: {
+          title,
+          type,
+          isActive: group.is_active ? 1 : 0,
+        },
+      });
     }
     return { synced: groups.length };
   }
 
   /**
-   * Fetches title/username/type for a discovered chat through the running bot.
-   * @param {number} botId - Owning bot id.
-   * @param {string} chatId - Numeric chat id.
-   * @returns {Promise<DiscoveredChatInfo | null>} Chat info, or null when the bot is offline/unreachable.
+   * Fetches chat info via live bot instance.
    */
   private async fetchChatInfo(botId: number, chatId: string): Promise<DiscoveredChatInfo | null> {
     const bot = this.pool.getBot(botId);
@@ -307,17 +251,9 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
 
   /**
    * Fetches a single connection or throws.
-   * @param {number} botId - Owning bot id.
-   * @param {number} id - Connection identifier.
-   * @returns {ChatConnectionRow} The row.
-   * @throws {NotFoundException} When the connection does not exist.
    */
-  private getOrFail(botId: number, id: number): ChatConnectionRow {
-    const row = this.db.get<ChatConnectionRow>(
-      'SELECT * FROM chat_connections WHERE bot_id = ? AND id = ?',
-      botId,
-      id,
-    );
+  private async getOrFail(botId: number, id: number): Promise<ChatConnectionRow> {
+    const row = await this.connectionModel.findConnectionById(botId, id);
     if (!row) throw new NotFoundException(`Connection ${id} not found`);
     return row;
   }

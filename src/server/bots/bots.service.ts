@@ -1,5 +1,6 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { DatabaseService } from '../database/database.service';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../database/prisma.service';
+import { BotModel } from '../models/bot.model';
 import { BotPoolService } from '../bot-engine/bot-pool.service';
 import { MODULE_REGISTRY, findModule } from '../bot-engine/module-registry';
 import { callGetMe } from '../common/utils/telegram.util';
@@ -9,16 +10,6 @@ import type { CreateBotDto, UpdateBotDto, UpdateModuleStateDto } from './dto/bot
 /**
  * Bot row with runtime enrichment for the dashboard.
  * @interface BotWithStatus
- * @property {number} id - Studio bot identifier.
- * @property {string} name - Display name.
- * @property {string} username - Bot @username.
- * @property {number} is_active - Enabled flag.
- * @property {string} created_at - ISO creation timestamp.
- * @property {string} status - Runtime health (active/failed/inactive/...).
- * @property {number} activeModules - Count of enabled modules.
- * @property {number} miniApps - Count of hosted Mini Apps.
- * @property {number} subscribers - Rows in bot_users.
- * @property {number} dailyVolume - Messages in the current UTC day.
  */
 export interface BotWithStatus {
   id: number;
@@ -35,71 +26,94 @@ export interface BotWithStatus {
   dailyVolume: number;
 }
 
+function maskToken(token: string): string {
+  if (!token || token.length < 10) return '••••••••';
+  return `${token.slice(0, 4)}••••${token.slice(-4)}`;
+}
+
 /**
  * Bot CRUD and per-bot module toggle management.
  */
 @Injectable()
 export class BotsService {
+  private readonly logger = new Logger(BotsService.name);
+
   /**
-   * @param {DatabaseService} db - SQLite access service.
+   * @param {BotModel} botModel - Domain model for bots and modules.
+   * @param {PrismaService} prisma - Prisma ORM access service.
    * @param {BotPoolService} pool - Multi-bot runtime pool.
+   * @param {AiAssistantService} aiService - AI service gateway.
    */
   constructor(
-    private readonly db: DatabaseService,
+    private readonly botModel: BotModel,
+    private readonly prisma: PrismaService,
     private readonly pool: BotPoolService,
     private readonly aiService: AiAssistantService,
   ) {}
 
   /**
    * Lists all bots enriched with runtime status and audience metrics.
-   * @returns {BotWithStatus[]} All registered bots.
+   * @returns {Promise<BotWithStatus[]>} All registered bots.
    */
-  findAll(): BotWithStatus[] {
-    const rows = this.db.query<{
-      id: number;
-      name: string;
-      token: string;
-      username: string | null;
-      first_name: string | null;
-      is_active: number;
-      created_at: string | null;
-    }>('SELECT * FROM bots ORDER BY id');
+  async findAll(): Promise<BotWithStatus[]> {
+    const bots = await this.botModel.findAll();
 
-    return rows.map((row) => {
-      const activeModules =
-        this.db.get<{ count: number }>(
-          'SELECT COUNT(*) as count FROM bot_modules WHERE bot_id = ? AND is_enabled = 1',
-          row.id,
-        )?.count ?? 0;
-      const miniApps =
-        this.db.get<{ count: number }>(
-          'SELECT COUNT(*) as count FROM mini_apps WHERE bot_id = ?',
-          row.id,
-        )?.count ?? 0;
-      const subscribers =
-        this.db.get<{ count: number }>(
-          'SELECT COUNT(*) as count FROM bot_users WHERE bot_id = ?',
-          row.id,
-        )?.count ?? 0;
-      return {
-        ...row,
-        status: this.pool.getStatus(row.id, row.is_active === 1),
-        activeModules,
-        miniApps,
-        subscribers,
-        dailyVolume: this.pool.getDailyVolume(row.id),
-      };
-    });
+    return Promise.all(
+      bots.map(async (row) => {
+        const [activeModules, miniApps, subscribers] = await Promise.all([
+          this.botModel.countActiveModules(row.id),
+          this.botModel.countMiniApps(row.id),
+          this.botModel.countSubscribers(row.id),
+        ]);
+
+        return {
+          id: row.id,
+          name: row.name,
+          token: maskToken(row.token),
+          username: row.username,
+          first_name: row.firstName,
+          is_active: row.isActive,
+          created_at: row.createdAt,
+          status: this.pool.getStatus(row.id, row.isActive === 1),
+          activeModules,
+          miniApps,
+          subscribers,
+          dailyVolume: this.pool.getDailyVolume(row.id),
+        };
+      }),
+    );
   }
 
   /**
    * Fetches a single bot with metrics.
    * @param {number} id - Studio bot identifier.
-   * @returns {BotWithStatus} Enriched bot record.
+   * @returns {Promise<BotWithStatus>} Enriched bot record.
    * @throws {NotFoundException} When the bot does not exist.
    */
-  findOne(id: number): BotWithStatus {
-    return this.findAll().find((bot) => bot.id === id) ?? this.throwNotFound(id);
+  async findOne(id: number): Promise<BotWithStatus> {
+    const bot = await this.botModel.findById(id);
+    if (!bot) this.throwNotFound(id);
+
+    const [activeModules, miniApps, subscribers] = await Promise.all([
+      this.botModel.countActiveModules(bot.id),
+      this.botModel.countMiniApps(bot.id),
+      this.botModel.countSubscribers(bot.id),
+    ]);
+
+    return {
+      id: bot.id,
+      name: bot.name,
+      token: maskToken(bot.token),
+      username: bot.username,
+      first_name: bot.firstName,
+      is_active: bot.isActive,
+      created_at: bot.createdAt,
+      status: this.pool.getStatus(bot.id, bot.isActive === 1),
+      activeModules,
+      miniApps,
+      subscribers,
+      dailyVolume: this.pool.getDailyVolume(bot.id),
+    };
   }
 
   /**
@@ -124,22 +138,21 @@ export class BotsService {
         `Telegram rejected the token: ${check.description ?? 'unknown error'}`,
       );
     }
-    if (this.db.get('SELECT 1 FROM bots WHERE token = ?', dto.token)) {
+
+    const existing = await this.botModel.findByToken(dto.token);
+    if (existing) {
       throw new BadRequestException('This bot token is already registered');
     }
-    const now = new Date().toISOString();
-    const result = this.db.run(
-      'INSERT INTO bots (name, token, username, first_name, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, 1, ?, ?)',
-      dto.name || check.bot.first_name,
-      dto.token,
-      check.bot.username,
-      check.bot.first_name,
-      now,
-      now,
-    );
-    const id = Number(result.lastInsertRowid);
-    await this.pool.restartBot(id);
-    return this.findOne(id);
+
+    const created = await this.botModel.create({
+      name: dto.name || check.bot.first_name,
+      token: dto.token,
+      username: check.bot.username,
+      firstName: check.bot.first_name,
+    });
+
+    await this.pool.restartBot(created.id);
+    return this.findOne(created.id);
   }
 
   /**
@@ -150,57 +163,46 @@ export class BotsService {
    * @throws {NotFoundException} When the bot does not exist.
    */
   async update(id: number, dto: UpdateBotDto): Promise<BotWithStatus> {
-    const row = this.db.get('SELECT id FROM bots WHERE id = ?', id);
-    if (!row) throw new NotFoundException(`Bot ${id} not found`);
-    if (dto.name !== undefined) {
-      this.db.run('UPDATE bots SET name = ?, updated_at = ? WHERE id = ?', dto.name, new Date().toISOString(), id);
-    }
-    if (dto.isActive !== undefined) {
-      this.db.run('UPDATE bots SET is_active = ?, updated_at = ? WHERE id = ?', dto.isActive ? 1 : 0, new Date().toISOString(), id);
-    }
+    const existing = await this.botModel.findById(id);
+    if (!existing) throw new NotFoundException(`Bot ${id} not found`);
+
+    await this.botModel.update(id, {
+      name: dto.name,
+      isActive: dto.isActive !== undefined ? (dto.isActive ? 1 : 0) : undefined,
+    });
+
     await this.pool.restartBot(id);
     return this.findOne(id);
   }
 
   /**
-   * Deletes a bot, stops its poller, and purges every bot-scoped row.
+   * Deletes a bot, stops its poller, and cascades removal across all bot-scoped rows.
    * @param {number} id - Studio bot identifier.
    * @returns {Promise<void>} Resolves once fully removed.
    */
   async remove(id: number): Promise<void> {
     this.pool.destroyBot(id);
-    const tables = [
-      'bot_modules', 'mini_apps', 'mini_app_orders', 'bot_settings', 'bot_users',
-      'links', 'broadcasts', 'support_messages', 'drip_campaigns', 'drip_subscribers',
-      'giveaways', 'scheduled_posts', 'blocked_users', 'bot_groups', 'chat_connections',
-      'autoresponders', 'vip_subscriptions', 'chat_activity', 'score_schedules',
-    ] as const;
-    for (const table of tables) {
-      this.db.run(`DELETE FROM ${table} WHERE bot_id = ?`, id);
-    }
-    this.db.run('DELETE FROM bots WHERE id = ?', id);
+    await this.botModel.delete(id);
   }
 
   /**
    * Lists every module with its effective state and config for a bot.
    * @param {number} botId - Studio bot identifier.
-   * @returns {Array<object>} Registry entries merged with persisted state.
+   * @returns {Promise<Array<Record<string, unknown>>>} Registry entries merged with persisted state.
    */
-  listModules(botId: number): Array<Record<string, unknown>> {
-    const rows = this.db.query<{ module_key: string; is_enabled: number; config_json: string | null }>(
-      'SELECT module_key, is_enabled, config_json FROM bot_modules WHERE bot_id = ?',
-      botId,
-    );
-    const byKey = new Map(rows.map((row) => [row.module_key, row]));
+  async listModules(botId: number): Promise<Array<Record<string, unknown>>> {
+    const rows = await this.botModel.listModules(botId);
+    const byKey = new Map(rows.map((row) => [row.moduleKey, row]));
+
     return MODULE_REGISTRY.map((definition) => {
       const row = byKey.get(definition.key);
-      const stored = row?.config_json ? (JSON.parse(row.config_json) as Record<string, unknown>) : {};
+      const stored = row?.configJson ? (JSON.parse(row.configJson) as Record<string, unknown>) : {};
       return {
         key: definition.key,
         name: definition.name,
         category: definition.category,
         description: definition.description,
-        isEnabled: Boolean(row?.is_enabled),
+        isEnabled: Boolean(row?.isEnabled),
         config: { ...definition.defaultConfig, ...stored },
       };
     });
@@ -211,7 +213,7 @@ export class BotsService {
    * @param {number} botId - Studio bot identifier.
    * @param {string} moduleKey - Module registry key.
    * @param {UpdateModuleStateDto} dto - Enabled flag and config payload.
-   * @returns {Promise<object>} Updated module descriptor.
+   * @returns {Promise<Record<string, unknown>>} Updated module descriptor.
    * @throws {NotFoundException} When bot or module key is unknown.
    */
   async updateModule(
@@ -219,46 +221,47 @@ export class BotsService {
     moduleKey: string,
     dto: UpdateModuleStateDto,
   ): Promise<Record<string, unknown>> {
-    if (!this.db.get('SELECT 1 FROM bots WHERE id = ?', botId)) {
+    const bot = await this.botModel.findById(botId);
+    if (!bot) {
       throw new NotFoundException(`Bot ${botId} not found`);
     }
     const definition = findModule(moduleKey);
     if (!definition) throw new NotFoundException(`Module ${moduleKey} not found`);
 
-    this.db.run(
-      `INSERT INTO bot_modules (bot_id, module_key, is_enabled, config_json) VALUES (?, ?, ?, ?)
-       ON CONFLICT(bot_id, module_key) DO UPDATE SET is_enabled = excluded.is_enabled, config_json = excluded.config_json`,
+    await this.botModel.upsertModule(
       botId,
       moduleKey,
       dto.isEnabled ? 1 : 0,
       JSON.stringify(dto.config ?? {}),
     );
+
     await this.pool.restartBot(botId);
-    return this.listModules(botId).find((module) => module.key === moduleKey)!;
+    const modules = await this.listModules(botId);
+    return modules.find((module) => module.key === moduleKey)!;
   }
 
   /**
    * Runs diagnostic health checks on bot permissions and runtime status.
    * @param {number} botId - Studio bot identifier.
-   * @returns {Promise<object>} Diagnostic report with actionable recommendations.
+   * @returns {Promise<Record<string, unknown>>} Diagnostic report with actionable recommendations.
    */
   async getDiagnostics(botId: number): Promise<Record<string, unknown>> {
-    const row = this.db.get<{ id: number; name: string; token: string; is_active: number }>(
-      'SELECT id, name, token, is_active FROM bots WHERE id = ?',
-      botId,
-    );
+    const row = await this.botModel.findById(botId);
     if (!row) throw new NotFoundException(`Bot ${botId} not found`);
 
     const check = await callGetMe(row.token);
-    const runtimeStatus = this.pool.getStatus(botId, row.is_active === 1);
-    const groupCount =
-      this.db.get<{ count: number }>(
-        'SELECT COUNT(*) as count FROM chat_connections WHERE bot_id = ? AND is_active = 1',
-        botId,
-      )?.count ?? 0;
-    const activeModules = this.listModules(botId).filter((m) => m.isEnabled);
+    const runtimeStatus = this.pool.getStatus(botId, row.isActive === 1);
+    const groupCount = await this.prisma.chatConnection.count({
+      where: { botId, isActive: 1 },
+    });
+    const activeModules = (await this.listModules(botId)).filter((m) => m.isEnabled);
 
-    const checks: Array<{ key: string; title: string; status: 'pass' | 'warning' | 'error' | 'info'; details: string }> = [];
+    const checks: Array<{
+      key: string;
+      title: string;
+      status: 'pass' | 'warning' | 'error' | 'info';
+      details: string;
+    }> = [];
     const recommendations: string[] = [];
 
     // 1. Telegram API connectivity
@@ -280,6 +283,7 @@ export class BotsService {
     }
 
     // 2. Runtime engine status
+    const runtimeInfo = this.pool.getRuntimeInfo(botId);
     if (runtimeStatus === 'active') {
       checks.push({
         key: 'runtime',
@@ -287,6 +291,42 @@ export class BotsService {
         status: 'pass',
         details: 'Long-polling engine is running and processing updates in real-time.',
       });
+    } else if (runtimeInfo.errorReason === 'token_revoked') {
+      checks.push({
+        key: 'runtime',
+        title: 'Studio Runtime Poller',
+        status: 'error',
+        details: 'Bot token rejected or revoked (401 Unauthorized). Auto-restart was stopped.',
+      });
+      recommendations.push(
+        'Generate a new bot token via @BotFather and update the bot configuration.',
+      );
+    } else if (runtimeInfo.errorReason === 'conflict') {
+      checks.push({
+        key: 'runtime',
+        title: 'Studio Runtime Poller',
+        status: 'error',
+        details:
+          'Conflict detected (409 Conflict): Another bot instance or active webhook is using this token.',
+      });
+      recommendations.push(
+        'Ensure no other instances are polling this token and clear any webhook with deleteWebhook.',
+      );
+    } else if (runtimeInfo.status === 'retrying') {
+      checks.push({
+        key: 'runtime',
+        title: 'Studio Runtime Poller',
+        status: 'warning',
+        details: `Poller crashed and is automatically recovering (retry attempt ${runtimeInfo.retryCount}/3). Last error: ${runtimeInfo.lastError}`,
+      });
+    } else if (runtimeInfo.status === 'failed') {
+      checks.push({
+        key: 'runtime',
+        title: 'Studio Runtime Poller',
+        status: 'error',
+        details: `Poller failed after ${runtimeInfo.retryCount} restart attempt(s). Error: ${runtimeInfo.lastError || 'Unknown crash'}`,
+      });
+      recommendations.push('Check the server logs or restart the bot from the dashboard.');
     } else {
       checks.push({
         key: 'runtime',
@@ -341,11 +381,28 @@ export class BotsService {
       recommendations.push('Add your channels or press "Sync from bot" in Chat Connections.');
     }
 
+    // 5. Smart usage-based module recommendations
+    const hasSupport = activeModules.some((m) => String(m.key) === 'support');
+    const hasAi = activeModules.some((m) => String(m.key) === 'ai-assistant');
+    const hasBroadcast = activeModules.some((m) => String(m.key) === 'broadcast');
+
+    if (hasSupport && !hasAi) {
+      recommendations.push(
+        'Smart suggestion: Support module is active. Enable AI Assistant to auto-reply to FAQs and draft responses.',
+      );
+    }
+    if (groupCount > 0 && !hasBroadcast) {
+      recommendations.push(
+        'Smart suggestion: Connected channels found. Enable Broadcast module to send scheduled or immediate bulletins.',
+      );
+    }
+
     return {
       ok: true,
       botId,
       botInfo: check.bot,
       runtimeStatus,
+      runtimeInfo,
       checks,
       recommendations,
     };
@@ -355,15 +412,16 @@ export class BotsService {
    * Applies a coordinated starter feature bundle in one click.
    * @param {number} botId - Studio bot identifier.
    * @param {string} presetKey - Bundle key (ecommerce/community/support/growth).
-   * @returns {Promise<object>} Result and enabled module keys.
+   * @returns {Promise<Record<string, unknown>>} Result and enabled module keys.
    */
   async applyPreset(botId: number, presetKey: string): Promise<Record<string, unknown>> {
-    if (!this.db.get('SELECT 1 FROM bots WHERE id = ?', botId)) {
+    const bot = await this.botModel.findById(botId);
+    if (!bot) {
       throw new NotFoundException(`Bot ${botId} not found`);
     }
 
     const presetBundles: Record<string, string[]> = {
-      ecommerce: ['start-menu', 'mini-apps', 'support', 'paid-media'],
+      ecommerce: ['start-menu', 'vip-subs', 'support', 'paid-media'],
       community: ['welcome', 'captcha', 'moderation', 'message-score', 'giveaways'],
       support: ['support', 'ai-assistant', 'autoresponder'],
       growth: ['referrals', 'broadcast', 'drip', 'quizzes'],
@@ -376,11 +434,10 @@ export class BotsService {
 
     for (const key of modulesToEnable) {
       const definition = findModule(key);
-      this.db.run(
-        `INSERT INTO bot_modules (bot_id, module_key, is_enabled, config_json) VALUES (?, ?, 1, ?)
-         ON CONFLICT(bot_id, module_key) DO UPDATE SET is_enabled = 1`,
+      await this.botModel.upsertModule(
         botId,
         key,
+        1,
         JSON.stringify(definition?.defaultConfig ?? {}),
       );
     }
@@ -399,15 +456,15 @@ export class BotsService {
    * @param {string} text - Message text or command.
    * @returns {Promise<object>} Simulated bot response (text, photo, buttons).
    */
-  async simulateMessage(botId: number, text: string): Promise<{
+  async simulateMessage(
+    botId: number,
+    text: string,
+  ): Promise<{
     text: string;
     mediaUrl?: string | null;
     buttons?: Array<{ text: string; url?: string }>;
   }> {
-    const row = this.db.get<{ id: number; token: string; name: string }>(
-      'SELECT id, token, name FROM bots WHERE id = ?',
-      botId,
-    );
+    const row = await this.botModel.findById(botId);
     if (!row) throw new NotFoundException(`Bot ${botId} not found`);
 
     const trimmed = text.trim();
@@ -415,17 +472,18 @@ export class BotsService {
 
     // 1. Check Start Menu (/start or /menu)
     if (trimmed.startsWith('/start') || trimmed.startsWith('/menu')) {
-      const startMenuModule = this.db.get<{ is_enabled: number; config_json: string | null }>(
-        "SELECT is_enabled, config_json FROM bot_modules WHERE bot_id = ? AND module_key = 'start-menu'",
-        botId,
-      );
-      if (startMenuModule?.is_enabled) {
-        const config = startMenuModule.config_json ? (JSON.parse(startMenuModule.config_json) as Record<string, unknown>) : {};
-        const menuItems = this.db.query<{ title: string; url: string; type: string }>(
-          'SELECT title, url, type FROM links WHERE bot_id = ? AND is_active = 1 ORDER BY order_index ASC',
-          botId,
+      const startMenuModule = await this.botModel.getModule(botId, 'start-menu');
+      if (startMenuModule?.isEnabled) {
+        const config = startMenuModule.configJson
+          ? (JSON.parse(startMenuModule.configJson) as Record<string, unknown>)
+          : {};
+        const menuItems = await this.prisma.link.findMany({
+          where: { botId, isActive: 1 },
+          orderBy: { orderIndex: 'asc' },
+        });
+        const startMessage = String(
+          config.startMessage || `Welcome to ${row.name}! Choose an option below:`,
         );
-        const startMessage = String(config.startMessage || `Welcome to ${row.name}! Choose an option below:`);
         const buttons = menuItems.map((item) => ({
           text: item.title,
           url: item.url,
@@ -438,20 +496,11 @@ export class BotsService {
     }
 
     // 2. Check Autoresponder (slash commands and keyword triggers)
-    const autoresponderModule = this.db.get<{ is_enabled: number }>(
-      "SELECT is_enabled FROM bot_modules WHERE bot_id = ? AND module_key = 'autoresponder'",
-      botId,
-    );
-    if (autoresponderModule?.is_enabled) {
-      const rules = this.db.query<{
-        command: string;
-        response_text: string;
-        media_url: string | null;
-        buttons_json: string | null;
-      }>(
-        'SELECT command, response_text, media_url, buttons_json FROM autoresponders WHERE bot_id = ? AND is_active = 1',
-        botId,
-      );
+    const autoresponderModule = await this.botModel.getModule(botId, 'autoresponder');
+    if (autoresponderModule?.isEnabled) {
+      const rules = await this.prisma.autoresponder.findMany({
+        where: { botId, isActive: 1 },
+      });
       const cmdText = trimmed.split(/[\s@]/)[0].toLowerCase();
       const matched =
         rules.find((r) => r.command.startsWith('/') && r.command.toLowerCase() === cmdText) ??
@@ -459,28 +508,29 @@ export class BotsService {
 
       if (matched) {
         let buttons: Array<{ text: string; url?: string }> = [];
-        if (matched.buttons_json) {
+        if (matched.buttonsJson) {
           try {
-            buttons = JSON.parse(matched.buttons_json) as Array<{ text: string; url?: string }>;
+            buttons = JSON.parse(matched.buttonsJson) as Array<{ text: string; url?: string }>;
           } catch {
             // ignore
           }
         }
         return {
-          text: matched.response_text.replace('{first_name}', 'Tester').replace('{username}', 'studio_test'),
-          mediaUrl: matched.media_url,
+          text: matched.responseText
+            .replace('{first_name}', 'Tester')
+            .replace('{username}', 'studio_test'),
+          mediaUrl: matched.mediaUrl,
           buttons,
         };
       }
     }
 
     // 3. Check AI Assistant (with RAG retrieval)
-    const aiModule = this.db.get<{ is_enabled: number; config_json: string | null }>(
-      "SELECT is_enabled, config_json FROM bot_modules WHERE bot_id = ? AND module_key = 'ai-assistant'",
-      botId,
-    );
-    if (aiModule?.is_enabled) {
-      const config = aiModule.config_json ? (JSON.parse(aiModule.config_json) as Record<string, unknown>) : {};
+    const aiModule = await this.botModel.getModule(botId, 'ai-assistant');
+    if (aiModule?.isEnabled) {
+      const config = aiModule.configJson
+        ? (JSON.parse(aiModule.configJson) as Record<string, unknown>)
+        : {};
       if (config.apiKey) {
         try {
           const reply = await this.aiService.completeWithContext(
@@ -503,5 +553,240 @@ export class BotsService {
       text: `Message received: "${trimmed}". (No matching command, auto-responder, or AI rule found). Try typing /start.`,
     };
   }
-}
 
+  /**
+   * Clones an existing bot's complete module setup, autoresponders, drip flows,
+   * and mini-apps to a new bot with a new token.
+   */
+  async cloneBot(botId: number, data: { name?: string; token: string }): Promise<BotWithStatus> {
+    const original = await this.botModel.findById(botId);
+    if (!original) this.throwNotFound(botId);
+
+    const token = data.token.trim();
+    if (!token) throw new BadRequestException('New bot token is required for cloning');
+
+    const check = await callGetMe(token);
+    if (!check.ok || !check.bot) {
+      throw new BadRequestException(check.description || 'Invalid Telegram bot token');
+    }
+
+    const cloneName = data.name?.trim() || `${original.name} (Clone)`;
+    const newBot = await this.botModel.create({
+      name: cloneName,
+      token,
+      username: check.bot.username ?? null,
+      firstName: check.bot.first_name ?? null,
+    });
+
+    // 1. Clone modules
+    const modules = await this.prisma.botModule.findMany({ where: { botId } });
+    for (const m of modules) {
+      await this.prisma.botModule.create({
+        data: {
+          botId: newBot.id,
+          moduleKey: m.moduleKey,
+          isEnabled: m.isEnabled,
+          configJson: m.configJson,
+        },
+      });
+    }
+
+    // 2. Clone autoresponders
+    const autoresponders = await this.prisma.autoresponder.findMany({ where: { botId } });
+    for (const a of autoresponders) {
+      await this.prisma.autoresponder.create({
+        data: {
+          botId: newBot.id,
+          command: a.command,
+          responseText: a.responseText,
+          mediaUrl: a.mediaUrl,
+          buttonsJson: a.buttonsJson,
+          isActive: a.isActive,
+        },
+      });
+    }
+
+    // 3. Clone drip campaigns
+    const drips = await this.prisma.dripCampaign.findMany({
+      where: { botId },
+    });
+    for (const drip of drips) {
+      await this.prisma.dripCampaign.create({
+        data: {
+          botId: newBot.id,
+          name: drip.name,
+          stepsJson: drip.stepsJson,
+          isActive: drip.isActive,
+        },
+      });
+    }
+
+    // 4. Clone mini apps
+    const miniApps = await this.prisma.miniApp.findMany({ where: { botId } });
+    for (const app of miniApps) {
+      const cloneSlug = `${app.slug}-${Date.now().toString(36)}`;
+      await this.prisma.miniApp.create({
+        data: {
+          botId: newBot.id,
+          name: `${app.name} (Clone)`,
+          slug: cloneSlug,
+          templateType: app.templateType,
+          title: app.title,
+          description: app.description,
+          iconUrl: app.iconUrl,
+          configJson: app.configJson,
+          themeJson: app.themeJson,
+          isActive: app.isActive,
+        },
+      });
+    }
+
+    // 5. Clone relevant bot settings
+    const settings = await this.prisma.botSetting.findMany({ where: { botId } });
+    for (const s of settings) {
+      if (
+        s.key.startsWith('spin_') ||
+        s.key.startsWith('forms_') ||
+        s.key.startsWith('giveaway_')
+      ) {
+        continue;
+      }
+      await this.prisma.botSetting.create({
+        data: {
+          botId: newBot.id,
+          key: s.key,
+          value: s.value,
+        },
+      });
+    }
+
+    await this.pool.restartBot(newBot.id);
+    this.logger.log(`Cloned bot ${botId} -> ${newBot.id} (@${check.bot.username})`);
+    return this.findOne(newBot.id);
+  }
+
+  /**
+   * Exports full configuration bundle of a bot (excluding sensitive credentials).
+   */
+  async exportConfig(botId: number): Promise<Record<string, unknown>> {
+    const bot = await this.botModel.findById(botId);
+    if (!bot) this.throwNotFound(botId);
+
+    const modules = await this.prisma.botModule.findMany({ where: { botId } });
+    const autoresponders = await this.prisma.autoresponder.findMany({ where: { botId } });
+    const drips = await this.prisma.dripCampaign.findMany({
+      where: { botId },
+    });
+    const miniApps = await this.prisma.miniApp.findMany({ where: { botId } });
+
+    return {
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      botName: bot.name,
+      modules: modules.map((m) => {
+        let parsedConfig: Record<string, unknown> = {};
+        if (m.configJson) {
+          try {
+            parsedConfig = JSON.parse(m.configJson) as Record<string, unknown>;
+            if (m.moduleKey === 'ai-assistant') {
+              delete parsedConfig.apiKey;
+            }
+          } catch {}
+        }
+        return {
+          moduleKey: m.moduleKey,
+          isEnabled: m.isEnabled,
+          config: parsedConfig,
+        };
+      }),
+      autoresponders: autoresponders.map((a) => ({
+        command: a.command,
+        responseText: a.responseText,
+        mediaUrl: a.mediaUrl,
+        buttonsJson: a.buttonsJson,
+        isActive: a.isActive,
+      })),
+      dripCampaigns: drips.map((d) => ({
+        name: d.name,
+        stepsJson: d.stepsJson,
+        isActive: d.isActive,
+      })),
+      miniApps: miniApps.map((a) => ({
+        name: a.name,
+        templateType: a.templateType,
+        title: a.title,
+        description: a.description,
+        configJson: a.configJson,
+        themeJson: a.themeJson,
+        isActive: a.isActive,
+      })),
+    };
+  }
+
+  /**
+   * Imports a configuration bundle into an existing bot.
+   */
+  async importConfig(
+    botId: number,
+    bundle: Record<string, unknown>,
+  ): Promise<{ success: boolean; importedModules: number }> {
+    const bot = await this.botModel.findById(botId);
+    if (!bot) this.throwNotFound(botId);
+
+    let count = 0;
+    if (Array.isArray(bundle.modules)) {
+      for (const m of bundle.modules) {
+        if (!m || typeof m !== 'object' || !('moduleKey' in m)) continue;
+        const configJson = (m as any).config ? JSON.stringify((m as any).config) : null;
+        await this.prisma.botModule.upsert({
+          where: { botId_moduleKey: { botId, moduleKey: String((m as any).moduleKey) } },
+          create: {
+            botId,
+            moduleKey: String((m as any).moduleKey),
+            isEnabled: Number((m as any).isEnabled) || 0,
+            configJson,
+          },
+          update: {
+            isEnabled: Number((m as any).isEnabled) || 0,
+            configJson,
+          },
+        });
+        count++;
+      }
+    }
+
+    if (Array.isArray(bundle.autoresponders)) {
+      for (const a of bundle.autoresponders) {
+        if (!a || typeof a !== 'object' || !('command' in a)) continue;
+        await this.prisma.autoresponder.create({
+          data: {
+            botId,
+            command: String((a as any).command),
+            responseText: String((a as any).responseText ?? ''),
+            mediaUrl: (a as any).mediaUrl ? String((a as any).mediaUrl) : null,
+            buttonsJson: (a as any).buttonsJson ? String((a as any).buttonsJson) : null,
+            isActive: Number((a as any).isActive ?? 1),
+          },
+        });
+      }
+    }
+
+    if (Array.isArray(bundle.dripCampaigns)) {
+      for (const d of bundle.dripCampaigns) {
+        if (!d || typeof d !== 'object') continue;
+        await this.prisma.dripCampaign.create({
+          data: {
+            botId,
+            name: String((d as any).name ?? 'Imported Drip'),
+            stepsJson: String((d as any).stepsJson ?? '[]'),
+            isActive: Number((d as any).isActive ?? 1),
+          },
+        });
+      }
+    }
+
+    await this.pool.restartBot(botId);
+    this.logger.log(`Imported configuration bundle into bot ${botId}`);
+    return { success: true, importedModules: count };
+  }
+}

@@ -73,7 +73,10 @@ export default function Spin({ config }: { config: TmaAppConfig }): React.ReactE
     <>
       <div className="wheel-stage">
         <div className="wheel-pointer" />
-        <div className="wheel" style={{ background: gradient, transform: `rotate(${rotation}deg)` }} />
+        <div
+          className="wheel"
+          style={{ background: gradient, transform: `rotate(${rotation}deg)` }}
+        />
         <button
           className="primary"
           onClick={() => void spin()}

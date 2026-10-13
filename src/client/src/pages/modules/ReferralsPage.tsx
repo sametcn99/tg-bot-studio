@@ -74,7 +74,7 @@ export default function ReferralsPage({
       />
 
       <Stack spacing={3}>
-        <ModuleConfigPage botId={botId} module={module} />
+        <ModuleConfigPage botId={botId} module={module} embedded={true} />
 
         <Card>
           <CardContent>
@@ -82,38 +82,38 @@ export default function ReferralsPage({
               Leaderboard
             </Typography>
             <TableContainer sx={{ overflowX: 'auto' }}>
-            <Table size="small" aria-label="Referral leaderboard">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Rank</TableCell>
-                  <TableCell>Member</TableCell>
-                  <TableCell align="right">Points</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {leaders.map((leader, index) => (
-                  <TableRow key={leader.telegram_id}>
-                    <TableCell>{index + 1}</TableCell>
-                    <TableCell>
-                      {leader.username
-                        ? `@${leader.username}`
-                        : (leader.first_name ?? String(leader.telegram_id))}
-                    </TableCell>
-                    <TableCell align="right">{leader.points}</TableCell>
-                  </TableRow>
-                ))}
-                {leaders.length === 0 && (
+              <Table size="small" aria-label="Referral leaderboard">
+                <TableHead>
                   <TableRow>
-                    <TableCell colSpan={3}>
-                      <Typography color="text.secondary" align="center" sx={{ py: 2 }}>
-                        {t('common.empty')}
-                      </Typography>
-                    </TableCell>
+                    <TableCell>Rank</TableCell>
+                    <TableCell>Member</TableCell>
+                    <TableCell align="right">Points</TableCell>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                </TableHead>
+                <TableBody>
+                  {leaders.map((leader, index) => (
+                    <TableRow key={leader.telegram_id}>
+                      <TableCell>{index + 1}</TableCell>
+                      <TableCell>
+                        {leader.username
+                          ? `@${leader.username}`
+                          : (leader.first_name ?? String(leader.telegram_id))}
+                      </TableCell>
+                      <TableCell align="right">{leader.points}</TableCell>
+                    </TableRow>
+                  ))}
+                  {leaders.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={3}>
+                        <Typography color="text.secondary" align="center" sx={{ py: 2 }}>
+                          {t('common.empty')}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
           </CardContent>
         </Card>
       </Stack>

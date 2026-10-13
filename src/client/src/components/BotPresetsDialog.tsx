@@ -47,7 +47,7 @@ export default function BotPresetsDialog({
       title: t('presets.ecommerceTitle'),
       desc: t('presets.ecommerceDesc'),
       icon: <ShoppingBagIcon sx={{ fontSize: 32, color: 'primary.main' }} />,
-      modules: ['start-menu', 'mini-apps', 'support', 'paid-media'],
+      modules: ['start-menu', 'vip-subs', 'support', 'paid-media'],
     },
     {
       key: 'community',
@@ -110,7 +110,11 @@ export default function BotPresetsDialog({
             {successMsg}
           </Alert>
         )}
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
 
         <Grid container spacing={2}>
           {presets.map((preset) => (
@@ -140,7 +144,12 @@ export default function BotPresetsDialog({
                     {preset.desc}
                   </Typography>
 
-                  <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ mb: 0.75, display: 'block' }}>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    fontWeight={600}
+                    sx={{ mb: 0.75, display: 'block' }}
+                  >
                     Included Modules:
                   </Typography>
                   <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', gap: 0.5, mb: 2 }}>
@@ -155,7 +164,11 @@ export default function BotPresetsDialog({
                     onClick={() => void handleApply(preset.key)}
                     disabled={Boolean(applying)}
                   >
-                    {applying === preset.key ? <CircularProgress size={20} color="inherit" /> : t('presets.apply')}
+                    {applying === preset.key ? (
+                      <CircularProgress size={20} color="inherit" />
+                    ) : (
+                      t('presets.apply')
+                    )}
                   </Button>
                 </CardContent>
               </Card>

@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { DatabaseService } from '../../database/database.service';
+import { AiModel } from '../../models/ai.model';
+import { BotUserModel } from '../../models/bot-user.model';
+import { MiniAppModel } from '../../models/mini-app.model';
 
 /**
  * Chat message exchanged with an AI provider.
@@ -13,8 +15,9 @@ export interface ChatMessage {
  * Effective AI assistant module configuration.
  */
 export interface AiConfig {
-  provider: 'openai' | 'gemini';
+  provider: 'openai' | 'gemini' | 'custom';
   apiKey: string;
+  baseUrl?: string;
   model: string;
   systemPrompt: string;
   maxTokens: number;
@@ -29,16 +32,15 @@ export interface AiConfig {
 export class AiAssistantService {
   private readonly logger = new Logger(AiAssistantService.name);
 
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly aiModel: AiModel,
+    private readonly botUserModel: BotUserModel,
+    private readonly miniAppModel: MiniAppModel,
+  ) {}
 
   /**
    * Produces an assistant reply for the given conversation, enriching the prompt
    * with RAG knowledge base context and user context (points, orders) when applicable.
-   * @param {number} botId - Owning bot identifier.
-   * @param {number} telegramId - User telegram identifier.
-   * @param {AiConfig} config - Effective module configuration.
-   * @param {ChatMessage[]} history - Conversation history.
-   * @returns {Promise<string>} Assistant reply text.
    */
   async completeWithContext(
     botId: number,
@@ -53,12 +55,13 @@ export class AiAssistantService {
     const latestUserMessage = [...history].reverse().find((m) => m.role === 'user')?.content ?? '';
 
     // 1. RAG Knowledge Retrieval
-    const relevantDocs = this.retrieveKnowledgeDocs(botId, latestUserMessage);
+    const relevantDocs = await this.retrieveKnowledgeDocs(botId, latestUserMessage);
 
     // 2. User Tool Context (Points & Recent Orders)
-    const userContext = this.getUserActionContext(botId, telegramId, latestUserMessage);
+    const userContext = await this.getUserActionContext(botId, telegramId, latestUserMessage);
 
-    let systemPrompt = config.systemPrompt || 'You are a helpful customer support assistant for Telegram.';
+    let systemPrompt =
+      config.systemPrompt || 'You are a helpful customer support assistant for Telegram.';
 
     if (relevantDocs) {
       systemPrompt += `\n\n[OFFICIAL KNOWLEDGE BASE CONTEXT]\n${relevantDocs}\nAnswer user queries based strictly on the knowledge base above when relevant.`;
@@ -93,56 +96,85 @@ export class AiAssistantService {
   }
 
   /**
-   * Retrieves relevant knowledge documents matching terms in the query.
+   * Retrieves relevant knowledge documents matching terms in the query with tag awareness and chunking.
    */
-  private retrieveKnowledgeDocs(botId: number, query: string): string {
-    const docs = this.db.query<{ id: number; title: string; content: string }>(
-      'SELECT id, title, content FROM ai_knowledge_docs WHERE bot_id = ? LIMIT 20',
-      botId,
-    );
+  private async retrieveKnowledgeDocs(botId: number, query: string): Promise<string> {
+    const docs = await this.aiModel.listDocs(botId);
     if (docs.length === 0) return '';
 
     const words = query
       .toLowerCase()
-      .split(/\s+/)
+      .split(/[\s,.;:!?]+/)
       .filter((w) => w.length > 2);
 
-    const matches = docs.filter((doc) => {
-      const text = `${doc.title} ${doc.content}`.toLowerCase();
-      return words.some((word) => text.includes(word));
-    });
+    if (words.length === 0) return '';
 
-    const chosen = matches.length > 0 ? matches.slice(0, 4) : docs.slice(0, 2);
-    return chosen.map((d) => `### ${d.title}\n${d.content}`).join('\n\n');
+    const scoredDocs = docs
+      .map((doc) => {
+        const titleLower = (doc.title || '').toLowerCase();
+        const tagsLower = (doc.tags || '').toLowerCase();
+        const contentLower = (doc.content || '').toLowerCase();
+        let score = 0;
+
+        for (const word of words) {
+          if (titleLower.includes(word)) score += 5;
+          if (tagsLower.includes(word)) score += 4;
+          if (contentLower.includes(word)) score += 1;
+        }
+        return { doc, score };
+      })
+      .filter((item) => item.score > 0);
+
+    // If no matching terms found, return empty context (avoid hallucinating with unrelated docs)
+    if (scoredDocs.length === 0) return '';
+
+    scoredDocs.sort((a, b) => b.score - a.score);
+    const chosen = scoredDocs.slice(0, 3).map((item) => item.doc);
+
+    return chosen
+      .map((d) => {
+        const snippet = d.content.length > 1200 ? `${d.content.slice(0, 1200)}...` : d.content;
+        return `### ${d.title}${d.tags ? ` [Tags: ${d.tags}]` : ''}\n${snippet}`;
+      })
+      .join('\n\n');
   }
 
   /**
    * Fetches user balance and orders if the query relates to account or orders.
    */
-  private getUserActionContext(botId: number, telegramId: number, query: string): string {
+  private async getUserActionContext(
+    botId: number,
+    telegramId: number,
+    query: string,
+  ): Promise<string> {
     const lower = query.toLowerCase();
     const contextParts: string[] = [];
 
-    if (lower.includes('point') || lower.includes('puan') || lower.includes('balance') || lower.includes('bakiye')) {
-      const user = this.db.get<{ points: number }>(
-        'SELECT points FROM bot_users WHERE bot_id = ? AND telegram_id = ?',
-        botId,
-        telegramId,
-      );
+    if (
+      lower.includes('point') ||
+      lower.includes('puan') ||
+      lower.includes('balance') ||
+      lower.includes('bakiye')
+    ) {
+      const user = await this.botUserModel.findByTelegramId(botId, telegramId);
       if (user) {
         contextParts.push(`User loyalty points balance: ${user.points} points.`);
       }
     }
 
-    if (lower.includes('order') || lower.includes('siparis') || lower.includes('kargo') || lower.includes('status')) {
-      const orders = this.db.query<{ id: number; total_amount: number; currency: string; status: string; created_at: string }>(
-        'SELECT id, total_amount, currency, status, created_at FROM mini_app_orders WHERE bot_id = ? AND telegram_id = ? ORDER BY id DESC LIMIT 3',
-        botId,
-        telegramId,
-      );
+    if (
+      lower.includes('order') ||
+      lower.includes('siparis') ||
+      lower.includes('kargo') ||
+      lower.includes('status')
+    ) {
+      const orders = await this.miniAppModel.listUserOrders(botId, telegramId, 3);
       if (orders.length > 0) {
         const orderSummary = orders
-          .map((o) => `Order #${o.id}: ${o.total_amount} ${o.currency}, status: ${o.status} (${o.created_at})`)
+          .map(
+            (o) =>
+              `Order #${o.id}: ${o.total_amount} ${o.currency}, status: ${o.status} (${o.created_at})`,
+          )
           .join('; ');
         contextParts.push(`User recent orders: ${orderSummary}`);
       }
@@ -153,10 +185,6 @@ export class AiAssistantService {
 
   /**
    * Transcribes Telegram audio / voice message using OpenAI Whisper API.
-   * @param {string} apiKey - OpenAI API key.
-   * @param {Buffer} audioBuffer - Audio file bytes.
-   * @param {string} filename - File name (e.g. voice.oga).
-   * @returns {Promise<string>} Transcribed text.
    */
   async transcribeAudio(apiKey: string, audioBuffer: Buffer, filename: string): Promise<string> {
     try {
@@ -180,75 +208,74 @@ export class AiAssistantService {
       const result = (await response.json()) as { text?: string };
       return result.text ?? '';
     } catch (err) {
-      this.logger.warn(`Whisper transcription failed: ${err instanceof Error ? err.message : String(err)}`);
+      this.logger.warn(
+        `Whisper transcription failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
       return '';
     }
   }
 
   /**
-   * Loads persisted conversation turns for a user from SQLite.
+   * Loads persisted conversation turns for a user from Prisma.
    */
-  getHistory(botId: number, telegramId: number, limit = 10): ChatMessage[] {
-    const rows = this.db.query<{ role: 'user' | 'assistant'; content: string }>(
-      `SELECT role, content FROM ai_chat_history
-       WHERE bot_id = ? AND telegram_id = ?
-       ORDER BY id DESC LIMIT ?`,
-      botId,
-      telegramId,
-      limit,
-    );
-    return rows.reverse().map((r) => ({ role: r.role, content: r.content }));
+  async getHistory(botId: number, telegramId: number, limit = 10): Promise<ChatMessage[]> {
+    return this.aiModel.getHistory(botId, telegramId, limit);
   }
 
   /**
    * Appends a message to persistent chat history.
    */
-  saveMessage(botId: number, telegramId: number, role: 'user' | 'assistant', content: string): void {
-    this.db.run(
-      `INSERT INTO ai_chat_history (bot_id, telegram_id, role, content, created_at)
-       VALUES (?, ?, ?, ?, ?)`,
-      botId,
-      telegramId,
-      role,
-      content,
-      new Date().toISOString(),
-    );
+  async saveMessage(
+    botId: number,
+    telegramId: number,
+    role: 'user' | 'assistant',
+    content: string,
+  ): Promise<void> {
+    await this.aiModel.saveMessage(botId, telegramId, role, content);
   }
 
   /**
    * Knowledge Docs CRUD: lists all docs for a bot.
    */
-  listDocs(botId: number): Array<{ id: number; title: string; content: string; tags: string | null; created_at: string }> {
-    return this.db.query(
-      'SELECT id, title, content, tags, created_at FROM ai_knowledge_docs WHERE bot_id = ? ORDER BY id DESC',
-      botId,
-    );
+  async listDocs(botId: number) {
+    return this.aiModel.listDocs(botId);
   }
 
   /**
    * Knowledge Docs CRUD: adds a new doc.
    */
-  addDoc(botId: number, title: string, content: string, tags?: string): { id: number } {
-    const result = this.db.run(
-      'INSERT INTO ai_knowledge_docs (bot_id, title, content, tags, created_at) VALUES (?, ?, ?, ?, ?)',
-      botId,
-      title,
-      content,
-      tags ?? null,
-      new Date().toISOString(),
-    );
-    return { id: Number(result.lastInsertRowid) };
+  async addDoc(
+    botId: number,
+    title: string,
+    content: string,
+    tags?: string,
+  ): Promise<{ id: number }> {
+    return this.aiModel.addDoc(botId, title, content, tags);
+  }
+
+  /**
+   * Knowledge Docs CRUD: updates an existing doc.
+   */
+  async updateDoc(
+    botId: number,
+    docId: number,
+    title: string,
+    content: string,
+    tags?: string,
+  ): Promise<void> {
+    await this.aiModel.updateDoc(botId, docId, title, content, tags);
   }
 
   /**
    * Knowledge Docs CRUD: deletes a doc.
    */
-  removeDoc(botId: number, docId: number): void {
-    this.db.run('DELETE FROM ai_knowledge_docs WHERE bot_id = ? AND id = ?', botId, docId);
+  async removeDoc(botId: number, docId: number): Promise<void> {
+    await this.aiModel.removeDoc(botId, docId);
   }
 
   private async callOpenAi(config: AiConfig, history: ChatMessage[]): Promise<string> {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const baseUrl = config.baseUrl?.trim().replace(/\/+$/, '') || 'https://api.openai.com/v1';
+    const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -259,9 +286,10 @@ export class AiAssistantService {
         max_tokens: config.maxTokens || 600,
         messages: [{ role: 'system', content: config.systemPrompt }, ...history],
       }),
+      signal: AbortSignal.timeout(20_000),
     });
     if (!response.ok) {
-      throw new Error(`OpenAI request failed with status ${response.status}`);
+      throw new Error(`AI request to ${baseUrl} failed with status ${response.status}`);
     }
     const payload = (await response.json()) as {
       choices?: Array<{ message?: { content?: string } }>;
@@ -276,15 +304,19 @@ export class AiAssistantService {
       parts: [{ text: message.content }],
     }));
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(config.apiKey)}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': config.apiKey,
+        },
         body: JSON.stringify({
           system_instruction: { parts: [{ text: config.systemPrompt }] },
           contents,
           generationConfig: { maxOutputTokens: config.maxTokens || 600 },
         }),
+        signal: AbortSignal.timeout(20_000),
       },
     );
     if (!response.ok) {

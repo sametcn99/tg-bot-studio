@@ -66,8 +66,8 @@ export class ConnectionsController {
    * @returns {{success: boolean}} Confirmation payload.
    */
   @Delete(':id')
-  remove(@Param('botId', ParseIntPipe) botId: number, @Param('id', ParseIntPipe) id: number) {
-    this.service.remove(botId, id);
+  async remove(@Param('botId', ParseIntPipe) botId: number, @Param('id', ParseIntPipe) id: number) {
+    await this.service.remove(botId, id);
     return { success: true };
   }
 }

@@ -46,7 +46,12 @@ export default function PhonePreview({
           <Box sx={{ width: 60, height: 4, borderRadius: 2, bgcolor: 'divider' }} />
         </Box>
         {url ? (
-          <Box component="iframe" src={url} title="Mini App preview" sx={{ border: 0, flex: 1, width: '100%' }} />
+          <Box
+            component="iframe"
+            src={url}
+            title="Mini App preview"
+            sx={{ border: 0, flex: 1, width: '100%' }}
+          />
         ) : (
           <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Typography variant="caption" color="text.secondary">

@@ -52,7 +52,11 @@ const ConnectionsContext = createContext<ConnectionsContextValue>({
  * @param {React.ReactNode} props.children - Wrapped application tree.
  * @returns {React.ReactElement} The provider element.
  */
-export function ConnectionsProvider({ children }: { children: React.ReactNode }): React.ReactElement {
+export function ConnectionsProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}): React.ReactElement {
   const { authenticated } = useAuth();
   const { activeBot } = useBots();
   const [connections, setConnections] = useState<ChatConnection[]>([]);
@@ -81,10 +85,7 @@ export function ConnectionsProvider({ children }: { children: React.ReactNode })
     refresh();
   }, [authenticated, refresh]);
 
-  const value = useMemo(
-    () => ({ connections, loading, refresh }),
-    [connections, loading, refresh],
-  );
+  const value = useMemo(() => ({ connections, loading, refresh }), [connections, loading, refresh]);
 
   return <ConnectionsContext.Provider value={value}>{children}</ConnectionsContext.Provider>;
 }

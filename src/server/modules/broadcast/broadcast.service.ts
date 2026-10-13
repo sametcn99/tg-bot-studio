@@ -1,37 +1,11 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { InlineKeyboard } from 'grammy';
-import { DatabaseService } from '../../database/database.service';
 import { BotPoolService } from '../../bot-engine/bot-pool.service';
-import type { BotUserRow } from '../../bot-engine/engine-helpers.service';
+import { BroadcastModel, toBroadcastRow, type BroadcastRow } from '../../models/broadcast.model';
+import { BotModel } from '../../models/bot.model';
+import type { BotUserEntity } from '../../models/bot-user.model';
 
-/**
- * Broadcast row in the `broadcasts` table.
- * @interface BroadcastRow
- * @property {number} id - Broadcast identifier.
- * @property {number} bot_id - Owning bot id.
- * @property {string} target_type - `all` | `language` | `recent`.
- * @property {string} message_text - Message body (placeholders allowed).
- * @property {string} [media_url] - Optional photo or video URL.
- * @property {string} [buttons_json] - JSON rows of `{text, url}` buttons.
- * @property {number} total_recipients - Resolved audience size.
- * @property {number} success_count - Delivered messages.
- * @property {number} failed_count - Failed deliveries.
- * @property {string} status - `queued` | `running` | `done` | `failed`.
- * @property {string} created_at - ISO creation timestamp.
- */
-export interface BroadcastRow {
-  id: number;
-  bot_id: number;
-  target_type: string;
-  message_text: string;
-  media_url: string | null;
-  buttons_json: string | null;
-  total_recipients: number;
-  success_count: number;
-  failed_count: number;
-  status: string;
-  created_at: string | null;
-}
+export { BroadcastRow };
 
 /**
  * Inbound broadcast button descriptor.
@@ -50,103 +24,91 @@ interface BroadcastButton {
  * the grammY auto-retry transformer), and tracks per-broadcast counters.
  */
 @Injectable()
-export class BroadcastService {
+export class BroadcastService implements OnModuleInit {
   private readonly logger = new Logger(BroadcastService.name);
+  private readonly cancelledBroadcasts = new Set<number>();
 
-  /**
-   * @param {DatabaseService} db - SQLite access service.
-   * @param {BotPoolService} pool - Multi-bot runtime pool.
-   */
   constructor(
-    private readonly db: DatabaseService,
+    private readonly broadcastModel: BroadcastModel,
+    private readonly botModel: BotModel,
     private readonly pool: BotPoolService,
   ) {}
 
   /**
-   * Lists broadcast history for a bot.
-   * @param {number} botId - Owning bot id.
-   * @returns {BroadcastRow[]} Newest first.
+   * Cleans up stale in-flight broadcasts from previous runs on server boot.
    */
-  list(botId: number): BroadcastRow[] {
-    return this.db.query<BroadcastRow>(
-      'SELECT * FROM broadcasts WHERE bot_id = ? ORDER BY id DESC',
-      botId,
-    );
+  async onModuleInit(): Promise<void> {
+    const swept = await this.broadcastModel.sweepInterrupted();
+    if (swept > 0) {
+      this.logger.warn(`Swept ${swept} stalled broadcast(s) to 'interrupted' status on startup`);
+    }
+  }
+
+  /**
+   * Lists broadcast history for a bot.
+   */
+  async list(botId: number): Promise<BroadcastRow[]> {
+    const broadcasts = await this.broadcastModel.list(botId);
+    return broadcasts.map(toBroadcastRow);
   }
 
   /**
    * Creates a broadcast and starts the background queue.
-   * @param {number} botId - Owning bot id.
-   * @param {Record<string, unknown>} data - targetType, language, recentDays,
-   * messageText, mediaUrl, buttons.
-   * @returns {BroadcastRow} The queued broadcast row.
    */
-  create(botId: number, data: Record<string, unknown>): BroadcastRow {
-    const result = this.db.run(
-      `INSERT INTO broadcasts (bot_id, target_type, message_text, media_url, buttons_json, total_recipients, success_count, failed_count, status, created_at)
-       VALUES (?, ?, ?, ?, ?, 0, 0, 0, 'queued', ?)`,
+  async create(botId: number, data: Record<string, unknown>): Promise<BroadcastRow> {
+    const item = await this.broadcastModel.create({
       botId,
-      String(data.targetType ?? 'all'),
-      String(data.messageText ?? ''),
-      (data.mediaUrl as string) || null,
-      data.buttons ? JSON.stringify(data.buttons) : null,
-      new Date().toISOString(),
-    );
-    const row = this.findOne(botId, Number(result.lastInsertRowid));
+      targetType: String(data.targetType ?? 'all'),
+      messageText: String(data.messageText ?? ''),
+      mediaUrl: (data.mediaUrl as string) || null,
+      buttonsJson: data.buttons ? JSON.stringify(data.buttons) : null,
+    });
+    const row = toBroadcastRow(item);
     void this.runQueue(botId, row.id, data);
     return row;
   }
 
   /**
    * Fetches one broadcast.
-   * @param {number} botId - Owning bot id.
-   * @param {number} id - Broadcast identifier.
-   * @returns {BroadcastRow} The broadcast row.
-   * @throws {NotFoundException} When not found.
    */
-  findOne(botId: number, id: number): BroadcastRow {
-    const row = this.db.get<BroadcastRow>(
-      'SELECT * FROM broadcasts WHERE bot_id = ? AND id = ?',
-      botId,
-      id,
-    );
-    if (!row) throw new NotFoundException(`Broadcast ${id} not found`);
-    return row;
+  async findOne(botId: number, id: number): Promise<BroadcastRow> {
+    const item = await this.broadcastModel.findById(botId, id);
+    if (!item) throw new NotFoundException(`Broadcast ${id} not found`);
+    return toBroadcastRow(item);
+  }
+
+  /**
+   * Cancels a running or queued broadcast.
+   */
+  async cancel(botId: number, id: number): Promise<BroadcastRow> {
+    const broadcast = await this.findOne(botId, id);
+    if (broadcast.status !== 'running' && broadcast.status !== 'queued') {
+      return broadcast;
+    }
+    this.cancelledBroadcasts.add(id);
+    const updated = await this.broadcastModel.updateStatus(id, {
+      status: 'cancelled',
+    });
+    this.logger.log(`Broadcast ${id} for bot ${botId} marked cancelled`);
+    return toBroadcastRow(updated);
   }
 
   /**
    * Resolves the audience for a target type.
-   * @param {number} botId - Owning bot id.
-   * @param {Record<string, unknown>} data - Filter parameters.
-   * @returns {BotUserRow[]} Target subscribers.
    */
-  private resolveAudience(botId: number, data: Record<string, unknown>): BotUserRow[] {
-    const targetType = String(data.targetType ?? 'all');
-    if (targetType === 'language') {
-      return this.db.query<BotUserRow>(
-        'SELECT * FROM bot_users WHERE bot_id = ? AND language_code = ?',
-        botId,
-        String(data.language ?? 'en'),
-      );
-    }
-    if (targetType === 'recent') {
-      const days = Number(data.recentDays ?? 7);
-      const since = new Date(Date.now() - days * 86_400_000).toISOString();
-      return this.db.query<BotUserRow>(
-        'SELECT * FROM bot_users WHERE bot_id = ? AND last_seen_at >= ?',
-        botId,
-        since,
-      );
-    }
-    return this.db.query<BotUserRow>('SELECT * FROM bot_users WHERE bot_id = ?', botId);
+  private async resolveAudience(
+    botId: number,
+    data: Record<string, unknown>,
+  ): Promise<BotUserEntity[]> {
+    return this.broadcastModel.resolveAudience(botId, {
+      targetType: data.targetType as string,
+      language: data.language as string,
+      recentDays: data.recentDays as number,
+    });
   }
 
   /**
    * Executes the queued send-out with rate limiting and counter tracking.
-   * @param {number} botId - Owning bot id.
-   * @param {number} broadcastId - Broadcast identifier.
-   * @param {Record<string, unknown>} data - Filter and content parameters.
-   * @returns {Promise<void>} Resolves when the queue drains.
    */
   private async runQueue(
     botId: number,
@@ -155,27 +117,26 @@ export class BroadcastService {
   ): Promise<void> {
     const bot = this.pool.getBot(botId);
     if (!bot) {
-      this.db.run("UPDATE broadcasts SET status = 'failed' WHERE id = ?", broadcastId);
+      await this.broadcastModel.updateStatus(broadcastId, { status: 'failed' });
       return;
     }
-    const moduleRow = this.db.get<{ is_enabled: number; config_json: string | null }>(
-      "SELECT is_enabled, config_json FROM bot_modules WHERE bot_id = ? AND module_key = 'broadcast'",
-      botId,
-    );
-    const config = moduleRow?.config_json ? (JSON.parse(moduleRow.config_json) as Record<string, unknown>) : {};
+
+    const moduleRow = await this.botModel.getModule(botId, 'broadcast');
+    const config = moduleRow?.configJson
+      ? (JSON.parse(moduleRow.configJson) as Record<string, unknown>)
+      : {};
     const perSecond = Number(config.rateLimitPerSecond ?? 20);
     const delayMs = Math.max(30, Math.round(1000 / Math.max(1, perSecond)));
+    const batchSize = Math.max(1, Number(config.batchSize ?? 30));
+    const pauseBetweenBatchesMs = Math.max(0, Number(config.pauseBetweenBatchesMs ?? 0));
 
-    const audience = this.resolveAudience(botId, data);
-    this.db.run(
-      "UPDATE broadcasts SET status = 'running', total_recipients = ? WHERE id = ?",
-      audience.length,
-      broadcastId,
-    );
+    const audience = await this.resolveAudience(botId, data);
+    await this.broadcastModel.updateStatus(broadcastId, {
+      status: 'running',
+      totalRecipients: audience.length,
+    });
 
-    const buttons: BroadcastButton[] = data.buttons
-      ? (data.buttons as BroadcastButton[])
-      : [];
+    const buttons: BroadcastButton[] = data.buttons ? (data.buttons as BroadcastButton[]) : [];
     const keyboard = new InlineKeyboard();
     for (const button of buttons) {
       keyboard.url(button.text, button.url).row();
@@ -185,7 +146,20 @@ export class BroadcastService {
 
     let success = 0;
     let failed = 0;
+    let batchCounter = 0;
+
     for (const recipient of audience) {
+      if (this.cancelledBroadcasts.has(broadcastId)) {
+        this.cancelledBroadcasts.delete(broadcastId);
+        await this.broadcastModel.updateStatus(broadcastId, {
+          status: 'cancelled',
+          successCount: success,
+          failedCount: failed,
+        });
+        this.logger.log(`Broadcast ${broadcastId} stopped early due to cancellation`);
+        return;
+      }
+
       try {
         const mention = recipient.username
           ? `@${recipient.username}`
@@ -210,18 +184,26 @@ export class BroadcastService {
           await bot.api.sendMessage(recipient.telegram_id, text, options);
         }
         success++;
-      } catch {
+      } catch (err) {
         failed++;
+        this.logger.warn(
+          `Broadcast ${broadcastId} delivery failed for user ${recipient.telegram_id}: ${err instanceof Error ? err.message : String(err)}`,
+        );
       }
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
+
+      batchCounter++;
+      if (pauseBetweenBatchesMs > 0 && batchCounter % batchSize === 0) {
+        await new Promise((resolve) => setTimeout(resolve, pauseBetweenBatchesMs));
+      } else {
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
     }
 
-    this.db.run(
-      "UPDATE broadcasts SET status = 'done', success_count = ?, failed_count = ? WHERE id = ?",
-      success,
-      failed,
-      broadcastId,
-    );
+    await this.broadcastModel.updateStatus(broadcastId, {
+      status: 'done',
+      successCount: success,
+      failedCount: failed,
+    });
     this.logger.log(`Broadcast ${broadcastId} finished: ${success} sent, ${failed} failed`);
   }
 }

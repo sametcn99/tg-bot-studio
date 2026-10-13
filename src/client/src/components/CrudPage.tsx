@@ -118,7 +118,11 @@ export default function CrudPage({
         } else if (field.type === 'chatMultiSelect') {
           const raw = row[serverKey];
           const list =
-            typeof raw === 'string' ? (JSON.parse(raw) as unknown[]) : Array.isArray(raw) ? raw : [];
+            typeof raw === 'string'
+              ? (JSON.parse(raw) as unknown[])
+              : Array.isArray(raw)
+                ? raw
+                : [];
           seeded[field.key] = list.map((entry) => String(entry));
         } else {
           seeded[field.key] = row[serverKey];
@@ -159,7 +163,16 @@ export default function CrudPage({
     for (const field of resource.formFields) {
       if (field.type === 'json' && typeof payload[field.key] === 'string') {
         const text = String(payload[field.key]).trim();
-        payload[field.key] = text ? JSON.parse(text) : undefined;
+        if (text) {
+          try {
+            payload[field.key] = JSON.parse(text);
+          } catch {
+            setError(`Invalid JSON for field "${field.label || field.key}"`);
+            return;
+          }
+        } else {
+          payload[field.key] = undefined;
+        }
       }
       if (field.type === 'chatSelect' && typeof payload[field.key] === 'string') {
         const text = String(payload[field.key]).trim();
@@ -227,15 +240,28 @@ export default function CrudPage({
         }
       />
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
       {module.configFields && module.configFields.length > 0 && (
         <Card sx={{ mb: 3 }}>
           <CardContent>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              alignItems="center"
+              sx={{ mb: 2 }}
+            >
               <Typography variant="subtitle2">Module settings</Typography>
               <Stack direction="row" spacing={1} alignItems="center">
-                <Typography variant="caption" color="text.secondary" id={`${module.key}-switch-label`}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  id={`${module.key}-switch-label`}
+                >
                   {enabled ? t('status.enabled') : t('status.disabled')}
                 </Typography>
                 <Switch
@@ -358,7 +384,9 @@ export default function CrudPage({
                 key={field.key}
                 field={field}
                 value={form?.[field.key]}
-                onChange={(value) => setForm((current) => ({ ...(current ?? {}), [field.key]: value }))}
+                onChange={(value) =>
+                  setForm((current) => ({ ...(current ?? {}), [field.key]: value }))
+                }
               />
             ))}
           </Stack>
@@ -405,7 +433,9 @@ function CellValue({
     );
   }
   const text =
-    typeof value === 'string' && value.length > 60 ? `${value.slice(0, 60)}...` : String(value ?? '');
+    typeof value === 'string' && value.length > 60
+      ? `${value.slice(0, 60)}...`
+      : String(value ?? '');
   return <Typography variant="body2">{text}</Typography>;
 }
 
@@ -426,7 +456,12 @@ function CrudFormField({
   value: unknown;
   onChange: (value: unknown) => void;
 }): React.ReactElement {
-  const common = { label: field.label, fullWidth: true, size: 'small' as const, helperText: field.help };
+  const common = {
+    label: field.label,
+    fullWidth: true,
+    size: 'small' as const,
+    helperText: field.help,
+  };
   switch (field.type) {
     case 'chatSelect':
       return (

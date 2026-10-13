@@ -43,7 +43,6 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
    * @returns {void}
    */
   componentDidCatch(error: unknown): void {
-    // eslint-disable-next-line no-console
     console.error('Dashboard render error:', error);
   }
 

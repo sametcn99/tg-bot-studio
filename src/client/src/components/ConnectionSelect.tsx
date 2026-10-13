@@ -53,9 +53,7 @@ export function NoConnectionsNotice({
         </Button>
       }
     >
-      {typeLabel
-        ? t('connections.noneOfType', { type: typeLabel })
-        : t('connections.noneYet')}
+      {typeLabel ? t('connections.noneOfType', { type: typeLabel }) : t('connections.noneYet')}
     </Alert>
   );
 }
@@ -100,7 +98,10 @@ function isPoolEmpty(
   types: string[] | undefined,
 ): boolean {
   if (loading) return false;
-  return (types?.length ? connections.filter((row) => types.includes(row.type)) : connections).length === 0;
+  return (
+    (types?.length ? connections.filter((row) => types.includes(row.type)) : connections).length ===
+    0
+  );
 }
 
 /**
@@ -172,7 +173,11 @@ export function ConnectionSelect({
           placeholder="-1001234567890 or @username"
           value={currentValue}
           onChange={(event) => onChange(event.target.value.trim())}
-          helperText={manual ? `${helperText ? `${helperText} ` : ''}${t('connections.manualEntry')}`.trim() : helperText}
+          helperText={
+            manual
+              ? `${helperText ? `${helperText} ` : ''}${t('connections.manualEntry')}`.trim()
+              : helperText
+          }
           slotProps={adornment ? { input: { endAdornment: adornment } } : undefined}
         />
         {manual && !poolEmpty && (
@@ -253,7 +258,7 @@ export function ConnectionMultiSelect({
 }): React.ReactElement {
   const { t } = useTranslation();
   const { connections, loading } = useConnections();
-  const currentValue = Array.isArray(value) ? value.map(String) : [];
+  const currentValue = useMemo(() => (Array.isArray(value) ? value.map(String) : []), [value]);
 
   const options = useMemo(
     () => buildOptions(connections, types, currentValue),

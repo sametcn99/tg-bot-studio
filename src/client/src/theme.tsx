@@ -82,7 +82,11 @@ function buildTheme(mode: ThemeMode) {
  * @param {React.ReactNode} props.children - Wrapped application tree.
  * @returns {React.ReactElement} The themed tree.
  */
-export function StudioThemeProvider({ children }: { children: React.ReactNode }): React.ReactElement {
+export function StudioThemeProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}): React.ReactElement {
   const [mode, setMode] = useState<ThemeMode>(initialMode);
 
   const value = useMemo<ThemeContextValue>(

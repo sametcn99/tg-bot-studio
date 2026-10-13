@@ -3,7 +3,8 @@ import { initReactI18next } from 'react-i18next';
 import en from './locales/en.json';
 import tr from './locales/tr.json';
 
-const savedLang = typeof window !== 'undefined' ? localStorage.getItem('studio_language') || 'en' : 'en';
+const savedLang =
+  typeof window !== 'undefined' ? localStorage.getItem('studio_language') || 'en' : 'en';
 
 void i18n.use(initReactI18next).init({
   resources: {
@@ -16,4 +17,3 @@ void i18n.use(initReactI18next).init({
 });
 
 export default i18n;
-
