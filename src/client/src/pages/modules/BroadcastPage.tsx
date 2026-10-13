@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../../services/api';
 import PageHeader from '../../components/PageHeader';
 import ModuleHelpDialog from '../../components/ModuleHelpDialog';
+import VisualButtonBuilder from '../../components/VisualButtonBuilder';
 import type { ModuleEntry } from '../../registry/modules';
 
 /**
@@ -167,13 +168,10 @@ export default function BroadcastPage({
               onChange={(event) => setMediaUrl(event.target.value)}
               size="small"
             />
-            <TextField
-              label="Inline buttons (JSON, optional)"
-              multiline
-              minRows={2}
+            <VisualButtonBuilder
               value={buttons}
-              onChange={(event) => setButtons(event.target.value)}
-              size="small"
+              onChange={setButtons}
+              label="Inline Buttons"
               helperText='[{"text":"Open","url":"https://example.com"}]'
             />
             <Box>

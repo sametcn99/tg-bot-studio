@@ -135,6 +135,56 @@
     "publishHint": "Sets the Telegram chat menu button to launch this Mini App.",
     "publicBaseUrl": "Public base URL",
     "orders": "Orders",
-    "forms": "Form submissions"
+    "forms": "Form submissions",
+    "visualEditor": "Visual Editor",
+    "rawJsonEditor": "Raw JSON Editor"
+  },
+  "support": {
+    "title": "Support Desk",
+    "replyPlaceholder": "Type a reply to the user...",
+    "copilot": "Suggest AI Draft",
+    "copilotLoading": "Generating AI draft...",
+    "cannedTitle": "Quick Replies",
+    "cannedGreeting": "Hello! How can I help you today?",
+    "cannedThanks": "Thank you for reaching out! Is there anything else I can assist with?",
+    "cannedEscalate": "I have escalated this issue to our team and we will get back to you shortly."
+  },
+  "buttons": {
+    "builderTitle": "Inline Buttons Builder",
+    "addRow": "Add Button Row",
+    "addButton": "Add Button",
+    "text": "Button Label",
+    "url": "Link URL",
+    "preview": "Telegram Button Preview",
+    "visualMode": "Visual Mode",
+    "jsonMode": "JSON Mode"
+  },
+  "diagnostics": {
+    "title": "Bot Health & Diagnostics",
+    "checking": "Inspecting bot permissions and Telegram status...",
+    "allGood": "All systems and Telegram permissions look operational!",
+    "privacyWarning": "Group Privacy Mode might be active. If the bot needs to read regular group messages, run /setprivacy -> Disable in BotFather.",
+    "groupsChecked": "Connected Groups & Channels Inspected",
+    "advice": "Recommended Optimizations"
+  },
+  "presets": {
+    "title": "One-Click Bot Starter Presets",
+    "subtitle": "Activate coordinated feature bundles tailored to your use case in one click",
+    "apply": "Apply Preset",
+    "ecommerceTitle": "E-Commerce & Digital Store",
+    "ecommerceDesc": "Enables Start Menu, E-Commerce Mini App, Paid Media, and Support Desk.",
+    "communityTitle": "Community & Moderation",
+    "communityDesc": "Enables Welcome & Clean Chat, Captcha Gatekeeper, Anti-Spam Moderation, Score Leaderboard, and Giveaways.",
+    "supportTitle": "Customer Support & AI Helpdesk",
+    "supportDesc": "Combines Support Desk, 24/7 AI Knowledge Assistant, and Auto-Responder rules.",
+    "growthTitle": "Viral Growth & Loyalty",
+    "growthDesc": "Integrates Referral Leaderboard, Loyalty Mini App, Spin Wheel, and Drip Campaigns."
+  },
+  "simulator": {
+    "title": "Live Bot Simulator",
+    "subtitle": "Test commands, buttons, and AI replies in a virtual sandbox without leaving the browser",
+    "placeholder": "Type a message or /start...",
+    "send": "Send",
+    "clear": "Clear Chat"
   }
 }

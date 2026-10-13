@@ -8,7 +8,7 @@ A self-hosted web application for managing multiple Telegram bots and Telegram M
 | --------- | ----------------------------------------------------------------------- |
 | Backend   | NestJS 11, grammY (multi-bot long-polling pool), class-validator        |
 | Database  | SQLite (`bun:sqlite`) with WAL mode at `data/studio.sqlite`             |
-| Dashboard | React 19, Vite, Material UI v7, React Router v7, i18next (English only) |
+| Dashboard | React 19, Vite, Material UI v7, React Router v7, i18next (English & Turkish) |
 | Mini Apps | React + Vite shell with the official Telegram WebApp SDK                |
 | Runtime   | Bun (`oven/bun:1-alpine` in Docker)                                     |
 
@@ -87,7 +87,35 @@ Scores member activity in every group the bot operates in (messages, replies to 
 
 > **Group privacy note:** Telegram hides regular member messages from bots unless the bot is a group administrator or bot privacy mode is disabled via BotFather. Enable one of the two so the module can score activity.
 
+### Visual Builders & Zero Raw JSON Experience
+
+- **Visual Button Builder**: Build Telegram inline keyboards visually with drag/add row and button controls (URL, Callback, WebApp, Copy Text) and real-time Telegram button rendering.
+- **Visual Drip Sequence Builder**: Build onboarding and sales drip campaigns with interactive timelines and quick delay chips (`+15m`, `+1h`, `+24h`, `+3d`).
+- **Visual Mini App Configurator**: Configure E-Commerce catalogs, Custom Forms, Spin-to-Win wheels, and Loyalty tiers without writing raw JSON.
+- **Quick Datetime Helpers**: One-click scheduling chips (`+1h`, `+24h`, `+7d`) across scheduling forms.
+
+### Smarter AI Engine with RAG & Multimodal Voice
+
+- **RAG Knowledge Base**: Upload custom company documents, FAQs, and policies with keyword/semantic indexing and an interactive search testing sandbox.
+- **Multimodal Voice Support**: Automatic voice note transcription powered by OpenAI Whisper STT.
+- **Persistent SQLite Conversation Memory**: Long-term contextual memory per user stored directly in SQLite.
+- **Smart Human Handoff**: Automatic detection of frustration/support requests to route queries to live agents.
+
+### In-Studio Bot Sandbox Simulator
+
+Test commands (`/start`, `/help`, etc.), interactive inline buttons, and AI assistant answers live in a Telegram-like sandbox drawer right inside the management studio without needing your phone.
+
+### Bot Diagnostics & 1-Click Starter Presets
+
+- **Diagnostics Inspector**: Instant health check verifying Telegram Bot API token validity, pool runtime status, Group Privacy Mode, and connected chats.
+- **1-Click Starter Presets**: Provision curated bundles for **E-Commerce**, **Community & Moderation**, **Customer Support**, or **Growth & Marketing** during bot creation or anytime from the dashboard.
+
+### Real Two-Way Web Support Desk with AI Copilot
+
+Manage and reply to customer tickets directly from the web dashboard. Features canned replies and an AI Copilot that drafts contextual answers based on conversation history.
+
 ## Documentation
 
 - Placeholder dictionary (`{first_name}`, `{user_id}`, `{mention}`, `{group_name}`, ...) is available inside every module's help dialog with one-click copy.
 - Telegram rate limit guidance (429 backoff) and required bot permissions are documented per module in the dashboard.
+- Full bilingual interface (English & Turkish) switchable instantly from the top navigation bar.

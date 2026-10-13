@@ -20,6 +20,7 @@ import { apiFetch } from '../services/api';
 import PageHeader from '../components/PageHeader';
 import ModuleHelpDialog from '../components/ModuleHelpDialog';
 import { ConnectionSelect } from '../components/ConnectionSelect';
+import AiKnowledgeDocsManager from '../components/AiKnowledgeDocsManager';
 import { LoadingState } from '../components/Feedback';
 import type { ConfigField, ModuleEntry } from '../registry/modules';
 
@@ -165,6 +166,8 @@ export default function ModuleConfigPage({
           </Stack>
         </CardContent>
       </Card>
+
+      {module.key === 'ai-assistant' && <AiKnowledgeDocsManager botId={botId} />}
 
       <ModuleHelpDialog module={docsOpen ? module : null} onClose={() => setDocsOpen(false)} />
     </Box>

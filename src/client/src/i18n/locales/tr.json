@@ -1,0 +1,197 @@
+{
+  "app": {
+    "title": "Telegram Bot Stüdyosu",
+    "subtitle": "Bot & Mini App Yönetim Merkezi"
+  },
+  "login": {
+    "title": "Stüdyo Girişi",
+    "masterKey": "Ana Yönetici Anahtarı (Master Key)",
+    "submit": "Giriş Yap",
+    "hint": "Bu kurulum için yapılandırılmış ADMIN_MASTER_KEY anahtarını kullanın (varsayılan: admin123).",
+    "invalid": "Geçersiz anahtar"
+  },
+  "nav": {
+    "overview": "Tüm Botlar",
+    "botDashboard": "Genel Bakış",
+    "modules": "Modüller",
+    "miniApps": "Mini Uygulamalar",
+    "security": "Güvenlik & Oturumlar",
+    "primary": "Birincil",
+    "studio": "Stüdyo",
+    "bot": "Aktif Bot",
+    "account": "Hesap",
+    "skipToContent": "Ana içeriğe atla",
+    "openMenu": "Gezinme menüsünü aç",
+    "breadcrumbs": "Sayfa yolu",
+    "lightMode": "Açık temaya geç",
+    "darkMode": "Koyu temaya geç",
+    "toggleTheme": "Temayı değiştir",
+    "signOut": "Çıkış Yap",
+    "language": "Dil",
+    "diagnostics": "Bot Teşhisi & Sağlık",
+    "simulator": "Canlı Test Simülatörü",
+    "categories": {
+      "Directory & Content": "Dizin & İçerik",
+      "Communication & CRM": "İletişim & CRM",
+      "Community & Moderation": "Topluluk & Moderasyon",
+      "Automation & Monetization": "Otomasyon & Gelir Modelleri"
+    }
+  },
+  "actions": {
+    "add": "Ekle",
+    "create": "Oluştur",
+    "save": "Kaydet",
+    "cancel": "İptal",
+    "delete": "Sil",
+    "edit": "Düzenle",
+    "close": "Kapat",
+    "refresh": "Yenile",
+    "confirm": "Onayla",
+    "copy": "Kopyala",
+    "copied": "Kopyalandı",
+    "export": "Dışa Aktar",
+    "test": "Test Gönder",
+    "publish": "Yayınla",
+    "reply": "Yanıtla",
+    "send": "Gönder",
+    "applyPreset": "Hazır Paket Uygula",
+    "runDiagnostics": "Sağlık Testini Çalıştır"
+  },
+  "status": {
+    "active": "Aktif",
+    "starting": "Başlatılıyor",
+    "failed": "Hata",
+    "stopped": "Durduruldu",
+    "inactive": "Pasif",
+    "enabled": "Etkin",
+    "disabled": "Devre Dışı",
+    "running": "Çalışıyor",
+    "queued": "Kuyrukta",
+    "done": "Tamamlandı",
+    "pending": "Bekliyor"
+  },
+  "bots": {
+    "addTitle": "Bot Ekle",
+    "token": "BotFather API Token",
+    "name": "Görünen İsim",
+    "validate": "Tokeni Doğrula",
+    "validated": "Token Doğrulandı",
+    "empty": "Henüz kayıtlı bot yok. Başlamak için ilk botunuzu ekleyin.",
+    "subscribers": "Abone Sayısı",
+    "activeModules": "Aktif Modüller",
+    "miniApps": "Mini Uygulamalar",
+    "volume24h": "24s Mesaj Hacmi",
+    "deleteConfirm": "Bu botu ve tüm verilerini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
+  },
+  "modules": {
+    "managerTitle": "Özellik Modülleri",
+    "enabled": "{{total}} modülden {{count}} tanesi aktif",
+    "configSaved": "Yapılandırma kaydedildi. Bot çalışma zamanı güncellendi.",
+    "toggleFailed": "Modül güncellenemedi"
+  },
+  "connections": {
+    "sync": "Bottan Eşitle",
+    "manage": "Bağlantıları Yönet",
+    "noneYet": "Henüz sohbet bağlantısı yok. Gruplarınızı ve kanallarınızı Bağlantılar modülüne ekleyerek stüdyodaki tüm açılır listelerden seçebilirsiniz.",
+    "noneOfType": "Henüz {{type}} türünde bağlantı yok.",
+    "manualOption": "Diğer — Sohbet ID'sini elle gir",
+    "manualEntry": "Manuel Giriş",
+    "backToSelect": "Kayıtlı bağlantılardan seç",
+    "empty": "Henüz bağlantı yok.",
+    "emptyHint": "İpucu: Botun eklendiği sohbetler otomatik keşfedilir; hemen içe aktarmak için 'Bottan Eşitle' butonuna basın.",
+    "chatIdHelp": "Sayısal ID (-100...) veya herkese açık @kullaniciadi",
+    "deleteConfirm": "'{{title}}' bağlantısını silmek istediğinize emin misiniz?"
+  },
+  "help": {
+    "open": "Dokümantasyon & Kurulum Rehberi",
+    "overview": "Genel Bakış & Kullanım Alanları",
+    "setup": "Adım Adım Kurulum",
+    "placeholders": "Değişkenler & Yer Tutucular",
+    "troubleshooting": "Sorun Giderme & Hız Limitleri"
+  },
+  "common": {
+    "search": "Ara",
+    "name": "İsim",
+    "title": "Başlık",
+    "description": "Açıklama",
+    "actions": "İşlemler",
+    "status": "Durum",
+    "created": "Oluşturulma",
+    "loading": "Yükleniyor...",
+    "error": "Bir sorun oluştu",
+    "empty": "Burada henüz bir şey yok",
+    "unsaved": "Kaydedilmemiş değişiklikleriniz var"
+  },
+  "security": {
+    "sessions": "Aktif Oturumlar",
+    "logs": "Güvenlik Denetim Günlüğü",
+    "changeKey": "Anahtarı Değiştir",
+    "currentKey": "Mevcut Anahtar",
+    "newKey": "Yeni Anahtar",
+    "keyChanged": "Anahtar güncellendi. Sonraki girişte yeni anahtarı kullanın.",
+    "revoke": "Sonlandır",
+    "revokeOthers": "Diğer tüm oturumları sonlandır"
+  },
+  "miniApps": {
+    "addTitle": "Mini Uygulama Oluştur",
+    "template": "Şablon",
+    "slug": "URL Kısa Adı (Slug)",
+    "config": "Yapılandırma",
+    "theme": "Tema",
+    "preview": "Canlı Önizleme",
+    "publishHint": "Telegram sohbet sol-alt menü butonuna bu Mini App'i bağlar.",
+    "publicBaseUrl": "Genel Erişim URL'si",
+    "orders": "Siparişler",
+    "forms": "Form Yanıtları",
+    "visualEditor": "Görsel Düzenleyici",
+    "rawJsonEditor": "Gelişmiş JSON Düzenleyici"
+  },
+  "support": {
+    "title": "Destek Masası",
+    "replyPlaceholder": "Kullanıcıya iletilecek yanıtı yazın...",
+    "copilot": "AI ile Taslak Yanıt Öner",
+    "copilotLoading": "AI yanıt üretiyor...",
+    "cannedTitle": "Hazır Yanıtlar",
+    "cannedGreeting": "Merhaba, size nasıl yardımcı olabilirim?",
+    "cannedThanks": "Geri bildiriminiz için teşekkür ederiz! Başka bir sorunuz var mı?",
+    "cannedEscalate": "Konuyu ilgili birimimize aktardık, en kısa sürede dönüş yapacağız."
+  },
+  "buttons": {
+    "builderTitle": "İnline Buton Düzenleyici",
+    "addRow": "Yeni Buton Satırı Ekle",
+    "addButton": "Yanına Buton Ekle",
+    "text": "Buton Metni",
+    "url": "Bağlantı URL'si",
+    "preview": "Telegram Buton Önizlemesi",
+    "visualMode": "Görsel Mod",
+    "jsonMode": "JSON Modu"
+  },
+  "diagnostics": {
+    "title": "Bot Tanı & Sağlık Kontrolü",
+    "checking": "Bot yetkileri ve durumları taranıyor...",
+    "allGood": "Tüm sistemler ve Telegram izinleri sorunsuz görünüyor!",
+    "privacyWarning": "Grup Gizlilik Modu (Privacy Mode) açık olabilir. Botun gruptaki mesajları ve skorları okuyabilmesi için BotFather üzerinden /setprivacy -> Disable yapılması önerilir.",
+    "groupsChecked": "Bağlı Grup & Kanallar Kontrol Edildi",
+    "advice": "Önerilen İyileştirmeler"
+  },
+  "presets": {
+    "title": "1-Tıkla Bot Başlangıç Paketleri",
+    "subtitle": "Kullanım amacınıza en uygun özellikleri tek tıklamayla aktif edin",
+    "apply": "Paketi Uygula",
+    "ecommerceTitle": "E-Ticaret & Dijital Mağaza",
+    "ecommerceDesc": "Start Menu, E-Commerce Mini App, Paid Media ve Canlı Destek Masasını otomatik yapılandırır.",
+    "communityTitle": "Topluluk & Grup Koruma",
+    "communityDesc": "Welcome & Clean Chat, Captcha Doğrulama, Anti-Spam Moderasyon, Aktivite Skoru ve Çekilişleri aktif eder.",
+    "supportTitle": "Müşteri Hizmetleri & AI Asistan",
+    "supportDesc": "Canlı Destek Masası, 7/24 AI Bilgi Asistanı ve Otomatik Yanıtlayıcı kurallarını birleştirir.",
+    "growthTitle": "Viral Büyüme & Sadakat",
+    "growthDesc": "Tavsiye Liderliği (Referral), Sadakat Mini Uygulaması, Çarkıfelek ve Damla Kampanyaları entegrasyonu."
+  },
+  "simulator": {
+    "title": "Canlı Bot Test Simülatörü",
+    "subtitle": "BotFather veya telefonunuzu açmadan komutları ve butonları test edin",
+    "placeholder": "Bir mesaj veya /start yazın...",
+    "send": "Gönder",
+    "clear": "Sohbeti Temizle"
+  }
+}

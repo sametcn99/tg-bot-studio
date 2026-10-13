@@ -3,6 +3,7 @@ import { DatabaseService } from '../database/database.service';
 import { BotPoolService } from '../bot-engine/bot-pool.service';
 import { MODULE_REGISTRY, findModule } from '../bot-engine/module-registry';
 import { callGetMe } from '../common/utils/telegram.util';
+import { AiAssistantService } from '../modules/ai-assistant/ai-assistant.service';
 import type { CreateBotDto, UpdateBotDto, UpdateModuleStateDto } from './dto/bots.dto';
 
 /**
@@ -46,6 +47,7 @@ export class BotsService {
   constructor(
     private readonly db: DatabaseService,
     private readonly pool: BotPoolService,
+    private readonly aiService: AiAssistantService,
   ) {}
 
   /**
@@ -234,4 +236,272 @@ export class BotsService {
     await this.pool.restartBot(botId);
     return this.listModules(botId).find((module) => module.key === moduleKey)!;
   }
+
+  /**
+   * Runs diagnostic health checks on bot permissions and runtime status.
+   * @param {number} botId - Studio bot identifier.
+   * @returns {Promise<object>} Diagnostic report with actionable recommendations.
+   */
+  async getDiagnostics(botId: number): Promise<Record<string, unknown>> {
+    const row = this.db.get<{ id: number; name: string; token: string; is_active: number }>(
+      'SELECT id, name, token, is_active FROM bots WHERE id = ?',
+      botId,
+    );
+    if (!row) throw new NotFoundException(`Bot ${botId} not found`);
+
+    const check = await callGetMe(row.token);
+    const runtimeStatus = this.pool.getStatus(botId, row.is_active === 1);
+    const groupCount =
+      this.db.get<{ count: number }>(
+        'SELECT COUNT(*) as count FROM chat_connections WHERE bot_id = ? AND is_active = 1',
+        botId,
+      )?.count ?? 0;
+    const activeModules = this.listModules(botId).filter((m) => m.isEnabled);
+
+    const checks: Array<{ key: string; title: string; status: 'pass' | 'warning' | 'error' | 'info'; details: string }> = [];
+    const recommendations: string[] = [];
+
+    // 1. Telegram API connectivity
+    if (check.ok && check.bot) {
+      checks.push({
+        key: 'token',
+        title: 'Telegram API Connectivity',
+        status: 'pass',
+        details: `@${check.bot.username} is responsive to Telegram API.`,
+      });
+    } else {
+      checks.push({
+        key: 'token',
+        title: 'Telegram API Connectivity',
+        status: 'error',
+        details: check.description || 'Bot token rejected or Telegram API unreachable.',
+      });
+      recommendations.push('Verify your BotFather token or generate a new one via @BotFather.');
+    }
+
+    // 2. Runtime engine status
+    if (runtimeStatus === 'active') {
+      checks.push({
+        key: 'runtime',
+        title: 'Studio Runtime Poller',
+        status: 'pass',
+        details: 'Long-polling engine is running and processing updates in real-time.',
+      });
+    } else {
+      checks.push({
+        key: 'runtime',
+        title: 'Studio Runtime Poller',
+        status: 'warning',
+        details: `Poller status is "${runtimeStatus}". Updates are currently paused.`,
+      });
+      recommendations.push('Toggle the bot status switch to Active in the overview.');
+    }
+
+    // 3. Group privacy mode
+    const canReadAll = Boolean(check.bot?.can_read_all_group_messages);
+    const needsAll = activeModules.some((m) =>
+      ['message-score', 'moderation', 'welcome'].includes(String(m.key)),
+    );
+    if (canReadAll) {
+      checks.push({
+        key: 'privacy_mode',
+        title: 'Group Privacy Mode',
+        status: 'pass',
+        details: 'Privacy Mode is disabled. Bot sees all member messages in groups.',
+      });
+    } else {
+      checks.push({
+        key: 'privacy_mode',
+        title: 'Group Privacy Mode',
+        status: needsAll ? 'warning' : 'info',
+        details: 'Privacy Mode is enabled. Bot only sees messages mentioning it unless admin.',
+      });
+      if (needsAll) {
+        recommendations.push(
+          'For Message Score and Moderation modules: open @BotFather -> /setprivacy -> Choose bot -> Disable.',
+        );
+      }
+    }
+
+    // 4. Chat connections
+    if (groupCount > 0) {
+      checks.push({
+        key: 'connections',
+        title: 'Chat Connections Address Book',
+        status: 'pass',
+        details: `${groupCount} group(s)/channel(s) connected and available for targeting.`,
+      });
+    } else {
+      checks.push({
+        key: 'connections',
+        title: 'Chat Connections Address Book',
+        status: 'warning',
+        details: 'No channels or groups connected yet. Schedulers and Giveaways need target chats.',
+      });
+      recommendations.push('Add your channels or press "Sync from bot" in Chat Connections.');
+    }
+
+    return {
+      ok: true,
+      botId,
+      botInfo: check.bot,
+      runtimeStatus,
+      checks,
+      recommendations,
+    };
+  }
+
+  /**
+   * Applies a coordinated starter feature bundle in one click.
+   * @param {number} botId - Studio bot identifier.
+   * @param {string} presetKey - Bundle key (ecommerce/community/support/growth).
+   * @returns {Promise<object>} Result and enabled module keys.
+   */
+  async applyPreset(botId: number, presetKey: string): Promise<Record<string, unknown>> {
+    if (!this.db.get('SELECT 1 FROM bots WHERE id = ?', botId)) {
+      throw new NotFoundException(`Bot ${botId} not found`);
+    }
+
+    const presetBundles: Record<string, string[]> = {
+      ecommerce: ['start-menu', 'mini-apps', 'support', 'paid-media'],
+      community: ['welcome', 'captcha', 'moderation', 'message-score', 'giveaways'],
+      support: ['support', 'ai-assistant', 'autoresponder'],
+      growth: ['referrals', 'broadcast', 'drip', 'quizzes'],
+    };
+
+    const modulesToEnable = presetBundles[presetKey];
+    if (!modulesToEnable) {
+      throw new BadRequestException(`Unknown preset bundle: ${presetKey}`);
+    }
+
+    for (const key of modulesToEnable) {
+      const definition = findModule(key);
+      this.db.run(
+        `INSERT INTO bot_modules (bot_id, module_key, is_enabled, config_json) VALUES (?, ?, 1, ?)
+         ON CONFLICT(bot_id, module_key) DO UPDATE SET is_enabled = 1`,
+        botId,
+        key,
+        JSON.stringify(definition?.defaultConfig ?? {}),
+      );
+    }
+
+    await this.pool.restartBot(botId);
+    return {
+      success: true,
+      presetKey,
+      enabledModules: modulesToEnable,
+    };
+  }
+
+  /**
+   * Simulates an incoming Telegram message dispatch for in-studio sandbox testing.
+   * @param {number} botId - Studio bot identifier.
+   * @param {string} text - Message text or command.
+   * @returns {Promise<object>} Simulated bot response (text, photo, buttons).
+   */
+  async simulateMessage(botId: number, text: string): Promise<{
+    text: string;
+    mediaUrl?: string | null;
+    buttons?: Array<{ text: string; url?: string }>;
+  }> {
+    const row = this.db.get<{ id: number; token: string; name: string }>(
+      'SELECT id, token, name FROM bots WHERE id = ?',
+      botId,
+    );
+    if (!row) throw new NotFoundException(`Bot ${botId} not found`);
+
+    const trimmed = text.trim();
+    const lower = trimmed.toLowerCase();
+
+    // 1. Check Start Menu (/start or /menu)
+    if (trimmed.startsWith('/start') || trimmed.startsWith('/menu')) {
+      const startMenuModule = this.db.get<{ is_enabled: number; config_json: string | null }>(
+        "SELECT is_enabled, config_json FROM bot_modules WHERE bot_id = ? AND module_key = 'start-menu'",
+        botId,
+      );
+      if (startMenuModule?.is_enabled) {
+        const config = startMenuModule.config_json ? (JSON.parse(startMenuModule.config_json) as Record<string, unknown>) : {};
+        const menuItems = this.db.query<{ title: string; url: string; type: string }>(
+          'SELECT title, url, type FROM links WHERE bot_id = ? AND is_active = 1 ORDER BY order_index ASC',
+          botId,
+        );
+        const startMessage = String(config.startMessage || `Welcome to ${row.name}! Choose an option below:`);
+        const buttons = menuItems.map((item) => ({
+          text: item.title,
+          url: item.url,
+        }));
+        return {
+          text: startMessage.replace('{first_name}', 'Tester').replace('{username}', 'studio_test'),
+          buttons,
+        };
+      }
+    }
+
+    // 2. Check Autoresponder (slash commands and keyword triggers)
+    const autoresponderModule = this.db.get<{ is_enabled: number }>(
+      "SELECT is_enabled FROM bot_modules WHERE bot_id = ? AND module_key = 'autoresponder'",
+      botId,
+    );
+    if (autoresponderModule?.is_enabled) {
+      const rules = this.db.query<{
+        command: string;
+        response_text: string;
+        media_url: string | null;
+        buttons_json: string | null;
+      }>(
+        'SELECT command, response_text, media_url, buttons_json FROM autoresponders WHERE bot_id = ? AND is_active = 1',
+        botId,
+      );
+      const cmdText = trimmed.split(/[\s@]/)[0].toLowerCase();
+      const matched =
+        rules.find((r) => r.command.startsWith('/') && r.command.toLowerCase() === cmdText) ??
+        rules.find((r) => !r.command.startsWith('/') && lower.includes(r.command.toLowerCase()));
+
+      if (matched) {
+        let buttons: Array<{ text: string; url?: string }> = [];
+        if (matched.buttons_json) {
+          try {
+            buttons = JSON.parse(matched.buttons_json) as Array<{ text: string; url?: string }>;
+          } catch {
+            // ignore
+          }
+        }
+        return {
+          text: matched.response_text.replace('{first_name}', 'Tester').replace('{username}', 'studio_test'),
+          mediaUrl: matched.media_url,
+          buttons,
+        };
+      }
+    }
+
+    // 3. Check AI Assistant (with RAG retrieval)
+    const aiModule = this.db.get<{ is_enabled: number; config_json: string | null }>(
+      "SELECT is_enabled, config_json FROM bot_modules WHERE bot_id = ? AND module_key = 'ai-assistant'",
+      botId,
+    );
+    if (aiModule?.is_enabled) {
+      const config = aiModule.config_json ? (JSON.parse(aiModule.config_json) as Record<string, unknown>) : {};
+      if (config.apiKey) {
+        try {
+          const reply = await this.aiService.completeWithContext(
+            botId,
+            999999, // sandbox simulator user id
+            config as any,
+            [{ role: 'user', content: trimmed }],
+          );
+          return { text: reply };
+        } catch (err: unknown) {
+          return { text: `[AI Error]: ${err instanceof Error ? err.message : String(err)}` };
+        }
+      } else {
+        return { text: 'AI Assistant module is enabled, but no API key is set in configuration.' };
+      }
+    }
+
+    // 4. Default echo response
+    return {
+      text: `Message received: "${trimmed}". (No matching command, auto-responder, or AI rule found). Try typing /start.`,
+    };
+  }
 }
+

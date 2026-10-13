@@ -11,6 +11,7 @@ import {
   DialogContent,
   DialogTitle,
   Grid,
+  MenuItem,
   Stack,
   Table,
   TableBody,
@@ -200,6 +201,8 @@ function AddBotWizard({
     }
   }
 
+  const [selectedPreset, setSelectedPreset] = useState<string>('none');
+
   /**
    * Persists the bot after a successful validation.
    * @returns {Promise<void>} Resolves after creation.
@@ -208,12 +211,16 @@ function AddBotWizard({
     setBusy(true);
     setError(null);
     try {
-      await apiFetch('/api/bots', { method: 'POST', body: JSON.stringify({ token, name }) });
+      const created = await apiFetch<{ id: number }>('/api/bots', { method: 'POST', body: JSON.stringify({ token, name }) });
+      if (selectedPreset !== 'none') {
+        await apiFetch(`/api/bots/${created.id}/presets/${selectedPreset}`, { method: 'POST' }).catch(() => undefined);
+      }
       onCreated();
       onClose();
       setToken('');
       setName('');
       setValidated(null);
+      setSelectedPreset('none');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Creation failed');
     } finally {
@@ -261,6 +268,23 @@ function AddBotWizard({
             onChange={(event) => setName(event.target.value)}
             fullWidth
           />
+          {validated && (
+            <TextField
+              label="Starter Feature Preset (optional)"
+              select
+              size="small"
+              value={selectedPreset}
+              onChange={(event) => setSelectedPreset(event.target.value)}
+              fullWidth
+              helperText="Automatically enables coordinated feature modules on creation"
+            >
+              <MenuItem value="none">Blank (Configure modules manually)</MenuItem>
+              <MenuItem value="ecommerce">🛒 E-Commerce & Storefront</MenuItem>
+              <MenuItem value="community">👥 Community & Moderation</MenuItem>
+              <MenuItem value="support">💬 Customer Support & AI Helpdesk</MenuItem>
+              <MenuItem value="growth">🚀 Growth & Loyalty</MenuItem>
+            </TextField>
+          )}
           {error && <Alert severity="error">{error}</Alert>}
         </Stack>
       </DialogContent>

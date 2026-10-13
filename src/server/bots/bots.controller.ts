@@ -122,4 +122,44 @@ export class BotsController {
   ) {
     return this.botsService.updateModule(id, moduleKey, body);
   }
+
+  /**
+   * Runs diagnostic permission and health checks for a bot.
+   * @param {number} id - Studio bot identifier.
+   * @returns {Promise<object>} Diagnostic report.
+   */
+  @Get(':id/diagnostics')
+  getDiagnostics(@Param('id', ParseIntPipe) id: number) {
+    return this.botsService.getDiagnostics(id);
+  }
+
+  /**
+   * Applies a one-click starter feature bundle for a bot.
+   * @param {number} id - Studio bot identifier.
+   * @param {string} presetKey - Bundle key.
+   * @returns {Promise<object>} Result.
+   */
+  @Post(':id/presets/:presetKey')
+  applyPreset(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('presetKey') presetKey: string,
+  ) {
+    return this.botsService.applyPreset(id, presetKey);
+  }
+
+  /**
+   * Simulates a message exchange in the in-studio sandbox simulator.
+   * @param {number} id - Studio bot identifier.
+   * @param {object} body - Payload with message text.
+   * @returns {Promise<object>} Bot simulated response.
+   */
+  @Post(':id/simulator/send')
+  simulateMessage(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { message: string },
+  ) {
+    return this.botsService.simulateMessage(id, body.message);
+  }
 }
+
+

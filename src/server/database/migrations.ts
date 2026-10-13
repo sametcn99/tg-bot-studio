@@ -275,4 +275,23 @@ export const MIGRATIONS: readonly string[] = [
   // 2026-10: the "Directory & Chat Folder Hub" (links) module became the
   // consolidated "Start Menu" module — remap stored toggles and configs.
   `UPDATE bot_modules SET module_key = 'start-menu' WHERE module_key = 'links'`,
+
+  `CREATE TABLE IF NOT EXISTS ai_chat_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    bot_id INTEGER NOT NULL,
+    telegram_id INTEGER NOT NULL,
+    role TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS ai_knowledge_docs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    bot_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    tags TEXT,
+    created_at TEXT NOT NULL
+  )`,
 ];
+

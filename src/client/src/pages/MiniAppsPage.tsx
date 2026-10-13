@@ -34,6 +34,7 @@ import { apiFetch } from '../services/api';
 import PageHeader from '../components/PageHeader';
 import PhonePreview from '../components/PhonePreview';
 import ModuleHelpDialog from '../components/ModuleHelpDialog';
+import VisualMiniAppConfigBuilder from '../components/VisualMiniAppConfigBuilder';
 import { EmptyState } from '../components/Feedback';
 import { MINI_APPS_DOCS_ENTRY, type ModuleEntry } from '../registry/modules';
 
@@ -200,20 +201,10 @@ export default function MiniAppsPage(): React.ReactElement {
                         defaultValue={selected.title}
                         onBlur={(event) => save({ title: event.target.value })}
                       />
-                      <TextField
-                        label={t('miniApps.config')}
-                        size="small"
-                        multiline
-                        minRows={8}
-                        defaultValue={JSON.stringify(selected.config, null, 2)}
-                        onBlur={(event) => {
-                          try {
-                            save({ config: JSON.parse(event.target.value) });
-                            setError(null);
-                          } catch {
-                            setError('Configuration is not valid JSON.');
-                          }
-                        }}
+                      <VisualMiniAppConfigBuilder
+                        templateType={selected.template_type}
+                        config={selected.config}
+                        onChange={(newConfig) => save({ config: newConfig })}
                       />
                       <TextField
                         label={t('miniApps.publicBaseUrl')}

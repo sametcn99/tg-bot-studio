@@ -5,6 +5,7 @@ import {
   Button,
   Card,
   CardContent,
+  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -35,6 +36,8 @@ import PageHeader from './PageHeader';
 import ModuleHelpDialog from './ModuleHelpDialog';
 import ConfirmDialog from './ConfirmDialog';
 import { ConnectionSelect, ConnectionMultiSelect } from './ConnectionSelect';
+import VisualButtonBuilder from './VisualButtonBuilder';
+import VisualDripStepsBuilder from './VisualDripStepsBuilder';
 import { LoadingState } from './Feedback';
 import type { CrudField, ModuleEntry } from '../registry/modules';
 
@@ -455,7 +458,6 @@ function CrudFormField({
         />
       );
     case 'textarea':
-    case 'json':
       return (
         <TextField
           {...common}
@@ -465,15 +467,57 @@ function CrudFormField({
           onChange={(event) => onChange(event.target.value)}
         />
       );
-    case 'datetime':
+    case 'json':
+      if (field.key === 'buttons') {
+        return (
+          <VisualButtonBuilder
+            label={field.label}
+            value={String(value ?? '')}
+            onChange={(v) => onChange(v)}
+            helperText={field.help}
+          />
+        );
+      }
+      if (field.key === 'steps') {
+        return (
+          <VisualDripStepsBuilder
+            label={field.label}
+            value={String(value ?? '')}
+            onChange={(v) => onChange(v)}
+            helperText={field.help}
+          />
+        );
+      }
       return (
         <TextField
           {...common}
-          placeholder="2026-01-01T12:00:00.000Z"
+          multiline
+          minRows={3}
           value={String(value ?? '')}
           onChange={(event) => onChange(event.target.value)}
         />
       );
+    case 'datetime': {
+      const setOffset = (minutes: number) => {
+        onChange(new Date(Date.now() + minutes * 60000).toISOString());
+      };
+      return (
+        <Stack spacing={0.5}>
+          <TextField
+            {...common}
+            placeholder="2026-01-01T12:00:00.000Z"
+            value={String(value ?? '')}
+            onChange={(event) => onChange(event.target.value)}
+          />
+          <Stack direction="row" spacing={0.5} sx={{ pt: 0.5 }}>
+            <Chip size="small" label="Now" onClick={() => setOffset(0)} />
+            <Chip size="small" label="+1 Hour" onClick={() => setOffset(60)} />
+            <Chip size="small" label="+24 Hours" onClick={() => setOffset(1440)} />
+            <Chip size="small" label="+7 Days" onClick={() => setOffset(10080)} />
+          </Stack>
+        </Stack>
+      );
+    }
     case 'select':
       return (
         <TextField

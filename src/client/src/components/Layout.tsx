@@ -50,11 +50,13 @@ import ReplyIcon from '@mui/icons-material/Reply';
 import PaidIcon from '@mui/icons-material/Paid';
 import StarIcon from '@mui/icons-material/Star';
 import WebhookIcon from '@mui/icons-material/Webhook';
+import LanguageIcon from '@mui/icons-material/Language';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useBots } from '../context/BotContext';
 import { useThemeMode } from '../theme';
 import BotSwitcher from './BotSwitcher';
+import BotSimulatorDrawer from './BotSimulatorDrawer';
 import { MODULES, modulesByCategory } from '../registry/modules';
 
 /** Sidebar width in pixels on medium screens and up. */
@@ -92,7 +94,7 @@ const MODULE_ICONS: Record<string, React.ReactElement> = {
  * @returns {React.ReactElement} The layout.
  */
 export default function Layout(): React.ReactElement {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { logout } = useAuth();
   const { activeBot } = useBots();
   const { mode, toggle } = useThemeMode();
@@ -101,6 +103,13 @@ export default function Layout(): React.ReactElement {
   const theme = useTheme();
   const isCompact = useMediaQuery(theme.breakpoints.down('md'));
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const currentLang = i18n.language || 'en';
+  const toggleLanguage = (): void => {
+    const next = currentLang.startsWith('tr') ? 'en' : 'tr';
+    void i18n.changeLanguage(next);
+    localStorage.setItem('studio_language', next);
+  };
 
   const pathParts = location.pathname.split('/').filter(Boolean);
   const botId = pathParts[0] === 'bots' ? Number(pathParts[1]) : null;
@@ -302,6 +311,14 @@ export default function Layout(): React.ReactElement {
             </Box>
             <Box sx={{ flexGrow: { xs: 1, sm: 0 } }} />
             <BotSwitcher />
+            <Tooltip title={currentLang.startsWith('tr') ? 'Switch to English' : 'Türkçe Dilini Seç'}>
+              <IconButton size="small" onClick={toggleLanguage} aria-label="Toggle language">
+                <LanguageIcon fontSize="small" />
+                <Typography variant="caption" sx={{ ml: 0.5, fontWeight: 700 }}>
+                  {currentLang.startsWith('tr') ? 'TR' : 'EN'}
+                </Typography>
+              </IconButton>
+            </Tooltip>
             <Tooltip title={mode === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}>
               <IconButton size="small" onClick={toggle} aria-label={t('nav.toggleTheme')}>
                 {mode === 'dark' ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />}
@@ -317,6 +334,7 @@ export default function Layout(): React.ReactElement {
         <Box sx={{ p: { xs: 1.5, sm: 2.5, md: 3 }, maxWidth: 1280, mx: 'auto', width: '100%' }}>
           <Outlet />
         </Box>
+        <BotSimulatorDrawer />
       </Box>
     </Box>
   );
