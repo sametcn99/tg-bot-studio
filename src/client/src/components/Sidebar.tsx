@@ -15,12 +15,17 @@ import {
   ListSubheader,
   Menu,
   MenuItem,
+  Stack,
   Tooltip,
   Typography,
 } from '@mui/material';
 import { alpha, useTheme, type Theme } from '@mui/material/styles';
 import { keyframes } from '@emotion/react';
 import { useTranslation } from 'react-i18next';
+import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
+import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
+import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
+import LanguageIcon from '@mui/icons-material/Language';
 import TelegramIcon from '@mui/icons-material/Telegram';
 import AppsIcon from '@mui/icons-material/Apps';
 import SpaceDashboardOutlinedIcon from '@mui/icons-material/SpaceDashboardOutlined';
@@ -57,6 +62,8 @@ import PaidIcon from '@mui/icons-material/Paid';
 import StarIcon from '@mui/icons-material/Star';
 import WebhookIcon from '@mui/icons-material/Webhook';
 import { useBots, type BotSummary } from '../context/BotContext';
+import { useAuth } from '../context/AuthContext';
+import { useThemeMode } from '../theme';
 import { modulesByCategory } from '../registry/modules';
 import { localizedCategory, useLocalizedModules } from '../registry/localize';
 import { colorFor as statusColor } from './StatusDot';
@@ -825,15 +832,24 @@ export default function Sidebar({
   onNavigate,
   enableShortcut = false,
 }: SidebarProps): React.ReactElement {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const theme = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const { activeBot } = useBots();
+  const { logout } = useAuth();
+  const { mode, toggle: toggleTheme } = useThemeMode();
   const localizedModules = useLocalizedModules();
   const [query, setQuery] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
   const focusAfterExpand = useRef(false);
+
+  const currentLang = i18n.language || 'en';
+  const toggleLanguage = (): void => {
+    const next = currentLang.startsWith('tr') ? 'en' : 'tr';
+    void i18n.changeLanguage(next);
+    localStorage.setItem('studio_language', next);
+  };
 
   const pathname = location.pathname;
   const parts = pathname.split('/').filter(Boolean);
@@ -1121,9 +1137,10 @@ export default function Sidebar({
         sx={{
           flexShrink: 0,
           px: 1.5,
-          py: 1,
+          py: 1.25,
           borderTop: '1px solid',
           borderColor: 'divider',
+          bgcolor: alpha(theme.palette.text.primary, dark ? 0.02 : 0.015),
         }}
       >
         <List dense disablePadding aria-label={t('nav.account')}>
@@ -1135,27 +1152,237 @@ export default function Sidebar({
             collapsed={collapsed}
             onNavigate={onNavigate}
           />
-          {onToggleCollapsed && (
-            <RailTooltip collapsed={collapsed} title={t('nav.expandSidebar')}>
-              <ListItemButton
-                onClick={onToggleCollapsed}
-                aria-label={collapsed ? t('nav.expandSidebar') : t('nav.collapseSidebar')}
-                aria-expanded={!collapsed}
-                sx={(themeArg) => ({ ...itemSx(themeArg, collapsed), mb: 0 })}
-              >
-                <ListItemIcon aria-hidden="true">
-                  {collapsed ? <KeyboardDoubleArrowRightIcon /> : <KeyboardDoubleArrowLeftIcon />}
-                </ListItemIcon>
-                {!collapsed && (
-                  <ListItemText
-                    primary={t('nav.collapseSidebar')}
-                    slotProps={{ primary: { variant: 'body2', noWrap: true, fontWeight: 500 } }}
-                  />
-                )}
-              </ListItemButton>
-            </RailTooltip>
-          )}
         </List>
+
+        <Divider sx={{ my: 1 }} />
+
+        {collapsed ? (
+          <Stack spacing={0.75} alignItems="center">
+            <RailTooltip
+              collapsed={true}
+              title={
+                currentLang.startsWith('tr') ? t('nav.switchToEnglish') : t('nav.switchToTurkish')
+              }
+            >
+              <IconButton
+                size="small"
+                onClick={toggleLanguage}
+                aria-label={t('nav.language')}
+                sx={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: '8px',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                }}
+              >
+                <LanguageIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </RailTooltip>
+
+            <RailTooltip
+              collapsed={true}
+              title={mode === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}
+            >
+              <IconButton
+                size="small"
+                onClick={toggleTheme}
+                aria-label={t('nav.toggleTheme')}
+                sx={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: '8px',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                }}
+              >
+                {mode === 'dark' ? (
+                  <LightModeOutlinedIcon sx={{ fontSize: 18 }} />
+                ) : (
+                  <DarkModeOutlinedIcon sx={{ fontSize: 18 }} />
+                )}
+              </IconButton>
+            </RailTooltip>
+
+            <RailTooltip collapsed={true} title={t('nav.signOut')}>
+              <IconButton
+                size="small"
+                onClick={logout}
+                aria-label={t('nav.signOut')}
+                sx={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: '8px',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  '&:hover': {
+                    color: 'error.main',
+                    borderColor: 'error.main',
+                    bgcolor: alpha(theme.palette.error.main, 0.08),
+                  },
+                }}
+              >
+                <LogoutOutlinedIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </RailTooltip>
+
+            {onToggleCollapsed && (
+              <RailTooltip collapsed={true} title={t('nav.expandSidebar')}>
+                <IconButton
+                  size="small"
+                  onClick={onToggleCollapsed}
+                  aria-label={t('nav.expandSidebar')}
+                  sx={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: '8px',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                  }}
+                >
+                  <KeyboardDoubleArrowRightIcon sx={{ fontSize: 18 }} />
+                </IconButton>
+              </RailTooltip>
+            )}
+          </Stack>
+        ) : (
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 0.75,
+            }}
+          >
+            <Stack direction="row" spacing={0.75} alignItems="center">
+              {/* Language toggle */}
+              <Tooltip
+                title={
+                  currentLang.startsWith('tr') ? t('nav.switchToEnglish') : t('nav.switchToTurkish')
+                }
+                arrow
+              >
+                <ButtonBase
+                  onClick={toggleLanguage}
+                  aria-label={t('nav.language')}
+                  sx={(th) => ({
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 0.75,
+                    px: 1,
+                    py: 0.625,
+                    height: 34,
+                    borderRadius: '8px',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    color: 'text.secondary',
+                    bgcolor: alpha(th.palette.text.primary, 0.02),
+                    transition: th.transitions.create(
+                      ['background-color', 'border-color', 'color'],
+                      {
+                        duration: th.transitions.duration.shortest,
+                      },
+                    ),
+                    '&:hover': {
+                      color: 'text.primary',
+                      borderColor: alpha(th.palette.text.primary, 0.2),
+                      bgcolor: alpha(th.palette.text.primary, 0.06),
+                    },
+                  })}
+                >
+                  <LanguageIcon sx={{ fontSize: 16 }} />
+                  <Typography
+                    variant="caption"
+                    sx={{ fontWeight: 700, fontSize: '0.6875rem', lineHeight: 1 }}
+                  >
+                    {currentLang.startsWith('tr') ? 'TR' : 'EN'}
+                  </Typography>
+                </ButtonBase>
+              </Tooltip>
+
+              {/* Theme toggle */}
+              <Tooltip title={mode === 'dark' ? t('nav.lightMode') : t('nav.darkMode')} arrow>
+                <IconButton
+                  size="small"
+                  onClick={toggleTheme}
+                  aria-label={t('nav.toggleTheme')}
+                  sx={(th) => ({
+                    width: 34,
+                    height: 34,
+                    borderRadius: '8px',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    color: 'text.secondary',
+                    bgcolor: alpha(th.palette.text.primary, 0.02),
+                    '&:hover': {
+                      color: 'text.primary',
+                      borderColor: alpha(th.palette.text.primary, 0.2),
+                      bgcolor: alpha(th.palette.text.primary, 0.06),
+                    },
+                  })}
+                >
+                  {mode === 'dark' ? (
+                    <LightModeOutlinedIcon sx={{ fontSize: 18 }} />
+                  ) : (
+                    <DarkModeOutlinedIcon sx={{ fontSize: 18 }} />
+                  )}
+                </IconButton>
+              </Tooltip>
+
+              {/* Sign out */}
+              <Tooltip title={t('nav.signOut')} arrow>
+                <IconButton
+                  size="small"
+                  onClick={logout}
+                  aria-label={t('nav.signOut')}
+                  sx={(th) => ({
+                    width: 34,
+                    height: 34,
+                    borderRadius: '8px',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    color: 'text.secondary',
+                    bgcolor: alpha(th.palette.text.primary, 0.02),
+                    '&:hover': {
+                      color: 'error.main',
+                      borderColor: 'error.main',
+                      bgcolor: alpha(th.palette.error.main, 0.08),
+                    },
+                  })}
+                >
+                  <LogoutOutlinedIcon sx={{ fontSize: 18 }} />
+                </IconButton>
+              </Tooltip>
+            </Stack>
+
+            {/* Collapse rail toggle */}
+            {onToggleCollapsed && (
+              <Tooltip title={t('nav.collapseSidebar')} arrow>
+                <IconButton
+                  size="small"
+                  onClick={onToggleCollapsed}
+                  aria-label={t('nav.collapseSidebar')}
+                  sx={(th) => ({
+                    width: 34,
+                    height: 34,
+                    borderRadius: '8px',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    color: 'text.secondary',
+                    bgcolor: alpha(th.palette.text.primary, 0.02),
+                    '&:hover': {
+                      color: 'text.primary',
+                      borderColor: alpha(th.palette.text.primary, 0.2),
+                      bgcolor: alpha(th.palette.text.primary, 0.06),
+                    },
+                  })}
+                >
+                  <KeyboardDoubleArrowLeftIcon sx={{ fontSize: 18 }} />
+                </IconButton>
+              </Tooltip>
+            )}
+          </Box>
+        )}
       </Box>
     </Box>
   );

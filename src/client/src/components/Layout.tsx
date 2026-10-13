@@ -1,49 +1,24 @@
 import React, { useCallback, useState } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import {
-  AppBar,
-  Box,
-  Breadcrumbs,
-  Drawer,
-  IconButton,
-  Link,
-  Toolbar,
-  Tooltip,
-  Typography,
-  useMediaQuery,
-  useTheme,
-} from '@mui/material';
+import { Outlet } from 'react-router-dom';
+import { Box, Drawer, IconButton, useMediaQuery, useTheme } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import MenuIcon from '@mui/icons-material/Menu';
-import DarkModeIcon from '@mui/icons-material/DarkMode';
-import LightModeIcon from '@mui/icons-material/LightMode';
-import LogoutIcon from '@mui/icons-material/Logout';
-import LanguageIcon from '@mui/icons-material/Language';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../context/AuthContext';
-import { useBots } from '../context/BotContext';
-import { useThemeMode } from '../theme';
-import BotSwitcher from './BotSwitcher';
 import BotSimulatorDrawer from './BotSimulatorDrawer';
-import Sidebar, { BrandMark, SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_WIDTH } from './Sidebar';
-import { useLocalizedModule } from '../registry/localize';
+import Sidebar, { SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_WIDTH } from './Sidebar';
 
 /** localStorage key for the persisted desktop rail state. */
 const SIDEBAR_COLLAPSED_KEY = 'studio-sidebar-collapsed';
 
 /**
- * Application shell: responsive sidebar (temporary drawer below `md`,
- * permanent collapsible rail above), sticky top bar with breadcrumbs, bot
- * switcher, theme toggle, and sign-out. Renders the active route through an
- * outlet inside a `<main>` landmark with a skip-navigation link.
+ * Application shell: sidebar-centric workspace layout without top header.
+ * All controls (workspace bot switcher, navigation, search, language,
+ * theme mode, and sign-out) are integrated directly into the responsive
+ * sidebar. On small screens, a floating mobile trigger opens the drawer.
  * @returns {React.ReactElement} The layout.
  */
 export default function Layout(): React.ReactElement {
-  const { t, i18n } = useTranslation();
-  const { logout } = useAuth();
-  const { activeBot } = useBots();
-  const { mode, toggle } = useThemeMode();
-  const navigate = useNavigate();
-  const location = useLocation();
+  const { t } = useTranslation();
   const theme = useTheme();
   const isCompact = useMediaQuery(theme.breakpoints.down('md'));
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -61,18 +36,6 @@ export default function Layout(): React.ReactElement {
 
   const closeDrawer = useCallback((): void => setDrawerOpen(false), []);
 
-  const currentLang = i18n.language || 'en';
-  const toggleLanguage = (): void => {
-    const next = currentLang.startsWith('tr') ? 'en' : 'tr';
-    void i18n.changeLanguage(next);
-    localStorage.setItem('studio_language', next);
-  };
-
-  const pathParts = location.pathname.split('/').filter(Boolean);
-  const moduleKey = pathParts[2] === 'm' ? pathParts[3] : null;
-  const localizedModule = useLocalizedModule(moduleKey ?? '');
-  const sectionTitle = moduleKey ? localizedModule?.name : pathParts.join('/');
-
   const railWidth = collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH;
 
   return (
@@ -81,7 +44,7 @@ export default function Layout(): React.ReactElement {
         {t('nav.skipToContent')}
       </a>
 
-      {/* Permanent, collapsible rail on md+ */}
+      {/* Permanent, collapsible sidebar rail on md+ */}
       {!isCompact && (
         <Box
           sx={{
@@ -100,6 +63,37 @@ export default function Layout(): React.ReactElement {
         >
           <Sidebar collapsed={collapsed} onToggleCollapsed={toggleCollapsed} enableShortcut />
         </Box>
+      )}
+
+      {/* Floating mobile drawer toggle on small viewports */}
+      {isCompact && (
+        <IconButton
+          edge="start"
+          onClick={() => setDrawerOpen(true)}
+          aria-label={t('nav.openMenu')}
+          aria-controls="app-sidebar"
+          aria-expanded={drawerOpen}
+          sx={(th) => ({
+            position: 'fixed',
+            top: 14,
+            left: 14,
+            zIndex: 1100,
+            borderRadius: '10px',
+            bgcolor: alpha(th.palette.background.paper, 0.9),
+            backdropFilter: 'blur(8px)',
+            border: '1px solid',
+            borderColor: 'divider',
+            boxShadow:
+              th.palette.mode === 'dark'
+                ? '0 4px 14px rgba(0,0,0,0.5)'
+                : '0 4px 14px rgba(15,23,42,0.1)',
+            '&:hover': {
+              bgcolor: th.palette.background.paper,
+            },
+          })}
+        >
+          <MenuIcon fontSize="small" />
+        </IconButton>
       )}
 
       {/* Temporary drawer below md */}
@@ -122,100 +116,29 @@ export default function Layout(): React.ReactElement {
         <Sidebar onNavigate={closeDrawer} />
       </Drawer>
 
+      {/* Main content view */}
       <Box
         component="main"
         id="main-content"
-        sx={{ flexGrow: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}
+        sx={{
+          flexGrow: 1,
+          minWidth: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100vh',
+          overflowY: 'auto',
+        }}
       >
-        <AppBar
-          position="sticky"
-          elevation={0}
-          color="inherit"
+        <Box
           sx={{
-            bgcolor: 'background.paper',
-            borderBottom: '1px solid',
-            borderColor: 'divider',
+            p: { xs: 2, sm: 3, md: 3.5 },
+            pt: { xs: 7, md: 3.5 },
+            maxWidth: 1400,
+            mx: 'auto',
+            width: '100%',
+            flexGrow: 1,
           }}
         >
-          <Toolbar sx={{ gap: 1 }}>
-            {isCompact && (
-              <IconButton
-                edge="start"
-                onClick={() => setDrawerOpen(true)}
-                aria-label={t('nav.openMenu')}
-                aria-controls="app-sidebar"
-                aria-expanded={drawerOpen}
-              >
-                <MenuIcon />
-              </IconButton>
-            )}
-            {isCompact && (
-              <Box sx={{ mr: 0.5, display: 'flex' }}>
-                <BrandMark size={28} />
-              </Box>
-            )}
-            <Box sx={{ flexGrow: 1, minWidth: 0, display: { xs: 'none', sm: 'block' } }}>
-              <Breadcrumbs aria-label={t('nav.breadcrumbs')}>
-                <Link
-                  underline="hover"
-                  color="text.primary"
-                  component="button"
-                  type="button"
-                  sx={{ cursor: 'pointer', fontWeight: 600 }}
-                  onClick={() => navigate('/')}
-                >
-                  {t('nav.studio')}
-                </Link>
-                {activeBot && (
-                  <Link
-                    underline="hover"
-                    color="text.primary"
-                    component="button"
-                    type="button"
-                    sx={{ cursor: 'pointer' }}
-                    onClick={() => navigate(`/bots/${activeBot.id}`)}
-                  >
-                    @{activeBot.username ?? activeBot.name}
-                  </Link>
-                )}
-                {sectionTitle && (
-                  <Typography variant="body2" color="text.secondary" noWrap>
-                    {sectionTitle}
-                  </Typography>
-                )}
-              </Breadcrumbs>
-            </Box>
-            <Box sx={{ flexGrow: { xs: 1, sm: 0 } }} />
-            <BotSwitcher />
-            <Tooltip
-              title={
-                currentLang.startsWith('tr') ? t('nav.switchToEnglish') : t('nav.switchToTurkish')
-              }
-            >
-              <IconButton size="small" onClick={toggleLanguage} aria-label={t('nav.language')}>
-                <LanguageIcon fontSize="small" />
-                <Typography variant="caption" sx={{ ml: 0.5, fontWeight: 700 }}>
-                  {currentLang.startsWith('tr') ? 'TR' : 'EN'}
-                </Typography>
-              </IconButton>
-            </Tooltip>
-            <Tooltip title={mode === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}>
-              <IconButton size="small" onClick={toggle} aria-label={t('nav.toggleTheme')}>
-                {mode === 'dark' ? (
-                  <LightModeIcon fontSize="small" />
-                ) : (
-                  <DarkModeIcon fontSize="small" />
-                )}
-              </IconButton>
-            </Tooltip>
-            <Tooltip title={t('nav.signOut')}>
-              <IconButton size="small" onClick={logout} aria-label={t('nav.signOut')}>
-                <LogoutIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          </Toolbar>
-        </AppBar>
-        <Box sx={{ p: { xs: 1.5, sm: 2.5, md: 3 }, maxWidth: 1280, mx: 'auto', width: '100%' }}>
           <Outlet />
         </Box>
         <BotSimulatorDrawer />
