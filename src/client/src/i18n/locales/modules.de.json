@@ -6,17 +6,20 @@
       "overview": [
         "Registriere jede Gruppe, Superguppe und jeden Kanal, in dem der Bot tätig ist, einmal — jedes Ziel-Chat-Feld im Studio bietet sie dann als Dropdown an.",
         "Chats, denen der Bot hinzugefügt wurde, werden automatisch erkannt; die Synchronisierung importiert sie mit Titeln und Typen.",
-        "Verbindungen akzeptieren numerische IDs (-100…) oder öffentliche @Benutzernamen und lassen sich ohne Löschen deaktivieren."
+        "Verbindungen akzeptieren numerische IDs (-100…) oder öffentliche @Benutzernamen und lassen sich ohne Löschen deaktivieren.",
+        "Jedes chat-basierte Modul (Scheduler, Broadcast, Verlosungen, VIP-Abonnements, Paid Media, Webhooks) wählt seine Ziele aus dieser Liste — wer sie aktuell hält, hält jede Auswahlliste korrekt."
       ],
       "setup": [
         "Füge den Bot der Zielgruppe oder dem Zielkanal als Administrator hinzu (Für Kanäle genügen Veröffentlichungsrechte).",
         "Drücke „Synchronisieren“, um bereits erkannte Chats zu importieren, oder lege Einträge manuell mit Chat-ID oder @Benutzername an.",
-        "Dieselbe Liste nutzen der Scheduler, Support-Desk, Verlosungen, VIP-Abonnements, Bezahlmedien und Webhooks."
+        "Dieselbe Liste nutzen der Scheduler, Support-Desk, Verlosungen, VIP-Abonnements, Bezahlmedien und Webhooks.",
+        "Forum-fähige Supergruppen schalten zusätzlich den Support-Desk und das Topics-Modul frei."
       ],
       "troubleshooting": [
         "Für private Chats ist eine numerische Chat-ID erforderlich; @Benutzernamen funktionieren nur bei öffentlichen Kanälen und Gruppen.",
         "Die Synchronisierung kennt nur Chats, in denen der Bot mindestens ein Update erhalten hat (my_chat_member-Ereignisse).",
-        "Das Entfernen einer Verbindung wirft den Bot nie raus; es entfernt nur die Studio-Verknüpfung."
+        "Das Entfernen einer Verbindung wirft den Bot nie raus; es entfernt nur die Studio-Verknüpfung.",
+        "Zur Erkennung muss der Bot aus einem Chat mindestens ein Update erhalten haben; Kanäle brauchen Veröffentlichungsrechte, Gruppen nur Mitgliedschaft."
       ]
     }
   },
@@ -28,19 +31,22 @@
         "Das konsolidierte Startmenü: Jedes Ziel, das dein Bot bei /start anbietet, lebt hier — Chat-Ordner-Sharelinks (t.me/addlist/...), Kanäle, Gruppen und externe Weblinks.",
         "Der flache Stil rendert eine Buttonliste; der kategorisierte Stil gruppiert Ziele nach Typ mit Abschnittsüberschriften im Nachrichtentext.",
         "Das Buttonlayout wird pro Reihe gesteuert (1–4 Spalten), und Nutzer können das Menü jederzeit mit /menu wieder öffnen.",
-        "Klickzähler messen die Interaktion pro Menüeintrag, wenn das Tracking aktiviert ist."
+        "Klickzähler messen die Interaktion pro Menüeintrag, wenn das Tracking aktiviert ist.",
+        "Das Startmenü besitzt /start, sobald es aktiv ist — die Autoresponder-Standard-/start-Nachricht tritt zurück, während Drip-Auto-Subscribe weiter still einschreibt."
       ],
       "setup": [
         "Erstelle in Telegram einen Chat-Ordner und verwende seinen Sharelink (t.me/addlist/...) als Menüeintrag vom Typ Ordner.",
         "Füge Kanäle, Gruppen und Web-Ziele als Einträge ihres jeweiligen Typs hinzu; die Reihenfolge steuert die Buttonposition.",
         "Lege eine Startnachricht mit Platzhaltern ({first_name}, {mention}) für eine personalisierte Kopfzeile fest.",
         "Optional eine öffentliche Basis-URL setzen, um Buttons durch den eingebauten Klick-Tracker zu leiten.",
-        "Sende /start (oder /menu) an den Bot, um zu prüfen, ob das Menü gerendert wird."
+        "Sende /start (oder /menu) an den Bot, um zu prüfen, ob das Menü gerendert wird.",
+        "Kombiniere es mit Drip-Sequenzen (Auto-Subscribe bei /start): Neue Nutzer sehen das Menü und landen zugleich im Pflegefluss."
       ],
       "troubleshooting": [
         "Klick-Tracking erfordert, dass das Studio über eine öffentliche HTTPS-URL erreichbar ist.",
         "Telegram cached Inline-Tastaturen kurz; Änderungen gelten für neu gesendete Menüs.",
-        "Wenn sowohl dieses Modul als auch Eigene Befehle eine /start-Antwort definieren, hat das Startmenü Vorrang."
+        "Wenn sowohl dieses Modul als auch Eigene Befehle eine /start-Antwort definieren, hat das Startmenü Vorrang.",
+        "Wenn das Menü bei einem Nutzer fehlt, prüfe, ob keine Autoresponder-Befehlsregel ebenfalls /start mit anderer Nutzlast beansprucht."
       ]
     },
     "fields": {
@@ -99,16 +105,19 @@
     "docs": {
       "overview": [
         "Beiträge mit präzisen Sendezeiten, reichen Medien und Inline-Buttons in Kanäle einreihen.",
-        "Eine Marken-Wasserzeichenzeile wird an Beschriftungen angehängt für eine konsistente Kanalidentität."
+        "Eine Marken-Wasserzeichenzeile wird an Beschriftungen angehängt für eine konsistente Kanalidentität.",
+        "Ziele stammen aus Chat-Verbindungen; der Zeitzonen-Offset speist die Platzhalter {date} und {time}."
       ],
       "setup": [
         "Füge den Bot als Administrator im Zielkanal mit Veröffentlichungsrecht hinzu.",
         "Kopiere die Kanal-ID (@Benutzername oder numerisch) in das Beitragsformular.",
-        "Plane Beiträge; der Dispatcher prüft alle 30 Sekunden."
+        "Plane Beiträge; der Dispatcher prüft alle 30 Sekunden.",
+        "Nutze Broadcast für sofortige Ankündigungen und den Scheduler für geplante Slots — beide kollidieren nie."
       ],
       "troubleshooting": [
         "Beiträge schlagen mit 400 fehl, wenn dem Bot im Ziel-Chat Adminrechte fehlen.",
-        "Zeiten werden im UTC-ISO-Format gespeichert und verglichen."
+        "Zeiten werden im UTC-ISO-Format gespeichert und verglichen.",
+        "Wasserzeichen gelten nur für geplante Beschriftungen, nicht für über Broadcast gesendete Beiträge."
       ]
     },
     "fields": {
@@ -152,16 +161,19 @@
       "overview": [
         "Jede Benutzernachricht öffnet ein eigenes Forumthema in deiner Admin-Superguppe.",
         "Admins antworten im Thema; der Bot leitet die Antwort an den Benutzer weiter.",
-        "Schnellbefehle: /ban, /unban, /info beim Antworten in einem Thema."
+        "Schnellbefehle: /ban, /unban, /info beim Antworten in einem Thema.",
+        "Ist Support aktiv, besitzt er private Chats: Der KI-Assistent tritt zurück, während Autoresponder-Schlüsselwortregeln weiter antworten."
       ],
       "setup": [
         "Erstelle eine Superguppe, aktiviere Themen in den Einstellungen und füge den Bot als Admin hinzu.",
         "Kopiere die Superguppen-ID in die Konfiguration und speichere.",
-        "Nutzer schreiben dem Bot direkt; Themen erscheinen automatisch."
+        "Nutzer schreiben dem Bot direkt; Themen erscheinen automatisch.",
+        "KI-Eskalationen landen automatisch hier — lass das Modul (auch ohne KI) aktiviert, um Übergabe-Tickets zu erhalten."
       ],
       "troubleshooting": [
         "Das Erstellen von Themen erfordert, dass der Bot Administrator mit can_manage_topics ist.",
-        "Die automatische Antwort wird pro Benutzer gedrosselt, um Empfangsbestätigungs-Spam zu vermeiden."
+        "Die automatische Antwort wird pro Benutzer gedrosselt, um Empfangsbestätigungs-Spam zu vermeiden.",
+        "Themen erscheinen nur in der konfigurierten Forum-Superguppe; normale Gruppen können keine Themen hosten."
       ]
     },
     "fields": {
@@ -183,16 +195,19 @@
     "docs": {
       "overview": [
         "Verarbeitet Nachrichten, die über eine persönliche Telegram-Business-Verbindung eingehen.",
-        "Nützlich für Empfangsbestätigungen außerhalb der Öffnungszeiten und Vorsortierung."
+        "Nützlich für Empfangsbestätigungen außerhalb der Öffnungszeiten und Vorsortierung.",
+        "Vollständig von normalen Bot-Chats getrennt: Antworten berühren nur die Business-Konto-Konversationen."
       ],
       "setup": [
         "Verbinde den Bot in den Telegram-Business-Einstellungen mit dem Manager-Konto.",
         "Kopiere die ausgegebene business_connection_id in die Konfiguration.",
-        "Schreibe eine knappe, professionelle Autoantwort und aktiviere das Modul."
+        "Schreibe eine knappe, professionelle Autoantwort und aktiviere das Modul.",
+        "Telegram Business muss auf dem verbundenen Konto aktiv sein; der Bot-Token selbst braucht keine Zusatzrechte."
       ],
       "troubleshooting": [
         "Die Business-Nachrichten-APIs entwickeln sich weiter; Antworten laufen über die rohe Bot-API.",
-        "Wenn Antworten fehlschlagen, prüfe, ob die Verbindung in den Telegram-Einstellungen noch aktiv ist."
+        "Wenn Antworten fehlschlagen, prüfe, ob die Verbindung in den Telegram-Einstellungen noch aktiv ist.",
+        "Heute werden nur Text-Autoantworten gesendet; Medien und Buttons in Business-Antworten werden nicht unterstützt."
       ]
     },
     "fields": {
@@ -212,16 +227,19 @@
       "overview": [
         "Klassische Tag-1/Tag-3/Tag-7-Onboarding- und Werbereisen.",
         "Jeder Schritt verzögert um eine konfigurierbare Anzahl Minuten nach dem vorherigen.",
-        "Abonnenten können manuell oder automatisch bei /start hinzugefügt werden."
+        "Abonnenten können manuell oder automatisch bei /start hinzugefügt werden.",
+        "Schritte nutzen die Broadcast-Platzhalter; die Einschreibung funktioniert egal, welches Modul /start beantwortet."
       ],
       "setup": [
         "Erstelle eine Kampagne mit mindestens einem Schritt (delayMinutes + text).",
         "Aktiviere Auto-Subscribe bei /start oder füge Abonnenten aus der Kampagnenansicht hinzu.",
-        "Der Scheduler schreitet alle 30 Sekunden voran."
+        "Der Scheduler schreitet alle 30 Sekunden voran.",
+        "Lege den ersten Schritt direkt auf die Startmenü-Begrüßung, damit die erste Stunde stimmig wirkt."
       ],
       "troubleshooting": [
         "Nutzer, die den Bot blockiert haben, werden bei Zustellfehler automatisch abgemeldet.",
-        "delayMinutes zählt ab dem vorherigen Schritt, nicht ab der Anmeldung."
+        "delayMinutes zählt ab dem vorherigen Schritt, nicht ab der Anmeldung.",
+        "Kampagnen sind bot-spezifisch: Ein Klon kopiert Kampagnenhüllen, nicht Drip-Abonnenten."
       ]
     },
     "fields": {
@@ -249,16 +267,19 @@
       "overview": [
         "Sende Ankündigungen an alle, ein Sprachsegment oder kürzlich aktive Nutzer.",
         "Reiche Medien und Inline-Buttons werden mit Platzhaltern pro Empfänger unterstützt.",
-        "Erfolgs- und Fehlerzähler aktualisieren sich live, während die Warteschlange abläuft."
+        "Erfolgs- und Fehlerzähler aktualisieren sich live, während die Warteschlange abläuft.",
+        "Zielfilter lesen die Abonnentenprofile, die die Engine anlegt — Sprache und letzte Aktivität kommen direkt aus den CRM-Daten."
       ],
       "setup": [
         "Wachse zuerst die Zielgruppe: Jeder Nutzer, der dem Bot schreibt, wird erfasst.",
         "Stelle die Broadcast zusammen, wähle einen Zielfilter und reihe sie ein.",
-        "Überwache den Fortschritt in der Verlaufstabelle."
+        "Überwache den Fortschritt in der Verlaufstabelle.",
+        "Tagge Nutzer zuerst im CRM, wenn du Segmente manuell per CSV-Export auswählen willst."
       ],
       "troubleshooting": [
         "Telegram begrenzt Broadcasts auf ~30 Nachrichten pro Sekunde; die Engine punktet darunter.",
-        "Nutzer, die den Bot blockiert haben, zählen als Fehler und werden künftig nicht mehr angeschrieben."
+        "Nutzer, die den Bot blockiert haben, zählen als Fehler und werden künftig nicht mehr angeschrieben.",
+        "Broadcasts zielen auf Private-Chat-Abonnenten; in Gruppen zu posten ist Sache des Schedulers."
       ]
     }
   },
@@ -269,15 +290,18 @@
       "overview": [
         "Jede Bot-Interaktion legt automatisch ein Abonnentenprofil an bzw. aktualisiert es.",
         "Tagge Nutzer in Segmente (VIP, Beta, Kündigungsrisiko) und pflege interne Notizen.",
-        "Exportiere die gesamte Zielgruppe als CSV oder JSON für externe Tools."
+        "Exportiere die gesamte Zielgruppe als CSV oder JSON für externe Tools.",
+        "Die hier gezeigten Punktguthaben sind dasselbe Ledger wie bei Empfehlungen, Quiz, Reaktionen und dem KI-Assistenten."
       ],
       "setup": [
         "Keine Einrichtung nötig; Profile entstehen, während der Bot läuft.",
-        "Nutze Tags als Broadcast-Filter und Segmentierungshaken."
+        "Nutze Tags als Broadcast-Filter und Segmentierungshaken.",
+        "Tags sind aktuell organisatorisch — Broadcast-Zielung nutzt Sprache und Aktivität, nicht Tags."
       ],
       "troubleshooting": [
         "Die Suche durchsucht Benutzername, Name und Telegram-ID.",
-        "Die hier angezeigten Punkte speisen die Empfehlungs- und Gamification-Module."
+        "Die hier angezeigten Punkte speisen die Empfehlungs- und Gamification-Module.",
+        "Gelöschte Profile erscheinen automatisch wieder, sobald der Nutzer dem Bot schreibt."
       ]
     }
   },
@@ -325,16 +349,19 @@
       "overview": [
         "Begrüßt neue Mitglieder mit Vorlagen, Medien und Inline-Buttons.",
         "Abschiedsnachrichten und Clean-Welcome halten genau eine Begrüßung sichtbar.",
-        "Beitritts-/Verlassens-Service Nachrichten werden automatisch entfernt."
+        "Beitritts-/Verlassens-Service Nachrichten werden automatisch entfernt.",
+        "Läuft bei jedem Beitritt in Gruppen; aktiviere Captcha daneben — die Captcha-Aufgabe ist eine eigene Nachricht, getrennt von der Begrüßung."
       ],
       "setup": [
         "Füge den Bot als Gruppenadministrator mit Löschrechten hinzu.",
         "Stelle Vorlagen mit Platzhaltern wie {mention} und {group_name} zusammen.",
-        "Hänge eine Medien-URL und Buttons-JSON für reichhaltige Begrüßungen an."
+        "Hänge eine Medien-URL und Buttons-JSON für reichhaltige Begrüßungen an.",
+        "Halte die Begrüßung kurz, wenn Captcha aktiv ist, damit beide Nachrichten in belebten Chats lesbar bleiben."
       ],
       "troubleshooting": [
         "Medienbegrüßungen fallen auf Text zurück, wenn die URL nicht gesendet werden kann.",
-        "Auto-Löschen akzeptiert 15 Sekunden bis zu einer Stunde."
+        "Auto-Löschen akzeptiert 15 Sekunden bis zu einer Stunde.",
+        "Feuert nicht in Kanälen; Begrüßungen sind nur für Gruppen/Superggruppen."
       ]
     }
   },
@@ -366,15 +393,18 @@
       "overview": [
         "Anti-Raid-Tor: Neue Mitglieder müssen sich innerhalb des konfigurierten Zeitfensters verifizieren.",
         "Button-Modus: Tippen zum Verifizieren; Mathe antwortet mit einer Summe; pm-math verifiziert im PM.",
-        "Mitglieder bleiben stumm bis zur Verifizierung und lösen das Captcha pro Gruppe nur einmal."
+        "Mitglieder bleiben stumm bis zur Verifizierung und lösen das Captcha pro Gruppe nur einmal.",
+        "Bildet mit AntiRaid ein Gesamtschutzpaket: AntiRaid bremst Massenbeitritte, das Captcha filtert danach die Menschen."
       ],
       "setup": [
         "Füge den Bot als Gruppenadministrator mit Ban-Rechten hinzu.",
-        "Wähle Modus und Zeitlimit und aktiviere das Modul."
+        "Wähle Modus und Zeitlimit und aktiviere das Modul.",
+        "Der Bot braucht Restrict-Rechte — Stummschaltungen werden bei erfolgreicher Verifizierung automatisch aufgehoben."
       ],
       "troubleshooting": [
         "pm-math fällt auf einen Gruppen-Button zurück, wenn der Nutzer den Bot nie gestartet hat.",
-        "Die Beitrittsanfragen-Integration benötigt chat_join_request-Updates (aktiviert)."
+        "Die Beitrittsanfragen-Integration benötigt chat_join_request-Updates (aktiviert).",
+        "Freigegebene Nutzer sind nicht ausgenommen: Jedes neue Mitglied löst das Captcha genau einmal pro Gruppe."
       ]
     }
   },
@@ -385,15 +415,18 @@
       "overview": [
         "Löscht Nachrichten mit blockierten Wörtern (Klartext oder /regex/), Links oder Flood.",
         "Wiederholungstäter eskalieren zu einem studio-weiten Bann und Chat-Kick.",
-        "Gesperrte Benutzer werden hier zur Überprüfung und manuellen Entsperrung gelistet."
+        "Gesperrte Benutzer werden hier zur Überprüfung und manuellen Entsperrung gelistet.",
+        "Läuft Locks ebenfalls, arbeitet dieses Modul davor — Lock-Treffen erreichen nie die Blocklist."
       ],
       "setup": [
         "Gewähre dem Bot Administratorrechte mit Nachrichtenlöschung.",
-        "Stelle Schwellen konservativ ein, um Fehlalarme zu vermeiden."
+        "Stelle Schwellen konservativ ein, um Fehlalarme zu vermeiden.",
+        "Hier erfasste Verwarnungen teilen das Ledger der Gruppen-Moderationsbefehle — Limits und Modi gelten für beide."
       ],
       "troubleshooting": [
         "Regex-Einträge nutzen die /pattern/flags-Form, z. B. /\\bfree crypto\\b/i.",
-        "Flood-Fenster gelten pro Benutzer pro Gruppe und liegen im Speicher."
+        "Flood-Fenster gelten pro Benutzer pro Gruppe und liegen im Speicher.",
+        "Admins und freigegebene Nutzer sind von Blocklist-, Link- und Flood-Prüfungen immer ausgenommen."
       ]
     },
     "fields": {
@@ -439,16 +472,19 @@
       "overview": [
         "Nutzer treten über /giveaway und Inline-Teilnehmen-Buttons bei.",
         "Die Mitgliedschaft in Pflichtkanälen wird über getChatMember geprüft.",
-        "Gewinner werden mit einem seeded Shuffle gezogen, das aus der Teilnehmerliste reproduzierbar ist."
+        "Gewinner werden mit einem seeded Shuffle gezogen, das aus der Teilnehmerliste reproduzierbar ist.",
+        "Pflichtkanäle werden aus Chat-Verbindungen gewählt; Mitgliedsprüfungen erfordern Bot-Adminrechte in diesen Kanälen."
       ],
       "setup": [
         "Füge den Bot als Administrator in jedem Pflichtkanal hinzu.",
         "Erstelle die Verlosung mit Kanal-IDs und einer Endzeit.",
-        "Kündige /giveaway in deiner Community an, um Teilnehmer zu sammeln."
+        "Kündige /giveaway in deiner Community an, um Teilnehmer zu sammeln.",
+        "Kündige Verlosungen direkt nach dem Anlegen per Broadcast an — das maximiert die Teilnahme."
       ],
       "troubleshooting": [
         "Die Prüfung schlägt fehl, wenn der Bot die Kanal-Mitgliederliste nicht sehen kann.",
-        "Ziehungen laufen alle 60 Sekunden nach Ablauf von ends_at."
+        "Ziehungen laufen alle 60 Sekunden nach Ablauf von ends_at.",
+        "Punktplätze sind kein Teil von Verlosungen — Gewinner werden gezogen, nicht gepunktet."
       ]
     },
     "fields": {
@@ -486,15 +522,18 @@
     "docs": {
       "overview": [
         "Nutzer teilen t.me/bot?start=ref_<id>-Deeplinks; die Zuordnung erfolgt automatisch.",
-        "Werber erhalten sofort Punkte; /top zeigt die laufende Bestenliste."
+        "Werber erhalten sofort Punkte; /top zeigt die laufende Bestenliste.",
+        "Guthaben erscheinen im Zielgruppen-CRM, und der KI-Assistent nennt sie, wenn Nutzer nach Punkten fragen."
       ],
       "setup": [
         "Aktiviere das Modul und konfiguriere die Prämie pro Empfehlung.",
-        "Verbreite das persönliche Linkmuster in deiner Community."
+        "Verbreite das persönliche Linkmuster in deiner Community.",
+        "Kombiniere mit Broadcast, um der Community das persönliche Linkmuster beizubringen."
       ],
       "troubleshooting": [
         "Selbstempfehlungen und wiederholte Zuordnungen werden ignoriert.",
-        "Der Werber muss beim Eintreffen des Eingeladenen bereits bekannter Abonnent sein."
+        "Der Werber muss beim Eintreffen des Eingeladenen bereits bekannter Abonnent sein.",
+        "Empfehlungspunkte lassen sich nicht automatisch zurückbuchen; passe Punkte im CRM an."
       ]
     },
     "fields": {
@@ -512,15 +551,18 @@
     "docs": {
       "overview": [
         "sendPoll-basierte Quiz mit automatisch bewerteten richtigen Antworten.",
-        "Punkte und Scoreboards pro Quiz bleiben für Bestenlisten erhalten (/scoreboard)."
+        "Punkte und Scoreboards pro Quiz bleiben für Bestenlisten erhalten (/scoreboard).",
+        "Punkte landen im selben Ledger wie Empfehlungen und Reaktionen; /scoreboard liest es pro Quiz zurück."
       ],
       "setup": [
         "Erstelle Quiz im Interaktions-Tab (Frage, Optionen, richtiger Index, Punkte).",
-        "Nutzer starten ein zufälliges Quiz mit dem konfigurierten Befehl."
+        "Nutzer starten ein zufälliges Quiz mit dem konfigurierten Befehl.",
+        "Teile den Auslöserbefehl in Gruppen — Quiz sind Gruppen-Engagement."
       ],
       "troubleshooting": [
         "Umfragen müssen für die Bewertung nicht-anonym sein; das Modul erzwingt das.",
-        "Reaktionsanalysen liegen im selben Interaktions-Tab."
+        "Reaktionsanalysen liegen im selben Interaktions-Tab.",
+        "Quiz-Umfragen brauchen kein Zusatzrecht, nur die Fähigkeit, in der Gruppe Umfragen zu senden."
       ]
     },
     "fields": {
@@ -535,15 +577,18 @@
     "docs": {
       "overview": [
         "Zählt Emoji-Reaktionen auf Beiträgen und belohnt die reagierenden Mitglieder mit Punkten.",
-        "Die Übersichtsgrafik zeigt, welche Emojis bei der Audience ankommen."
+        "Die Übersichtsgrafik zeigt, welche Emojis bei der Audience ankommen.",
+        "Funktioniert automatisch: Die Engine abonniert message_reaction-Updates — keine zusätzliche BotFather-Einstellung."
       ],
       "setup": [
         "Füge den Bot als Administrator im erfassten Kanal hinzu.",
-        "Reaktions-Updates erfordern, dass der Chat Bot-Reaktionsereignisse zulässt."
+        "Reaktions-Updates erfordern, dass der Chat Bot-Reaktionsereignisse zulässt.",
+        "Am besten in Kanälen mit verknüpfter Diskussionsgruppe, damit bot-sichtbare Reaktionen sich ansammeln."
       ],
       "troubleshooting": [
         "Anonyme Reagierende können nicht zugeordnet werden und werden übersprungen.",
-        "Nur Emoji-Reaktionen zählen; bezahlte und benutzerdefinierte werden ignoriert."
+        "Nur Emoji-Reaktionen zählen; bezahlte und benutzerdefinierte werden ignoriert.",
+        "Reaktionen auf Beiträge vor der Bot-Abonnierung werden nicht nachträglich gezählt."
       ]
     },
     "fields": {
@@ -560,19 +605,22 @@
         "Jede Mitgliedsnachricht in deinen Gruppen baut einen Tagesaktivitätsdatensatz auf: Nachrichten, Antworten an andere und Medien getrennt gezählt.",
         "Der gewichtete Score rangiert die aktivsten Mitglieder für jeden Zeitraum (heute, 7 Tage, 30 Tage oder gesamt).",
         "Reichhaltige Bestenlistennachrichten (Kopfzeile, Zeilenvorlage pro Mitglied, Fußzeile, Medaillen, Parse-Modus, Stummschaltung) lassen sich sofort oder nach Zeitplan an einen oder mehrere verbundene Chats senden.",
-        "Zeitpläne unterstützen einmalige, stündliche, tägliche und wöchentliche Wiederholungen in UTC."
+        "Zeitpläne unterstützen einmalige, stündliche, tägliche und wöchentliche Wiederholungen in UTC.",
+        "Zählt alle Mitgliedsnachrichten inklusive Admins; Service Nachrichten und Bots werden ignoriert."
       ],
       "setup": [
         "Deaktiviere den Datenschutzmodus über BotFather (oder mache den Bot zum Admin), damit er Mitgliedsnachrichten in Gruppen sieht.",
         "Aktiviere das Modul und tune die Score-Gewichte in der Konfigurationskarte.",
         "Wähle ein oder mehrere Ziel-Chats, gestalte das Nachrichtenformat mit Platzhaltern und prüfe die Live-Vorschau.",
-        "Drücke „Jetzt senden“ für eine einmalige Veröffentlichung oder „Als Zeitplan speichern“ zur Automatisierung."
+        "Drücke „Jetzt senden“ für eine einmalige Veröffentlichung oder „Als Zeitplan speichern“ zur Automatisierung.",
+        "Der Chat-Picker des Editors nutzt Chat-Verbindungen — genau wie Broadcast und Scheduler."
       ],
       "troubleshooting": [
         "Keine Mitglieder in der Bestenliste bedeutet meist, dass der Datenschutzmodus dem Bot Gruppen Nachrichten verbirgt.",
         "Service Nachrichten (Beitritte, Pins, Titeländerungen) zählen nie zum Score.",
         "Das Senden schlägt mit 403 fehl, wenn der Bot kein Mitglied des Ziel-Chats ist oder Veröffentlichungsrechte fehlen.",
-        "Geplante Zeiten nutzen UTC; tägliche/wöchentliche Läufe feuern zur konfigurierten HH:mm."
+        "Geplante Zeiten nutzen UTC; tägliche/wöchentliche Läufe feuern zur konfigurierten HH:mm.",
+        "Geplante Bestenlisten nutzen die in den Bot-Einstellungen konfigurierte Zeitzone."
       ]
     },
     "fields": {
@@ -597,17 +645,20 @@
       "overview": [
         "Beantwortet private Nutzernachrichten rund um die Uhr im Unternehmenston.",
         "Spricht das OpenAI-Chat-Completions-Protokoll — jeder OpenAI-kompatible Dienst funktioniert: OpenRouter, DeepSeek, Groq, Ollama, vLLM und mehr; Gemini nutzt seine native API.",
-        "Hält eine kurze Historie pro Nutzer für kontextbezogene Antworten."
+        "Hält eine kurze Historie pro Nutzer für kontextbezogene Antworten.",
+        "Kennt Treuepunktguthaben und aktuelle Mini-App-Bestellungen und zitiert sie, wenn Nutzer nach Punkten oder Lieferungen fragen."
       ],
       "setup": [
         "Wähle einen Anbieter: openai, openrouter, gemini oder custom (eigene OpenAI-kompatible Basis-URL).",
         "Füge den API-Schlüssel ein, setze die Modell-ID im Anbieterformat (OpenRouter nutzt anbieter/modell wie openai/gpt-4o-mini) und tune den Systemprompt.",
-        "Nutze den eingebauten Testbutton vor der Aktivierung."
+        "Nutze den eingebauten Testbutton vor der Aktivierung.",
+        "Eskalationen des Frustrations-Klassifikators legen automatisch Support-Desk-Tickets an, selbst wenn Support aus ist."
       ],
       "troubleshooting": [
         "Der Assistent tritt hinter den Support-Desk und Autoresponder-Schlüsselwörter zurück.",
         "Anbieterfehler erscheinen im Chat als Hinweis auf vorübergehende Nichtverfügbarkeit.",
-        "Sprachtranskription braucht einen OpenAI-kompatiblen /audio/transcriptions-Endpunkt; OpenRouter bietet keinen — setze transcriptionModel auf einen kompatiblen Anbieter (OpenAI, Groq, lokales Whisper)."
+        "Sprachtranskription braucht einen OpenAI-kompatiblen /audio/transcriptions-Endpunkt; OpenRouter bietet keinen — setze transcriptionModel auf einen kompatiblen Anbieter (OpenAI, Groq, lokales Whisper).",
+        "Wissensabruf und Tool-Kontext laufen nur in privaten Chats; Gruppen Nachrichten werden nicht beantwortet."
       ]
     },
     "fields": {
@@ -663,15 +714,18 @@
     "docs": {
       "overview": [
         "Eigene Befehle wie /preise und /faq werden sofort mit Medien beantwortet.",
-        "Nicht-Slash-Trigger greifen auf Nachrichtenteile als Schlüsselwort-Autoresponder."
+        "Nicht-Slash-Trigger greifen auf Nachrichtenteile als Schlüsselwort-Autoresponder.",
+        "Regeln können auch in Gruppen laufen — scope jede Regel auf privat, Gruppe oder beides und pinne sie bei Bedarf an einen Chat."
       ],
       "setup": [
         "Erstelle Regeln; Befehle müssen mit / beginnen, Schlüsselwörter nicht.",
-        "Foto-URLs und Inline-Buttons sind optionale Erweiterungen."
+        "Foto-URLs und Inline-Buttons sind optionale Erweiterungen.",
+        "Schlüsselwort-Treffer pausieren den KI-Assistenten für diese Nachricht, um Doppelantworten zu vermeiden."
       ],
       "troubleshooting": [
         "Wenn das Startmenü-Modul /start besitzt, hat dessen Menü Vorrang.",
-        "Schlüsselwortregeln pausieren auch KI-Assistent-Antworten, um Doppelantworten zu vermeiden."
+        "Schlüsselwortregeln pausieren auch KI-Assistent-Antworten, um Doppelantworten zu vermeiden.",
+        "Hashtag-Notizen (#faq) und prefix/exact-Modi arbeiten auf jeder Fläche, auf die die Regel begrenzt ist."
       ]
     },
     "fields": {
@@ -703,15 +757,18 @@
     "docs": {
       "overview": [
         "Sendet Medien, die Nutzer durch Zahlung von Telegram-Stars freischalten.",
-        "Einnahmen gehen auf das Fragment-Guthaben des Bot-Besitzers."
+        "Einnahmen gehen auf das Fragment-Guthaben des Bot-Besitzers.",
+        "Nur über das Dashboard ausgelöst — kombiniere mit Broadcast, um einen Paid-Drop der richtigen Zielgruppe anzukündigen."
       ],
       "setup": [
         "Sende bezahlte Medien aus dem Monetarisierungs-Tab an eine beliebige Chat-ID.",
-        "Preise pro Sendung in Stars; Empfänger sehen einen nativen Paywall."
+        "Preise pro Sendung in Stars; Empfänger sehen einen nativen Paywall.",
+        "Empfänger zahlen in Telegram Stars; außer einer modernen Bot API ist keine Zusatzkonfiguration nötig."
       ],
       "troubleshooting": [
         "Benötigt eine Bot-API-Version mit sendPaidMedia.",
-        "Medien müssen öffentlich erreichbare URLs sein."
+        "Medien müssen öffentlich erreichbare URLs sein.",
+        "Stars-Einnahmen landen in der Fragment-Auszahlung des Bot-Besitzers, nicht im Studio."
       ]
     },
     "fields": {
@@ -729,15 +786,18 @@
     "docs": {
       "overview": [
         "createChatSubscriptionInviteLink erzeugt Star-Abrechnungs-Einladungslinks.",
-        "Abgelaufene Mitglieder entfernt der Sweep-Timer automatisch."
+        "Abgelaufene Mitglieder entfernt der Sweep-Timer automatisch.",
+        "Verbindungen mit nur @Benutzername können keine VIP-Abonnements hosten — eine numerische Kanal-ID aus Chat-Verbindungen ist nötig."
       ],
       "setup": [
         "Erstelle einen privaten Kanal und füge den Bot als Administrator hinzu.",
-        "Setze Kanal-ID, Zeitraum und Star-Preis und gewähre Abonnements."
+        "Setze Kanal-ID, Zeitraum und Star-Preis und gewähre Abonnements.",
+        "Vergabe erfolgt im Monetarisierungs-Tab; der Ablauf-Sweeper entfernt abgelaufene Mitglieder jede Minute."
       ],
       "troubleshooting": [
         "Der Kanal muss dem Bot das Verwalten von Einladungslinks erlauben.",
-        "Die Entfernung nutzt Bann + Unban; das Mitglied kann nach Verlängerung wieder beitreten."
+        "Die Entfernung nutzt Bann + Unban; das Mitglied kann nach Verlängerung wieder beitreten.",
+        "Schlägt die Entfernung fehl, prüfe, ob der Bot im VIP-Kanal noch Ban-Rechte hat."
       ]
     },
     "fields": {
@@ -760,16 +820,19 @@
       "overview": [
         "Streamt Ereignisse (Bestellungen, Formulareingaben, Supportaktivität) an Zapier, Make oder n8n.",
         "Jede Zustellung ist mit HMAC-SHA256 in X-Studio-Signature signiert.",
-        "Eingehende Hooks rendern vorlagenbasierte Nachrichten aus externen Systemen in einen Chat."
+        "Eingehende Hooks rendern vorlagenbasierte Nachrichten aus externen Systemen in einen Chat.",
+        "order_created, order_paid und form_submitted entstehen aus Mini-App-Checkouts und Formularen — verdrahte sie mit Fulfillment-Tools."
       ],
       "setup": [
         "Registriere einen ausgehenden Endpunkt mit geteiltem Geheimnis und Ereignisfilter.",
         "Verifiziere Signaturen auf der Empfangsseite, bevor du Nutzdaten vertraust.",
-        "Für eingehend: Hook erstellen und JSON an seine URL posten."
+        "Für eingehend: Hook erstellen und JSON an seine URL posten.",
+        "Nutze den Zustellungsprotokoll-Tab zum Debuggen der Signaturen; jede Nutzlast ist HMAC-signiert."
       ],
       "troubleshooting": [
         "Leere Ereignislisten abonnieren alle Ereignisse.",
-        "Fehlgeschlagene Zustellungen erscheinen im Zustellungsprotokoll-Tab."
+        "Fehlgeschlagene Zustellungen erscheinen im Zustellungsprotokoll-Tab.",
+        "Eingehende Hooks umgehen den JWT-Schutz absichtlich — halte Hook-IDs unerratbar."
       ]
     }
   },
@@ -780,18 +843,21 @@
       "overview": [
         "Baue und hoste Telegram-Mini-Apps direkt aus dem Studio über die vereinheitlichte /tma/*-Route.",
         "Fünf Unternehmensvorlagen: E-Commerce-Shop, Treue-Hub, dynamische Formulare, tägliches Glücksrad und externer Webview-Wrapper.",
-        "Die eingebettete Telefonvorschau rendert die Live-App; die Veröffentlichung verdrahtet die Chat-Menüschaltfläche mit einem Klick."
+        "Die eingebettete Telefonvorschau rendert die Live-App; die Veröffentlichung verdrahtet die Chat-Menüschaltfläche mit einem Klick.",
+        "Bestellungen und Formulareingaben speisen Webhooks-Ereignisse und die bestellbewussten Antworten des KI-Assistenten."
       ],
       "setup": [
         "Erstelle einen BotFather-Bot und registriere ihn im Studio (der Bot muss laufen).",
         "Erstelle eine Mini-App, wähle eine Vorlage und passe die JSON-Konfiguration an.",
         "Telegram verlangt HTTPS-Hosting: setze die öffentliche Basis-URL vor der Veröffentlichung.",
-        "Veröffentlichen setzt die Chat-Menüschaltfläche unten links via setChatMenuButton."
+        "Veröffentlichen setzt die Chat-Menüschaltfläche unten links via setChatMenuButton.",
+        "Veröffentlichen braucht eine öffentliche HTTPS-Basis-URL und einen laufenden Bot für setChatMenuButton."
       ],
       "troubleshooting": [
         "Telegram verlangt eine öffentliche HTTPS-URL für Mini-Apps; localhost funktioniert nur in Telegram Desktop mit Flags.",
         "Mini-App-API-Aufrufe werden mit initData-HMAC-SHA256-Signaturen geprüft, die an den Bot-Token gebunden sind.",
-        "Die Webview-Vorlage kann keine Seiten einrahmen, die X-Frame-Options oder CSP frame-ancestors senden."
+        "Die Webview-Vorlage kann keine Seiten einrahmen, die X-Frame-Options oder CSP frame-ancestors senden.",
+        "Spin- und Treuedaten gehören zum Bot — Klone kopieren App-Hüllen, keine Spielerdaten."
       ]
     }
   },
@@ -828,16 +894,19 @@
         "Voller Admin-Befehlssatz direkt im Gruppenchat.",
         "Ban-/Mute-/Kick-Familien mit zeitlichen (tban/tmute), Lösch- (d*) und stillen (s*) Varianten.",
         "Dauerhafte Verwarnungen mit konfigurierbarem Limit, Modus und Ablauf, dazu Purge-Befehle.",
-        "Freigaben machen vertrauenswürdige Mitglieder immun gegen automatische Moderation."
+        "Freigaben machen vertrauenswürdige Mitglieder immun gegen automatische Moderation.",
+        "Hier erteilte Verwarnungen teilen das Ledger mit dem Blocklist-Warn-Modus des Moderationsmoduls; Limits gelten einmal für beide."
       ],
       "setup": [
         "Aktiviere das Modul und nutze /ban, /mute, /warn, /purge und Freunde in der Gruppe.",
         "Der Bot muss Gruppenadministrator mit Restrict- und Löschrechten sein.",
-        "Standardwerte hier einstellen; Gruppen können sie mit /setwarnlimit und /setwarnmode überschreiben."
+        "Standardwerte hier einstellen; Gruppen können sie mit /setwarnlimit und /setwarnmode überschreiben.",
+        "Jede Aktion wird an das Admin-Log-Kanal-Modul weitergegeben, wenn es aktiv ist — beide zusammen ergeben eine vollständige Spur."
       ],
       "troubleshooting": [
         "Purges erreichen nur Nachrichten unter 48 Stunden (Telegram-Einschränkung).",
-        "Verwarnungen liegen in der Datenbank; /resetwarn räumt einen Nutzer komplett auf."
+        "Verwarnungen liegen in der Datenbank; /resetwarn räumt einen Nutzer komplett auf.",
+        "Befehle prüfen Telegram-Adminrechte, keine Studio-Rollen: Ein Admin ohne Restrict-Recht kann nicht bannen."
       ]
     }
   },
@@ -862,15 +931,18 @@
         "Pin-Familie: /pin, /pin loud, /permapin, /unpin, /unpinall, plus verknüpfte Kanalsteuerung.",
         "Nutzermeldungen: /report und @admin markieren alle Admins unsichtbar.",
         "Abfragen (/id, /info), Admin-Liste, befördern/degradieren und /echo.",
-        "Gruppenspezifische Befehlsdeaktivierung mit /disable und /enable."
+        "Gruppenspezifische Befehlsdeaktivierung mit /disable und /enable.",
+        "Die Befehlsdeaktivierung gilt für die nutzerseitigen Befehle dieses Moduls (/adminlist, /id, /info, /report)."
       ],
       "setup": [
         "Aktiviere das Modul; jeder Befehl prüft native Telegram-Adminrechte.",
-        "Pin-Befehle brauchen das Pin-Recht; Befehlsdeaktivierung braucht change-info."
+        "Pin-Befehle brauchen das Pin-Recht; Befehlsdeaktivierung braucht change-info.",
+        "Meldungen überspringen Admins und Bot-Absender; nur menschliche Mitglieder können auslösen."
       ],
       "troubleshooting": [
         "Admins können nicht gemeldet werden.",
-        "Anonyme Admins erhalten alle Nicht-Owner-Rechte."
+        "Anonyme Admins erhalten alle Nicht-Owner-Rechte.",
+        "/echo verlangt change-info, weil es im Namen des Bots postet."
       ]
     }
   },
@@ -899,15 +971,18 @@
         "45+ Sperrtypen: Medienarten, Sticker, Umfragen, Weiterleitungen, Links, Buttons.",
         "Schrift-Sperren (rtl, cjk, kyrillisch, zalgo) und anonymer-Kanal-Schutz.",
         "Allowlist-Einträge befreien bestimmte Domains, Pakete, Weiterleitungen und Befehle.",
-        "Individuelle Strafen pro Sperre via /lock <typen> ### grund {aktion}."
+        "Individuelle Strafen pro Sperre via /lock <typen> ### grund {aktion}.",
+        "Lock-Verstöße können Verwarnungen schreiben, die Limit und Modus der Gruppen-Moderationsbefehle teilen."
       ],
       "setup": [
         "Aktiviere das Modul und sperre Inhaltstypen mit /lock gif poll url.",
-        "Admins und freigegebene Nutzer sind immer ausgenommen."
+        "Admins und freigegebene Nutzer sind immer ausgenommen.",
+        "Lock-Auswertung läuft vor Blocklists — aktiviere Locks zusammen mit Moderation für vorhersehbare Stapelung."
       ],
       "troubleshooting": [
         "Sperren laufen vor Blocklists.",
-        "Bot-Absender und Service Nachrichten werden nie gesperrt."
+        "Bot-Absender und Service Nachrichten werden nie gesperrt.",
+        "Mediengruppen zählen pro Element; die Album-Sperre erfasst Mediengruppen, selbst wenn Einzeltypen durchgehen."
       ]
     }
   },
@@ -929,15 +1004,18 @@
       "overview": [
         "Der Raid-Modus bannt jeden neuen Beitretenden kurzzeitig, damit Raids abebbern.",
         "Manuell per /antiraid on/off oder eigene Dauer.",
-        "/autoantiraid N aktiviert automatisch, wenn N Nutzer innerhalb einer Minute beitreten."
+        "/autoantiraid N aktiviert automatisch, wenn N Nutzer innerhalb einer Minute beitreten.",
+        "Ergänzt das Captcha-Modul: AntiRaid leert Beitrittsfluten ab, das Captcha verifiziert danach die Verbliebenen."
       ],
       "setup": [
         "Aktiviere das Modul und scharf den Raid-Modus mit /antiraid on, wenn du angegriffen wirst.",
-        "Stelle die Dauern so ein, dass unschuldige Spätbeitretende nicht lange gebannt sind."
+        "Stelle die Dauern so ein, dass unschuldige Spätbeitretende nicht lange gebannt sind.",
+        "Der Zustand liegt bewusst im Speicher — nach Neustarts neu scharf stellen oder Auto-AntiRaid setzen."
       ],
       "troubleshooting": [
         "Der Raid-Zustand liegt im Speicher; ein Neustart beendet den aktiven Raid-Modus.",
-        "Captchas oder Beitrittsanfragen verhindern Spam-Beitritte vollständig."
+        "Captchas oder Beitrittsanfragen verhindern Spam-Beitritte vollständig.",
+        "Andere Bots, die der Gruppe beitreten, werden von AntiRaid nie gebannt."
       ]
     }
   },
@@ -959,15 +1037,18 @@
       "overview": [
         "/rules zeigt die Gruppenregeln im Chat oder per PM-Deeplink-Button.",
         "Der {rules}-Platzhalter bettet denselben Link in Willkommensnachrichten ein.",
-        "Verwalten mit /setrules, /resetrules, /privaterules und /setrulesbutton."
+        "Verwalten mit /setrules, /resetrules, /privaterules und /setrulesbutton.",
+        "Der {rules}-Platzhalter funktioniert in Willkommenstexten, Notizen und jeder vorlagenbasierten Modulnachricht."
       ],
       "setup": [
         "Aktiviere das Modul und setze den Regeltext (oder nutze /setrules in der Gruppe).",
-        "Nutzer müssen den Bot im PM starten, um private Regeln zu erhalten."
+        "Nutzer müssen den Bot im PM starten, um private Regeln zu erhalten.",
+        "Private Zustellung setzt voraus, dass Nutzer den Bot gestartet haben; sonst öffnet der Button einen leeren Chat."
       ],
       "troubleshooting": [
         "Leerer Regeltext lässt /rules mit „keine Regeln gesetzt“ antworten.",
-        "Der Deeplink funktioniert nur mit öffentlichem Bot-Benutzernamen."
+        "Der Deeplink funktioniert nur mit öffentlichem Bot-Benutzernamen.",
+        "Regeltext unterstützt dieselbe HTML-Teilmenge wie jedes Nachrichtenmodul."
       ]
     }
   },
@@ -988,15 +1069,18 @@
       "overview": [
         "Dauerhaftes Protokoll von Bans, Mutes, Verwarnungen, Einstellungsänderungen und Meldungen.",
         "Kategoriefilter: settings, admin, user, automated, reports, other.",
-        "Verknüpfen mit /setlog <kanalId> (Gruppenbesitzer) oder über das Dashboard."
+        "Verknüpfen mit /setlog <kanalId> (Gruppenbesitzer) oder über das Dashboard.",
+        "Verarbeitet Ereignisse aus Gruppen-Moderation, Locks, Moderationsautomatik, Gruppen-Tools-Meldungen und Einstellungsänderungen."
       ],
       "setup": [
         "Erstelle einen Kanal, füge den Bot als Administrator hinzu und setze seine ID hier.",
-        "Führe /setlog <kanalId> in der Gruppe aus, um die Protokollierung zu binden."
+        "Führe /setlog <kanalId> in der Gruppe aus, um die Protokollierung zu binden.",
+        "Ein Kanal kann Logs mehrerer Gruppen empfangen; Kategoriefilter gelten pro Gruppe."
       ],
       "troubleshooting": [
         "Log-Kanäle müssen Kanäle sein; Gruppen können keine Logs empfangen.",
-        "Entfernt man den Bot aus dem Kanal, endet die Protokollierung still."
+        "Entfernt man den Bot aus dem Kanal, endet die Protokollierung still.",
+        "Log-Nachrichten respektieren Telegram-Ratenlimits; Schübe werden von der Auto-Retry-Schicht eingereiht."
       ]
     }
   },
@@ -1019,15 +1103,18 @@
       "overview": [
         "Genutzte Befehle verschwinden nach der Ausführung (nach Klasse: admin/user/other).",
         "Service Nachrichten (Beitritte, Pins, Titel- und Fotoänderungen) werden typweise automatisch gelöscht.",
-        "Die eigenen Gruppennachrichten des Bots können sich nach fünf Minuten selbst zerstören."
+        "Die eigenen Gruppennachrichten des Bots können sich nach fünf Minuten selbst zerstören.",
+        "Entfernt Befehlstexte nach der Ausführung, ohne Modulantworten oder Ankündigungen anzutasten."
       ],
       "setup": [
         "Aktiviere das Modul und wähle, welche Befehlsklassen gereinigt werden.",
-        "Füge Service-Typen wie join und leave hinzu, um den Chat aufgeräumt zu halten."
+        "Füge Service-Typen wie join und leave hinzu, um den Chat aufgeräumt zu halten.",
+        "Mit jedem Modul sicher: Reinigung löscht nie Nutzerinhalte, nur Befehls- und Service Nachrichten."
       ],
       "troubleshooting": [
         "Befehle werden mit kurzer Verzögerung entfernt, damit sie noch ausführen.",
-        "Bot-Nachrichten-Reinigung braucht keine Rechte über Senden hinaus."
+        "Bot-Nachrichten-Reinigung braucht keine Rechte über Senden hinaus.",
+        "cleanCommand passt nur zu den bekannten Befehlsklassen dieses Bots, nicht zu fremden Bot-Befehlen."
       ]
     }
   },
@@ -1044,15 +1131,18 @@
       "overview": [
         "Forumthemen-Befehle: /newtopic, /renametopic, /closetopic, /reopentopic, /deletetopic.",
         "/setactiontopic lenkt die Bot-Ausgabe in ein Thema.",
-        "Jeder Befehl läuft innerhalb des Themas, das er betrifft."
+        "Jeder Befehl läuft innerhalb des Themas, das er betrifft.",
+        "Unabhängig vom Support-Desk (der ein Thema pro Nutzer anlegt); dieses Modul verwaltet Forumsstruktur-Befehle."
       ],
       "setup": [
         "Aktiviere das Modul in einer forum-fähigen Superguppe.",
-        "Gewähre dem Bot das manage-topics-Administratorrecht."
+        "Gewähre dem Bot das manage-topics-Administratorrecht.",
+        "Diese Befehle akzeptieren nur forum-fähige Supergruppen."
       ],
       "troubleshooting": [
         "Diese Befehle funktionieren nur in Forumthemen.",
-        "Das Löschen eines Themas entfernt seine Nachrichten dauerhaft."
+        "Das Löschen eines Themas entfernt seine Nachrichten dauerhaft.",
+        "Die Themenverwaltung prüft das manage-topics-Recht — dasselbe Recht, das der Support-Desk zum Anlegen braucht."
       ]
     }
   },
@@ -1074,16 +1164,19 @@
       "overview": [
         "Eine Banliste, jede Gruppe: /fban entfernt Nutzer aus allen Chats der Föderation.",
         "Funktioniert über jeden Bot des Studios hinweg, nicht nur einen.",
-        "Fed-Admins, Abonnements (max. 5), Protokolle und CSV/JSON-Importe."
+        "Fed-Admins, Abonnements (max. 5), Protokolle und CSV/JSON-Importe.",
+        "Föderationsbans greifen vor Locks und Blocklists — ein Fed-gebannter Nutzer wird beim ersten Sichtkontakt entfernt."
       ],
       "setup": [
         "Erstelle eine Föderation mit /newfed <Name> im Bot-PM.",
         "Füge Gruppen mit /joinfed <fedId> hinzu (Gruppenbesitzer führt es aus).",
-        "Verwalte Sperren und Importe über die Verwaltung unten."
+        "Verwalte Sperren und Importe über die Verwaltung unten.",
+        "Föderationen wirken über jeden Bot des Studios: verbinde Gruppen zweier Bots mit derselben Fed für eine gemeinsame Banliste."
       ],
       "troubleshooting": [
         "Passive Durchsetzung benötigt das chat_member-Update (bereits aktiviert).",
-        "/leavefed lässt bisherige Sperren bestehen, bis sie aufgehoben werden."
+        "/leavefed lässt bisherige Sperren bestehen, bis sie aufgehoben werden.",
+        "Bot-übergreifende Durchsetzung braucht jeden Bot online; offline Bots wenden Bans nachträglich an, wenn sie den Nutzer sehen."
       ]
     }
   },
@@ -1099,15 +1192,18 @@
       "overview": [
         "/setlang schaltet jede Bot-Antwort zwischen den unterstützten Sprachen um.",
         "Alle Moderations-, Captcha-, Föderations- und Werkzeugnachrichten lokalisieren sich.",
-        "Nutzereigestellte Vorlagen (Willkommenstext, Notizen) bleiben wie geschrieben."
+        "Nutzereigestellte Vorlagen (Willkommenstext, Notizen) bleiben wie geschrieben.",
+        "Wirkt auf die festen Nachrichten jedes Gruppenmoduls; nutzereigene Vorlagen bleiben exakt wie geschrieben."
       ],
       "setup": [
         "Aktiviere das Modul und wähle einen Standard.",
-        "Gruppen ändern ihn jederzeit mit /setlang."
+        "Gruppen ändern ihn jederzeit mit /setlang.",
+        "Gruppen-Overrides schlagen den Dashboard-Standard; private Chats antworten immer auf Englisch."
       ],
       "troubleshooting": [
         "Unterstützte Sprachen: Englisch, Türkisch, Deutsch, Russisch, Spanisch, Aserbaidschanisch, Arabisch, Französisch, Italienisch, Portugiesisch, Ukrainisch, Persisch, Indonesisch, Usbekisch.",
-        "Private Chats standardmäßig auf Englisch."
+        "Private Chats standardmäßig auf Englisch.",
+        "Ein Sprachwechsel wirkt ab der nächsten Nachricht (kurzer Cache-Zeitraum)."
       ]
     }
   },
@@ -1128,15 +1224,18 @@
       "overview": [
         "Automatisierungs- und KI-Bots können Moderationsbefehle treiben.",
         "Bot-ausgelöste Admin-Aktionen reihen sich hinter Inline-Genehmigen/Ablehnen-Buttons ein.",
-        "Überspringe Prüfungen für vertrauenswürdige Bots und behalte ihre echten Rechte."
+        "Überspringe Prüfungen für vertrauenswürdige Bots und behalte ihre echten Rechte.",
+        "Schränkt die Gruppenbefehls-Module ein (Gruppen-Moderation, Gruppen-Tools); private Module ignorieren Bot-Absender ohnehin."
       ],
       "setup": [
         "Aktiviere das Modul und wähle einen Modus (Standard: off).",
-        "Lass den anderen Bot Befehle wie /ban senden, wie ein normaler Admin es täte."
+        "Lass den anderen Bot Befehle wie /ban senden, wie ein normaler Admin es täte.",
+        "Starte mit Modus admin und skipReview aus; gehe erst bei vertrauenswürdigen Automatisierungsflotten auf all."
       ],
       "troubleshooting": [
         "Der handelnde Bot braucht weiterhin seine eigenen Telegram-Adminrechte.",
-        "Prüfungen liegen im Speicher und fallen beim Neustart weg."
+        "Prüfungen liegen im Speicher und fallen beim Neustart weg.",
+        "Bot-Absender brauchen für restrict-fähige Befehle weiterhin eigene Telegram-Adminrechte."
       ]
     }
   }

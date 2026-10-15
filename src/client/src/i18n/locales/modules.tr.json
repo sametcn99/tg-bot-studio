@@ -6,17 +6,20 @@
       "overview": [
         "Botun işlem yaptığı her grubu, süpergrubu ve kanalı bir kez kaydedin — stüdyodaki tüm hedef sohbet alanları bunları açılır listede sunar.",
         "Botun eklendiği sohbetler otomatik keşfedilir; Eşitle, bunları başlıkları ve türleriyle birlikte içe aktarır.",
-        "Bağlantılar sayısal kimlikleri (-100…) ve herkese açık @kullanıcı adlarını kabul eder; silmeden devre dışı bırakılabilir."
+        "Bağlantılar sayısal kimlikleri (-100…) ve herkese açık @kullanıcı adlarını kabul eder; silmeden devre dışı bırakılabilir.",
+        "Planlayıcı, broadcast, çekilişler, VIP abonelikler, paid media ve webhooks gibi sohbet hedefli her modül hedeflerini bu listeden seçer — listeyi güncel tutmak her seçiciyi doğru kılar."
       ],
       "setup": [
         "Botu hedef gruba veya kanala yönetici olarak ekleyin (kanallar için gönderim yetkisi yeterlidir).",
         "Botun zaten keşfettiği sohbetleri içe aktarmak için Eşitle'ye basın veya sohbet kimliği / @kullanıcı adı ile elle ekleyin.",
-        "Aynı listeyi Zamanlayıcı, Destek Masası, Çekilişler, VIP Abonelikler, Ücretli Medya ve Webhooks modüllerinde kullanın."
+        "Aynı listeyi Zamanlayıcı, Destek Masası, Çekilişler, VIP Abonelikler, Ücretli Medya ve Webhooks modüllerinde kullanın.",
+        "Forum etkin süpergruplar ayrıca Destek Masası ve Topics modüllerinin yolunu açar."
       ],
       "troubleshooting": [
         "Özel sohbetler için sayısal sohbet kimliği gerekir; @kullanıcı adları yalnızca herkese açık kanal ve gruplarda çalışır.",
         "Eşitle yalnızca botun en az bir güncelleme aldığı sohbetleri bilir (my_chat_member olayları).",
-        "Bir bağlantıyı silmek botu asla atmaz; yalnızca stüdyo tarafındaki kısayolu kaldırır."
+        "Bir bağlantıyı silmek botu asla atmaz; yalnızca stüdyo tarafındaki kısayolu kaldırır.",
+        "Keşif için botun bir sohbetten en az bir güncelleme alması gerekir; kanallarda yayınlama, gruplarda ise yalnızca üyelik yeterlidir."
       ]
     }
   },
@@ -77,19 +80,22 @@
         "Birleşik başlangıç menüsü: botunuzun /start üzerinde sunduğu her hedef burada yaşar — sohbet klasörü paylaşım bağlantıları (t.me/addlist/...), kanallar, gruplar ve dış web bağlantıları.",
         "Düz stil tek bir buton listesi oluşturur; kategorize stil hedefleri türüne göre gruplandırır ve mesaj metninde bölüm başlıkları gösterir.",
         "Buton düzeni satır başına kontrol edilir (1-4 sütun) ve kullanıcılar menüyü istedikleri an /menu ile yeniden açabilir.",
-        "Takip etkinleştirildiğinde tıklama sayaçları menü öğesi başına etkileşimi ölçer."
+        "Takip etkinleştirildiğinde tıklama sayaçları menü öğesi başına etkileşimi ölçer.",
+        "Etkin olduğunda Start Menu /start komutunun sahibidir — Autoresponder varsayılan /start mesajı geri çekilir, drip otomatik kaydı sessizce çalışmaya devam eder."
       ],
       "setup": [
         "Telegram'da bir sohbet klasörü oluşturun ve paylaşım bağlantısını (t.me/addlist/...) türü folder olan bir menü öğesi olarak kullanın.",
         "Kanalları, grupları ve web hedeflerini kendi türlerinde öğe olarak ekleyin; sıra, buton konumunu belirler.",
         "Kişiselleştirilmiş bir başlık için yer tutuculu bir başlangıç mesajı belirleyin ({first_name}, {mention}).",
         "İsteğe bağlı olarak butonları yerleşik tıklama takibinden geçirmek için genel temel URL belirleyin.",
-        "Menünün göründüğünü doğrulamak için bota /start (veya /menu) gönderin."
+        "Menünün göründüğünü doğrulamak için bota /start (veya /menu) gönderin.",
+        "Drip Sequences ile birleştirin (/start otomatik aboneliği): yeni kullanıcılar menüyü görürken besleme akışına da girer."
       ],
       "troubleshooting": [
         "Tıklama takibi, stüdyonun herkese açık bir HTTPS adresinden erişilebilir olmasını gerektirir.",
         "Telegram inline klavyeleri kısa süre önbelleğe alır; düzenlemeler yeni gönderilen menülere uygulanır.",
-        "Hem bu modül hem de Özel Komutlar bir /start yanıtı tanımladığında Başlangıç Menüsü öncelik alır."
+        "Hem bu modül hem de Özel Komutlar bir /start yanıtı tanımladığında Başlangıç Menüsü öncelik alır.",
+        "Menü bir kullanıcıda görünmüyorsa bir autoresponder komut kuralının da /start talep etmediğini kontrol edin."
       ]
     }
   },
@@ -132,16 +138,19 @@
     "docs": {
       "overview": [
         "Kanallara tam gönderim zamanları, zengin medya ve inline butonlarla gönderi kuyruğa alın.",
-        "Tutarlı kanal kimliği için açıklamalara marka filigranı satırı eklenir."
+        "Tutarlı kanal kimliği için açıklamalara marka filigranı satırı eklenir.",
+        "Hedefler Chat Connections'tan gelir; saat dilimi kayması {date} ve {time} yer tutucularını besler."
       ],
       "setup": [
         "Botu hedef kanala gönderim yetkisi olan bir yönetici olarak ekleyin.",
         "Kanal kimliğini (@kullanıcı adı veya sayısal) gönderi formuna yapıştırın.",
-        "Gönderileri zamanlayın; dağıtıcı 30 saniyede bir kontrol eder."
+        "Gönderileri zamanlayın; dağıtıcı 30 saniyede bir kontrol eder.",
+        "Anlık duyurular için Broadcast, planlı aralıklar için Scheduler kullanın — ikisi çatışmaz."
       ],
       "troubleshooting": [
         "Bot hedef sohbette yönetici haklarına sahip değilse gönderiler 400 hatasıyla başarısız olur.",
-        "Zamanlar UTC ISO biçiminde saklanır ve karşılaştırılır."
+        "Zamanlar UTC ISO biçiminde saklanır ve karşılaştırılır.",
+        "Filigran yalnızca zamanlanmış açıklamalara uygulanır, Broadcast ile gönderilenlere değil."
       ]
     }
   },
@@ -164,16 +173,19 @@
       "overview": [
         "Her kullanıcı mesajı, yönetici süpergrubunuzda özel bir forum konusu açar.",
         "Yöneticiler konu içinde yanıtlar; bot cevabı kullanıcıya iletir.",
-        "Hızlı komutlar: bir konuya yanıt verirken /ban, /unban, /info."
+        "Hızlı komutlar: bir konuya yanıt verirken /ban, /unban, /info.",
+        "Etkin olduğunda Destek özel sohbetlerin sahibidir: AI Assistant çekilir, autoresponder anahtar kelime kuralları yanıtlamaya devam eder."
       ],
       "setup": [
         "Bir süpergrup oluşturun, ayarlarından Konuları etkinleştirin ve botu yönetici olarak ekleyin.",
         "Süpergrup kimliğini yapılandırmaya yapıştırın ve kaydedin.",
-        "Kullanıcılar bota doğrudan mesaj yazar; konular otomatik görünür."
+        "Kullanıcılar bota doğrudan mesaj yazar; konular otomatik görünür.",
+        "AI eskalasyonları buraya otomatik düşer — insan aktarım biletleri için modülü (AI olmadan da) açık tutun."
       ],
       "troubleshooting": [
         "Konu oluşturmak, botun can_manage_topics yetkili yönetici olmasını gerektirir.",
-        "Otomatik yanıt, alındı spamini önlemek için kullanıcı başına sınırlıdır."
+        "Otomatik yanıt, alındı spamini önlemek için kullanıcı başına sınırlıdır.",
+        "Konular yalnızca yapılandırılmış forum süpergrubunda görünür; normal gruplar konu barındıramaz."
       ]
     }
   },
@@ -192,16 +204,19 @@
     "docs": {
       "overview": [
         "Yöneticinin kişisel Telegram Business bağlantısı üzerinden gelen mesajları işler.",
-        "Mesai dışı bilgilendirmeler ve çalışma saatleri dışında önceliklendirme için kullanışlıdır."
+        "Mesai dışı bilgilendirmeler ve çalışma saatleri dışında önceliklendirme için kullanışlıdır.",
+        "Normal bot sohbetlerinden tamamen bağımsızdır: yanıtlar yalnızca Business hesabı konuşmalarına dokunur."
       ],
       "setup": [
         "Telegram Business ayarlarında botu yönetici hesabına bağlayın.",
         "Üretilen business_connection_id değerini yapılandırmaya yapıştırın.",
-        "Kısa ve profesyonel bir otomatik yanıt yazın ve modülü etkinleştirin."
+        "Kısa ve profesyonel bir otomatik yanıt yazın ve modülü etkinleştirin.",
+        "Bağlı hesapta Telegram Business aktif olmalıdır; bot tokeninin ekstra yetkiye ihtiyacı yoktur."
       ],
       "troubleshooting": [
         "Business mesaj API'leri gelişmeye devam ediyor; yanıtlar ham Bot API yüzeyiyle gönderilir.",
-        "Yanıtlar başarısız olursa bağlantının Telegram ayarlarında hâlâ aktif olduğunu doğrulayın."
+        "Yanıtlar başarısız olursa bağlantının Telegram ayarlarında hâlâ aktif olduğunu doğrulayın.",
+        "Bugün yalnızca metin auto-reply gönderilir; business yanıtlarında medya ve buton desteklenmez."
       ]
     }
   },
@@ -229,16 +244,19 @@
       "overview": [
         "Klasik 1./3./7. gün onboarding ve promosyon yolculukları.",
         "Her adım, bir öncekinden sonra yapılandırılabilir sayıda dakika gecikir.",
-        "Aboneler elle veya /start üzerinde otomatik eklenebilir."
+        "Aboneler elle veya /start üzerinde otomatik eklenebilir.",
+        "Adımlar broadcast yer tutucularını yeniden kullanır; kayıt, /start hangi modül tarafından yanıtlanırsa yanıtlandı işler."
       ],
       "setup": [
         "En az bir adımla (delayMinutes + metin) bir kampanya oluşturun.",
         "Başlangıçta otomatik aboneliği etkinleştirin veya kampanya görünümünden abone ekleyin.",
-        "Zamanlayıcı adımları 30 saniyede bir ilerletir."
+        "Zamanlayıcı adımları 30 saniyede bir ilerletir.",
+        "İlk adımı Start Menu karşılamasına yakın zamanlayın ki ilk saat bütünlüklü olsun."
       ],
       "troubleshooting": [
         "Botu engelleyen kullanıcılar teslimat başarısızında otomatik olarak abonelikten çıkarılır.",
-        "delayMinutes abonelikten değil, önceki adımdan itibaren sayılır."
+        "delayMinutes abonelikten değil, önceki adımdan itibaren sayılır.",
+        "Kampanyalar bota görelidir: bot klonlamak kampanya iskeletini kopyalar, drip abonelerini kopyalamaz."
       ]
     }
   },
@@ -249,16 +267,19 @@
       "overview": [
         "Duyuruları herkese, bir dil segmentine veya yakın zamanda aktif kullanıcılara gönderin.",
         "Zengin medya ve inline butonlar, alıcı başına yer tutucularla desteklenir.",
-        "Kuyruk boşalarken başarı ve başarısızlık sayaçları canlı güncellenir."
+        "Kuyruk boşalarken başarı ve başarısızlık sayaçları canlı güncellenir.",
+        "Kitle filtreleri motorun kaydettiği abone profillerini okur — dil ve son aktivite doğrudan CRM verisinden gelir."
       ],
       "setup": [
         "Önce kitleyi büyütün: bota mesaj yazan her kullanıcı kaydedilir.",
         "Yayını yazın, hedef filtresi seçin ve kuyruğa alın.",
-        "İlerlemeyi geçmiş tablosundan izleyin."
+        "İlerlemeyi geçmiş tablosundan izleyin.",
+        "CSV dışa aktarımla elle segment seçmeyi planlıyorsanız önce CRM'de kullanıcıları etiketleyin."
       ],
       "troubleshooting": [
         "Telegram yayınları saniyede ~30 mesajla sınırlar; motor bunun altında tempo tutar.",
-        "Botu engelleyen kullanıcılar başarısız sayılır ve sonraki hedeflemelerde atlanır."
+        "Botu engelleyen kullanıcılar başarısız sayılır ve sonraki hedeflemelerde atlanır.",
+        "Broadcastlar özel sohbet abonelerini hedefler; gruplara göndermek Scheduler'ın işidir."
       ]
     }
   },
@@ -269,15 +290,18 @@
       "overview": [
         "Her bot etkileşimi abone profilini otomatik güncelleyerek kaydeder.",
         "Kullanıcıları segmentlere ayırın (VIP, beta, kayıp riski) ve dahili not tutun.",
-        "Tüm kitleyi dış araçlar için CSV veya JSON olarak dışa aktarın."
+        "Tüm kitleyi dış araçlar için CSV veya JSON olarak dışa aktarın.",
+        "Burada görünen puan bakiyeleri Referrals, Quizzes, Reactions ve AI Assistant'ın kullandığı aynı defterdir."
       ],
       "setup": [
         "Kurulum gerekmez; profiller bot çalıştıkça birikir.",
-        "Etiketleri yayın filtreleri ve segmentleme kancaları olarak kullanın."
+        "Etiketleri yayın filtreleri ve segmentleme kancaları olarak kullanın.",
+        "Etiketler bugün organizasyoneldir — broadcast hedeflemesi dil ve aktivite kullanır, etiket değil."
       ],
       "troubleshooting": [
         "Arama; kullanıcı adı, isim ve Telegram kimliğinde eşleşir.",
-        "Burada gösterilen puanlar tavsiye ve oyunlaştırma modüllerini besler."
+        "Burada gösterilen puanlar tavsiye ve oyunlaştırma modüllerini besler.",
+        "Silinen profiller kullanıcı bota yeniden yazdığında otomatik olarak geri gelir."
       ]
     }
   },
@@ -325,16 +349,19 @@
       "overview": [
         "Yeni üyeleri şablonlar, medya ve satır içi butonlarla karşılar.",
         "Vedalaşma mesajları ve clean-welcome tek karşılama görünmesini sağlar.",
-        "Katılım/ayrılma servis mesajları otomatik silinir."
+        "Katılım/ayrılma servis mesajları otomatik silinir.",
+        "Gruplardaki her girişte çalışır; Captcha'yı yanına açın — captcha sınaması karşılama mesajından ayrıdır."
       ],
       "setup": [
         "Botu silme yetkisiyle grup yöneticisi olarak ekleyin.",
         "Şablonları {mention} ve {group_name} gibi placeholder'larla yazın.",
-        "Zengin karşılama için medya URL ve butonlar JSON ekleyin."
+        "Zengin karşılama için medya URL ve butonlar JSON ekleyin.",
+        "Captcha etkinken karşılamayı kısa tutun ki iki mesaj da kalabalık sohbetlerde okunaklı kalsın."
       ],
       "troubleshooting": [
         "Medya gönderilemezse karşılama metne döner.",
-        "Otomatik silme 15 saniye ile bir saat arasını kabul eder."
+        "Otomatik silme 15 saniye ile bir saat arasını kabul eder.",
+        "Kanallarda tetiklenmez; karşılamalar yalnızca grup/süpergrup içindir."
       ]
     }
   },
@@ -366,15 +393,18 @@
       "overview": [
         "Anti-raid kapısı: yeni üyeler belirtilen sürede doğrulamalı.",
         "Buton modu dokunarak; math toplam yanıtlayarak; pm-math PM'de doğrular.",
-        "Üyeler doğrulanana kadar susturulur; captcha grupta bir kez çözülür."
+        "Üyeler doğrulanana kadar susturulur; captcha grupta bir kez çözülür.",
+        "AntiRaid ile tam koruma oluşturur: AntiRaid yoğun girişleri yavaşlatır, captcha sonra insanları süzer."
       ],
       "setup": [
         "Botu ban yetkisiyle grup yöneticisi olarak ekleyin.",
-        "Bir mod ve zaman aşımı seçip modülü etkinleştirin."
+        "Bir mod ve zaman aşımı seçip modülü etkinleştirin.",
+        "Botun kısıtlama yetkisi olmalıdır — sessizlik başarılı doğrulamada otomatik kalkar."
       ],
       "troubleshooting": [
         "Kullanıcı botu başlatmadıysa pm-math grup butonuna döner.",
-        "Katılım isteği entegrasyonu chat_join_request güncellemesi ister (etkin)."
+        "Katılım isteği entegrasyonu chat_join_request güncellemesi ister (etkin).",
+        "Onaylı kullanıcılar muaftır değil: her yeni üye captchayı grup başına tam bir kez çözer."
       ]
     }
   },
@@ -420,15 +450,18 @@
       "overview": [
         "Kara listedeki kelimelerle (düz veya /regex/ biçimi), bağlantılarla veya flood ile eşleşen mesajları siler.",
         "Tekrarlayan ihlaller stüdyo düzeyi ban ve sohbetten atmaya yükselir.",
-        "Banlanan kullanıcılar inceleme ve manuel ban kaldırma için burada listelenir."
+        "Banlanan kullanıcılar inceleme ve manuel ban kaldırma için burada listelenir.",
+        "İkisi de etkinken Locks bu modülden önce çalışır; kilit isabetleri blacklist'e ulaşmaz."
       ],
       "setup": [
         "Bota mesaj silme yetkisi olan yönetici hakları verin.",
-        "Yanlış pozitifleri önlemek için eşikleri temkinli ayarlayın."
+        "Yanlış pozitifleri önlemek için eşikleri temkinli ayarlayın.",
+        "Buraya yazılan uyarılar Group Moderation Commands defterini paylaşır — limit ve modlar ikisine de uygulanır."
       ],
       "troubleshooting": [
         "Regex girdileri /pattern/flags biçimini kullanır, örn. /\\bfree crypto\\b/i.",
-        "Flood pencereleri grup ve kullanıcı başınadır ve bellekte tutulur."
+        "Flood pencereleri grup ve kullanıcı başınadır ve bellekte tutulur.",
+        "Adminler ve onaylı kullanıcılar blacklist, link ve flood kontrollerinden her zaman muaftır."
       ]
     }
   },
@@ -467,16 +500,19 @@
       "overview": [
         "Kullanıcılar /giveaway ve inline Katıl butonlarıyla katılır.",
         "Zorunlu kanallardaki üyelik getChatMember ile doğrulanır.",
-        "Kazananlar, katılımcı listesinden yeniden üretilebilir tohumlu karıştırma ile seçilir."
+        "Kazananlar, katılımcı listesinden yeniden üretilebilir tohumlu karıştırma ile seçilir.",
+        "Zorunlu kanallar Chat Connections'dan seçilir; üyelik kontrolleri botun o kanallarda admin olmasını gerektirir."
       ],
       "setup": [
         "Botu her zorunlu kanalda yönetici olarak ekleyin.",
         "Çekilişi kanal kimlikleri ve bir bitiş zamanıyla oluşturun.",
-        "Katılımcı toplamaya başlamak için topluluğunuzda /giveaway duyurun."
+        "Katılımcı toplamaya başlamak için topluluğunuzda /giveaway duyurun.",
+        "Katılımı artırmak için çekilişi oluşturduktan hemen sonra Broadcast ile duyurun."
       ],
       "troubleshooting": [
         "Bot kanal üye listesini göremediğinde doğrulama başarısız olur.",
-        "Çekilişler, ends_at geçtikten sonra 60 saniyede bir çalışır."
+        "Çekilişler, ends_at geçtikten sonra 60 saniyede bir çalışır.",
+        "Puan ödülü çekilişlerin parçası değildir — kazananlar çekilir, puanlanmaz."
       ]
     }
   },
@@ -494,15 +530,18 @@
     "docs": {
       "overview": [
         "Kullanıcılar t.me/bot?start=ref_<id> derin bağlantılarını paylaşır; atama otomatiktir.",
-        "Tavsiye edenler anında puan kazanır; /top güncel sıralamayı gösterir."
+        "Tavsiye edenler anında puan kazanır; /top güncel sıralamayı gösterir.",
+        "Bakiyeler Audience CRM'de görünür ve AI Assistant puan sorularında bunları aktarır."
       ],
       "setup": [
         "Modülü etkinleştirin ve tavsiye başına ödülü yapılandırın.",
-        "Kişisel bağlantı desenini topluluğunuza duyurun."
+        "Kişisel bağlantı desenini topluluğunuza duyurun.",
+        "Topluluğa kişisel bağlantı desenini öğretmek için Broadcast ile birleştirin."
       ],
       "troubleshooting": [
         "Kendi kendine tavsiyeler ve tekrar atamalar yok sayılır.",
-        "Davet edilen geldiğinde tavsiye edenin kayıtlı bir abone olması gerekir."
+        "Davet edilen geldiğinde tavsiye edenin kayıtlı bir abone olması gerekir.",
+        "Referans puanları otomatik geri alınamaz; gerekiyorsa CRM'den puanı düzeltin."
       ]
     }
   },
@@ -517,15 +556,18 @@
     "docs": {
       "overview": [
         "sendPoll tabanlı, doğru cevapları otomatik puanlanan yarışmalar.",
-        "Puanlar ve yarışma başına skor tabloları liderlik için kalıcıdır (/scoreboard)."
+        "Puanlar ve yarışma başına skor tabloları liderlik için kalıcıdır (/scoreboard).",
+        "Puanlar referans ve tepki puanlarıyla aynı deftere düşer; /scoreboard quiz bazında geri okur."
       ],
       "setup": [
         "Yarışmaları etkileşim sekmesinde oluşturun (soru, seçenekler, doğru indeks, puan).",
-        "Kullanıcılar yapılandırılan komutla rastgele bir yarışma başlatır."
+        "Kullanıcılar yapılandırılan komutla rastgele bir yarışma başlatır.",
+        "Tetikleyici komutu gruplarda paylaşın — quizler grup yüzeyi etkileşimidir."
       ],
       "troubleshooting": [
         "Puanlama için anketler anonim olmamalıdır; modül bunu zorunlu kılar.",
-        "Tepki analitiği aynı etkileşim sekmesinde yer alır."
+        "Tepki analitiği aynı etkileşim sekmesinde yer alır.",
+        "Quiz anketleri için botun grupta anket gönderebilmesi dışında ek yetki gerekmez."
       ]
     }
   },
@@ -540,15 +582,18 @@
     "docs": {
       "overview": [
         "Gönderilerdeki emoji tepkilerini sayar ve tepki veren üyeye puan verir.",
-        "Özet grafik, hangi emojilerin kitlede karşılık bulduğunu gösterir."
+        "Özet grafik, hangi emojilerin kitlede karşılık bulduğunu gösterir.",
+        "Otomatik çalışır: motor message_reaction güncellemelerine abonedir — ekstra BotFather ayarı gerekmez."
       ],
       "setup": [
         "Botu izlenen kanalda yönetici olarak ekleyin.",
-        "Tepki güncellemeleri, sohbetin bot tepki olaylarına izin vermesini gerektirir."
+        "Tepki güncellemeleri, sohbetin bot tepki olaylarına izin vermesini gerektirir.",
+        "Botun görebildiği tepkilerin birikmesi için bağlantılı tartışma grubu olan kanallarda en iyisidir."
       ],
       "troubleshooting": [
         "Anonim tepki verenler eşleştirilemez ve atlanır.",
-        "Yalnızca emoji tepkileri sayılır; ücretli ve özel tepkiler yok sayılır."
+        "Yalnızca emoji tepkileri sayılır; ücretli ve özel tepkiler yok sayılır.",
+        "Botun aboneliğinden eski gönderilerdeki tepkiler geriye dönük sayılmaz."
       ]
     }
   },
@@ -574,19 +619,22 @@
         "Gruplarınızdaki her üye mesajı günlük bir etkinlik kaydı oluşturur: mesajlar, başkalarına yanıtlar ve medya ayrı sayılır.",
         "Ağırlıklı puan, herhangi bir dönem için (bugün, 7 gün, 30 gün veya tüm zamanlar) en aktif üyeleri sıralar.",
         "Zengin liderlik mesajları (başlık, üye başına satır şablonu, altbilgi, madalyalar, ayrıştırma modu, sessiz bayrağı) anında veya yinelenen zamanlamayla bir ya da birden çok bağlı sohbete gönderilebilir.",
-        "Zamanlamalar UTC üzerinde tek seferlik, saatlik, günlük ve haftalık yinelenmeleri destekler."
+        "Zamanlamalar UTC üzerinde tek seferlik, saatlik, günlük ve haftalık yinelenmeleri destekler.",
+        "Adminler dahil tüm üye mesajlarını sayar; servis mesajları ve botlar yok sayılır."
       ],
       "setup": [
         "Bot, gruplardaki üye mesajlarını görebilsin diye BotFather üzerinden gizlilik modunu kapatın (veya botu yönetici yapın).",
         "Modülü etkinleştirin ve yapılandırma kartındaki puan ağırlıklarını ayarlayın.",
         "Bir veya birden çok hedef sohbet seçin, mesaj biçimini yer tutucularla tasarlayın ve canlı önizlemeyi kontrol edin.",
-        "Tek seferlik gönderim için Şimdi gönder'e, otomatikleştirmek için Zamanlama olarak kaydet'e basın."
+        "Tek seferlik gönderim için Şimdi gönder'e, otomatikleştirmek için Zamanlama olarak kaydet'e basın.",
+        "Editördeki sohbet seçici, Broadcast ve Scheduler gibi Chat Connections'ı yeniden kullanır."
       ],
       "troubleshooting": [
         "Liderlik tablosunda üye olmaması genellikle gizlilik modunun grup mesajlarını bottan sakladığı anlamına gelir.",
         "Servis mesajları (katılmalar, sabitlemeler, başlık değişiklikleri) skora asla katılmaz.",
         "Bot hedef sohbetin üyesi değilse veya gönderim hakkı yoksa gönderim 403 ile başarısız olur.",
-        "Zamanlanmış saatler UTC kullanır; günlük/haftalık çalıştırımlar yapılandırılan HH:mm'de tetiklenir."
+        "Zamanlanmış saatler UTC kullanır; günlük/haftalık çalıştırımlar yapılandırılan HH:mm'de tetiklenir.",
+        "Zamanlanmış tablolar Bot ayarlarındaki botun saat dilimini kullanır."
       ]
     }
   },
@@ -643,17 +691,20 @@
       "overview": [
         "Özel kullanıcı mesajlarını kurumsal bir tonda 7/24 yanıtlar.",
         "OpenAI Chat Completions protokolünü konuşur; OpenRouter, DeepSeek, Groq, Ollama, vLLM dahil her OpenAI-uyumlu hizmet çalışır. Gemini yerel API'sini kullanır.",
-        "Bağlama uygun yanıtlar için kullanıcı başına kısa bir geçmiş tutar."
+        "Bağlama uygun yanıtlar için kullanıcı başına kısa bir geçmiş tutar.",
+        "Sadakat puanı bakiyelerini ve son mini uygulama siparişlerini bilir — kullanıcı puan veya teslimat sorunca bunları aktarır."
       ],
       "setup": [
         "Bir sağlayıcı seçin: openai, openrouter, gemini veya custom (kendi OpenAI-uyumlu temel URL'niz).",
         "API anahtarını yapıştırın, model kimliğini sağlayıcı biçiminde girin (OpenRouter openai/gpt-4o-mini gibi satıcı/model kullanır) ve sistem promptunu ayarlayın.",
-        "Etkinleştirmeden önce yerleşik test düğmesini kullanın."
+        "Etkinleştirmeden önce yerleşik test düğmesini kullanın.",
+        "Öfke sınıflandırıcısının eskalasyonları Destek açık olmasa bile otomatik olarak Destek Masası bileti oluşturur."
       ],
       "troubleshooting": [
         "Asistan, destek masasına ve otomatik yanıtlayıcı anahtar kelime kurallarına öncelik tanır.",
         "Sağlayıcı hataları sohbette geçici erişilemez bildirimi olarak görünür.",
-        "Sesli transkripsiyon OpenAI-uyumlu bir /audio/transcriptions ucu gerektirir; OpenRouter bu ucu sunmaz, transcriptionModel'i uyumlu bir sağlayıcıya (OpenAI, Groq, yerel Whisper) yönlendirin."
+        "Sesli transkripsiyon OpenAI-uyumlu bir /audio/transcriptions ucu gerektirir; OpenRouter bu ucu sunmaz, transcriptionModel'i uyumlu bir sağlayıcıya (OpenAI, Groq, yerel Whisper) yönlendirin.",
+        "Bilgi erişimi ve araç bağlamı yalnızca özel sohbetlerde çalışır; grup mesajları yanıtlanmaz."
       ]
     }
   },
@@ -685,15 +736,18 @@
     "docs": {
       "overview": [
         "/fiyat ve /sss gibi özel komutlar medya ile anında yanıtlanır.",
-        "Eğik çizgisiz tetikleyiciler, mesaj alt dizileriyle anahtar kelime otomatik yanıtları olarak eşleşir."
+        "Eğik çizgisiz tetikleyiciler, mesaj alt dizileriyle anahtar kelime otomatik yanıtları olarak eşleşir.",
+        "Kurallar artık gruplarda da çalışabilir — her kuralı özel/grup/her ikisi olarak kapsamlayın, gerekirse tek sohbete sabitleyin."
       ],
       "setup": [
         "Kurallar oluşturun; komutlar / ile başlamalı, anahtar kelimeler başlamamalıdır.",
-        "Fotoğraf URL'leri ve inline butonlar isteğe bağlı zenginleştirmelerdir."
+        "Fotoğraf URL'leri ve inline butonlar isteğe bağlı zenginleştirmelerdir.",
+        "Anahtar kelime eşleşmesi o mesaj için çift yanıtı önlemek üzere AI Assistant'ı geçici olarak durdurur."
       ],
       "troubleshooting": [
         "Başlangıç Menüsü modülü /start'a sahip olduğunda menüsü öncelik alır.",
-        "Anahtar kelime kuralları çift yanıtı önlemek için AI asistan yanıtlarını da duraklatır."
+        "Anahtar kelime kuralları çift yanıtı önlemek için AI asistan yanıtlarını da duraklatır.",
+        "Hashtag notları (#sss) ve prefix/exact modları kuralın kapsamındaki her sohbet yüzeyinde çalışır."
       ]
     }
   },
@@ -711,15 +765,18 @@
     "docs": {
       "overview": [
         "Kullanıcıların Telegram Stars ödeyerek açtığı medya gönderir.",
-        "Gelir, bot sahibinin Fragment bakiyesine aktarılır."
+        "Gelir, bot sahibinin Fragment bakiyesine aktarılır.",
+        "Yalnızca panelden tetiklenir — ücretli içeriği doğru kitleye duyurmak için Broadcast ile eşleştirin."
       ],
       "setup": [
         "Gelir sekmesinden herhangi bir sohbet kimliğine ücretli medya gönderin.",
-        "Her gönderiyi Stars ile fiyatlandırın; alıcılar yerel ödeme duvarı görür."
+        "Her gönderiyi Stars ile fiyatlandırın; alıcılar yerel ödeme duvarı görür.",
+        "Alıcılar Telegram Stars ile öder; modern bir Bot API dışında ek bot yapılandırması gerekmez."
       ],
       "troubleshooting": [
         "sendPaidMedia destekleyen bir Bot API sürümü gerektirir.",
-        "Medya, herkese açık erişilebilir URL'ler olmalıdır."
+        "Medya, herkese açık erişilebilir URL'ler olmalıdır.",
+        "Stars geliri stüdyoya değil bot sahibinin Fragment ödemesine işler."
       ]
     }
   },
@@ -741,15 +798,18 @@
     "docs": {
       "overview": [
         "createChatSubscriptionInviteLink, Stars faturalı davet bağlantıları üretir.",
-        "Süresi biten üyeler tarama zamanlayıcısı tarafından otomatik çıkarılır."
+        "Süresi biten üyeler tarama zamanlayıcısı tarafından otomatik çıkarılır.",
+        "Yalnızca @kullanıcı adı olan bağlantılar VIP aboneliği barındıramaz — Chat Connections'tan sayısal kanal id gerekir."
       ],
       "setup": [
         "Özel bir kanal oluşturun ve botu yönetici olarak ekleyin.",
-        "Kanal kimliğini, süreyi ve Stars fiyatını ayarlayın, ardından abonelik tanımlayın."
+        "Kanal kimliğini, süreyi ve Stars fiyatını ayarlayın, ardından abonelik tanımlayın.",
+        "Abonelikleri Monetization sekmesinden verin; süre tarayıcısı süresi biten üyeleri her dakika çıkarır."
       ],
       "troubleshooting": [
         "Kanal, botun davet bağlantılarını yönetmesine izin vermelidir.",
-        "Çıkarma ban + unban ile yapılır; üye yeniledikten sonra tekrar katılabilir."
+        "Çıkarma ban + unban ile yapılır; üye yeniledikten sonra tekrar katılabilir.",
+        "Çıkarma başarısızsa botun VIP kanalında hâlâ ban yetkisi olduğunu kontrol edin."
       ]
     }
   },
@@ -760,16 +820,19 @@
       "overview": [
         "Olayları (siparişler, form gönderimleri, destek etkinliği) Zapier, Make veya n8n'e aktarın.",
         "Her teslimat, X-Studio-Signature içinde HMAC-SHA256 ile imzalanır.",
-        "Gelen kancalar, dış sistemlerden şablonlu mesajları bir sohbete işler."
+        "Gelen kancalar, dış sistemlerden şablonlu mesajları bir sohbete işler.",
+        "order_created, order_paid ve form_submitted Mini App ödemelerinden ve formlarından tetiklenir — bunları teslimat araçlarına bağlayın."
       ],
       "setup": [
         "Paylaşılan gizli anahtar ve olay filtresiyle giden bir uç nokta kaydedin.",
         "Yüklere güvenmeden önce imzaları alıcı tarafta doğrulayın.",
-        "Gelen taraf için bir kanca oluşturun ve URL'sine JSON POST edin."
+        "Gelen taraf için bir kanca oluşturun ve URL'sine JSON POST edin.",
+        "İmzaları ayıklamak için teslimat günlüğü sekmesini kullanın; her payload HMAC ile imzalıdır."
       ],
       "troubleshooting": [
         "Boş olay listesi, uç noktayı her olaya abone eder.",
-        "Başarısız teslimatlar teslimat günlüğü sekmesine kaydedilir."
+        "Başarısız teslimatlar teslimat günlüğü sekmesine kaydedilir.",
+        "Gelen hooklar tasarım gereği JWT korumasını atlar — hook id'lerini tahmin edilmez tutun."
       ]
     }
   },
@@ -780,18 +843,21 @@
       "overview": [
         "Telegram Mini Uygulamalarını doğrudan stüdyodan, birleşik /tma/* rotası üzerinde oluşturun ve barındırın.",
         "Beş kurumsal şablon: E-Ticaret vitrini, Sadakat merkezi, dinamik Formlar, günlük Çark ve dış Webview sarmalayıcı.",
-        "Yerleşik telefon önizlemesi canlı uygulamayı gösterir; yayınlama sohbet menü butonunu tek tıkla bağlar."
+        "Yerleşik telefon önizlemesi canlı uygulamayı gösterir; yayınlama sohbet menü butonunu tek tıkla bağlar.",
+        "Siparişler ve form gönderimleri Webhooks olaylarını ve AI Assistant'ın sipariş farkında yanıtlarını besler."
       ],
       "setup": [
         "Bir BotFather botu oluşturun ve stüdyoya kaydedin (bot çalışıyor olmalıdır).",
         "Bir Mini Uygulama oluşturun, şablon seçin ve JSON yapılandırmasını ayarlayın.",
         "Telegram HTTPS barındırma ister: yayınlamadan önce genel temel URL'yi ayarlayın.",
-        "Sohbet sol-alt menü butonunu setChatMenuButton ile ayarlamak için yayınlayın."
+        "Sohbet sol-alt menü butonunu setChatMenuButton ile ayarlamak için yayınlayın.",
+        "Yayınlama, herkese açık HTTPS taban URL ve setChatMenuButton için çalışan bir bot gerektirir."
       ],
       "troubleshooting": [
         "Telegram Mini Uygulamalar için HTTPS genel adres ister; localhost yalnızca bayraklarla Telegram Desktop içinde çalışır.",
         "Mini Uygulama API çağrıları, sahip bot tokenine bağlı initData HMAC-SHA256 imzalarıyla doğrulanır.",
-        "Webview şablonu, X-Frame-Options veya CSP frame-ancestors kısıtlaması gönderen siteleri çerçeveleyemez."
+        "Webview şablonu, X-Frame-Options veya CSP frame-ancestors kısıtlaması gönderen siteleri çerçeveleyemez.",
+        "Spin ve sadakat verisi bota özeldir — klonlama uygulama kabuklarını kopyalar, oyuncu verilerini kopyalamaz."
       ]
     }
   },
@@ -828,16 +894,19 @@
         "Grup içinde doğrudan tam admin komut seti.",
         "ban/mute/kick aileleri: süreli (tban/tmute), mesaj-silen (d*) ve sessiz (s*) varyantlar.",
         "Kalıcı uyarılar: sınır, mod ve süre sona ermesi ayarlanabilir; purge komutları dahil.",
-        "Onaylı kullanıcılar otomatik moderasyondan muaf tutulur."
+        "Onaylı kullanıcılar otomatik moderasyondan muaf tutulur.",
+        "Burada verilen uyarılar moderation modülünün blacklist-warn moduyla aynı defteri paylaşır; limit iki tarafta bir kez uygulanır."
       ],
       "setup": [
         "Modülü etkinleştirin, sonra grupta /ban, /mute, /warn, /purge komutlarını kullanın.",
         "Bot, sınır ve silme yetkileriyle grup yöneticisi olmalı.",
-        "Varsayılanları buradan ayarlayın; gruplar /setwarnlimit ve /setwarnmode ile geçersiz kılabilir."
+        "Varsayılanları buradan ayarlayın; gruplar /setwarnlimit ve /setwarnmode ile geçersiz kılabilir.",
+        "Her eylem, Admin Log Channel etkin olduğundan ona iletilir — tam denetim izi için ikisini birlikte çalıştırın."
       ],
       "troubleshooting": [
         "Purge yalnızca 48 saatten yeni mesajlara ulaşır (Telegram kısıtı).",
-        "Uyarılar veritabanında kalıcıdır; /resetwarn kullanıcıyı tamamen temizler."
+        "Uyarılar veritabanında kalıcıdır; /resetwarn kullanıcıyı tamamen temizler.",
+        "Komutlar stüdyo rollerini değil Telegram admin haklarını denetler: restrict yetkisi olmayan admin banlayamaz."
       ]
     }
   },
@@ -862,15 +931,18 @@
         "Pin ailesi: /pin, /pin loud, /permapin, /unpin, /unpinall ve bağlı kanal kontrolleri.",
         "Kullanıcı raporları: /report ve @admin tüm yöneticileri görünmezce etiketler.",
         "Sorgular (/id, /info), admin listesi, promote/demote ve /echo.",
-        "Grup bazlı komut devre dışı bırakma: /disable ve /enable."
+        "Grup bazlı komut devre dışı bırakma: /disable ve /enable.",
+        "Komut devre dışı bırakma bu modülün kullanıcı yüzü komutlarına (/adminlist, /id, /info, /report) uygulanır."
       ],
       "setup": [
         "Modülü etkinleştirin; her komut Telegram'ın native yönetici izinlerini denetler.",
-        "Pin komutları pin yetkı, komut kapatma change-info yetkisi ister."
+        "Pin komutları pin yetkı, komut kapatma change-info yetkisi ister.",
+        "Raporlar adminleri ve bot göndericileri atlar; yalnızca insan üyeler tetikleyebilir."
       ],
       "troubleshooting": [
         "Yöneticiler raporlanamaz.",
-        "Anonim yöneticiler, owner hariç tüm yetkilerle güvenilir sayılır."
+        "Anonim yöneticiler, owner hariç tüm yetkilerle güvenilir sayılır.",
+        "/echo, bot adına gönderdiği için change-info yetkisi ister."
       ]
     }
   },
@@ -899,15 +971,18 @@
         "45+ kilit türü: medya, sticker, anket, forward, link, buton.",
         "Yazı sistemi kilitleri (rtl, cjk, cyrillic, zalgo) ve anonim kanal koruması.",
         "İzin listesi belirli alan adı, paket, forward ve komutları muaf tutar.",
-        "/lock <tür> ### sebep {aksiyon} ile kilit başına özel ceza."
+        "/lock <tür> ### sebep {aksiyon} ile kilit başına özel ceza.",
+        "Kilit ihlalleri Group Moderation uyarı limitini ve modunu paylaşan uyarılar yazabilir."
       ],
       "setup": [
         "Modülü etkinleştirin ve /lock gif poll url ile içerik türlerini kilitleyin.",
-        "Yöneticiler ve onaylı kullanıcılar her zaman muaf tutulur."
+        "Yöneticiler ve onaylı kullanıcılar her zaman muaf tutulur.",
+        "Kilit değerlendirmesi blacklist'ten önce çalışır — öngörülebilir yığın için Locks'u Moderation ile birlikte açın."
       ],
       "troubleshooting": [
         "Kilitler blacklist'ten önce çalışır.",
-        "Bot göndericileri ve servis mesajları asla kilitlenmez."
+        "Bot göndericileri ve servis mesajları asla kilitlenmez.",
+        "Gruplu medya öğe başına sayılır; albüm kilidi tekli türler geçse bile medya gruplarını yakalar."
       ]
     }
   },
@@ -929,15 +1004,18 @@
       "overview": [
         "Raid modu, saldırı boşalana kadar her yeni katılanı kısa süreli banlar.",
         "Manuel /antiraid on/off veya özel süre.",
-        "/autoantiraid N, dakikada N katılım olunca otomatik devreye alır."
+        "/autoantiraid N, dakikada N katılım olunca otomatik devreye alır.",
+        "Captcha modülünü tamamlar: AntiRaid giriş fırtınasını boşaltır, captcha sonra kalanları doğrular."
       ],
       "setup": [
         "Modülü etkinleştirin; saldırı anında /antiraid on ile devreye alın.",
-        "Masum geç katılanlar uzun banlanmasın diye süreleri ayarlayın."
+        "Masum geç katılanlar uzun banlanmasın diye süreleri ayarlayın.",
+        "Durum tasarım gereği bellektedir — yeniden başlatmalarda yeniden kurun veya otomatik iyileşme için auto-antiraid ayarlayın."
       ],
       "troubleshooting": [
         "Raid durumu bellekte; yeniden başlatma aktif raid modunu kapatır.",
-        "CAPTCHA veya katılım isteği spam katılımı tamamen önler."
+        "CAPTCHA veya katılım isteği spam katılımı tamamen önler.",
+        "Gruba katılan diğer botlar AntiRaid tarafından asla banlanmaz."
       ]
     }
   },
@@ -959,15 +1037,18 @@
       "overview": [
         "/rules kuralları grupta veya PM derin-link butonuyla gösterir.",
         "{rules} placeholder aynı linki karşılama mesajlarına gömer.",
-        "/setrules, /resetrules, /privaterules ve /setrulesbutton ile yönetilir."
+        "/setrules, /resetrules, /privaterules ve /setrulesbutton ile yönetilir.",
+        "{rules} yer tutucusu karşılama metinlerinde, notlarda ve tüm şablonlu modül mesajlarında çalışır."
       ],
       "setup": [
         "Modülü etkinleştirin ve kural metnini ayarlayın (veya grupta /setrules).",
-        "Özel teslim için kullanıcıların botu PM'de başlatması gerekir."
+        "Özel teslim için kullanıcıların botu PM'de başlatması gerekir.",
+        "Özel teslim, kullanıcının botu başlatmış olmasını gerektirir; aksi halde buton boş bir sohbet açar."
       ],
       "troubleshooting": [
         "Boş kural metninde /rules \"kural yok\" der.",
-        "Derin link yalnızca herkese açık bot kullanıcı adıyla çalışır."
+        "Derin link yalnızca herkese açık bot kullanıcı adıyla çalışır.",
+        "Kural metni, her mesajlaşma modülündeki HTML alt kümesini destekler."
       ]
     }
   },
@@ -988,15 +1069,18 @@
       "overview": [
         "Ban, mute, uyarı, ayar değişikliği ve raporların kalıcı günlüğü.",
         "Kategori filtreleri: settings, admin, user, automated, reports, other.",
-        "/setlog <kanalId> (grup sahibi) veya dashboard üzerinden bağlayın."
+        "/setlog <kanalId> (grup sahibi) veya dashboard üzerinden bağlayın.",
+        "Group Moderation, Locks, Moderation otomasyonu, Group Tools raporları ve ayar değişikliklerinden olayları tüketir."
       ],
       "setup": [
         "Bir kanal oluşturun, botu yönetici yapın ve id'sini buraya yazın.",
-        "Günlüklemeyi bağlamak için grupta /setlog <kanalId> çalıştırın."
+        "Günlüklemeyi bağlamak için grupta /setlog <kanalId> çalıştırın.",
+        "Tek kanal birkaç gruptan log alabilir; kategori filtreleri grup başınadır."
       ],
       "troubleshooting": [
         "Günlük kanalı kanal olmalı; gruplar log alamaz.",
-        "Botu kanaldan çıkarmak günlüklemeyi sessizce durdurur."
+        "Botu kanaldan çıkarmak günlüklemeyi sessizce durdurur.",
+        "Log mesajları Telegram hız limitlerine uyar; yoğunlar otomatik yeniden deneme katmanı tarafından kuyruklanır."
       ]
     }
   },
@@ -1019,15 +1103,18 @@
       "overview": [
         "Kullanılan komutlar çalıştıktan sonra kaybolur (admin/user/other sınıfına göre).",
         "Servis mesajları (katılım, sabitleme, başlık ve foto değişimi) tür bazlı silinir.",
-        "Botun kendi grup mesajları beş dakika sonra kendini yok edebilir."
+        "Botun kendi grup mesajları beş dakika sonra kendini yok edebilir.",
+        "Komut metinlerini modül yanıtlarına ve duyurulara dokunmadan yürütme sonrası kaldırır."
       ],
       "setup": [
         "Modülü etkinleştirin ve hangi komut sınıflarının temizleneceğini seçin.",
-        "Sohbeti derli toplu tutmak için join, leave gibi türler ekleyin."
+        "Sohbeti derli toplu tutmak için join, leave gibi türler ekleyin.",
+        "Her modülle güvenlidir: temizlik asla kullanıcı içeriğini silmez, yalnızca komut ve servis mesajlarını siler."
       ],
       "troubleshooting": [
         "Komutlar çalışmaya devam etsin diye kısa gecikmeyle silinir.",
-        "Bot mesajı temizliği gönderme dışında ek yetki istemez."
+        "Bot mesajı temizliği gönderme dışında ek yetki istemez.",
+        "cleanCommand yalnızca bu botun bilinen komut sınıflarıyla eşleşir, diğer botların komutlarıyla değil."
       ]
     }
   },
@@ -1044,15 +1131,18 @@
       "overview": [
         "Forum konusu komutları: /newtopic, /renametopic, /closetopic, /reopentopic, /deletetopic.",
         "/setactiontopic bot çıktısını tek bir konuya yönlendirir.",
-        "Her komut, etkilediği konunun içinde çalışır."
+        "Her komut, etkilediği konunun içinde çalışır.",
+        "Kullanıcı başına bir konu açan Destek Masasından bağımsızdır; bu modül forum yapısı komutlarını yönetir."
       ],
       "setup": [
         "Modülü forum etkin bir süpergrupta etkinleştirin.",
-        "Bota konu yönetimi (manage topics) yönetici hakkı verin."
+        "Bota konu yönetimi (manage topics) yönetici hakkı verin.",
+        "Bu komutları yalnızca forum etkin süpergruplar kabul eder."
       ],
       "troubleshooting": [
         "Bu komutlar yalnızca forum konularında çalışır.",
-        "Konu silmek mesajlarını kalıcı olarak kaldırır."
+        "Konu silmek mesajlarını kalıcı olarak kaldırır.",
+        "Konu yönetimi manage-topics hakkını denetler — Destek Masasının konu açmak için istediği aynı hak."
       ]
     }
   },
@@ -1074,16 +1164,19 @@
       "overview": [
         "Tek ban listesi, tüm gruplar: /fban kullanıcıyı federasyondaki tüm sohbetlerden çıkarır.",
         "Sadece bir botu değil, stüdyodaki tüm botları kapsar.",
-        "Fed yöneticileri, abonelikler (maks 5), günlükler ve CSV/JSON içe aktarma."
+        "Fed yöneticileri, abonelikler (maks 5), günlükler ve CSV/JSON içe aktarma.",
+        "Federasyon banları kilitlerden ve blacklist'ten önce uygulanır — fed-banlı kullanıcı katıldığı ilk sohbette çıkarılır."
       ],
       "setup": [
         "Botun PM'inde /newfed <ad> ile federasyon oluşturun.",
         "Grupları /joinfed <fedId> ile katın (grup sahibi çalıştırır).",
-        "Banları ve içe aktarmaları aşağıdaki yöneticiden yapın."
+        "Banları ve içe aktarmaları aşağıdaki yöneticiden yapın.",
+        "Federasyonlar stüdyodaki her botta çalışır: tek bir ban listesi için iki botun gruplarını aynı fed'e katın."
       ],
       "troubleshooting": [
         "Pasif uygulama chat_member güncellemesi ister (zaten etkin).",
-        "/leavefed, banlar kaldırılana kadar geçmiş banları korur."
+        "/leavefed, banlar kaldırılana kadar geçmiş banları korur.",
+        "Bot-ötesi uygulama her botun çevrimiçi olmasını gerektirir; çevrimdışı botlar kullanıcıyı yeniden gördüğünde uygular."
       ]
     }
   },
@@ -1099,15 +1192,18 @@
       "overview": [
         "/setlang tüm bot yanıtlarını desteklenen diller arasında değiştirir.",
         "Tüm moderasyon, captcha, federasyon ve araç mesajları yerelleşir.",
-        "Kullanıcı şablonları (karşılama metni, notlar) yazıldığı gibi kalır."
+        "Kullanıcı şablonları (karşılama metni, notlar) yazıldığı gibi kalır.",
+        "Her grup modülünün sabit mesajlarını etkiler; kullanıcıya ait şablonlar yazıldığı gibi kalır."
       ],
       "setup": [
         "Modülü etkinleştirin ve bir varsayılan seçin.",
-        "Gruplar /setlang ile istediği zaman değiştirir."
+        "Gruplar /setlang ile istediği zaman değiştirir.",
+        "Grup geçersiz kılmaları panel varsayılanını geçer; özel sohbetler her zaman İngilizce yanıtlar."
       ],
       "troubleshooting": [
         "Desteklenen diller: İngilizce, Türkçe, Almanca, Rusça, İspanyolca, Azerice, Arapça, Fransızca, İtalyanca, Portekizce, Ukraynaca, Farsça, Endonezce, Özbekçe.",
-        "Özel sohbetler varsayılan olarak İngilizcedir."
+        "Özel sohbetler varsayılan olarak İngilizcedir.",
+        "Dil değişikliği bir sonraki mesajda etkili olur (kısa önbellek penceresi)."
       ]
     }
   },
@@ -1128,15 +1224,18 @@
       "overview": [
         "Otomasyon ve AI botları moderasyon komutlarını kullanabilir.",
         "Bot kaynaklı admin aksiyonları Onayla/Ret butonları ardına kuyruklanır.",
-        "Güvenilen botlar için incelemeyi atlayıp gerçek yetkileri koruyabilirsiniz."
+        "Güvenilen botlar için incelemeyi atlayıp gerçek yetkileri koruyabilirsiniz.",
+        "Grup komut modüllerini (Group Moderation, Group Tools) kısıtlar; özel sohbet modülleri bot göndericilerini zaten yok sayar."
       ],
       "setup": [
         "Modülü etkinleştirin ve bir mod seçin (varsayılan off).",
-        "Diğer bot, normal bir yönetici gibi /ban gibi komutlar göndersin."
+        "Diğer bot, normal bir yönetici gibi /ban gibi komutlar göndersin.",
+        "admin modu ve skipReview kapalıyla başlayın; yalnızca güvenilen otomasyon filoları için all'a geçin."
       ],
       "troubleshooting": [
         "Komutu veren botun yine kendi Telegram yönetici hakları gerekir.",
-        "İncelemeler bellekte tutulur; yeniden başlatmada düşer."
+        "İncelemeler bellekte tutulur; yeniden başlatmada düşer.",
+        "Bot göndericiler için kısıt yeteneği olan komutlarda botun kendi Telegram admin hakları da gerekir."
       ]
     }
   }
