@@ -27,6 +27,17 @@ import PaidIcon from '@mui/icons-material/Paid';
 import StarIcon from '@mui/icons-material/Star';
 import WebhookIcon from '@mui/icons-material/Webhook';
 import WidgetsIcon from '@mui/icons-material/Widgets';
+import ShieldIcon from '@mui/icons-material/Shield';
+import BuildIcon from '@mui/icons-material/Build';
+import LockIcon from '@mui/icons-material/Lock';
+import SecurityIcon from '@mui/icons-material/Security';
+import ArticleIcon from '@mui/icons-material/Article';
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
+import CleaningServicesIcon from '@mui/icons-material/CleaningServices';
+import ForumIcon2 from '@mui/icons-material/Forum';
+import HubIcon from '@mui/icons-material/Hub';
+import TranslateIcon from '@mui/icons-material/Translate';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
 
 /** Module keys mapped to their icon components. */
 const MODULE_ICON_COMPONENTS: Record<string, React.ElementType> = {
@@ -51,6 +62,17 @@ const MODULE_ICON_COMPONENTS: Record<string, React.ElementType> = {
   'vip-subs': StarIcon,
   webhooks: WebhookIcon,
   'mini-apps': WidgetsIcon,
+  'group-moderation': ShieldIcon,
+  'group-tools': BuildIcon,
+  locks: LockIcon,
+  antiraid: SecurityIcon,
+  rules: ArticleIcon,
+  'admin-log': ReceiptLongIcon,
+  cleaning: CleaningServicesIcon,
+  topics: ForumIcon2,
+  federation: HubIcon,
+  language: TranslateIcon,
+  bot2bot: SmartToyIcon,
 };
 
 /**

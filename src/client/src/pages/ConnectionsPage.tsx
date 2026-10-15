@@ -29,6 +29,8 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SyncIcon from '@mui/icons-material/Sync';
+import SettingsIcon from '@mui/icons-material/Settings';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { apiFetch } from '../services/api';
@@ -84,6 +86,7 @@ export default function ConnectionsPage({
   module: ModuleEntry;
 }): React.ReactElement {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { connections, loading, refresh } = useConnections();
   const [form, setForm] = useState<Record<string, string> | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -315,6 +318,19 @@ export default function ConnectionsPage({
                       />
                     </TableCell>
                     <TableCell align="right">
+                      {(row.type === 'group' || row.type === 'supergroup') && (
+                        <Tooltip title={t('connectionSettings.title', { title: row.title })}>
+                          <IconButton
+                            size="small"
+                            onClick={() =>
+                              navigate(`/bots/${botId}/connections/${row.id}/settings`)
+                            }
+                            aria-label={`${t('connectionSettings.title', { title: row.title })}`}
+                          >
+                            <SettingsIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
                       <Tooltip title={t('actions.edit')}>
                         <IconButton
                           size="small"

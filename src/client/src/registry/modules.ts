@@ -478,34 +478,37 @@ export const MODULES: ModuleEntry[] = [
   },
   {
     key: 'welcome',
-    name: 'Welcome & Clean Chat',
+    name: 'Group Welcome & Goodbye',
     category: 'Community & Moderation',
-    description: 'New-member greetings with auto-delete and service message cleanup.',
+    description: 'Media greetings with buttons, goodbyes, clean-welcome, and service cleanup.',
     pageType: 'config',
     configFields: [
-      { key: 'template', label: 'Welcome template', type: 'textarea' },
-      {
-        key: 'autoDeleteSeconds',
-        label: 'Auto-delete after seconds (15-120, 0 = off)',
-        type: 'number',
-      },
-      { key: 'deleteServiceMessages', label: 'Delete join service messages', type: 'switch' },
-      { key: 'deleteLeaveMessages', label: 'Delete leave service messages', type: 'switch' },
+      { key: 'welcomeEnabled', label: "Welcome messages enabled", type: 'switch' },
+      { key: 'template', label: "Welcome template", type: 'textarea' },
+      { key: 'autoDeleteSeconds', label: "Auto-delete after (seconds, 0 = off)", type: 'number' },
+      { key: 'cleanWelcome', label: "Replace previous greeting", type: 'switch' },
+      { key: 'mediaUrl', label: "Welcome media URL", type: 'text', help: "Photo or video sent with the greeting caption" },
+      { key: 'buttonsJson', label: "Buttons JSON", type: 'text', help: "[{\"text\": \"Join channel\", \"url\": \"https://t.me/...\"}] one per row" },
+      { key: 'goodbyeEnabled', label: "Goodbye messages enabled", type: 'switch' },
+      { key: 'goodbyeText', label: "Goodbye template", type: 'textarea' },
+      { key: 'goodbyeMediaUrl', label: "Goodbye media URL", type: 'text' },
+      { key: 'deleteServiceMessages', label: "Delete join service messages", type: 'switch' },
+      { key: 'deleteLeaveMessages', label: "Delete leave service messages", type: 'switch' },
     ],
     docs: {
       overview: [
-        'Greets every new group member with a templated message and mention link.',
-        'Keeps chats clean by removing Telegram join/leave service messages.',
-        'Greetings can self-delete after 15 to 120 seconds.',
+        'Greets new members with templates, media and inline buttons.',
+        'Goodbye messages and clean-welcome keep exactly one greeting visible.',
+        'Join/leave service messages are removed automatically.',
       ],
       setup: [
-        'Disable bot privacy mode via BotFather so the bot sees join events.',
-        'Add the bot to the group as an administrator with delete permissions.',
-        'Compose the template using placeholders such as {mention} and {group_name}.',
+        'Add the bot as a group administrator with delete permissions.',
+        'Compose templates with placeholders such as {mention} and {group_name}.',
+        'Attach a media URL and buttons JSON for rich greetings.',
       ],
       troubleshooting: [
-        'Without admin rights the bot cannot delete service or greeting messages.',
-        'autoDeleteSeconds is clamped to the supported 15-120 range.',
+        'Media greetings fall back to text when the URL cannot be sent.',
+        'Auto-delete accepts 15 seconds up to one hour.',
       ],
     },
   },
@@ -513,27 +516,29 @@ export const MODULES: ModuleEntry[] = [
     key: 'captcha',
     name: 'Captcha Gatekeeper',
     category: 'Community & Moderation',
-    description: 'Button or math verification with automatic kick timers.',
+    description: 'Button, math or PM verification with kick timers and join requests.',
     pageType: 'config',
     configFields: [
-      { key: 'mode', label: 'Mode', type: 'select', options: ['button', 'math'] },
-      { key: 'timeoutSeconds', label: 'Timeout (seconds)', type: 'number' },
-      { key: 'kickOnFail', label: 'Kick on timeout', type: 'switch' },
-      { key: 'successText', label: 'Success message', type: 'text' },
+      { key: 'mode', label: "Mode", type: 'select', options: ["button", "math", "pm-math"], help: "pm-math challenges in PM and falls back to a button" },
+      { key: 'timeoutSeconds', label: "Timeout (seconds)", type: 'number' },
+      { key: 'kickOnFail', label: "Kick on timeout", type: 'switch' },
+      { key: 'successText', label: "Success message", type: 'text' },
+      { key: 'buttonText', label: "Verify button label", type: 'text' },
+      { key: 'joinRequestIntegration', label: "Handle join requests via PM captcha", type: 'switch' },
     ],
     docs: {
       overview: [
         'Anti-raid gate: new members must verify within the configured window.',
-        'Button mode taps to verify; math mode replies with a sum answer.',
-        'Unverified members are kicked (ban + unban) when the timer expires.',
+        'Button mode taps to verify; math replies with a sum; pm-math verifies in PM.',
+        'Members stay muted until verified and solve the captcha once per group.',
       ],
       setup: [
         'Add the bot as a group administrator with ban permissions.',
         'Choose a mode and timeout, then enable the module.',
       ],
       troubleshooting: [
-        'Kicks require administrator rights including can_restrict_members.',
-        'Pending challenges live in memory and reset on bot restart.',
+        'pm-math falls back to a group button when the user never started the bot.',
+        'Join-request integration needs chat_join_request updates (enabled).',
       ],
     },
   },
@@ -549,6 +554,9 @@ export const MODULES: ModuleEntry[] = [
       { key: 'floodMessageLimit', label: 'Flood limit (0 = off)', type: 'number' },
       { key: 'floodWindowSeconds', label: 'Flood window (seconds)', type: 'number' },
       { key: 'autoBanAfterStrikes', label: 'Auto-ban after strikes (0 = off)', type: 'number' },
+      { key: 'blocklistMode', label: "Blocklist mode", type: 'select', options: ["nothing", "warn", "kick", "ban", "tban", "mute", "tmute"], help: "Punishment for blocklist hits; per-entry {action} overrides this" },
+      { key: 'blocklistDelete', label: "Delete matching messages", type: 'switch' },
+      { key: 'floodMode', label: "Flood punishment", type: 'select', options: ["mute", "tmute", "kick", "ban", "tban"] },
     ],
     docs: {
       overview: [
@@ -931,6 +939,304 @@ export const MODULES: ModuleEntry[] = [
       troubleshooting: [
         'Empty event lists subscribe an endpoint to every event.',
         'Failed deliveries are logged in the delivery log tab.',
+      ],
+    },
+  },
+  {
+    key: 'group-moderation',
+    name: 'Group Moderation Commands',
+    category: 'Community & Moderation',
+    description: 'In-group admin commands: ban, mute, kick, warnings, purges, approvals, silent actions.',
+    pageType: 'config',
+    configFields: [
+      { key: 'warnLimit', label: "Warning limit", type: 'number', help: "Warnings before the warn mode punishment fires (0 disables)" },
+      { key: 'warnMode', label: "Warning mode", type: 'select', options: ["kick", "ban", "tban", "mute", "tmute"], help: "Punishment applied when the warn limit is reached" },
+      { key: 'warnTimeSeconds', label: "Warn expiry (seconds, 0 = off)", type: 'number' },
+      { key: 'silentActions', label: "Silent actions", type: 'switch', help: "s-commands and punishments without confirmation messages" },
+      { key: 'adminError', label: "Reply to non-admins", type: 'switch', help: "Show \"admin only\" errors to unauthorized users" },
+    ],
+    docs: {
+      overview: [
+        "Full admin command set directly in the group chat.",
+        "ban/mute/kick families with timed (tban/tmute), delete (d*) and silent (s*) variants.",
+        "Persistent warnings with configurable limit, mode and expiry, plus purge commands.",
+        "Approvals make trusted members immune to automated moderation.",
+      ],
+      setup: [
+        "Enable the module, then use /ban, /mute, /warn, /purge and friends in the group.",
+        "The bot must be a group administrator with restrict and delete rights.",
+        "Tune defaults here; groups can override them with /setwarnlimit and /setwarnmode.",
+      ],
+      troubleshooting: [
+        "Purges only reach messages younger than 48 hours (Telegram limitation).",
+        "Warnings persist in the database; /resetwarn clears a user entirely.",
+      ],
+    },
+  },
+  {
+    key: 'group-tools',
+    name: 'Group Admin Tools',
+    category: 'Community & Moderation',
+    description: 'Pins, user reports, admin list, /id and /info lookups, echo, and command disabling.',
+    pageType: 'config',
+    configFields: [
+      { key: 'reportsEnabled', label: "User reports enabled", type: 'switch', help: "/report and @admin notify group admins" },
+      { key: 'antichannelPins', label: "Unpin linked channel posts", type: 'switch' },
+      { key: 'cleanLinked', label: "Delete linked channel posts", type: 'switch', help: "Removes forwarded channel messages from the discussion group" },
+    ],
+    docs: {
+      overview: [
+        "Pin family: /pin, /pin loud, /permapin, /unpin, /unpinall, plus linked-channel controls.",
+        "User reports: /report and @admin tag every admin invisibly.",
+        "Lookups (/id, /info), admin listing, promote/demote, and /echo.",
+        "Per-group command disabling with /disable and /enable.",
+      ],
+      setup: [
+        "Enable the module; every command checks native Telegram admin permissions.",
+        "Pin commands need the pin right; disabling commands needs change-info rights.",
+      ],
+      troubleshooting: [
+        "Admins cannot be reported.",
+        "Anonymous admins are trusted with full non-owner rights.",
+      ],
+    },
+  },
+  {
+    key: 'locks',
+    name: 'Chat Locks',
+    category: 'Community & Moderation',
+    description: 'Fine-grained content locks: stickers, gifs, polls, forwards, links, scripts and more.',
+    pageType: 'config',
+    configFields: [
+      { key: 'lockedTypes', label: "Locked types (one per line)", type: 'stringList', help: "Run /locktypes in the group for the full list" },
+      { key: 'lockWarns', label: "Warn instead of just deleting", type: 'switch' },
+      { key: 'allowlist', label: "Allowlist entries (one per line)", type: 'stringList', help: "Domains, stickerpack:<name>, forward:<id>, command:/cmd" },
+    ],
+    docs: {
+      overview: [
+        "45+ lock types: media kinds, stickers, polls, forwards, links, buttons.",
+        "Script locks (rtl, cjk, cyrillic, zalgo) and anonymous-channel protection.",
+        "Allowlist entries exempt specific domains, packs, forwards and commands.",
+        "Custom punishments per lock via /lock <types> ### reason {action}.",
+      ],
+      setup: [
+        "Enable the module and lock content types with /lock gif poll url.",
+        "Admins and approved users are always exempt.",
+      ],
+      troubleshooting: [
+        "Locks run before blocklists.",
+        "Bot senders and service messages are never locked.",
+      ],
+    },
+  },
+  {
+    key: 'antiraid',
+    name: 'AntiRaid',
+    category: 'Community & Moderation',
+    description: 'Temporarily bans joiners during raid attacks, manually or automatically.',
+    pageType: 'config',
+    configFields: [
+      { key: 'raidTimeSeconds', label: "Raid mode duration (seconds)", type: 'number' },
+      { key: 'raidActionTimeSeconds', label: "Per-joiner ban (seconds)", type: 'number' },
+      { key: 'autoRaidJoinThreshold', label: "Auto-enable after joins/minute (0 = off)", type: 'number' },
+    ],
+    docs: {
+      overview: [
+        "Raid mode bans every new joiner for a short period so raids drain out.",
+        "Manual /antiraid on/off or a custom duration.",
+        "/autoantiraid N enables automatically when N users join within a minute.",
+      ],
+      setup: [
+        "Enable the module and arm raid mode with /antiraid on when under attack.",
+        "Tune durations so innocent late joiners are not banned for long.",
+      ],
+      troubleshooting: [
+        "Raid state lives in memory; a restart disarms active raid mode.",
+        "CAPTCHAs or join requests prevent spam-joining entirely.",
+      ],
+    },
+  },
+  {
+    key: 'rules',
+    name: 'Group Rules',
+    category: 'Community & Moderation',
+    description: 'Per-group rules with /rules delivery and the {rules} placeholder button.',
+    pageType: 'config',
+    configFields: [
+      { key: 'rulesText', label: "Rules text", type: 'textarea' },
+      { key: 'privateRules', label: "Deliver rules via PM button", type: 'switch' },
+      { key: 'rulesButton', label: "Button label", type: 'text' },
+    ],
+    docs: {
+      overview: [
+        "/rules shows the group rules in chat or via a PM deep-link button.",
+        "The {rules} placeholder embeds the same link into welcome messages.",
+        "Manage with /setrules, /resetrules, /privaterules and /setrulesbutton.",
+      ],
+      setup: [
+        "Enable the module and set the rules text (or use /setrules in the group).",
+        "Users must start the bot in PM for private rule delivery.",
+      ],
+      troubleshooting: [
+        "Empty rules text makes /rules reply \"no rules set\".",
+        "The deep link only works with a public bot username.",
+      ],
+    },
+  },
+  {
+    key: 'admin-log',
+    name: 'Admin Log Channel',
+    category: 'Community & Moderation',
+    description: 'Forwards admin actions and automated punishments to a Telegram log channel.',
+    pageType: 'config',
+    configFields: [
+      { key: 'logChatId', label: "Log channel id", type: 'number', help: "Numeric channel id the bot posts logs to" },
+      { key: 'categories', label: "Categories (one per line)", type: 'stringList', help: "settings, admin, user, automated, reports, other" },
+    ],
+    docs: {
+      overview: [
+        "Persistent log of bans, mutes, warns, settings changes and reports.",
+        "Category filters: settings, admin, user, automated, reports, other.",
+        "Link with /setlog <channelId> (group owner) or from the dashboard.",
+      ],
+      setup: [
+        "Create a channel, add the bot as administrator, and set its id here.",
+        "Run /setlog <channelId> in the group to bind logging.",
+      ],
+      troubleshooting: [
+        "Log channels must be channels; groups cannot receive logs.",
+        "Removing the bot from the channel silently stops logging.",
+      ],
+    },
+  },
+  {
+    key: 'cleaning',
+    name: 'Message Cleaning',
+    category: 'Community & Moderation',
+    description: 'Auto-deletes used commands, service messages, and bot action messages.',
+    pageType: 'config',
+    configFields: [
+      { key: 'cleanCommand', label: "Clean used commands", type: 'select', options: ["off", "all", "admin", "user", "other"] },
+      { key: 'cleanServiceTypes', label: "Service types (one per line)", type: 'stringList', help: "join, leave, pin, title, photo, videochat, other" },
+      { key: 'cleanBotMessages', label: "Delete bot messages after 5 minutes", type: 'select', options: ["off", "on"] },
+    ],
+    docs: {
+      overview: [
+        "Used commands disappear after execution (by class: admin/user/other).",
+        "Service messages (joins, pins, title and photo changes) auto-delete per type.",
+        "The bot's own group messages can self-destruct after five minutes.",
+      ],
+      setup: [
+        "Enable the module and pick which command classes to clean.",
+        "Add service types like join and leave to keep the chat tidy.",
+      ],
+      troubleshooting: [
+        "Commands are removed with a short delay so they still execute.",
+        "Bot-message cleanup needs no extra rights beyond sending.",
+      ],
+    },
+  },
+  {
+    key: 'topics',
+    name: 'Forum Topic Management',
+    category: 'Community & Moderation',
+    description: 'Create, rename, close and delete forum topics from chat commands.',
+    pageType: 'config',
+    configFields: [
+      { key: 'actionTopicId', label: "Action topic id (0 = general)", type: 'number', help: "Bot messages route to this forum topic" },
+    ],
+    docs: {
+      overview: [
+        "Forum topic commands: /newtopic, /renametopic, /closetopic, /reopentopic, /deletetopic.",
+        "/setactiontopic routes bot output to one topic.",
+        "Every command runs inside the topic it affects.",
+      ],
+      setup: [
+        "Enable the module in a forum-enabled supergroup.",
+        "Grant the bot the manage-topics administrator right.",
+      ],
+      troubleshooting: [
+        "These commands only work in forum topics.",
+        "Deleting a topic removes its messages permanently.",
+      ],
+    },
+  },
+  {
+    key: 'federation',
+    name: 'Ban Federations',
+    category: 'Community & Moderation',
+    description: 'Shared ban lists enforced across all joined chats of every studio bot.',
+    pageType: 'config',
+    configFields: [
+      { key: 'quietFed', label: "Suppress fed-ban announcements", type: 'switch' },
+      { key: 'fedNotif', label: "Notify the fed owner on actions", type: 'switch' },
+      { key: 'fedReasonRequired', label: "Require a reason on /fban", type: 'switch' },
+    ],
+    docs: {
+      overview: [
+        "One ban list, every group: /fban removes users from all chats in the federation.",
+        "Works across every bot in the studio, not just one.",
+        "Fed admins, subscriptions (max 5), logs, and CSV/JSON imports.",
+      ],
+      setup: [
+        "Create a federation with /newfed <name> in the bot's PM.",
+        "Join groups with /joinfed <fedId> (group owner runs it).",
+        "Manage bans and imports from the manager below.",
+      ],
+      troubleshooting: [
+        "Passive enforcement needs the chat_member update (already enabled).",
+        "/leavefed keeps past bans in place until unbanned.",
+      ],
+    },
+  },
+  {
+    key: 'language',
+    name: 'Bot Reply Language',
+    category: 'Community & Moderation',
+    description: 'Per-group bot reply language (/setlang) for moderation and system messages.',
+    pageType: 'config',
+    configFields: [
+      { key: 'language', label: "Default language", type: 'select', options: ["en", "tr"] },
+    ],
+    docs: {
+      overview: [
+        "/setlang switches every bot reply between supported languages.",
+        "All moderation, captcha, federation and tool messages localize.",
+        "User-configured templates (welcome text, notes) stay as written.",
+      ],
+      setup: [
+        "Enable the module and pick a default.",
+        "Groups change it any time with /setlang.",
+      ],
+      troubleshooting: [
+        "Supported languages today: English and Turkish.",
+        "Private chats default to English.",
+      ],
+    },
+  },
+  {
+    key: 'bot2bot',
+    name: 'Bot-to-Bot Commands',
+    category: 'Automation & Monetization',
+    description: "Let other bots use this bot's group commands with an admin review gate.",
+    pageType: 'config',
+    configFields: [
+      { key: 'mode', label: "Mode", type: 'select', options: ["off", "admin", "all"], help: "off ignores bots, admin trusts admin-bots only, all allows every bot" },
+      { key: 'skipReview', label: "Skip the review queue", type: 'switch', help: "Trusted bots act immediately without Approve/Deny buttons" },
+    ],
+    docs: {
+      overview: [
+        "Automation and AI bots can drive moderation commands.",
+        "Bot-issued admin actions queue behind inline Approve/Deny buttons.",
+        "Skip reviews for trusted bots while keeping their real permissions.",
+      ],
+      setup: [
+        "Enable the module and choose a mode (off by default).",
+        "Have the other bot send commands like /ban as a normal admin would.",
+      ],
+      troubleshooting: [
+        "The acting bot still needs its own Telegram admin rights.",
+        "Reviews live in memory and are dropped on restart.",
       ],
     },
   },

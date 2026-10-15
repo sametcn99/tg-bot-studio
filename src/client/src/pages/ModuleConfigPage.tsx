@@ -21,6 +21,8 @@ import PageHeader from '../components/PageHeader';
 import ModuleHelpDialog from '../components/ModuleHelpDialog';
 import { ConnectionSelect } from '../components/ConnectionSelect';
 import AiKnowledgeDocsManager from '../components/AiKnowledgeDocsManager';
+import FederationManager from '../components/FederationManager';
+import BlockedUsersManager from '../components/BlockedUsersManager';
 import { LoadingState } from '../components/Feedback';
 import { useSnackbar } from '../context/SnackbarContext';
 import type { ConfigField, ModuleEntry } from '../registry/modules';
@@ -210,6 +212,8 @@ export default function ModuleConfigPage({
       </Card>
 
       {module.key === 'ai-assistant' && <AiKnowledgeDocsManager botId={botId} />}
+      {module.key === 'federation' && <FederationManager botId={botId} />}
+      {module.key === 'moderation' && <BlockedUsersManager botId={botId} />}
 
       <ModuleHelpDialog module={docsOpen ? module : null} onClose={() => setDocsOpen(false)} />
     </Box>

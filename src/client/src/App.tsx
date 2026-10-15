@@ -11,6 +11,7 @@ import BotsOverviewPage from './pages/BotsOverviewPage';
 import BotDashboardPage from './pages/BotDashboardPage';
 import ModulesManagerPage from './pages/ModulesManagerPage';
 import MiniAppsPage from './pages/MiniAppsPage';
+import ConnectionSettingsPage from './pages/ConnectionSettingsPage';
 import SecurityPage from './pages/SecurityPage';
 import ModuleConfigPage from './pages/ModuleConfigPage';
 import ConnectionsPage from './pages/ConnectionsPage';
@@ -102,6 +103,10 @@ function AppRoutes(): React.ReactElement {
         <Route path="/bots/:botId" element={<BotDashboardPage />} />
         <Route path="/bots/:botId/modules" element={<ModulesManagerPage />} />
         <Route path="/bots/:botId/mini-apps" element={<MiniAppsPage />} />
+        <Route
+          path="/bots/:botId/connections/:connectionId/settings"
+          element={<ConnectionSettingsPage />}
+        />
         <Route path="/bots/:botId/m/:moduleKey" element={<ModuleRoute />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

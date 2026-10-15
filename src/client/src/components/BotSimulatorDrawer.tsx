@@ -13,9 +13,12 @@ import {
   Paper,
   Stack,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Tooltip,
   Typography,
 } from '@mui/material';
+import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import CloseIcon from '@mui/icons-material/Close';
 import SendIcon from '@mui/icons-material/Send';
@@ -49,6 +52,8 @@ export default function BotSimulatorDrawer(): React.ReactElement {
     },
   ]);
   const [input, setInput] = useState('');
+  /** Simulated surface: private chat or the sandbox supergroup. */
+  const [surface, setSurface] = useState<'private' | 'supergroup'>('private');
   const [loading, setLoading] = useState(false);
   const streamRef = useRef<HTMLDivElement | null>(null);
 
@@ -91,7 +96,7 @@ export default function BotSimulatorDrawer(): React.ReactElement {
         buttons?: Array<{ text: string; url?: string; callback_data?: string }>;
       }>(`/api/bots/${activeBot.id}/simulator/send`, {
         method: 'POST',
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({ message: text, chatType: surface }),
       });
 
       const botMsg: SimMessage = {
@@ -114,6 +119,39 @@ export default function BotSimulatorDrawer(): React.ReactElement {
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, errorMsg]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Simulates a synthetic group event (join / leave / chat_member) through
+   * the real module chain against the sandbox supergroup.
+   * @param {'join'|'leave'|'chat_member'} event - Sandbox event type.
+   * @returns {Promise<void>} Resolves after the sandbox reply lands.
+   */
+  const sendEvent = async (event: 'join' | 'leave' | 'chat_member'): Promise<void> => {
+    if (!activeBot || loading) return;
+    setLoading(true);
+    try {
+      const res = await apiFetch<{ text: string }>(
+        `/api/bots/${activeBot.id}/simulator/send`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ message: '', chatType: 'supergroup', event }),
+        },
+      );
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `e_${Date.now()}`,
+          sender: 'bot',
+          text: res.text,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        },
+      ]);
+    } catch {
+      // Sandbox event failures are non-fatal in the drawer.
     } finally {
       setLoading(false);
     }
@@ -150,7 +188,7 @@ export default function BotSimulatorDrawer(): React.ReactElement {
           buttons?: Array<{ text: string; url?: string; callback_data?: string }>;
         }>(`/api/bots/${activeBot.id}/simulator/callback`, {
           method: 'POST',
-          body: JSON.stringify({ callbackData: btn.callback_data }),
+          body: JSON.stringify({ callbackData: btn.callback_data, chatType: surface }),
         });
         setMessages((prev) => [
           ...prev,
@@ -280,6 +318,14 @@ export default function BotSimulatorDrawer(): React.ReactElement {
               label={t('simulator.quickPricing')}
               onClick={() => void sendMessage('pricing')}
             />
+            {surface === 'supergroup' && (
+              <Chip
+                size="small"
+                icon={<PersonAddAlt1Icon sx={{ fontSize: 14 }} />}
+                label={t('simulator.simulateJoin')}
+                onClick={() => void sendEvent('join')}
+              />
+            )}
           </Stack>
         </Box>
 
@@ -391,6 +437,20 @@ export default function BotSimulatorDrawer(): React.ReactElement {
         </Box>
 
         <Divider />
+
+        {/* Surface switcher: private chat vs sandbox supergroup */}
+        <Box sx={{ px: 2, pt: 1.5, bgcolor: 'background.paper' }}>
+          <ToggleButtonGroup
+            exclusive
+            size="small"
+            value={surface}
+            onChange={(_, next) => next && setSurface(next)}
+            fullWidth
+          >
+            <ToggleButton value="private">{t('simulator.surfacePrivate')}</ToggleButton>
+            <ToggleButton value="supergroup">{t('simulator.surfaceGroup')}</ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
 
         {/* Input Bar */}
         <Box sx={{ p: 2, bgcolor: 'background.paper' }}>

@@ -1,6 +1,7 @@
 import React from 'react';
-import { Box, Button, Stack, Typography } from '@mui/material';
+import { Box, Button, IconButton, Stack, Typography } from '@mui/material';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 /**
  * Standard page header with title, subtitle, action slot, and the mandatory
@@ -11,6 +12,8 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
  * @param {string} [props.subtitle] - Muted subtitle line.
  * @param {() => void} [props.onDocs] - Opens the module documentation dialog.
  * @param {React.ReactNode} [props.actions] - Additional action elements.
+ * @param {() => void} [props.onBack] - Optional back navigation action.
+ * @param {React.ReactNode} [props.backIcon] - Back icon override.
  * @returns {React.ReactElement} The header row.
  */
 export default function PageHeader({
@@ -18,11 +21,15 @@ export default function PageHeader({
   subtitle,
   onDocs,
   actions,
+  onBack,
+  backIcon,
 }: {
   title: string;
   subtitle?: string;
   onDocs?: () => void;
   actions?: React.ReactNode;
+  onBack?: () => void;
+  backIcon?: React.ReactNode;
 }): React.ReactElement {
   return (
     <Stack
@@ -32,7 +39,12 @@ export default function PageHeader({
       spacing={1.5}
       sx={{ mb: 3, gap: 2 }}
     >
-      <Box sx={{ minWidth: 0 }}>
+      <Box sx={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        {onBack ? (
+          <IconButton size="small" onClick={onBack} aria-label="back">
+            {backIcon ?? <ArrowBackIcon fontSize="small" />}
+          </IconButton>
+        ) : null}
         <Typography variant="h5" component="h1" fontWeight={700} letterSpacing="-0.01em">
           {title}
         </Typography>
