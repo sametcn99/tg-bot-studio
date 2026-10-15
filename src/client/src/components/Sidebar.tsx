@@ -15,6 +15,7 @@ import {
   ListSubheader,
   Menu,
   MenuItem,
+  Select,
   Stack,
   Tooltip,
   Typography,
@@ -803,16 +804,18 @@ export default function Sidebar({
   const focusAfterExpand = useRef(false);
 
   const currentLang = i18n.language || 'en';
-  const languageIndex = Math.max(
-    0,
-    UI_LANGUAGES.findIndex((language) => language.code === currentLang),
-  );
-  const nextLanguage = UI_LANGUAGES[(languageIndex + 1) % UI_LANGUAGES.length];
-  const currentLanguageMeta = UI_LANGUAGES[languageIndex] ?? UI_LANGUAGES[0];
-  const cycleLanguage = (): void => {
-    void i18n.changeLanguage(nextLanguage.code);
-    localStorage.setItem('studio_language', nextLanguage.code);
-  };
+  const currentLanguageMeta =
+    UI_LANGUAGES.find((language) => language.code === currentLang) ?? UI_LANGUAGES[0];
+
+  /**
+   * Applies a dashboard language choice.
+   * @param {string} code - Language code from UI_LANGUAGES.
+   * @returns {void}
+   */
+  function selectLanguage(code: string): void {
+    void i18n.changeLanguage(code);
+    localStorage.setItem('studio_language', code);
+  }
 
   const pathname = location.pathname;
   const parts = pathname.split('/').filter(Boolean);
@@ -1121,14 +1124,11 @@ export default function Sidebar({
 
         {collapsed ? (
           <Stack spacing={0.75} alignItems="center">
-            <RailTooltip
-              collapsed={true}
-              title={t('nav.switchTo', { language: nextLanguage.native })}
-            >
+            <RailTooltip collapsed={true} title={t('nav.expandSidebar')}>
               <IconButton
                 size="small"
-                onClick={cycleLanguage}
-                aria-label={t('nav.language')}
+                onClick={onToggleCollapsed}
+                aria-label={t('nav.expandSidebar')}
                 sx={{
                   width: 36,
                   height: 36,
@@ -1216,44 +1216,42 @@ export default function Sidebar({
             }}
           >
             <Stack direction="row" spacing={0.75} alignItems="center">
-              {/* Language toggle */}
-              <Tooltip title={t('nav.switchTo', { language: nextLanguage.native })} arrow>
-                <ButtonBase
-                  onClick={cycleLanguage}
+              {/* Language select */}
+              <Tooltip title={t('nav.language')} arrow>
+                <Select
+                  size="small"
+                  value={currentLanguageMeta.code}
+                  onChange={(event) => selectLanguage(String(event.target.value))}
                   aria-label={t('nav.language')}
                   sx={(th) => ({
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 0.75,
-                    px: 1,
-                    py: 0.625,
                     height: 34,
+                    minWidth: 104,
                     borderRadius: '8px',
                     border: '1px solid',
                     borderColor: 'divider',
                     color: 'text.secondary',
                     bgcolor: alpha(th.palette.text.primary, 0.02),
-                    transition: th.transitions.create(
-                      ['background-color', 'border-color', 'color'],
-                      {
-                        duration: th.transitions.duration.shortest,
-                      },
-                    ),
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
                     '&:hover': {
                       color: 'text.primary',
-                      borderColor: alpha(th.palette.text.primary, 0.2),
                       bgcolor: alpha(th.palette.text.primary, 0.06),
+                    },
+                    '& .MuiSelect-select': {
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.75,
+                      py: 0.625,
                     },
                   })}
                 >
-                  <LanguageIcon sx={{ fontSize: 16 }} />
-                  <Typography
-                    variant="caption"
-                    sx={{ fontWeight: 700, fontSize: '0.6875rem', lineHeight: 1 }}
-                  >
-                    {currentLanguageMeta.code.toUpperCase()}
-                  </Typography>
-                </ButtonBase>
+                  {UI_LANGUAGES.map((language) => (
+                    <MenuItem key={language.code} value={language.code} dense>
+                      {language.native}
+                    </MenuItem>
+                  ))}
+                </Select>
               </Tooltip>
 
               {/* Theme toggle */}
