@@ -162,16 +162,30 @@ export class BotsController {
    * @returns {Promise<object>} Bot simulated response.
    */
   @Post(':id/simulator/send')
-  simulateMessage(@Param('id', ParseIntPipe) id: number, @Body() body: { message: string }) {
-    return this.botsService.simulateMessage(id, body.message);
+  simulateMessage(
+    @Param('id', ParseIntPipe) id: number,
+    @Body()
+    body: {
+      message: string;
+      chatType?: 'private' | 'supergroup' | 'group';
+      event?: 'message' | 'join' | 'leave' | 'chat_member';
+    },
+  ) {
+    return this.botsService.simulateMessage(id, body.message, {
+      chatType: body.chatType,
+      event: body.event,
+    });
   }
 
   /**
    * Simulates an inline callback button press through the real module chain.
    */
   @Post(':id/simulator/callback')
-  simulateCallback(@Param('id', ParseIntPipe) id: number, @Body() body: { callbackData: string }) {
-    return this.botsService.simulateCallback(id, String(body.callbackData ?? ''));
+  simulateCallback(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { callbackData: string; chatType?: 'private' | 'supergroup' | 'group' },
+  ) {
+    return this.botsService.simulateCallback(id, String(body.callbackData ?? ''), body.chatType);
   }
 
   /**

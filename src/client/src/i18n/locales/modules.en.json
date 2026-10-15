@@ -282,30 +282,37 @@
     }
   },
   "welcome": {
-    "name": "Welcome & Clean Chat",
-    "description": "New-member greetings with auto-delete and service message cleanup.",
-    "docs": {
-      "overview": [
-        "Greets every new group member with a templated message and mention link.",
-        "Keeps chats clean by removing Telegram join/leave service messages.",
-        "Greetings can self-delete after 15 to 120 seconds."
-      ],
-      "setup": [
-        "Disable bot privacy mode via BotFather so the bot sees join events.",
-        "Add the bot to the group as an administrator with delete permissions.",
-        "Compose the template using placeholders such as {mention} and {group_name}."
-      ],
-      "troubleshooting": [
-        "Without admin rights the bot cannot delete service or greeting messages.",
-        "autoDeleteSeconds is clamped to the supported 15-120 range."
-      ]
-    },
+    "name": "Group Welcome & Goodbye",
+    "description": "Media greetings with buttons, goodbyes, clean-welcome, and service cleanup.",
     "fields": {
+      "welcomeEnabled": {
+        "label": "Welcome messages enabled"
+      },
       "template": {
         "label": "Welcome template"
       },
       "autoDeleteSeconds": {
-        "label": "Auto-delete after seconds (15-120, 0 = off)"
+        "label": "Auto-delete after (seconds, 0 = off)"
+      },
+      "cleanWelcome": {
+        "label": "Replace previous greeting"
+      },
+      "mediaUrl": {
+        "label": "Welcome media URL",
+        "help": "Photo or video sent with the greeting caption"
+      },
+      "buttonsJson": {
+        "label": "Buttons JSON",
+        "help": "[{\"text\": \"Join channel\", \"url\": \"https://t.me/...\"}] one per row"
+      },
+      "goodbyeEnabled": {
+        "label": "Goodbye messages enabled"
+      },
+      "goodbyeText": {
+        "label": "Goodbye template"
+      },
+      "goodbyeMediaUrl": {
+        "label": "Goodbye media URL"
       },
       "deleteServiceMessages": {
         "label": "Delete join service messages"
@@ -313,29 +320,31 @@
       "deleteLeaveMessages": {
         "label": "Delete leave service messages"
       }
+    },
+    "docs": {
+      "overview": [
+        "Greets new members with templates, media and inline buttons.",
+        "Goodbye messages and clean-welcome keep exactly one greeting visible.",
+        "Join/leave service messages are removed automatically."
+      ],
+      "setup": [
+        "Add the bot as a group administrator with delete permissions.",
+        "Compose templates with placeholders such as {mention} and {group_name}.",
+        "Attach a media URL and buttons JSON for rich greetings."
+      ],
+      "troubleshooting": [
+        "Media greetings fall back to text when the URL cannot be sent.",
+        "Auto-delete accepts 15 seconds up to one hour."
+      ]
     }
   },
   "captcha": {
     "name": "Captcha Gatekeeper",
-    "description": "Button or math verification with automatic kick timers.",
-    "docs": {
-      "overview": [
-        "Anti-raid gate: new members must verify within the configured window.",
-        "Button mode taps to verify; math mode replies with a sum answer.",
-        "Unverified members are kicked (ban + unban) when the timer expires."
-      ],
-      "setup": [
-        "Add the bot as a group administrator with ban permissions.",
-        "Choose a mode and timeout, then enable the module."
-      ],
-      "troubleshooting": [
-        "Kicks require administrator rights including can_restrict_members.",
-        "Pending challenges live in memory and reset on bot restart."
-      ]
-    },
+    "description": "Button, math or PM verification with kick timers and join requests.",
     "fields": {
       "mode": {
-        "label": "Mode"
+        "label": "Mod",
+        "help": "pm-math challenges in PM and falls back to a button"
       },
       "timeoutSeconds": {
         "label": "Timeout (seconds)"
@@ -345,7 +354,28 @@
       },
       "successText": {
         "label": "Success message"
+      },
+      "buttonText": {
+        "label": "Verify button label"
+      },
+      "joinRequestIntegration": {
+        "label": "Handle join requests via PM captcha"
       }
+    },
+    "docs": {
+      "overview": [
+        "Anti-raid gate: new members must verify within the configured window.",
+        "Button mode taps to verify; math replies with a sum; pm-math verifies in PM.",
+        "Members stay muted until verified and solve the captcha once per group."
+      ],
+      "setup": [
+        "Add the bot as a group administrator with ban permissions.",
+        "Choose a mode and timeout, then enable the module."
+      ],
+      "troubleshooting": [
+        "pm-math falls back to a group button when the user never started the bot.",
+        "Join-request integration needs chat_join_request updates (enabled)."
+      ]
     }
   },
   "moderation": {
@@ -381,6 +411,24 @@
       },
       "autoBanAfterStrikes": {
         "label": "Auto-ban after strikes (0 = off)"
+      },
+      "blocklistMode": {
+        "label": "Blocklist mode",
+        "help": "Punishment for blocklist hits; per-entry {action} overrides this"
+      },
+      "blocklistDelete": {
+        "label": "Delete matching messages"
+      },
+      "floodMode": {
+        "label": "Flood punishment"
+      },
+      "blocklistDurationSeconds": {
+        "label": "Blocklist tban/tmute duration (seconds)",
+        "help": "Duration for timed blocklist punishments (0 = default)"
+      },
+      "floodDurationSeconds": {
+        "label": "Flood punishment duration (seconds)",
+        "help": "Duration for tmute/tban flood punishments (0 = default)"
       }
     }
   },
@@ -744,6 +792,351 @@
         "Telegram requires an HTTPS public URL for Mini Apps; localhost only works inside Telegram Desktop with flags.",
         "Mini App API calls are validated with initData HMAC-SHA256 signatures tied to the owning bot token.",
         "The Webview template cannot frame sites that send X-Frame-Options or CSP frame-ancestors restrictions."
+      ]
+    }
+  },
+  "group-moderation": {
+    "name": "Group Moderation Commands",
+    "description": "In-group admin commands: ban, mute, kick, warnings, purges, approvals, silent actions.",
+    "fields": {
+      "warnLimit": {
+        "label": "Warning limit",
+        "help": "Warnings before the warn mode punishment fires (0 disables)"
+      },
+      "warnMode": {
+        "label": "Warning mode",
+        "help": "Punishment applied when the warn limit is reached"
+      },
+      "warnTimeSeconds": {
+        "label": "Warn expiry (seconds, 0 = off)"
+      },
+      "silentActions": {
+        "label": "Silent actions",
+        "help": "s-commands and punishments without confirmation messages"
+      },
+      "adminError": {
+        "label": "Reply to non-admins",
+        "help": "Show \"admin only\" errors to unauthorized users"
+      },
+      "warnDurationSeconds": {
+        "label": "Warn mode duration (seconds)",
+        "help": "Duration for tban/tmute warn modes (0 = default)"
+      }
+    },
+    "docs": {
+      "overview": [
+        "Full admin command set directly in the group chat.",
+        "ban/mute/kick families with timed (tban/tmute), delete (d*) and silent (s*) variants.",
+        "Persistent warnings with configurable limit, mode and expiry, plus purge commands.",
+        "Approvals make trusted members immune to automated moderation."
+      ],
+      "setup": [
+        "Enable the module, then use /ban, /mute, /warn, /purge and friends in the group.",
+        "The bot must be a group administrator with restrict and delete rights.",
+        "Tune defaults here; groups can override them with /setwarnlimit and /setwarnmode."
+      ],
+      "troubleshooting": [
+        "Purges only reach messages younger than 48 hours (Telegram limitation).",
+        "Warnings persist in the database; /resetwarn clears a user entirely."
+      ]
+    }
+  },
+  "group-tools": {
+    "name": "Group Admin Tools",
+    "description": "Pins, user reports, admin list, /id and /info lookups, echo, and command disabling.",
+    "fields": {
+      "reportsEnabled": {
+        "label": "User reports enabled",
+        "help": "/report and @admin notify group admins"
+      },
+      "antichannelPins": {
+        "label": "Unpin linked channel posts"
+      },
+      "cleanLinked": {
+        "label": "Delete linked channel posts",
+        "help": "Removes forwarded channel messages from the discussion group"
+      }
+    },
+    "docs": {
+      "overview": [
+        "Pin family: /pin, /pin loud, /permapin, /unpin, /unpinall, plus linked-channel controls.",
+        "User reports: /report and @admin tag every admin invisibly.",
+        "Lookups (/id, /info), admin listing, promote/demote, and /echo.",
+        "Per-group command disabling with /disable and /enable."
+      ],
+      "setup": [
+        "Enable the module; every command checks native Telegram admin permissions.",
+        "Pin commands need the pin right; disabling commands needs change-info rights."
+      ],
+      "troubleshooting": [
+        "Admins cannot be reported.",
+        "Anonymous admins are trusted with full non-owner rights."
+      ]
+    }
+  },
+  "locks": {
+    "name": "Chat Locks",
+    "description": "Fine-grained content locks: stickers, gifs, polls, forwards, links, scripts and more.",
+    "fields": {
+      "lockedTypes": {
+        "label": "Locked types (one per line)",
+        "help": "Run /locktypes in the group for the full list"
+      },
+      "lockWarns": {
+        "label": "Warn instead of just deleting"
+      },
+      "allowlist": {
+        "label": "Allowlist entries (one per line)",
+        "help": "Domains, stickerpack:<name>, forward:<id>, command:/cmd"
+      },
+      "lockRules": {
+        "label": "Custom lock rules JSON",
+        "help": "{\"gif\": {\"reason\": \"No gifs\", \"action\": \"tmute\", \"durationSeconds\": 3600}}"
+      }
+    },
+    "docs": {
+      "overview": [
+        "45+ lock types: media kinds, stickers, polls, forwards, links, buttons.",
+        "Script locks (rtl, cjk, cyrillic, zalgo) and anonymous-channel protection.",
+        "Allowlist entries exempt specific domains, packs, forwards and commands.",
+        "Custom punishments per lock via /lock <types> ### reason {action}."
+      ],
+      "setup": [
+        "Enable the module and lock content types with /lock gif poll url.",
+        "Admins and approved users are always exempt."
+      ],
+      "troubleshooting": [
+        "Locks run before blocklists.",
+        "Bot senders and service messages are never locked."
+      ]
+    }
+  },
+  "antiraid": {
+    "name": "AntiRaid",
+    "description": "Temporarily bans joiners during raid attacks, manually or automatically.",
+    "fields": {
+      "raidTimeSeconds": {
+        "label": "Raid mode duration (seconds)"
+      },
+      "raidActionTimeSeconds": {
+        "label": "Per-joiner ban (seconds)"
+      },
+      "autoRaidJoinThreshold": {
+        "label": "Auto-enable after joins/minute (0 = off)"
+      }
+    },
+    "docs": {
+      "overview": [
+        "Raid mode bans every new joiner for a short period so raids drain out.",
+        "Manual /antiraid on/off or a custom duration.",
+        "/autoantiraid N enables automatically when N users join within a minute."
+      ],
+      "setup": [
+        "Enable the module and arm raid mode with /antiraid on when under attack.",
+        "Tune durations so innocent late joiners are not banned for long."
+      ],
+      "troubleshooting": [
+        "Raid state lives in memory; a restart disarms active raid mode.",
+        "CAPTCHAs or join requests prevent spam-joining entirely."
+      ]
+    }
+  },
+  "rules": {
+    "name": "Group Rules",
+    "description": "Per-group rules with /rules delivery and the {rules} placeholder button.",
+    "fields": {
+      "rulesText": {
+        "label": "Rules text"
+      },
+      "privateRules": {
+        "label": "Deliver rules via PM button"
+      },
+      "rulesButton": {
+        "label": "Button label"
+      }
+    },
+    "docs": {
+      "overview": [
+        "/rules shows the group rules in chat or via a PM deep-link button.",
+        "The {rules} placeholder embeds the same link into welcome messages.",
+        "Manage with /setrules, /resetrules, /privaterules and /setrulesbutton."
+      ],
+      "setup": [
+        "Enable the module and set the rules text (or use /setrules in the group).",
+        "Users must start the bot in PM for private rule delivery."
+      ],
+      "troubleshooting": [
+        "Empty rules text makes /rules reply \"no rules set\".",
+        "The deep link only works with a public bot username."
+      ]
+    }
+  },
+  "admin-log": {
+    "name": "Admin Log Channel",
+    "description": "Forwards admin actions and automated punishments to a Telegram log channel.",
+    "fields": {
+      "logChatId": {
+        "label": "Log channel id",
+        "help": "Numeric channel id the bot posts logs to"
+      },
+      "categories": {
+        "label": "Categories (one per line)",
+        "help": "settings, admin, user, automated, reports, other"
+      }
+    },
+    "docs": {
+      "overview": [
+        "Persistent log of bans, mutes, warns, settings changes and reports.",
+        "Category filters: settings, admin, user, automated, reports, other.",
+        "Link with /setlog <channelId> (group owner) or from the dashboard."
+      ],
+      "setup": [
+        "Create a channel, add the bot as administrator, and set its id here.",
+        "Run /setlog <channelId> in the group to bind logging."
+      ],
+      "troubleshooting": [
+        "Log channels must be channels; groups cannot receive logs.",
+        "Removing the bot from the channel silently stops logging."
+      ]
+    }
+  },
+  "cleaning": {
+    "name": "Message Cleaning",
+    "description": "Auto-deletes used commands, service messages, and bot action messages.",
+    "fields": {
+      "cleanCommand": {
+        "label": "Clean used commands"
+      },
+      "cleanServiceTypes": {
+        "label": "Service types (one per line)",
+        "help": "join, leave, pin, title, photo, videochat, other"
+      },
+      "cleanBotMessages": {
+        "label": "Delete bot messages after 5 minutes"
+      }
+    },
+    "docs": {
+      "overview": [
+        "Used commands disappear after execution (by class: admin/user/other).",
+        "Service messages (joins, pins, title and photo changes) auto-delete per type.",
+        "The bot's own group messages can self-destruct after five minutes."
+      ],
+      "setup": [
+        "Enable the module and pick which command classes to clean.",
+        "Add service types like join and leave to keep the chat tidy."
+      ],
+      "troubleshooting": [
+        "Commands are removed with a short delay so they still execute.",
+        "Bot-message cleanup needs no extra rights beyond sending."
+      ]
+    }
+  },
+  "topics": {
+    "name": "Forum Topic Management",
+    "description": "Create, rename, close and delete forum topics from chat commands.",
+    "fields": {
+      "actionTopicId": {
+        "label": "Action topic id (0 = general)",
+        "help": "Bot messages route to this forum topic"
+      }
+    },
+    "docs": {
+      "overview": [
+        "Forum topic commands: /newtopic, /renametopic, /closetopic, /reopentopic, /deletetopic.",
+        "/setactiontopic routes bot output to one topic.",
+        "Every command runs inside the topic it affects."
+      ],
+      "setup": [
+        "Enable the module in a forum-enabled supergroup.",
+        "Grant the bot the manage-topics administrator right."
+      ],
+      "troubleshooting": [
+        "These commands only work in forum topics.",
+        "Deleting a topic removes its messages permanently."
+      ]
+    }
+  },
+  "federation": {
+    "name": "Ban Federations",
+    "description": "Shared ban lists enforced across all joined chats of every studio bot.",
+    "fields": {
+      "quietFed": {
+        "label": "Suppress fed-ban announcements"
+      },
+      "fedNotif": {
+        "label": "Notify the fed owner on actions"
+      },
+      "fedReasonRequired": {
+        "label": "Require a reason on /fban"
+      }
+    },
+    "docs": {
+      "overview": [
+        "One ban list, every group: /fban removes users from all chats in the federation.",
+        "Works across every bot in the studio, not just one.",
+        "Fed admins, subscriptions (max 5), logs, and CSV/JSON imports."
+      ],
+      "setup": [
+        "Create a federation with /newfed <name> in the bot's PM.",
+        "Join groups with /joinfed <fedId> (group owner runs it).",
+        "Manage bans and imports from the manager below."
+      ],
+      "troubleshooting": [
+        "Passive enforcement needs the chat_member update (already enabled).",
+        "/leavefed keeps past bans in place until unbanned."
+      ]
+    }
+  },
+  "language": {
+    "name": "Bot Reply Language",
+    "description": "Per-group bot reply language (/setlang) for moderation and system messages.",
+    "fields": {
+      "language": {
+        "label": "Default language"
+      }
+    },
+    "docs": {
+      "overview": [
+        "/setlang switches every bot reply between supported languages.",
+        "All moderation, captcha, federation and tool messages localize.",
+        "User-configured templates (welcome text, notes) stay as written."
+      ],
+      "setup": [
+        "Enable the module and pick a default.",
+        "Groups change it any time with /setlang."
+      ],
+      "troubleshooting": [
+        "Supported languages: English, Turkish, German, Russian, Spanish, Azerbaijani, Arabic, French, Italian, Portuguese, Ukrainian, Persian, Indonesian, Uzbek.",
+        "Private chats default to English."
+      ]
+    }
+  },
+  "bot2bot": {
+    "name": "Bot-to-Bot Commands",
+    "description": "Let other bots use this bot's group commands with an admin review gate.",
+    "fields": {
+      "mode": {
+        "label": "Mode",
+        "help": "off ignores bots, admin trusts admin-bots only, all allows every bot"
+      },
+      "skipReview": {
+        "label": "Skip the review queue",
+        "help": "Trusted bots act immediately without Approve/Deny buttons"
+      }
+    },
+    "docs": {
+      "overview": [
+        "Automation and AI bots can drive moderation commands.",
+        "Bot-issued admin actions queue behind inline Approve/Deny buttons.",
+        "Skip reviews for trusted bots while keeping their real permissions."
+      ],
+      "setup": [
+        "Enable the module and choose a mode (off by default).",
+        "Have the other bot send commands like /ban as a normal admin would."
+      ],
+      "troubleshooting": [
+        "The acting bot still needs its own Telegram admin rights.",
+        "Reviews live in memory and are dropped on restart."
       ]
     }
   }

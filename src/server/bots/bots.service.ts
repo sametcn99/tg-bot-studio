@@ -381,7 +381,16 @@ export class BotsService {
     // 3. Group privacy mode
     const canReadAll = Boolean(check.bot?.can_read_all_group_messages);
     const needsAll = activeModules.some((m) =>
-      ['message-score', 'moderation', 'welcome'].includes(String(m.key)),
+      [
+        'message-score',
+        'moderation',
+        'welcome',
+        'locks',
+        'group-tools',
+        'cleaning',
+        'antiraid',
+        'autoresponder',
+      ].includes(String(m.key)),
     );
     if (canReadAll) {
       checks.push({
@@ -399,9 +408,19 @@ export class BotsService {
       });
       if (needsAll) {
         recommendations.push(
-          'For Message Score and Moderation modules: open @BotFather -> /setprivacy -> Choose bot -> Disable.',
+          'For group moderation modules (locks, cleaning, message score, ...): open @BotFather -> /setprivacy -> Choose bot -> Disable, or make the bot a group administrator.',
         );
       }
+
+    // 3b. reference-parity group command modules need admin rights.
+    const groupCommandModules = activeModules.filter((m) =>
+      ['group-moderation', 'antiraid', 'admin-log', 'topics'].includes(String(m.key)),
+    );
+    if (groupCommandModules.length > 0) {
+      recommendations.push(
+        'Group command modules (Group Moderation, AntiRaid, Admin Log, Topics) act only where the bot is a group administrator with the matching Telegram rights (restrict, delete, pin, manage topics).',
+      );
+    }
     }
 
     // 4. Chat connections
@@ -500,6 +519,7 @@ export class BotsService {
   async simulateMessage(
     botId: number,
     text: string,
+    options: { chatType?: 'private' | 'supergroup' | 'group'; event?: 'message' | 'join' | 'leave' | 'chat_member' } = {},
   ): Promise<{
     text: string;
     mediaUrl?: string | null;
@@ -507,7 +527,7 @@ export class BotsService {
   }> {
     // Delegates to the real grammY middleware chain: every enabled module
     // runtime processes the sandbox message exactly like live traffic.
-    return this.simulator.send(botId, { text });
+    return this.simulator.send(botId, { text, ...options });
   }
 
   /**
@@ -519,12 +539,13 @@ export class BotsService {
   async simulateCallback(
     botId: number,
     callbackData: string,
+    chatType: 'private' | 'supergroup' | 'group' = 'private',
   ): Promise<{
     text: string;
     mediaUrl?: string | null;
     buttons?: Array<{ text: string; url?: string; callback_data?: string }>;
   }> {
-    return this.simulator.send(botId, { callbackData });
+    return this.simulator.send(botId, { callbackData, chatType });
   }
 
   /**
@@ -652,9 +673,10 @@ export class BotsService {
       where: { botId },
     });
     const miniApps = await this.prisma.miniApp.findMany({ where: { botId } });
+    const chatModuleSettings = await this.prisma.chatModuleSetting.findMany({ where: { botId } });
 
     return {
-      version: '1.0',
+      version: '1.1',
       exportedAt: new Date().toISOString(),
       botName: bot.name,
       modules: modules.map((m) => {
@@ -693,6 +715,11 @@ export class BotsService {
         configJson: a.configJson,
         themeJson: a.themeJson,
         isActive: a.isActive,
+      })),
+      chatModuleSettings: chatModuleSettings.map((c) => ({
+        chatId: c.chatId,
+        moduleKey: c.moduleKey,
+        configJson: c.configJson,
       })),
     };
   }
@@ -755,6 +782,28 @@ export class BotsService {
             stepsJson: String((d as any).stepsJson ?? '[]'),
             isActive: Number((d as any).isActive ?? 1),
           },
+        });
+      }
+    }
+
+    if (Array.isArray(bundle.chatModuleSettings)) {
+      for (const c of bundle.chatModuleSettings) {
+        if (!c || typeof c !== 'object' || !('chatId' in c)) continue;
+        await this.prisma.chatModuleSetting.upsert({
+          where: {
+            botId_chatId_moduleKey: {
+              botId,
+              chatId: String((c as any).chatId),
+              moduleKey: String((c as any).moduleKey),
+            },
+          },
+          create: {
+            botId,
+            chatId: String((c as any).chatId),
+            moduleKey: String((c as any).moduleKey),
+            configJson: String((c as any).configJson ?? '{}'),
+          },
+          update: { configJson: String((c as any).configJson ?? '{}') },
         });
       }
     }

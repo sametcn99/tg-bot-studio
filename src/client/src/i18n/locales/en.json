@@ -28,8 +28,7 @@
     "toggleTheme": "Toggle color theme",
     "signOut": "Sign out",
     "language": "Language",
-    "switchToTurkish": "Switch to Turkish",
-    "switchToEnglish": "Switch to English",
+    "switchTo": "Switch to {{language}}",
     "diagnostics": "Bot Diagnostics & Health",
     "simulator": "Live Test Simulator",
     "searchModules": "Search modules…",
@@ -397,7 +396,10 @@
     "mediaAlt": "Media",
     "typing": "Bot is typing...",
     "sendMessageAria": "Send message",
-    "error": "⚠️ Error: {{message}}"
+    "error": "⚠️ Error: {{message}}",
+    "surfacePrivate": "Private chat",
+    "surfaceGroup": "Group (sandbox)",
+    "simulateJoin": "Simulate join"
   },
   "broadcast": {
     "targetAudience": "Target audience",
@@ -745,5 +747,44 @@
     "totalUsers": "{{count}} total users",
     "activeUsers": "{{count}} active (7d)",
     "window": "Time window"
+  },
+  "connectionSettings": {
+    "title": "Group settings — {{title}}",
+    "subtitle": "Per-group module overrides for chat {{chatId}}; they apply live within seconds.",
+    "loading": "Loading group settings…",
+    "connectionNotFound": "Connection not found.",
+    "overridden": "Group override",
+    "botDefault": "Bot default",
+    "save": "Save override",
+    "saved": "Saved",
+    "reset": "Reset to bot default",
+    "placeholder": "Enter text…"
+  },
+  "federation": {
+    "managerTitle": "Federation manager",
+    "managerEmpty": "No federations yet. Create one with /newfed <name> in the bot's PM.",
+    "chipChats": "{{count}} chats",
+    "chipBans": "{{count}} bans",
+    "addBan": "Add ban",
+    "viewBans": "View bans",
+    "import": "Import",
+    "telegramId": "Telegram id",
+    "reason": "Reason",
+    "bannedBy": "Banned by",
+    "date": "Date",
+    "noBans": "No bans in this federation."
+  },
+  "moderation": {
+    "blockedTitle": "Blocked users",
+    "blockedEmpty": "No blocked users. Bans issued by moderation strikes or manual bans appear here.",
+    "blockButton": "Block user",
+    "unblock": "Unblock",
+    "colTelegramId": "Telegram id",
+    "colUser": "User",
+    "colReason": "Reason",
+    "colBlockedAt": "Blocked at",
+    "colActions": "Actions",
+    "invalidTelegramId": "Enter a numeric Telegram id.",
+    "blockHelp": "Blocks the user studio-wide for this bot: their private messages are dropped and they cannot pass support flows."
   }
 }

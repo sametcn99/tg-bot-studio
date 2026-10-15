@@ -22,6 +22,7 @@ import {
 import { alpha, useTheme, type Theme } from '@mui/material/styles';
 import { keyframes } from '@emotion/react';
 import { useTranslation } from 'react-i18next';
+import { UI_LANGUAGES } from '../i18n';
 import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
 import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
@@ -804,10 +805,15 @@ export default function Sidebar({
   const focusAfterExpand = useRef(false);
 
   const currentLang = i18n.language || 'en';
-  const toggleLanguage = (): void => {
-    const next = currentLang.startsWith('tr') ? 'en' : 'tr';
-    void i18n.changeLanguage(next);
-    localStorage.setItem('studio_language', next);
+  const languageIndex = Math.max(
+    0,
+    UI_LANGUAGES.findIndex((language) => language.code === currentLang),
+  );
+  const nextLanguage = UI_LANGUAGES[(languageIndex + 1) % UI_LANGUAGES.length];
+  const currentLanguageMeta = UI_LANGUAGES[languageIndex] ?? UI_LANGUAGES[0];
+  const cycleLanguage = (): void => {
+    void i18n.changeLanguage(nextLanguage.code);
+    localStorage.setItem('studio_language', nextLanguage.code);
   };
 
   const pathname = location.pathname;
@@ -1119,13 +1125,11 @@ export default function Sidebar({
           <Stack spacing={0.75} alignItems="center">
             <RailTooltip
               collapsed={true}
-              title={
-                currentLang.startsWith('tr') ? t('nav.switchToEnglish') : t('nav.switchToTurkish')
-              }
+              title={t('nav.switchTo', { language: nextLanguage.native })}
             >
               <IconButton
                 size="small"
-                onClick={toggleLanguage}
+                onClick={cycleLanguage}
                 aria-label={t('nav.language')}
                 sx={{
                   width: 36,
@@ -1215,14 +1219,9 @@ export default function Sidebar({
           >
             <Stack direction="row" spacing={0.75} alignItems="center">
               {/* Language toggle */}
-              <Tooltip
-                title={
-                  currentLang.startsWith('tr') ? t('nav.switchToEnglish') : t('nav.switchToTurkish')
-                }
-                arrow
-              >
+              <Tooltip title={t('nav.switchTo', { language: nextLanguage.native })} arrow>
                 <ButtonBase
-                  onClick={toggleLanguage}
+                  onClick={cycleLanguage}
                   aria-label={t('nav.language')}
                   sx={(th) => ({
                     display: 'inline-flex',
@@ -1254,7 +1253,7 @@ export default function Sidebar({
                     variant="caption"
                     sx={{ fontWeight: 700, fontSize: '0.6875rem', lineHeight: 1 }}
                   >
-                    {currentLang.startsWith('tr') ? 'TR' : 'EN'}
+                    {currentLanguageMeta.code.toUpperCase()}
                   </Typography>
                 </ButtonBase>
               </Tooltip>

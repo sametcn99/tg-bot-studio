@@ -28,8 +28,7 @@
     "toggleTheme": "Temayı değiştir",
     "signOut": "Çıkış Yap",
     "language": "Dil",
-    "switchToTurkish": "Türkçe'ye Geç",
-    "switchToEnglish": "İngilizce'ye Geç",
+    "switchTo": "{{language}} diline geç",
     "diagnostics": "Bot Teşhisi & Sağlık",
     "simulator": "Canlı Test Simülatörü",
     "searchModules": "Modül ara…",
@@ -397,7 +396,10 @@
     "mediaAlt": "Medya",
     "typing": "Bot yazıyor...",
     "sendMessageAria": "Mesaj gönder",
-    "error": "⚠️ Hata: {{message}}"
+    "error": "⚠️ Hata: {{message}}",
+    "surfacePrivate": "Özel sohbet",
+    "surfaceGroup": "Grup (kum kutusu)",
+    "simulateJoin": "Katılım simüle et"
   },
   "broadcast": {
     "targetAudience": "Hedef kitle",
@@ -745,5 +747,44 @@
     "totalUsers": "Toplam {{count}} kullanıcı",
     "activeUsers": "{{count}} aktif (7g)",
     "window": "Zaman aralığı"
+  },
+  "connectionSettings": {
+    "title": "Grup ayarları — {{title}}",
+    "subtitle": "{{chatId}} sohbeti için grup bazlı modül geçersiz kılmaları; birkaç saniye içinde canlıya uygulanır.",
+    "loading": "Grup ayarları yükleniyor…",
+    "connectionNotFound": "Bağlantı bulunamadı.",
+    "overridden": "Grup geçersiz kılma",
+    "botDefault": "Bot varsayılanı",
+    "save": "Geçersiz kılmayı kaydet",
+    "saved": "Kaydedildi",
+    "reset": "Bot varsayılanına dön",
+    "placeholder": "Metin girin…"
+  },
+  "federation": {
+    "managerTitle": "Federasyon yöneticisi",
+    "managerEmpty": "Henüz federasyon yok. Botun PM'inde /newfed <ad> ile oluşturun.",
+    "chipChats": "{{count}} sohbet",
+    "chipBans": "{{count}} ban",
+    "addBan": "Ban ekle",
+    "viewBans": "Banları gör",
+    "import": "İçe aktar",
+    "telegramId": "Telegram id",
+    "reason": "Sebep",
+    "bannedBy": "Banlayan",
+    "date": "Tarih",
+    "noBans": "Bu federasyonda ban yok."
+  },
+  "moderation": {
+    "blockedTitle": "Engellenen kullanıcılar",
+    "blockedEmpty": "Engellenen kullanıcı yok. Moderasyon strike'ları veya manuel banlar burada listelenir.",
+    "blockButton": "Kullanıcı engelle",
+    "unblock": "Engeli kaldır",
+    "colTelegramId": "Telegram id",
+    "colUser": "Kullanıcı",
+    "colReason": "Sebep",
+    "colBlockedAt": "Engellenme",
+    "colActions": "İşlemler",
+    "invalidTelegramId": "Sayısal bir Telegram id girin.",
+    "blockHelp": "Kullanıcıyı bu bot için stüdyo genelinde engeller: özel mesajları düşer ve destek akışlarından geçemez."
   }
 }

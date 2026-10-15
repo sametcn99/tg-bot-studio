@@ -47,14 +47,22 @@
         "label": "Genel temel URL",
         "help": "Tıklama takibi için gerekli, örn. https://studio.example.com"
       },
-      "title": { "label": "Başlık" },
+      "title": {
+        "label": "Başlık"
+      },
       "type": {
         "label": "Tür",
         "help": "folder = sohbet klasörü (t.me/addlist/...) paylaşım bağlantısı"
       },
-      "url": { "label": "URL" },
-      "description": { "label": "Açıklama" },
-      "orderIndex": { "label": "Sıra" }
+      "url": {
+        "label": "URL"
+      },
+      "description": {
+        "label": "Açıklama"
+      },
+      "orderIndex": {
+        "label": "Sıra"
+      }
     },
     "columns": {
       "title": "Başlık",
@@ -101,13 +109,19 @@
         "label": "Hedef sohbet",
         "help": "Bağlı bir kanal veya grup seçin; listeyi Sohbet Bağlantıları'nda yönetin"
       },
-      "messageText": { "label": "Mesaj metni" },
-      "mediaUrl": { "label": "Medya URL'si (foto/video)" },
+      "messageText": {
+        "label": "Mesaj metni"
+      },
+      "mediaUrl": {
+        "label": "Medya URL'si (foto/video)"
+      },
       "buttons": {
         "label": "Butonlar (JSON dizisi)",
         "help": "[{\"text\":\"Open\",\"url\":\"https://...\"}]"
       },
-      "scheduledAt": { "label": "Gönderim zamanı (UTC ISO)" }
+      "scheduledAt": {
+        "label": "Gönderim zamanı (UTC ISO)"
+      }
     },
     "columns": {
       "target_chat_id": "Hedef sohbet",
@@ -139,8 +153,12 @@
         "label": "Yönetici süpergrubu",
         "help": "Forum özellikli yönetici grubu; listeyi Sohbet Bağlantıları'nda yönetin"
       },
-      "welcomeText": { "label": "Otomatik yanıt metni" },
-      "autoReplyThrottleMinutes": { "label": "Otomatik yanıt sınırı (dakika)" }
+      "welcomeText": {
+        "label": "Otomatik yanıt metni"
+      },
+      "autoReplyThrottleMinutes": {
+        "label": "Otomatik yanıt sınırı (dakika)"
+      }
     },
     "docs": {
       "overview": [
@@ -167,7 +185,9 @@
         "label": "Business bağlantı kimliği",
         "help": "Tüm bağlantıları yanıtlamak için boş bırakın"
       },
-      "autoReplyText": { "label": "Otomatik yanıt metni" }
+      "autoReplyText": {
+        "label": "Otomatik yanıt metni"
+      }
     },
     "docs": {
       "overview": [
@@ -189,8 +209,12 @@
     "name": "Damla Kampanyaları",
     "description": "Onboarding yolculukları gibi zamanlanmış çok adımlı diziler.",
     "fields": {
-      "subscribeOnStart": { "label": "/start'ta otomatik abone ol" },
-      "name": { "label": "Kampanya adı" },
+      "subscribeOnStart": {
+        "label": "/start'ta otomatik abone ol"
+      },
+      "name": {
+        "label": "Kampanya adı"
+      },
       "steps": {
         "label": "Adımlar (JSON)",
         "help": "[{\"delayMinutes\":60,\"text\":\"Welcome {first_name}\"}]"
@@ -258,55 +282,99 @@
     }
   },
   "welcome": {
-    "name": "Karşılama & Temiz Sohbet",
-    "description": "Otomatik silinen yeni üye karşılamaları ve servis mesajı temizliği.",
+    "name": "Grup Karşılama ve Vedalaşma",
+    "description": "Medyalı karşılama, butonlar, vedalaşma, clean-welcome ve servis temizliği.",
     "fields": {
-      "template": { "label": "Karşılama şablonu" },
-      "autoDeleteSeconds": {
-        "label": "Kaç saniye sonra otomatik silinsin (15-120, 0 = kapalı)"
+      "welcomeEnabled": {
+        "label": "Karşılama mesajları açık"
       },
-      "deleteServiceMessages": { "label": "Katılma servis mesajlarını sil" },
-      "deleteLeaveMessages": { "label": "Ayrılma servis mesajlarını sil" }
+      "template": {
+        "label": "Karşılama şablonu"
+      },
+      "autoDeleteSeconds": {
+        "label": "Otomatik silme (saniye, 0 = kapalı)"
+      },
+      "cleanWelcome": {
+        "label": "Önceki karşılamanın yerine geç"
+      },
+      "mediaUrl": {
+        "label": "Karşılama medya URL",
+        "help": "Karşılamayla gönderilen fotoğraf veya video"
+      },
+      "buttonsJson": {
+        "label": "Butonlar JSON",
+        "help": "[{\"text\": \"Kanala katıl\", \"url\": \"https://t.me/...\"}] satır başına bir"
+      },
+      "goodbyeEnabled": {
+        "label": "Vedalaşma mesajları açık"
+      },
+      "goodbyeText": {
+        "label": "Vedalaşma şablonu"
+      },
+      "goodbyeMediaUrl": {
+        "label": "Vedalaşma medya URL"
+      },
+      "deleteServiceMessages": {
+        "label": "Katılım servis mesajlarını sil"
+      },
+      "deleteLeaveMessages": {
+        "label": "Ayrılma servis mesajlarını sil"
+      }
     },
     "docs": {
       "overview": [
-        "Her yeni grup üyesini şablon bir mesaj ve bahsetme bağlantısıyla karşılar.",
-        "Telegram katılma/ayrılma servis mesajlarını kaldırarak sohbetleri temiz tutar.",
-        "Karşılama mesajları 15 ila 120 saniye sonra kendiliğinden silinebilir."
+        "Yeni üyeleri şablonlar, medya ve satır içi butonlarla karşılar.",
+        "Vedalaşma mesajları ve clean-welcome tek karşılama görünmesini sağlar.",
+        "Katılım/ayrılma servis mesajları otomatik silinir."
       ],
       "setup": [
-        "Bot katılma olaylarını görebilsin diye BotFather üzerinden gizlilik modunu kapatın.",
-        "Botu gruba silme yetkisi olan bir yönetici olarak ekleyin.",
-        "Şablonu {mention} ve {group_name} gibi yer tutucularla yazın."
+        "Botu silme yetkisiyle grup yöneticisi olarak ekleyin.",
+        "Şablonları {mention} ve {group_name} gibi placeholder'larla yazın.",
+        "Zengin karşılama için medya URL ve butonlar JSON ekleyin."
       ],
       "troubleshooting": [
-        "Yönetici hakları olmadan bot servis veya karşılama mesajlarını silemez.",
-        "autoDeleteSeconds desteklenen 15-120 aralığına sabitlenir."
+        "Medya gönderilemezse karşılama metne döner.",
+        "Otomatik silme 15 saniye ile bir saat arasını kabul eder."
       ]
     }
   },
   "captcha": {
     "name": "Captcha Kapısı",
-    "description": "Otomatik atma zamanlayıcılı buton veya matematik doğrulaması.",
+    "description": "Buton, matematik veya PM doğrulaması; kick zamanlayıcıları ve katılım istekleriyle.",
     "fields": {
-      "mode": { "label": "Mod" },
-      "timeoutSeconds": { "label": "Zaman aşımı (saniye)" },
-      "kickOnFail": { "label": "Zaman aşımında at" },
-      "successText": { "label": "Başarı mesajı" }
+      "mode": {
+        "label": "Mod",
+        "help": "pm-math PM'de doğrular, olmazsa butona döner"
+      },
+      "timeoutSeconds": {
+        "label": "Zaman aşımı (saniye)"
+      },
+      "kickOnFail": {
+        "label": "Zaman aşımında at"
+      },
+      "successText": {
+        "label": "Başarı mesajı"
+      },
+      "buttonText": {
+        "label": "Doğrula buton etiketi"
+      },
+      "joinRequestIntegration": {
+        "label": "Katılım isteklerini PM captcha ile karşıla"
+      }
     },
     "docs": {
       "overview": [
-        "Akın koruması: yeni üyeler yapılandırılan süre içinde doğrulanmalıdır.",
-        "Buton modu dokunarak doğrular; matematik modu bir toplama cevabı ister.",
-        "Doğrulanmayan üyeler süre dolduğunda atılır (ban + unban)."
+        "Anti-raid kapısı: yeni üyeler belirtilen sürede doğrulamalı.",
+        "Buton modu dokunarak; math toplam yanıtlayarak; pm-math PM'de doğrular.",
+        "Üyeler doğrulanana kadar susturulur; captcha grupta bir kez çözülür."
       ],
       "setup": [
-        "Botu grup yöneticisi olarak ban yetkisiyle ekleyin.",
-        "Bir mod ve zaman aşımı seçin, ardından modülü etkinleştirin."
+        "Botu ban yetkisiyle grup yöneticisi olarak ekleyin.",
+        "Bir mod ve zaman aşımı seçip modülü etkinleştirin."
       ],
       "troubleshooting": [
-        "Atma işlemleri can_restrict_members dahil yönetici hakları gerektirir.",
-        "Bekleyen doğrulamalar bellekte tutulur ve bot yeniden başladığında sıfırlanır."
+        "Kullanıcı botu başlatmadıysa pm-math grup butonuna döner.",
+        "Katılım isteği entegrasyonu chat_join_request güncellemesi ister (etkin)."
       ]
     }
   },
@@ -317,10 +385,36 @@
       "blockedWords": {
         "label": "Engellenen kelimeler (satır başına bir veya /regex/)"
       },
-      "blockLinks": { "label": "Bağlantıları engelle" },
-      "floodMessageLimit": { "label": "Flood sınırı (0 = kapalı)" },
-      "floodWindowSeconds": { "label": "Flood penceresi (saniye)" },
-      "autoBanAfterStrikes": { "label": "İhtar sonrası otomatik ban (0 = kapalı)" }
+      "blockLinks": {
+        "label": "Bağlantıları engelle"
+      },
+      "floodMessageLimit": {
+        "label": "Flood sınırı (0 = kapalı)"
+      },
+      "floodWindowSeconds": {
+        "label": "Flood penceresi (saniye)"
+      },
+      "autoBanAfterStrikes": {
+        "label": "İhtar sonrası otomatik ban (0 = kapalı)"
+      },
+      "blocklistMode": {
+        "label": "Blacklist modu",
+        "help": "Blacklist eşleşmelerinde uygulanacak ceza; kayıt başına {aksiyon} bunu geçersiz kılar"
+      },
+      "blocklistDelete": {
+        "label": "Eşleşen mesajları sil"
+      },
+      "floodMode": {
+        "label": "Flood cezası"
+      },
+      "blocklistDurationSeconds": {
+        "label": "Blacklist tban/tmute süresi (saniye)",
+        "help": "Süreli blacklist cezaları için süre (0 = varsayılan)"
+      },
+      "floodDurationSeconds": {
+        "label": "Flood cezası süresi (saniye)",
+        "help": "tmute/tban flood cezaları için süre (0 = varsayılan)"
+      }
     },
     "docs": {
       "overview": [
@@ -342,15 +436,25 @@
     "name": "Çekiliş Motoru",
     "description": "Doğrulanabilir kazanan çekilişli, kanal üyeliği koşullu çekilişler.",
     "fields": {
-      "announceWinners": { "label": "Kazananları duyur" },
-      "title": { "label": "Başlık" },
-      "prizeDetails": { "label": "Ödül ayrıntıları" },
+      "announceWinners": {
+        "label": "Kazananları duyur"
+      },
+      "title": {
+        "label": "Başlık"
+      },
+      "prizeDetails": {
+        "label": "Ödül ayrıntıları"
+      },
       "requiredChannels": {
         "label": "Zorunlu kanallar",
         "help": "Katılımda doğrulanan üyelik koşulları; listeyi Sohbet Bağlantıları'nda yönetin"
       },
-      "winnersCount": { "label": "Kazanan sayısı" },
-      "endsAt": { "label": "Bitiş (UTC ISO, boş = manuel)" }
+      "winnersCount": {
+        "label": "Kazanan sayısı"
+      },
+      "endsAt": {
+        "label": "Bitiş (UTC ISO, boş = manuel)"
+      }
     },
     "columns": {
       "title": "Başlık",
@@ -380,8 +484,12 @@
     "name": "Tavsiye Liderlik Tablosu",
     "description": "Puan ödüllü ve /top destekli derin bağlantı tavsiye takibi.",
     "fields": {
-      "pointsPerReferral": { "label": "Tavsiye başına puan" },
-      "leaderboardSize": { "label": "Liderlik tablosu boyutu" }
+      "pointsPerReferral": {
+        "label": "Tavsiye başına puan"
+      },
+      "leaderboardSize": {
+        "label": "Liderlik tablosu boyutu"
+      }
     },
     "docs": {
       "overview": [
@@ -402,7 +510,9 @@
     "name": "Bilgi Yarışmaları & Anketler",
     "description": "Kalıcı skor tablolu, zamanlı bilgi yarışmaları.",
     "fields": {
-      "defaultCommand": { "label": "Tetikleyici komut" }
+      "defaultCommand": {
+        "label": "Tetikleyici komut"
+      }
     },
     "docs": {
       "overview": [
@@ -423,7 +533,9 @@
     "name": "Tepki Analitiği",
     "description": "Kanal gönderi tepkilerini izler ve puan verir.",
     "fields": {
-      "pointsPerReaction": { "label": "Tepki başına puan" }
+      "pointsPerReaction": {
+        "label": "Tepki başına puan"
+      }
     },
     "docs": {
       "overview": [
@@ -490,7 +602,9 @@
         "label": "Temel URL (OpenAI-uyumlu)",
         "help": "openai/openrouter için yok sayılır. Özel örnek: http://localhost:11434/v1 (Ollama), https://api.deepseek.com/v1"
       },
-      "apiKey": { "label": "API anahtarı" },
+      "apiKey": {
+        "label": "API anahtarı"
+      },
       "model": {
         "label": "Model",
         "help": "Sağlayıcı model kimliği: gpt-4o-mini, openai/gpt-4o-mini (OpenRouter), anthropic/claude-3.5-sonnet (OpenRouter), gemini-2.0-flash"
@@ -499,9 +613,15 @@
         "label": "Sesli transkripsiyon modeli",
         "help": "Sesli mesajlar için OpenAI-uyumlu /audio/transcriptions ucu üzerinde kullanılan model; boşsa whisper-1"
       },
-      "systemPrompt": { "label": "Sistem promptu" },
-      "maxTokens": { "label": "Maksimum token" },
-      "historyLimit": { "label": "Geçmiş tur sayısı" },
+      "systemPrompt": {
+        "label": "Sistem promptu"
+      },
+      "maxTokens": {
+        "label": "Maksimum token"
+      },
+      "historyLimit": {
+        "label": "Geçmiş tur sayısı"
+      },
       "smartHandoff": {
         "label": "Akıllı insana yönlendirme (AI sınılandırıcı)",
         "help": "İnsan talebini LLM ile sınıflandırır; kapalıyken veya hata durumunda anahtar kelimelere düşer"
@@ -541,11 +661,21 @@
     "name": "Komutlar & Otomatik Yanıtlayıcı",
     "description": "Medya destekli özel /komutlar ve anahtar kelime tetikleyicileri.",
     "fields": {
-      "startMessage": { "label": "Varsayılan /start mesajı" },
-      "command": { "label": "Komut (/fiyat) veya anahtar kelime" },
-      "responseText": { "label": "Yanıt metni" },
-      "mediaUrl": { "label": "Fotoğraf URL'si" },
-      "buttons": { "label": "Butonlar (JSON dizisi)" }
+      "startMessage": {
+        "label": "Varsayılan /start mesajı"
+      },
+      "command": {
+        "label": "Komut (/fiyat) veya anahtar kelime"
+      },
+      "responseText": {
+        "label": "Yanıt metni"
+      },
+      "mediaUrl": {
+        "label": "Fotoğraf URL'si"
+      },
+      "buttons": {
+        "label": "Butonlar (JSON dizisi)"
+      }
     },
     "columns": {
       "command": "Tetikleyici",
@@ -571,8 +701,12 @@
     "name": "Ücretli Medya Duvarı",
     "description": "sendPaidMedia ile Stars kilitli fotoğraf ve videolar.",
     "fields": {
-      "starCount": { "label": "Varsayılan fiyat (Stars)" },
-      "protectCaption": { "label": "Açıklama içeriğini koru" }
+      "starCount": {
+        "label": "Varsayılan fiyat (Stars)"
+      },
+      "protectCaption": {
+        "label": "Açıklama içeriğini koru"
+      }
     },
     "docs": {
       "overview": [
@@ -597,8 +731,12 @@
         "label": "VIP kanalı",
         "help": "Botun yönettiği özel kanal; listeyi Sohbet Bağlantıları'nda yönetin"
       },
-      "subscriptionPeriodDays": { "label": "Süre (gün)" },
-      "starPrice": { "label": "Fiyat (Stars)" }
+      "subscriptionPeriodDays": {
+        "label": "Süre (gün)"
+      },
+      "starPrice": {
+        "label": "Fiyat (Stars)"
+      }
     },
     "docs": {
       "overview": [
@@ -654,6 +792,351 @@
         "Telegram Mini Uygulamalar için HTTPS genel adres ister; localhost yalnızca bayraklarla Telegram Desktop içinde çalışır.",
         "Mini Uygulama API çağrıları, sahip bot tokenine bağlı initData HMAC-SHA256 imzalarıyla doğrulanır.",
         "Webview şablonu, X-Frame-Options veya CSP frame-ancestors kısıtlaması gönderen siteleri çerçeveleyemez."
+      ]
+    }
+  },
+  "group-moderation": {
+    "name": "Grup Moderasyon Komutları",
+    "description": "grup içi admin komutları: ban, mute, kick, uyarılar, purge, onaylar, sessiz aksiyonlar.",
+    "fields": {
+      "warnLimit": {
+        "label": "Uyarı sınırı",
+        "help": "Uyarı modu cezası tetiklenmeden önceki uyarı sayısı (0 kapatır)"
+      },
+      "warnMode": {
+        "label": "Uyarı modu",
+        "help": "Uyarı sınırına ulaşılınca uygulanan ceza"
+      },
+      "warnTimeSeconds": {
+        "label": "Uyarı süre sonu (saniye, 0 = kapalı)"
+      },
+      "silentActions": {
+        "label": "Sessiz aksiyonlar",
+        "help": "s-komutları ve cezalar onay mesajı olmadan uygulanır"
+      },
+      "adminError": {
+        "label": "Yetkisizlere yanıt ver",
+        "help": "Yetkisiz kullanıcılara \"yalnızca admin\" hatası göster"
+      },
+      "warnDurationSeconds": {
+        "label": "Uyarı modu süresi (saniye)",
+        "help": "tban/tmute uyarı modları için süre (0 = varsayılan)"
+      }
+    },
+    "docs": {
+      "overview": [
+        "Grup içinde doğrudan tam admin komut seti.",
+        "ban/mute/kick aileleri: süreli (tban/tmute), mesaj-silen (d*) ve sessiz (s*) varyantlar.",
+        "Kalıcı uyarılar: sınır, mod ve süre sona ermesi ayarlanabilir; purge komutları dahil.",
+        "Onaylı kullanıcılar otomatik moderasyondan muaf tutulur."
+      ],
+      "setup": [
+        "Modülü etkinleştirin, sonra grupta /ban, /mute, /warn, /purge komutlarını kullanın.",
+        "Bot, sınır ve silme yetkileriyle grup yöneticisi olmalı.",
+        "Varsayılanları buradan ayarlayın; gruplar /setwarnlimit ve /setwarnmode ile geçersiz kılabilir."
+      ],
+      "troubleshooting": [
+        "Purge yalnızca 48 saatten yeni mesajlara ulaşır (Telegram kısıtı).",
+        "Uyarılar veritabanında kalıcıdır; /resetwarn kullanıcıyı tamamen temizler."
+      ]
+    }
+  },
+  "group-tools": {
+    "name": "Grup Admin Araçları",
+    "description": "Sabitlemeler, kullanıcı raporları, admin listesi, /id ve /info sorguları, echo ve komut kapatma.",
+    "fields": {
+      "reportsEnabled": {
+        "label": "Kullanıcı raporları açık",
+        "help": "/report and @admin notify group admins"
+      },
+      "antichannelPins": {
+        "label": "Bağlı kanal postalarını sabitleme"
+      },
+      "cleanLinked": {
+        "label": "Bağlı kanal postalarını sil",
+        "help": "Removes forwarded channel messages from the discussion group"
+      }
+    },
+    "docs": {
+      "overview": [
+        "Pin ailesi: /pin, /pin loud, /permapin, /unpin, /unpinall ve bağlı kanal kontrolleri.",
+        "Kullanıcı raporları: /report ve @admin tüm yöneticileri görünmezce etiketler.",
+        "Sorgular (/id, /info), admin listesi, promote/demote ve /echo.",
+        "Grup bazlı komut devre dışı bırakma: /disable ve /enable."
+      ],
+      "setup": [
+        "Modülü etkinleştirin; her komut Telegram'ın native yönetici izinlerini denetler.",
+        "Pin komutları pin yetkı, komut kapatma change-info yetkisi ister."
+      ],
+      "troubleshooting": [
+        "Yöneticiler raporlanamaz.",
+        "Anonim yöneticiler, owner hariç tüm yetkilerle güvenilir sayılır."
+      ]
+    }
+  },
+  "locks": {
+    "name": "Sohbet Kilitleri",
+    "description": "İnce ayarlı içerik kilitleri: sticker, gif, anket, forward, link ve daha fazlası.",
+    "fields": {
+      "lockedTypes": {
+        "label": "Kilitli türler (satır başına bir)",
+        "help": "Tam liste için grupta /locktypes çalıştırın"
+      },
+      "lockWarns": {
+        "label": "Sadece silmek yerine uyar"
+      },
+      "allowlist": {
+        "label": "İzin listesi (satır başına bir)",
+        "help": "Alan adları, stickerpack:<ad>, forward:<id>, command:/komut"
+      },
+      "lockRules": {
+        "label": "Özel kilit kuralları JSON",
+        "help": "{\"gif\": {\"reason\": \"Gif yok\", \"action\": \"tmute\", \"durationSeconds\": 3600}}"
+      }
+    },
+    "docs": {
+      "overview": [
+        "45+ kilit türü: medya, sticker, anket, forward, link, buton.",
+        "Yazı sistemi kilitleri (rtl, cjk, cyrillic, zalgo) ve anonim kanal koruması.",
+        "İzin listesi belirli alan adı, paket, forward ve komutları muaf tutar.",
+        "/lock <tür> ### sebep {aksiyon} ile kilit başına özel ceza."
+      ],
+      "setup": [
+        "Modülü etkinleştirin ve /lock gif poll url ile içerik türlerini kilitleyin.",
+        "Yöneticiler ve onaylı kullanıcılar her zaman muaf tutulur."
+      ],
+      "troubleshooting": [
+        "Kilitler blacklist'ten önce çalışır.",
+        "Bot göndericileri ve servis mesajları asla kilitlenmez."
+      ]
+    }
+  },
+  "antiraid": {
+    "name": "AntiRaid",
+    "description": "Raid saldırılarında katılanları otomatik veya manuel geçici banlar.",
+    "fields": {
+      "raidTimeSeconds": {
+        "label": "Raid modu süresi (saniye)"
+      },
+      "raidActionTimeSeconds": {
+        "label": "Katılan başına ban (saniye)"
+      },
+      "autoRaidJoinThreshold": {
+        "label": "Dakikada N katılımda otomatik (0 = kapalı)"
+      }
+    },
+    "docs": {
+      "overview": [
+        "Raid modu, saldırı boşalana kadar her yeni katılanı kısa süreli banlar.",
+        "Manuel /antiraid on/off veya özel süre.",
+        "/autoantiraid N, dakikada N katılım olunca otomatik devreye alır."
+      ],
+      "setup": [
+        "Modülü etkinleştirin; saldırı anında /antiraid on ile devreye alın.",
+        "Masum geç katılanlar uzun banlanmasın diye süreleri ayarlayın."
+      ],
+      "troubleshooting": [
+        "Raid durumu bellekte; yeniden başlatma aktif raid modunu kapatır.",
+        "CAPTCHA veya katılım isteği spam katılımı tamamen önler."
+      ]
+    }
+  },
+  "rules": {
+    "name": "Grup Kuralları",
+    "description": "Grup bazlı kurallar; /rules teslimi ve {rules} placeholder butonu.",
+    "fields": {
+      "rulesText": {
+        "label": "Kural metni"
+      },
+      "privateRules": {
+        "label": "Kuralları PM butonuyla gönder"
+      },
+      "rulesButton": {
+        "label": "Buton etiketi"
+      }
+    },
+    "docs": {
+      "overview": [
+        "/rules kuralları grupta veya PM derin-link butonuyla gösterir.",
+        "{rules} placeholder aynı linki karşılama mesajlarına gömer.",
+        "/setrules, /resetrules, /privaterules ve /setrulesbutton ile yönetilir."
+      ],
+      "setup": [
+        "Modülü etkinleştirin ve kural metnini ayarlayın (veya grupta /setrules).",
+        "Özel teslim için kullanıcıların botu PM'de başlatması gerekir."
+      ],
+      "troubleshooting": [
+        "Boş kural metninde /rules \"kural yok\" der.",
+        "Derin link yalnızca herkese açık bot kullanıcı adıyla çalışır."
+      ]
+    }
+  },
+  "admin-log": {
+    "name": "Admin Günlük Kanalı",
+    "description": "Admin aksiyonlarını ve otomatik cezaları Telegram günlük kanalına iletir.",
+    "fields": {
+      "logChatId": {
+        "label": "Günlük kanalı id",
+        "help": "Botun günlükleri gönderdiği sayısal kanal id"
+      },
+      "categories": {
+        "label": "Kategoriler (satır başına bir)",
+        "help": "settings, admin, user, automated, reports, other"
+      }
+    },
+    "docs": {
+      "overview": [
+        "Ban, mute, uyarı, ayar değişikliği ve raporların kalıcı günlüğü.",
+        "Kategori filtreleri: settings, admin, user, automated, reports, other.",
+        "/setlog <kanalId> (grup sahibi) veya dashboard üzerinden bağlayın."
+      ],
+      "setup": [
+        "Bir kanal oluşturun, botu yönetici yapın ve id'sini buraya yazın.",
+        "Günlüklemeyi bağlamak için grupta /setlog <kanalId> çalıştırın."
+      ],
+      "troubleshooting": [
+        "Günlük kanalı kanal olmalı; gruplar log alamaz.",
+        "Botu kanaldan çıkarmak günlüklemeyi sessizce durdurur."
+      ]
+    }
+  },
+  "cleaning": {
+    "name": "Mesaj Temizleme",
+    "description": "Kullanılan komutları, servis mesajlarını ve bot mesajlarını otomatik siler.",
+    "fields": {
+      "cleanCommand": {
+        "label": "Kullanılan komutları temizle"
+      },
+      "cleanServiceTypes": {
+        "label": "Servis türleri (satır başına bir)",
+        "help": "join, leave, pin, title, photo, videochat, other"
+      },
+      "cleanBotMessages": {
+        "label": "Bot mesajlarını 5 dakika sonra sil"
+      }
+    },
+    "docs": {
+      "overview": [
+        "Kullanılan komutlar çalıştıktan sonra kaybolur (admin/user/other sınıfına göre).",
+        "Servis mesajları (katılım, sabitleme, başlık ve foto değişimi) tür bazlı silinir.",
+        "Botun kendi grup mesajları beş dakika sonra kendini yok edebilir."
+      ],
+      "setup": [
+        "Modülü etkinleştirin ve hangi komut sınıflarının temizleneceğini seçin.",
+        "Sohbeti derli toplu tutmak için join, leave gibi türler ekleyin."
+      ],
+      "troubleshooting": [
+        "Komutlar çalışmaya devam etsin diye kısa gecikmeyle silinir.",
+        "Bot mesajı temizliği gönderme dışında ek yetki istemez."
+      ]
+    }
+  },
+  "topics": {
+    "name": "Forum Konu Yönetimi",
+    "description": "Forum konularını sohbet komutlarıyla oluştur, yeniden adlandır, kapat ve sil.",
+    "fields": {
+      "actionTopicId": {
+        "label": "Aksiyon konusu id (0 = genel)",
+        "help": "Bot mesajları bu forum konusuna gider"
+      }
+    },
+    "docs": {
+      "overview": [
+        "Forum konusu komutları: /newtopic, /renametopic, /closetopic, /reopentopic, /deletetopic.",
+        "/setactiontopic bot çıktısını tek bir konuya yönlendirir.",
+        "Her komut, etkilediği konunun içinde çalışır."
+      ],
+      "setup": [
+        "Modülü forum etkin bir süpergrupta etkinleştirin.",
+        "Bota konu yönetimi (manage topics) yönetici hakkı verin."
+      ],
+      "troubleshooting": [
+        "Bu komutlar yalnızca forum konularında çalışır.",
+        "Konu silmek mesajlarını kalıcı olarak kaldırır."
+      ]
+    }
+  },
+  "federation": {
+    "name": "Ban Federasyonları",
+    "description": "Stüdyodaki her botun katıldığı sohbetlerde ortak ban listeleri.",
+    "fields": {
+      "quietFed": {
+        "label": "Fed-ban duyurularını kapat"
+      },
+      "fedNotif": {
+        "label": "Fed sahibini aksiyonlarda bilgilendir"
+      },
+      "fedReasonRequired": {
+        "label": "/fban için sebep zorunlu"
+      }
+    },
+    "docs": {
+      "overview": [
+        "Tek ban listesi, tüm gruplar: /fban kullanıcıyı federasyondaki tüm sohbetlerden çıkarır.",
+        "Sadece bir botu değil, stüdyodaki tüm botları kapsar.",
+        "Fed yöneticileri, abonelikler (maks 5), günlükler ve CSV/JSON içe aktarma."
+      ],
+      "setup": [
+        "Botun PM'inde /newfed <ad> ile federasyon oluşturun.",
+        "Grupları /joinfed <fedId> ile katın (grup sahibi çalıştırır).",
+        "Banları ve içe aktarmaları aşağıdaki yöneticiden yapın."
+      ],
+      "troubleshooting": [
+        "Pasif uygulama chat_member güncellemesi ister (zaten etkin).",
+        "/leavefed, banlar kaldırılana kadar geçmiş banları korur."
+      ]
+    }
+  },
+  "language": {
+    "name": "Bot Yanıt Dili",
+    "description": "Grup bazlı bot yanıtı dili (/setlang); moderasyon ve sistem mesajları.",
+    "fields": {
+      "language": {
+        "label": "Varsayılan dil"
+      }
+    },
+    "docs": {
+      "overview": [
+        "/setlang tüm bot yanıtlarını desteklenen diller arasında değiştirir.",
+        "Tüm moderasyon, captcha, federasyon ve araç mesajları yerelleşir.",
+        "Kullanıcı şablonları (karşılama metni, notlar) yazıldığı gibi kalır."
+      ],
+      "setup": [
+        "Modülü etkinleştirin ve bir varsayılan seçin.",
+        "Gruplar /setlang ile istediği zaman değiştirir."
+      ],
+      "troubleshooting": [
+        "Desteklenen diller: İngilizce, Türkçe, Almanca, Rusça, İspanyolca, Azerice, Arapça, Fransızca, İtalyanca, Portekizce, Ukraynaca, Farsça, Endonezce, Özbekçe.",
+        "Özel sohbetler varsayılan olarak İngilizcedir."
+      ]
+    }
+  },
+  "bot2bot": {
+    "name": "Bot-to-Bot Komutları",
+    "description": "Diğer botların admin inceleme kapısıyla bu botun komutlarını kullanmasını sağlar.",
+    "fields": {
+      "mode": {
+        "label": "Mod",
+        "help": "off botları yok sayar, admin yalnız admin-botlara güvenir, all tüm botlara izin verir"
+      },
+      "skipReview": {
+        "label": "İnceleme kuyruğunu atla",
+        "help": "Güvenilen botlar Onayla/Ret butonları olmadan anında uygulanır"
+      }
+    },
+    "docs": {
+      "overview": [
+        "Otomasyon ve AI botları moderasyon komutlarını kullanabilir.",
+        "Bot kaynaklı admin aksiyonları Onayla/Ret butonları ardına kuyruklanır.",
+        "Güvenilen botlar için incelemeyi atlayıp gerçek yetkileri koruyabilirsiniz."
+      ],
+      "setup": [
+        "Modülü etkinleştirin ve bir mod seçin (varsayılan off).",
+        "Diğer bot, normal bir yönetici gibi /ban gibi komutlar göndersin."
+      ],
+      "troubleshooting": [
+        "Komutu veren botun yine kendi Telegram yönetici hakları gerekir.",
+        "İncelemeler bellekte tutulur; yeniden başlatmada düşer."
       ]
     }
   }
