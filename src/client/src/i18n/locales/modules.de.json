@@ -1238,5 +1238,70 @@
         "Bot-Absender brauchen für restrict-fähige Befehle weiterhin eigene Telegram-Adminrechte."
       ]
     }
+  },
+  "media-library": {
+    "name": "Gemeinsame Medienbibliothek",
+    "description": "Wiederverwendbare URL- und Telegram-file_id-Assets mit Ein-Klick-Auswahl in jedem Medien-Editor.",
+    "docs": {
+      "overview": [
+        "Wiederverwendbare Medien einmal speichern (URL oder Telegram file_id) und überall aus der Bibliothek wählen.",
+        "Die Auswahl ist mit Broadcast-, Welcome-, Drip-, Flow- und Autoresponder-Editoren verknüpft.",
+        "Assets gehören zum Bot; Tags halten wachsende Bibliotheken auffindbar."
+      ],
+      "setup": [
+        "Modul aktivieren und dann die Gemeinsame Medienbibliothek in der Seitenleiste öffnen.",
+        "Asset hinzufügen: benennen, URL oder file_id wählen, Medienart festlegen.",
+        "Im Studio neben jedem Medienfeld auf „Bibliothek“ klicken, um es auszuwählen."
+      ],
+      "troubleshooting": [
+        "Telegram-file_id-Werte gelten nur für den Bot, der die Datei gesendet/empfangen hat.",
+        "URL-Assets müssen für Telegram-Server erreichbar sein (öffentliches HTTPS).",
+        "Abgelaufene file_ids schlagen still fehl — Asset mit neuer ID neu hinzufügen."
+      ]
+    }
+  },
+  "inline-mode": {
+    "name": "Inline-Modus-Antworten",
+    "description": "Beantwortet @bot-Abfragen in jedem Chat mit gespeicherten Schnellantworten oder KI-Antworten.",
+    "docs": {
+      "overview": [
+        "@yourbot <Abfrage> in einen beliebigen Chat tippen, um gespeicherte Schnellantworten zu durchsuchen.",
+        "Die gewählte Antwort wird als Bot-Nachricht in den Chat eingefügt.",
+        "Optional können nicht erkannte Abfragen über den KI-Assistenten laufen (nutzt dessen Anbieter-Konfiguration)."
+      ],
+      "setup": [
+        "Zuerst den Inline-Modus beim Bot in @BotFather aktivieren: /setinline.",
+        "Modul aktivieren und Schnellantworten hinzufügen (Titel + Nachrichteninhalt).",
+        "Optional: KI-Antworten einschalten, nachdem das KI-Assistent-Modul konfiguriert wurde."
+      ],
+      "troubleshooting": [
+        "„Unexpected thing happened“ bedeutet, dass der Inline-Modus nicht über @BotFather aktiviert ist.",
+        "KI-Antworten erfordern das aktivierte ai-assistant-Modul mit funktionierendem API-Schlüssel.",
+        "Inline-Ergebnisse werden pro Nutzer zwischengespeichert — beim Feintuning die Cache-Sekunden senken."
+      ]
+    }
+  },
+  "flows": {
+    "name": "Visueller Flow-Builder",
+    "description": "Mehrstufige Konversationsbäume mit Nachrichten-, Eingabe-, Bedingungs-, Warte- und Tag-Knoten.",
+    "docs": {
+      "overview": [
+        "Geführte Gespräche entwerfen: Auslöser → Nachricht → Eingabe → Verzweigung → Nachfassen.",
+        "Knoten: Nachricht (Medien + Buttons), Eingabe (Variablen erfassen), Bedingung (Verzweigung), Wartezeit (Planung), Tag (Segmentierung).",
+        "Sitzungen gehören zum Nutzer und sind persistent — Nutzer fahren fort, wo sie aufgehört haben, auch nach Neustarts.",
+        "Jeden Flow sofort in der Sandbox aus der Flow-Liste testen."
+      ],
+      "setup": [
+        "Modul aktivieren und einen Flow mit /Befehl-, Stichwort- oder /start-Auslöser erstellen.",
+        "Knoten über die Weiter-Selektoren verbinden; Buttons hinzufügen, die zu anderen Knoten springen.",
+        "Vor dem Livegang den Auslöser über das Play-Symbol in der Sandbox ausführen."
+      ],
+      "troubleshooting": [
+        "Buttons ohne URL springen zum verknüpften Knoten; Buttons mit URL sind einfache Links.",
+        "Flow-Auslöser starten nur in privaten Chats.",
+        "Das Bearbeiten eines Flows setzt aktive Sitzungen zurück; Nutzer starten im neuen Graphen neu.",
+        "Warteknoten laufen innerhalb von ~30 Sekunden um die geplante Zeit weiter."
+      ]
+    }
   }
 }

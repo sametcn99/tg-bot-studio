@@ -3,7 +3,7 @@ import { InlineKeyboard, type Context } from 'grammy';
 import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bot-module-handler';
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
 import { AutoresponderService, type AutoresponderRow } from './autoresponder.service';
-import { BotModel } from '../../models/bot.model';
+import { BotModel } from '../../bots/bot.model';
 import { AdminGateService } from '../../bot-engine/admin-gate.service';
 import { BotI18nService } from '../../bot-engine/bot-i18n.service';
 import { renderTemplate, type TemplateContext } from '../../common/utils/template.util';

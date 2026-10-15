@@ -37,9 +37,9 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { apiFetch } from '../../services/api';
 import PageHeader from '../../components/PageHeader';
-import ModuleHelpDialog from '../../components/ModuleHelpDialog';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import { useSnackbar } from '../../context/SnackbarContext';
+import { useModuleDocs } from '../../context/ModuleDocsContext';
 import ModuleConfigPage from '../ModuleConfigPage';
 import { ConnectionMultiSelect, ConnectionSelect } from '../../components/ConnectionSelect';
 import { LoadingState } from '../../components/Feedback';
@@ -209,7 +209,7 @@ export default function MessageScorePage({
   const [scheduleToDelete, setScheduleToDelete] = useState<ScheduleRow | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [docsOpen, setDocsOpen] = useState(false);
+  const { openDocs } = useModuleDocs();
   const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /**
@@ -425,7 +425,7 @@ export default function MessageScorePage({
       <PageHeader
         title={module.name}
         subtitle={module.description}
-        onDocs={() => setDocsOpen(true)}
+        onDocs={() => openDocs(module)}
       />
 
       {status && (
@@ -957,8 +957,6 @@ export default function MessageScorePage({
         onConfirm={handleDeleteSchedule}
         onCancel={() => setScheduleToDelete(null)}
       />
-
-      <ModuleHelpDialog module={docsOpen ? module : null} onClose={() => setDocsOpen(false)} />
     </Box>
   );
 }

@@ -1238,5 +1238,70 @@
         "Bot senders still need their own Telegram admin rights for restrict-capable commands."
       ]
     }
+  },
+  "media-library": {
+    "name": "Shared Media Library",
+    "description": "Reusable URL and Telegram file_id assets with a one-click picker in every media composer.",
+    "docs": {
+      "overview": [
+        "Save reusable media once (URL or Telegram file_id) and pick it from a library everywhere.",
+        "The picker is wired into broadcast, welcome, drip, flow, and autoresponder composers.",
+        "Assets are per bot; tags keep growing libraries searchable."
+      ],
+      "setup": [
+        "Enable the module, then open Shared Media Library from the sidebar.",
+        "Add an asset: name it, choose URL or file_id, set the media kind.",
+        "Press \"Library\" next to any media field in the studio to pick it."
+      ],
+      "troubleshooting": [
+        "Telegram file_id values are only valid for the bot that sent/received the file.",
+        "URL assets must be reachable by Telegram servers (public https).",
+        "Expired file_ids fail silently — re-add the asset with a fresh id."
+      ]
+    }
+  },
+  "inline-mode": {
+    "name": "Inline Mode Answers",
+    "description": "Answer @bot queries in any chat with saved quick answers or AI-generated replies.",
+    "docs": {
+      "overview": [
+        "Type @yourbot <query> in any chat to search your saved quick answers.",
+        "The picked answer is injected into the chat as a message on behalf of the bot.",
+        "Optionally route non-trivial queries through the AI assistant (uses its provider config)."
+      ],
+      "setup": [
+        "Enable inline mode for the bot in @BotFather first: /setinline.",
+        "Enable the module and add quick answers (title + message content).",
+        "Optional: turn on AI answers after configuring the AI assistant module."
+      ],
+      "troubleshooting": [
+        "\"Unexpected thing happened\" means inline mode is not enabled via @BotFather.",
+        "AI answers need the ai-assistant module enabled with a working API key.",
+        "Inline results are cached per user — lower cache seconds while tuning."
+      ]
+    }
+  },
+  "flows": {
+    "name": "Visual Flow Builder",
+    "description": "Multi-step conversation trees with message, input, condition, delay, and tag nodes.",
+    "docs": {
+      "overview": [
+        "Design guided conversations: trigger → message → input → branching → follow-up.",
+        "Nodes: message (media + buttons), input (capture variables), condition (branch), delay (schedule), tag (segment).",
+        "Sessions are per user and persistent — users resume where they left off, even after restarts.",
+        "Test any flow instantly in the sandbox simulator from the flow list."
+      ],
+      "setup": [
+        "Enable the module and create a flow with a /command, keyword, or /start trigger.",
+        "Wire nodes with the Next selectors; add buttons that jump to other nodes.",
+        "Press the play icon to run the trigger in the sandbox before going live."
+      ],
+      "troubleshooting": [
+        "Buttons without a URL jump to the wired node; buttons with a URL are plain links.",
+        "Flow triggers only start in private chats.",
+        "Editing a flow resets active sessions so users restart on the new graph.",
+        "Delay nodes resume within ~30 seconds of the scheduled time."
+      ]
+    }
   }
 }

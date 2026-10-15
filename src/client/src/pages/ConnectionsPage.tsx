@@ -35,10 +35,10 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { apiFetch } from '../services/api';
 import PageHeader from '../components/PageHeader';
-import ModuleHelpDialog from '../components/ModuleHelpDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { LoadingState } from '../components/Feedback';
 import { useConnections } from '../context/ConnectionsContext';
+import { useModuleDocs } from '../context/ModuleDocsContext';
 import type { ChatConnection } from '../context/ConnectionsContext';
 import type { ModuleEntry } from '../registry/modules';
 import { localizedErrorMessage } from '../utils/errors';
@@ -88,12 +88,12 @@ export default function ConnectionsPage({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { connections, loading, refresh } = useConnections();
+  const { openDocs } = useModuleDocs();
   const [form, setForm] = useState<Record<string, string> | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<ChatConnection | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
-  const [docsOpen, setDocsOpen] = useState(false);
   const [autoSync, setAutoSync] = useState(true);
   const [moduleEnabled, setModuleEnabled] = useState(false);
   const [moduleConfig, setModuleConfig] = useState<Record<string, unknown>>({});
@@ -231,7 +231,7 @@ export default function ConnectionsPage({
       <PageHeader
         title={module.name}
         subtitle={module.description}
-        onDocs={() => setDocsOpen(true)}
+        onDocs={() => openDocs(module)}
         actions={
           <Stack direction="row" spacing={1} alignItems="center">
             <Tooltip title={t('connections.autoSyncTooltip')}>
@@ -454,7 +454,6 @@ export default function ConnectionsPage({
         onConfirm={confirmDelete}
         onCancel={() => setDeleting(null)}
       />
-      <ModuleHelpDialog module={docsOpen ? module : null} onClose={() => setDocsOpen(false)} />
     </Box>
   );
 }

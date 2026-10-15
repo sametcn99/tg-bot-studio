@@ -27,6 +27,8 @@ import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import BookmarkAddIcon from '@mui/icons-material/BookmarkAdd';
+import DashboardCustomizeIcon from '@mui/icons-material/DashboardCustomize';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../services/api';
 import { useBots } from '../context/BotContext';
@@ -37,6 +39,8 @@ import BotDiagnosticsDialog from '../components/BotDiagnosticsDialog';
 import BotPresetsDialog from '../components/BotPresetsDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
 import AnalyticsCard from '../components/AnalyticsCard';
+import HealthAlertsCard from '../components/HealthAlertsCard';
+import TemplateGalleryDialog, { SaveTemplateDialog } from '../components/TemplateGalleryDialog';
 import { MODULES } from '../registry/modules';
 import { localizedErrorMessage } from '../utils/errors';
 
@@ -71,6 +75,8 @@ export default function BotDashboardPage(): React.ReactElement {
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [presetsOpen, setPresetsOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
 
   // Clone dialog state
   const [cloneOpen, setCloneOpen] = useState(false);
@@ -279,6 +285,16 @@ export default function BotDashboardPage(): React.ReactElement {
             >
               {t('actions.applyPreset')}
             </Button>
+            <Tooltip title={t('templates.galleryTooltip')}>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<DashboardCustomizeIcon />}
+                onClick={() => setGalleryOpen(true)}
+              >
+                {t('templates.gallery')}
+              </Button>
+            </Tooltip>
             <Tooltip title={t('bots.cloneTooltip')}>
               <Button
                 variant="outlined"
@@ -296,6 +312,15 @@ export default function BotDashboardPage(): React.ReactElement {
                 aria-label={t('bots.exportAria')}
               >
                 <FileDownloadIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title={t('templates.saveTooltip')}>
+              <IconButton
+                size="small"
+                onClick={() => setSaveTemplateOpen(true)}
+                aria-label={t('templates.save')}
+              >
+                <BookmarkAddIcon fontSize="small" />
               </IconButton>
             </Tooltip>
             <Tooltip title={t('bots.importTooltip')}>
@@ -360,48 +385,57 @@ export default function BotDashboardPage(): React.ReactElement {
       <AnalyticsCard botId={currentBot.id} />
 
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        {stats.map((stat) => (
-          <Grid size={{ xs: 6, md: 3 }} key={stat.label}>
+        <Grid size={{ xs: 12, md: 8 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Grid container spacing={2}>
+              {stats.map((stat) => (
+                <Grid size={{ xs: 6, md: 3 }} key={stat.label}>
+                  <Card>
+                    <CardContent>
+                      <Typography variant="caption" color="text.secondary">
+                        {stat.label}
+                      </Typography>
+                      <Typography variant="h5" fontWeight={700}>
+                        {stat.value}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+
             <Card>
               <CardContent>
-                <Typography variant="caption" color="text.secondary">
-                  {stat.label}
-                </Typography>
-                <Typography variant="h5" fontWeight={700}>
-                  {stat.value}
-                </Typography>
+                <Stack spacing={2}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Typography variant="subtitle2">{t('nav.modules')}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {t('modules.enabled', { count: bot.activeModules, total: MODULES.length })}
+                    </Typography>
+                  </Stack>
+                  <Typography variant="body2" color="text.secondary">
+                    {t('bots.modulesHint')}
+                  </Typography>
+                  <Box>
+                    <Link
+                      component="button"
+                      type="button"
+                      variant="body2"
+                      fontWeight={600}
+                      onClick={() => navigate(`/bots/${bot.id}/modules`)}
+                    >
+                      {t('bots.openModules')}
+                    </Link>
+                  </Box>
+                </Stack>
               </CardContent>
             </Card>
-          </Grid>
-        ))}
+          </Box>
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <HealthAlertsCard botId={currentBot.id} />
+        </Grid>
       </Grid>
-
-      <Card>
-        <CardContent>
-          <Stack spacing={2}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Typography variant="subtitle2">{t('nav.modules')}</Typography>
-              <Typography variant="caption" color="text.secondary">
-                {t('modules.enabled', { count: bot.activeModules, total: MODULES.length })}
-              </Typography>
-            </Stack>
-            <Typography variant="body2" color="text.secondary">
-              {t('bots.modulesHint')}
-            </Typography>
-            <Box>
-              <Link
-                component="button"
-                type="button"
-                variant="body2"
-                fontWeight={600}
-                onClick={() => navigate(`/bots/${bot.id}/modules`)}
-              >
-                {t('bots.openModules')}
-              </Link>
-            </Box>
-          </Stack>
-        </CardContent>
-      </Card>
 
       {/* Clone Bot Dialog */}
       <Dialog open={cloneOpen} onClose={() => setCloneOpen(false)} maxWidth="sm" fullWidth>
@@ -461,6 +495,20 @@ export default function BotDashboardPage(): React.ReactElement {
         open={presetsOpen}
         onClose={() => setPresetsOpen(false)}
         onSuccess={refresh}
+      />
+
+      <TemplateGalleryDialog
+        botId={bot.id}
+        open={galleryOpen}
+        onClose={() => setGalleryOpen(false)}
+        onApplied={refresh}
+      />
+
+      <SaveTemplateDialog
+        botId={bot.id}
+        botName={bot.name}
+        open={saveTemplateOpen}
+        onClose={() => setSaveTemplateOpen(false)}
       />
     </Box>
   );

@@ -39,20 +39,22 @@ export default function PageHeader({
       spacing={1.5}
       sx={{ mb: 3, gap: 2 }}
     >
-      <Box sx={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+      <Box sx={{ minWidth: 0, display: 'flex', alignItems: 'flex-start', gap: 0.5 }}>
         {onBack ? (
-          <IconButton size="small" onClick={onBack} aria-label="back">
+          <IconButton size="small" onClick={onBack} aria-label="back" sx={{ mt: 0.25 }}>
             {backIcon ?? <ArrowBackIcon fontSize="small" />}
           </IconButton>
         ) : null}
-        <Typography variant="h5" component="h1" fontWeight={700} letterSpacing="-0.01em">
-          {title}
-        </Typography>
-        {subtitle ? (
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            {subtitle}
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="h5" component="h1" fontWeight={700} letterSpacing="-0.01em">
+            {title}
           </Typography>
-        ) : null}
+          {subtitle ? (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              {subtitle}
+            </Typography>
+          ) : null}
+        </Box>
       </Box>
       <Stack
         direction={{ xs: 'row', sm: 'row' }}

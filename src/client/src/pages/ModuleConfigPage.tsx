@@ -18,13 +18,15 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../services/api';
 import PageHeader from '../components/PageHeader';
-import ModuleHelpDialog from '../components/ModuleHelpDialog';
 import { ConnectionSelect } from '../components/ConnectionSelect';
 import AiKnowledgeDocsManager from '../components/AiKnowledgeDocsManager';
 import FederationManager from '../components/FederationManager';
 import BlockedUsersManager from '../components/BlockedUsersManager';
 import { LoadingState } from '../components/Feedback';
+import MediaPicker from '../components/MediaPicker';
+import AiTranslateDialog from '../components/AiTranslateDialog';
 import { useSnackbar } from '../context/SnackbarContext';
+import { useModuleDocs } from '../context/ModuleDocsContext';
 import type { ConfigField, ModuleEntry } from '../registry/modules';
 import { localizedErrorMessage } from '../utils/errors';
 
@@ -62,10 +64,10 @@ export default function ModuleConfigPage({
 }): React.ReactElement {
   const { t } = useTranslation();
   const { showSuccess, showError } = useSnackbar();
+  const { openDocs } = useModuleDocs();
   const [state, setState] = useState<ModuleState | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [docsOpen, setDocsOpen] = useState(false);
 
   useEffect(() => {
     apiFetch<Array<{ key: string; isEnabled: boolean; config: Record<string, unknown> }>>(
@@ -85,9 +87,8 @@ export default function ModuleConfigPage({
   if (!state) {
     return (
       <Box>
-        <PageHeader title={module.name} onDocs={() => setDocsOpen(true)} />
+        <PageHeader title={module.name} onDocs={() => openDocs(module)} />
         <LoadingState label={t('common.loading')} />
-        <ModuleHelpDialog module={docsOpen ? module : null} onClose={() => setDocsOpen(false)} />
       </Box>
     );
   }
@@ -134,7 +135,7 @@ export default function ModuleConfigPage({
         <PageHeader
           title={module.name}
           subtitle={module.description}
-          onDocs={() => setDocsOpen(true)}
+          onDocs={() => openDocs(module)}
           actions={
             <Stack direction="row" spacing={1} alignItems="center">
               <Typography variant="caption" color="text.secondary">
@@ -192,6 +193,7 @@ export default function ModuleConfigPage({
             {(module.configFields ?? []).map((field) => (
               <ConfigFieldInput
                 key={field.key}
+                botId={botId}
                 field={field}
                 value={state.config[field.key]}
                 onChange={(value) => setConfig(field.key, value)}
@@ -214,8 +216,6 @@ export default function ModuleConfigPage({
       {module.key === 'ai-assistant' && <AiKnowledgeDocsManager botId={botId} />}
       {module.key === 'federation' && <FederationManager botId={botId} />}
       {module.key === 'moderation' && <BlockedUsersManager botId={botId} />}
-
-      <ModuleHelpDialog module={docsOpen ? module : null} onClose={() => setDocsOpen(false)} />
     </Box>
   );
 }
@@ -224,16 +224,19 @@ export default function ModuleConfigPage({
  * Renders a single configuration field widget with an optional help tooltip
  * implemented as an accessible icon button inside the label adornment.
  * @param {object} props - Component props.
+ * @param {number} props.botId - Active bot id (media picker, AI translate).
  * @param {ConfigField} props.field - Field definition.
  * @param {unknown} props.value - Current value.
  * @param {(value: unknown) => void} props.onChange - Change callback.
  * @returns {React.ReactElement} The field widget.
  */
 function ConfigFieldInput({
+  botId,
   field,
   value,
   onChange,
 }: {
+  botId: number;
   field: ConfigField;
   value: unknown;
   onChange: (value: unknown) => void;
@@ -251,6 +254,43 @@ function ConfigFieldInput({
         onChange={onChatChange}
         types={field.connectionTypes}
         helperText={field.help}
+      />
+    );
+  }
+
+  if (field.type === 'mediaSelect') {
+    return (
+      <MediaSelectField
+        botId={botId}
+        label={field.label}
+        value={String(value ?? '')}
+        onChange={onChange}
+      />
+    );
+  }
+
+  if ((field.type === 'text' || field.type === 'textarea') && typeof value === 'string') {
+    return (
+      <TranslatableTextField
+        botId={botId}
+        field={field}
+        value={value}
+        helpAdornment={
+          field.help ? (
+            <InputAdornment position="end">
+              <Tooltip title={field.help}>
+                <IconButton
+                  size="small"
+                  aria-label={t('common.helpFor', { field: field.label })}
+                  edge="end"
+                >
+                  <InfoOutlinedIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </InputAdornment>
+          ) : undefined
+        }
+        onChange={onChange}
       />
     );
   }
@@ -369,4 +409,92 @@ function ConfigFieldInput({
         />
       );
   }
+}
+
+/**
+ * Media library picker field: a read-only value input plus a button opening
+ * the shared media library to pick a saved URL or Telegram file_id.
+ */
+function MediaSelectField({
+  botId,
+  label,
+  value,
+  onChange,
+}: {
+  botId: number;
+  label: string;
+  value: string;
+  onChange: (value: unknown) => void;
+}): React.ReactElement {
+  const { t } = useTranslation();
+  const [pickerOpen, setPickerOpen] = useState(false);
+  return (
+    <Stack direction="row" spacing={1} alignItems="center">
+      <TextField
+        size="small"
+        fullWidth
+        label={label}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+      <Button size="small" onClick={() => setPickerOpen(true)} sx={{ whiteSpace: 'nowrap' }}>
+        {t('mediaLibrary.select')}
+      </Button>
+      <MediaPicker
+        botId={botId}
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onSelect={(picked) => onChange(picked)}
+      />
+    </Stack>
+  );
+}
+
+/**
+ * Text/textarea field with a one-click AI translation helper: opens the
+ * translation dialog, then applies the picked language version back to the
+ * field.
+ */
+function TranslatableTextField({
+  botId,
+  field,
+  value,
+  helpAdornment,
+  onChange,
+}: {
+  botId: number;
+  field: ConfigField;
+  value: string;
+  helpAdornment?: React.ReactElement;
+  onChange: (value: unknown) => void;
+}): React.ReactElement {
+  const { t } = useTranslation();
+  const [translateOpen, setTranslateOpen] = useState(false);
+  const multiline = field.type === 'textarea';
+  return (
+    <Box>
+      <TextField
+        size="small"
+        fullWidth
+        label={field.label}
+        multiline={multiline}
+        minRows={multiline ? 3 : undefined}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        InputProps={helpAdornment ? { endAdornment: helpAdornment } : undefined}
+      />
+      <Box sx={{ mt: 0.5 }}>
+        <Button size="small" disabled={!value.trim()} onClick={() => setTranslateOpen(true)}>
+          {t('translate.openButton')}
+        </Button>
+      </Box>
+      <AiTranslateDialog
+        botId={botId}
+        open={translateOpen}
+        text={value}
+        onClose={() => setTranslateOpen(false)}
+        onApply={(text) => onChange(text)}
+      />
+    </Box>
+  );
 }

@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { MiniApp } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
-import { MiniAppModel } from '../../models/mini-app.model';
+import { MiniAppModel } from './mini-app.model';
 import { SystemSettingsService } from '../../database/system-settings.service';
 import { BotPoolService } from '../../bot-engine/bot-pool.service';
 import { WebhooksService } from '../webhooks/webhooks.service';
@@ -14,7 +14,15 @@ import { StudioException } from '../../common/errors/studio-error';
 export type MiniAppRow = MiniApp;
 
 /** Allowed Mini App template types. */
-const TEMPLATE_TYPES = ['ecommerce', 'loyalty', 'forms', 'spin', 'webview'] as const;
+const TEMPLATE_TYPES = [
+  'ecommerce',
+  'loyalty',
+  'forms',
+  'spin',
+  'webview',
+  'leaderboard',
+  'support',
+] as const;
 
 /**
  * Mini App studio service: CRUD, one-click chat menu button publishing,
@@ -187,6 +195,95 @@ export class MiniAppsService {
       points: user?.points ?? 0,
       checkedInToday: lastCheckin === today,
     };
+  }
+
+  /**
+   * Points leaderboard for the `leaderboard` Mini App template: top members
+   * by points plus the requesting user's own rank when outside the top list.
+   */
+  async getLeaderboard(
+    botId: number,
+    telegramId: number,
+    limit = 20,
+  ): Promise<Record<string, unknown>> {
+    const take = Math.max(3, Math.min(50, limit));
+    const top = await this.prisma.botUser.findMany({
+      where: { botId, points: { gt: 0 } },
+      orderBy: [{ points: 'desc' }, { lastSeenAt: 'desc' }],
+      take,
+    });
+    const total = await this.prisma.botUser.count({ where: { botId, points: { gt: 0 } } });
+    const entries = top.map((user, index) => ({
+      rank: index + 1,
+      name: user.firstName ?? user.username ?? `#${user.telegramId}`,
+      username: user.username,
+      points: user.points,
+      isMe: Number(user.telegramId) === telegramId,
+    }));
+    let myRank: number | null = null;
+    if (!entries.some((entry) => entry.isMe)) {
+      const mine = await this.prisma.botUser.findUnique({
+        where: { botId_telegramId: { botId, telegramId: BigInt(telegramId) } },
+        select: { points: true },
+      });
+      if (mine && mine.points > 0) {
+        myRank = await this.prisma.botUser.count({
+          where: { botId, points: { gt: mine.points } },
+        });
+        myRank += 1;
+      }
+    }
+    return { entries, myRank, total, myPoints: entries.find((e) => e.isMe)?.points ?? 0 };
+  }
+
+  /**
+   * Stores a support request from the `support` Mini App template and, when
+   * the support module is configured, relays it to the admin chat.
+   */
+  async submitSupport(
+    botId: number,
+    telegramId: number,
+    message: string,
+    senderName?: string,
+  ): Promise<Record<string, unknown>> {
+    const clean = message.trim().slice(0, 3_500);
+    if (!clean) throw new BadRequestException('Message text is required');
+
+    await this.prisma.supportMessage.create({
+      data: {
+        botId,
+        telegramId: BigInt(telegramId),
+        direction: 'user',
+        senderName: senderName ?? null,
+        messageText: clean,
+        createdAt: new Date().toISOString(),
+      },
+    });
+
+    let relayed = false;
+    const supportModule = await this.prisma.botModule.findUnique({
+      where: { botId_moduleKey: { botId, moduleKey: 'support' } },
+    });
+    if (supportModule?.isEnabled === 1 && supportModule.configJson) {
+      try {
+        const config = JSON.parse(supportModule.configJson) as Record<string, unknown>;
+        const adminChatId = Number(config.adminChatId ?? 0);
+        if (adminChatId) {
+          const bot = this.pool.getBot(botId);
+          if (bot) {
+            await bot.api.sendMessage(
+              adminChatId,
+              `🆘 <b>Mini App support request</b>\nFrom: ${senderName ?? telegramId} (<code>${telegramId}</code>)\n\n${clean.replace(/</g, '&lt;')}`,
+              { parse_mode: 'HTML' },
+            );
+            relayed = true;
+          }
+        }
+      } catch {
+        // Relay is best-effort; the request is already stored.
+      }
+    }
+    return { success: true, relayed };
   }
 
   /**

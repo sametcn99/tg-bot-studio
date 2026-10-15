@@ -2,12 +2,10 @@ import { Injectable, Logger, NotFoundException, OnApplicationShutdown } from '@n
 import { InlineKeyboard } from 'grammy';
 import { BotPoolService } from '../../bot-engine/bot-pool.service';
 import { renderTemplate } from '../../common/utils/template.util';
-import {
-  SchedulerModel,
-  toScheduledPostRow,
-  type ScheduledPostRow,
-} from '../../models/scheduler.model';
-import { BotModel } from '../../models/bot.model';
+import { SchedulerModel } from './scheduler.model';
+import { toScheduledPostRow } from './scheduler.mapper';
+import { type ScheduledPostRow } from './scheduler.entity';
+import { BotModel } from '../../bots/bot.model';
 
 export { ScheduledPostRow };
 

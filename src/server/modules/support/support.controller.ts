@@ -6,8 +6,8 @@ import {
   type AiConfig,
   type ChatMessage,
 } from '../ai-assistant/ai-assistant.service';
-import { SupportModel } from '../../models/support.model';
-import { BotModel } from '../../models/bot.model';
+import { SupportModel } from './support.model';
+import { BotModel } from '../../bots/bot.model';
 import { SystemSettingsService } from '../../database/system-settings.service';
 import { LiveEventsService } from '../../common/live/live-events.service';
 import { StudioException } from '../../common/errors/studio-error';

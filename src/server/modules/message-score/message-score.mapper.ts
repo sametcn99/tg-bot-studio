@@ -1,0 +1,41 @@
+import type { ScoreSchedule } from '@prisma/client';
+import type { ScoreScheduleRow } from './message-score.entity';
+
+export function toScoreScheduleRow(s: ScoreSchedule): ScoreScheduleRow {
+  return {
+    id: s.id,
+    bot_id: s.botId,
+    name: s.name,
+    chat_ids_json: s.chatIdsJson,
+    period: s.period,
+    frequency: s.frequency,
+    time_of_day: s.timeOfDay,
+    day_of_week: s.dayOfWeek,
+    run_at: s.runAt,
+    top_limit: s.topLimit,
+    header_text: s.headerText,
+    row_template: s.rowTemplate,
+    footer_text: s.footerText,
+    parse_mode: s.parseMode,
+    medals: s.medals,
+    disable_notification: s.disableNotification,
+    status: s.status,
+    last_run_at: s.lastRunAt,
+    last_result: s.lastResult,
+    created_at: s.createdAt,
+    botId: s.botId,
+    chatIdsJson: s.chatIdsJson,
+    timeOfDay: s.timeOfDay,
+    dayOfWeek: s.dayOfWeek,
+    runAt: s.runAt,
+    topLimit: s.topLimit,
+    headerText: s.headerText,
+    rowTemplate: s.rowTemplate,
+    footerText: s.footerText,
+    parseMode: s.parseMode,
+    disableNotification: s.disableNotification,
+    lastRunAt: s.lastRunAt,
+    lastResult: s.lastResult,
+    createdAt: s.createdAt,
+  };
+}

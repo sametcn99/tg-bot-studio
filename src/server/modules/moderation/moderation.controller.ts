@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
 import { EngineHelpersService } from '../../bot-engine/engine-helpers.service';
-import { BotUserModel } from '../../models/bot-user.model';
-import { ChatConnectionModel } from '../../models/chat-connection.model';
+import { BotUserModel } from '../users-crm/bot-user.model';
+import { ChatConnectionModel } from '../connections/chat-connection.model';
 
 /**
  * Banned user management endpoints backing the moderation module UI.

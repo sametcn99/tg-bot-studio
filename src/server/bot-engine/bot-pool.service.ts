@@ -2,7 +2,7 @@ import { Injectable, Logger, OnApplicationBootstrap, OnApplicationShutdown } fro
 import { Bot } from 'grammy';
 import { autoRetry } from '@grammyjs/auto-retry';
 import { PrismaService } from '../database/prisma.service';
-import { ChatConnectionModel } from '../models/chat-connection.model';
+import { ChatConnectionModel } from '../modules/connections/chat-connection.model';
 import { EngineHelpersService } from './engine-helpers.service';
 import { ModuleHandlerRegistry } from './module-handler-registry';
 import { PaymentEventsService } from './payment-events.service';

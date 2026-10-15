@@ -3,7 +3,7 @@ import type { Bot } from 'grammy';
 import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bot-module-handler';
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
 import { EngineHelpersService } from '../../bot-engine/engine-helpers.service';
-import { SupportModel } from '../../models/support.model';
+import { SupportModel } from './support.model';
 import { SystemSettingsService } from '../../database/system-settings.service';
 
 /**

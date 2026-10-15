@@ -11,7 +11,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { AiAssistantService, type AiConfig } from './ai-assistant.service';
-import { BotModel } from '../../models/bot.model';
+import { BotModel } from '../../bots/bot.model';
 import { StudioException } from '../../common/errors/studio-error';
 
 /** Per-kind system instructions for the form-content generator. */
@@ -26,6 +26,24 @@ const GENERATION_PROMPTS: Record<string, string> = {
     'Write a Telegram broadcast announcement for the described purpose. Return PLAIN TEXT only (no JSON, no fences), 2-5 short paragraphs, with at most 2 emoji and placeholders like {first_name} where natural.',
   'knowledge-faq':
     'Write a knowledge-base article (FAQ style) answering the described topic for a company bot. Return PLAIN MARKDOWN only (no code fences), starting with a "# Title" line, followed by concise Q&A or guideline sections.',
+};
+
+/** Bot-reply language codes with their English names for translation prompts. */
+const TRANSLATION_LANGUAGES: Record<string, string> = {
+  en: 'English',
+  tr: 'Turkish',
+  de: 'German',
+  ru: 'Russian',
+  es: 'Spanish',
+  az: 'Azerbaijani',
+  ar: 'Arabic',
+  fr: 'French',
+  it: 'Italian',
+  pt: 'Portuguese',
+  uk: 'Ukrainian',
+  fa: 'Persian (Farsi)',
+  id: 'Indonesian',
+  uz: 'Uzbek',
 };
 
 /**
@@ -115,6 +133,125 @@ export class AiAssistantController {
         `Provider call failed: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
+  }
+
+  /**
+   * Translates labeled studio texts (welcome templates, rules, replies) into
+   * any subset of the 14 supported bot languages in one provider call.
+   * Placeholders like `{first_name}` are preserved verbatim.
+   */
+  @Post('translate')
+  async translate(
+    @Param('botId', ParseIntPipe) botId: number,
+    @Body() body: { texts?: Record<string, string>; targetLanguages?: string[] },
+  ): Promise<{ translations: Record<string, Record<string, string>> }> {
+    void botId;
+    const texts = body.texts ?? {};
+    const keys = Object.keys(texts).filter((key) => String(texts[key] ?? '').trim().length > 0);
+    if (keys.length === 0) {
+      throw new StudioException('TRANSLATE_EMPTY', 'Provide at least one non-empty text');
+    }
+    const requested = (body.targetLanguages ?? []).filter((code) => TRANSLATION_LANGUAGES[code]);
+    const targets = requested.length > 0 ? requested : Object.keys(TRANSLATION_LANGUAGES);
+    if (targets.length === 0) {
+      throw new StudioException('TRANSLATE_LANG_UNKNOWN', 'No supported target language');
+    }
+
+    const config = await this.resolveConfig(botId);
+    if (!this.service.isConfigured(config)) {
+      throw new StudioException(
+        'AI_NOT_CONFIGURED',
+        'The AI assistant is not configured with an API key yet.',
+      );
+    }
+
+    const sourceJson = JSON.stringify(
+      Object.fromEntries(keys.map((key) => [key, String(texts[key]).slice(0, 2_000)])),
+    );
+    const languageList = targets
+      .map((code) => `${code} (${TRANSLATION_LANGUAGES[code]})`)
+      .join(', ');
+    const prompt = [
+      'You are a professional localization engine for Telegram bot content.',
+      `Translate every value of the given JSON object into these languages: ${languageList}.`,
+      'Keep Telegram placeholders like {first_name}, {mention}, {group_name} exactly as they are.',
+      'Keep the tone friendly and concise; preserve emoji; do not add explanations.',
+      'Return STRICT JSON only, no markdown fences, shaped exactly as:',
+      '{"translations": {"<lang>": {"<key>": "<translated text>"}}}',
+      `Input JSON: ${sourceJson}`,
+    ].join('\n');
+
+    try {
+      const raw = await this.service.complete(
+        { ...config, systemPrompt: prompt, maxTokens: Math.min(4_000, 400 * targets.length + 400) },
+        [{ role: 'user', content: prompt }],
+      );
+      const parsed = this.parseJsonObject(raw) as {
+        translations?: Record<string, Record<string, string>>;
+      } | null;
+      if (!parsed?.translations) {
+        throw new BadRequestException('Provider returned an unparsable translation payload');
+      }
+      const translations: Record<string, Record<string, string>> = {};
+      for (const code of targets) {
+        const entry = parsed.translations[code];
+        if (entry && typeof entry === 'object') {
+          translations[code] = Object.fromEntries(
+            keys
+              .filter((key) => typeof entry[key] === 'string' && entry[key].trim())
+              .map((key) => [key, String(entry[key])]),
+          );
+        }
+      }
+      return { translations };
+    } catch (error) {
+      if (error instanceof BadRequestException) throw error;
+      throw new BadRequestException(
+        `Provider call failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  /**
+   * Extracts the first JSON object from a provider reply, tolerating code
+   * fences and preambles.
+   */
+  private parseJsonObject(raw: string): Record<string, unknown> | null {
+    let text = raw.trim();
+    text = text
+      .replace(/^```(?:json)?/i, '')
+      .replace(/```$/, '')
+      .trim();
+    const start = text.indexOf('{');
+    if (start < 0) return null;
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    for (let i = start; i < text.length; i++) {
+      const char = text[i];
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (char === '\\') {
+        escaped = true;
+        continue;
+      }
+      if (char === '"') inString = !inString;
+      if (inString) continue;
+      if (char === '{') depth++;
+      if (char === '}') {
+        depth--;
+        if (depth === 0) {
+          try {
+            return JSON.parse(text.slice(start, i + 1)) as Record<string, unknown>;
+          } catch {
+            return null;
+          }
+        }
+      }
+    }
+    return null;
   }
 
   /**

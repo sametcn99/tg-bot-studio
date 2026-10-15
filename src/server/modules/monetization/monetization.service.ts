@@ -6,7 +6,8 @@ import {
   OnApplicationShutdown,
 } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { MonetizationModel, type VipSubscriptionEntity } from '../../models/monetization.model';
+import { MonetizationModel } from './monetization.model';
+import { type VipSubscriptionEntity } from './monetization.entity';
 import { BotPoolService } from '../../bot-engine/bot-pool.service';
 import { StudioException } from '../../common/errors/studio-error';
 

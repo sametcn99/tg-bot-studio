@@ -17,7 +17,7 @@ import PaidIcon from '@mui/icons-material/Paid';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../../services/api';
 import PageHeader from '../../components/PageHeader';
-import ModuleHelpDialog from '../../components/ModuleHelpDialog';
+import { useModuleDocs } from '../../context/ModuleDocsContext';
 import { ConnectionSelect, NoConnectionsNotice } from '../../components/ConnectionSelect';
 import UserPicker from '../../components/UserPicker';
 import DataTable, { type Column } from '../../components/DataTable';
@@ -63,7 +63,7 @@ export default function MonetizationPage({
   const [tab, setTab] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
-  const [docsOpen, setDocsOpen] = useState(false);
+  const { openDocs } = useModuleDocs();
   const [vip, setVip] = useState<VipRow[]>([]);
 
   const [mediaForm, setMediaForm] = useState({
@@ -136,7 +136,7 @@ export default function MonetizationPage({
       <PageHeader
         title={t('monetization.title')}
         subtitle={t('monetization.subtitle')}
-        onDocs={() => setDocsOpen(true)}
+        onDocs={() => openDocs(module)}
       />
       {status && (
         <Alert severity="success" sx={{ mb: 2 }}>
@@ -312,8 +312,6 @@ export default function MonetizationPage({
           </Card>
         </Stack>
       )}
-
-      <ModuleHelpDialog module={docsOpen ? module : null} onClose={() => setDocsOpen(false)} />
     </Box>
   );
 }

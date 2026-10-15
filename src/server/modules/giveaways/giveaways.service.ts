@@ -3,7 +3,7 @@ import { InlineKeyboard } from 'grammy';
 import { BotPoolService } from '../../bot-engine/bot-pool.service';
 import { SystemSettingsService } from '../../database/system-settings.service';
 import { PrismaService } from '../../database/prisma.service';
-import { GiveawayModel } from '../../models/giveaway.model';
+import { GiveawayModel } from './giveaway.model';
 
 /**
  * Giveaway row in the `giveaways` table.

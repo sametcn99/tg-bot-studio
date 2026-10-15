@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { SnackbarProvider } from './context/SnackbarContext';
 import { BotProvider } from './context/BotContext';
 import { ConnectionsProvider } from './context/ConnectionsContext';
+import { ModuleDocsProvider } from './context/ModuleDocsContext';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import BotsOverviewPage from './pages/BotsOverviewPage';
@@ -24,6 +25,9 @@ import WebhooksPage from './pages/modules/WebhooksPage';
 import EngagementPage from './pages/modules/EngagementPage';
 import ReferralsPage from './pages/modules/ReferralsPage';
 import MessageScorePage from './pages/modules/MessageScorePage';
+import MediaLibraryPage from './pages/modules/MediaLibraryPage';
+import InlineModePage from './pages/modules/InlineModePage';
+import FlowBuilderPage from './pages/modules/FlowBuilderPage';
 import { useLocalizedModule } from './registry/localize';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import ScrollToTop from './components/ScrollToTop';
@@ -73,6 +77,12 @@ function ModulePageDispatcher({
       return <ConnectionsPage botId={botId} module={module} />;
     case 'message-score':
       return <MessageScorePage botId={botId} module={module} />;
+    case 'media-library':
+      return <MediaLibraryPage botId={botId} module={module} />;
+    case 'inline':
+      return <InlineModePage botId={botId} module={module} />;
+    case 'flows':
+      return <FlowBuilderPage botId={botId} module={module} />;
     default:
       return <ModuleConfigPage botId={botId} module={module} />;
   }
@@ -131,18 +141,20 @@ export default function App(): React.ReactElement {
   return (
     <ErrorBoundary>
       <StudioThemeProvider>
-        <AuthProvider>
-          <SnackbarProvider>
-            <BotProvider>
-              <ConnectionsProvider>
-                <BrowserRouter>
-                  <ScrollToTop />
-                  <AppRoutes />
-                </BrowserRouter>
-              </ConnectionsProvider>
-            </BotProvider>
-          </SnackbarProvider>
-        </AuthProvider>
+        <ModuleDocsProvider>
+          <AuthProvider>
+            <SnackbarProvider>
+              <BotProvider>
+                <ConnectionsProvider>
+                  <BrowserRouter>
+                    <ScrollToTop />
+                    <AppRoutes />
+                  </BrowserRouter>
+                </ConnectionsProvider>
+              </BotProvider>
+            </SnackbarProvider>
+          </AuthProvider>
+        </ModuleDocsProvider>
       </StudioThemeProvider>
     </ErrorBoundary>
   );

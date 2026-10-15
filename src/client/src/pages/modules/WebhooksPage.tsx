@@ -25,10 +25,10 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../../services/api';
 import PageHeader from '../../components/PageHeader';
-import ModuleHelpDialog from '../../components/ModuleHelpDialog';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import DataTable, { type Column } from '../../components/DataTable';
 import { useSnackbar } from '../../context/SnackbarContext';
+import { useModuleDocs } from '../../context/ModuleDocsContext';
 import { ConnectionSelect, NoConnectionsNotice } from '../../components/ConnectionSelect';
 import { useConnections } from '../../context/ConnectionsContext';
 import type { ModuleEntry } from '../../registry/modules';
@@ -101,7 +101,7 @@ export default function WebhooksPage({
   const [inbound, setInbound] = useState<InboundHook[]>([]);
   const [log, setLog] = useState<DeliveryLog[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [docsOpen, setDocsOpen] = useState(false);
+  const { openDocs } = useModuleDocs();
 
   const [outForm, setOutForm] = useState({ url: '', secret: '', events: '' });
   const [inForm, setInForm] = useState({ targetChatId: '', template: 'Event: {payload.event}' });
@@ -216,7 +216,7 @@ export default function WebhooksPage({
       <PageHeader
         title={module.name}
         subtitle={module.description}
-        onDocs={() => setDocsOpen(true)}
+        onDocs={() => openDocs(module)}
       />
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
@@ -496,8 +496,6 @@ export default function WebhooksPage({
         onConfirm={confirmDeleteInbound}
         onCancel={() => setDeletingInbound(null)}
       />
-
-      <ModuleHelpDialog module={docsOpen ? module : null} onClose={() => setDocsOpen(false)} />
     </Box>
   );
 }

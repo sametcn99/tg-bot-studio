@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
-import { BotModel } from '../models/bot.model';
+import { BotModel } from './bot.model';
 import { BotPoolService } from '../bot-engine/bot-pool.service';
 import { MODULE_REGISTRY, findModule } from '../bot-engine/module-registry';
 import { callGetMe } from '../common/utils/telegram.util';

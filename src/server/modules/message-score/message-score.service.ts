@@ -9,14 +9,11 @@ import { BotPoolService } from '../../bot-engine/bot-pool.service';
 import { SystemSettingsService } from '../../database/system-settings.service';
 import { nextZonedOccurrence, safeTimeZone } from '../../common/utils/tz.util';
 import { renderTemplate } from '../../common/utils/template.util';
-import {
-  MessageScoreModel,
-  toScoreScheduleRow,
-  type ScoreScheduleRow,
-  type LeaderboardEntryEntity,
-} from '../../models/message-score.model';
-import { BotModel } from '../../models/bot.model';
-import { ChatConnectionModel } from '../../models/chat-connection.model';
+import { MessageScoreModel } from './message-score.model';
+import { toScoreScheduleRow } from './message-score.mapper';
+import { type ScoreScheduleRow, type LeaderboardEntryEntity } from './message-score.entity';
+import { BotModel } from '../../bots/bot.model';
+import { ChatConnectionModel } from '../connections/chat-connection.model';
 import { StudioException } from '../../common/errors/studio-error';
 
 export type ScorePeriod = 'daily' | 'weekly' | 'monthly' | 'alltime';

@@ -1,9 +1,19 @@
-import { Body, Controller, Get, HttpCode, Param, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import type { Request } from 'express';
 import { MiniAppsService } from './mini-apps.service';
 import { Public } from '../../common/decorators/public.decorator';
 import { TmaInitDataGuard, type TmaUser } from '../../common/guards/tma-init-data.guard';
-import { MiniAppModel } from '../../models/mini-app.model';
+import { MiniAppModel } from './mini-app.model';
 
 /**
  * Public Mini App runtime endpoints consumed by the TMA webview shell. The
@@ -136,6 +146,47 @@ export class TmaController {
   ) {
     const app = await this.appForSlug(slug);
     return this.service.submitForm(app.bot_id, app.id, req.tmaUser!.id, body.answers ?? {});
+  }
+
+  /**
+   * Points leaderboard for the `leaderboard` template.
+   */
+  @Public()
+  @UseGuards(TmaInitDataGuard)
+  @Get(':slug/leaderboard')
+  async leaderboard(
+    @Param('slug') slug: string,
+    @Req() req: Request & { tmaUser?: TmaUser },
+    @Query('limit') limit?: string,
+  ) {
+    const botId = await this.botIdForSlug(slug);
+    const parsed = Number(limit);
+    return this.service.getLeaderboard(
+      botId,
+      req.tmaUser!.id,
+      Number.isFinite(parsed) ? parsed : 20,
+    );
+  }
+
+  /**
+   * Support request submission for the `support` template.
+   */
+  @Public()
+  @UseGuards(TmaInitDataGuard)
+  @Post(':slug/support')
+  @HttpCode(200)
+  async support(
+    @Param('slug') slug: string,
+    @Req() req: Request & { tmaUser?: TmaUser },
+    @Body() body: { message?: string; senderName?: string },
+  ) {
+    const app = await this.appForSlug(slug);
+    return this.service.submitSupport(
+      app.bot_id,
+      req.tmaUser!.id,
+      String(body.message ?? ''),
+      body.senderName ? String(body.senderName).slice(0, 120) : undefined,
+    );
   }
 
   /**

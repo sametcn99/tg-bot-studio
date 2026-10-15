@@ -15,7 +15,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../../services/api';
 import PageHeader from '../../components/PageHeader';
-import ModuleHelpDialog from '../../components/ModuleHelpDialog';
+import { useModuleDocs } from '../../context/ModuleDocsContext';
 import ModuleConfigPage from '../ModuleConfigPage';
 import type { ModuleEntry } from '../../registry/modules';
 
@@ -50,7 +50,7 @@ export default function ReferralsPage({
 }): React.ReactElement {
   const { t } = useTranslation();
   const [leaders, setLeaders] = useState<LeaderRow[]>([]);
-  const [docsOpen, setDocsOpen] = useState(false);
+  const { openDocs } = useModuleDocs();
 
   useEffect(() => {
     apiFetch<LeaderRow[]>(`/api/bots/${botId}/users`)
@@ -70,7 +70,7 @@ export default function ReferralsPage({
       <PageHeader
         title={module.name}
         subtitle={module.description}
-        onDocs={() => setDocsOpen(true)}
+        onDocs={() => openDocs(module)}
       />
 
       <Stack spacing={3}>
@@ -117,8 +117,6 @@ export default function ReferralsPage({
           </CardContent>
         </Card>
       </Stack>
-
-      <ModuleHelpDialog module={docsOpen ? module : null} onClose={() => setDocsOpen(false)} />
     </Box>
   );
 }

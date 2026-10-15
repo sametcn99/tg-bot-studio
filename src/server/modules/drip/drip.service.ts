@@ -3,8 +3,8 @@ import { BotPoolService } from '../../bot-engine/bot-pool.service';
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
 import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bot-module-handler';
 import { renderTemplate } from '../../common/utils/template.util';
-import { DripModel } from '../../models/drip.model';
-import { BotUserModel } from '../../models/bot-user.model';
+import { DripModel } from './drip.model';
+import { BotUserModel } from '../users-crm/bot-user.model';
 
 /**
  * Drip step definition inside `steps_json`.

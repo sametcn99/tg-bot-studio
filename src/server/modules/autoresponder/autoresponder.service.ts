@@ -1,9 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import {
-  AutoresponderModel,
-  toAutoresponderRow,
-  type AutoresponderRow,
-} from '../../models/autoresponder.model';
+import { AutoresponderModel } from './autoresponder.model';
+import { toAutoresponderRow } from './autoresponder.mapper';
+import { type AutoresponderRow } from './autoresponder.entity';
 
 export { AutoresponderRow };
 

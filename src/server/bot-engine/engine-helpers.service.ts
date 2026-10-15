@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { User } from 'grammy/types';
-import { BotUserModel, type BotUserEntity } from '../models/bot-user.model';
+import { BotUserModel } from '../modules/users-crm/bot-user.model';
+import type { BotUserEntity } from '../modules/users-crm/bot-user.entity';
 
 /**
  * Bot subscriber row shape.

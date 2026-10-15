@@ -2,10 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bot-module-handler';
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
 import { AiAssistantService, type AiConfig } from './ai-assistant.service';
-import { AiModel } from '../../models/ai.model';
-import { BotModel } from '../../models/bot.model';
-import { AutoresponderModel } from '../../models/autoresponder.model';
-import { SupportModel } from '../../models/support.model';
+import { AiModel } from './ai.model';
+import { BotModel } from '../../bots/bot.model';
+import { AutoresponderModel } from '../autoresponder/autoresponder.model';
+import { SupportModel } from '../support/support.model';
 import { SystemSettingsService } from '../../database/system-settings.service';
 
 /**

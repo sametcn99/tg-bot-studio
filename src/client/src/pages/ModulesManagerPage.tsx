@@ -14,11 +14,10 @@ import {
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../services/api';
 import PageHeader from '../components/PageHeader';
-import ModuleHelpDialog from '../components/ModuleHelpDialog';
 import { LoadingState } from '../components/Feedback';
-import type { ModuleEntry } from '../registry/modules';
 import { localizedCategory, useLocalizedModules } from '../registry/localize';
 import { localizedErrorMessage } from '../utils/errors';
+import { useModuleDocs } from '../context/ModuleDocsContext';
 
 /**
  * Effective module state returned by `GET /api/bots/:id/modules`.
@@ -46,9 +45,9 @@ export default function ModulesManagerPage(): React.ReactElement {
   const { botId } = useParams<{ botId: string }>();
   const navigate = useNavigate();
   const localizedModules = useLocalizedModules();
+  const { openDocs } = useModuleDocs();
   const [states, setStates] = useState<ModuleState[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [docsModule, setDocsModule] = useState<ModuleEntry | null>(null);
 
   useEffect(() => {
     apiFetch<ModuleState[]>(`/api/bots/${botId}/modules`)
@@ -154,7 +153,9 @@ export default function ModulesManagerPage(): React.ReactElement {
                                 type="button"
                                 variant="caption"
                                 fontWeight={600}
-                                onClick={() => setDocsModule(entry ?? null)}
+                                onClick={() => {
+                                  if (entry) openDocs(entry);
+                                }}
                               >
                                 {t('modules.docsLink')}
                               </Link>
@@ -178,8 +179,6 @@ export default function ModulesManagerPage(): React.ReactElement {
           </Box>
         ))
       )}
-
-      <ModuleHelpDialog module={docsModule} onClose={() => setDocsModule(null)} />
     </Box>
   );
 }

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type { Link } from '@prisma/client';
-import { StartMenuModel } from '../../models/start-menu.model';
+import { StartMenuModel } from './start-menu.model';
 
 /**
  * Menu item row in the `links` table backing the Start Menu module.

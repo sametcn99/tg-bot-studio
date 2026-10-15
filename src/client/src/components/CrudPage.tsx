@@ -30,7 +30,6 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../services/api';
 import PageHeader from './PageHeader';
-import ModuleHelpDialog from './ModuleHelpDialog';
 import ConfirmDialog from './ConfirmDialog';
 import DataTable, { type Column } from './DataTable';
 import { ConnectionSelect, ConnectionMultiSelect } from './ConnectionSelect';
@@ -38,6 +37,7 @@ import VisualButtonBuilder from './VisualButtonBuilder';
 import VisualDripStepsBuilder from './VisualDripStepsBuilder';
 import { LoadingState } from './Feedback';
 import { useSnackbar } from '../context/SnackbarContext';
+import { useModuleDocs } from '../context/ModuleDocsContext';
 import { openSimulatorWith } from '../utils/simulatorBus';
 import AiGenerateButton from './AiGenerateButton';
 import TemplatePicker from './TemplatePicker';
@@ -83,6 +83,7 @@ export default function CrudPage({
 }): React.ReactElement {
   const { t } = useTranslation();
   const { showSuccess, showError } = useSnackbar();
+  const { openDocs } = useModuleDocs();
   const resource = module.crud!;
   const endpoint = resource.endpoint.replace('{botId}', String(botId));
 
@@ -91,7 +92,6 @@ export default function CrudPage({
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [docsOpen, setDocsOpen] = useState(false);
   const [enabled, setEnabled] = useState(false);
   const [config, setConfig] = useState<Record<string, unknown>>({});
   const [submitBusy, setSubmitBusy] = useState(false);
@@ -411,7 +411,7 @@ export default function CrudPage({
       <PageHeader
         title={module.name}
         subtitle={module.description}
-        onDocs={() => setDocsOpen(true)}
+        onDocs={() => openDocs(module)}
         actions={
           <Stack direction="row" spacing={1}>
             <Tooltip title={t('actions.refresh')}>
@@ -583,7 +583,6 @@ export default function CrudPage({
         onConfirm={confirmDelete}
         onCancel={() => setDeleting(null)}
       />
-      <ModuleHelpDialog module={docsOpen ? module : null} onClose={() => setDocsOpen(false)} />
     </Box>
   );
 }

@@ -30,8 +30,8 @@ import { useTranslation } from 'react-i18next';
 import { apiDownload, apiFetch } from '../../services/api';
 import PageHeader from '../../components/PageHeader';
 import { LoadingState } from '../../components/Feedback';
-import ModuleHelpDialog from '../../components/ModuleHelpDialog';
 import { useSnackbar } from '../../context/SnackbarContext';
+import { useModuleDocs } from '../../context/ModuleDocsContext';
 import { formatDateTime } from '../../utils/format';
 import type { ModuleEntry } from '../../registry/modules';
 import { localizedErrorMessage } from '../../utils/errors';
@@ -83,7 +83,7 @@ export default function UsersCrmPage({
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<CrmUser | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [docsOpen, setDocsOpen] = useState(false);
+  const { openDocs } = useModuleDocs();
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [orderBy, setOrderBy] = useState<'name' | 'points' | 'last_seen_at'>('last_seen_at');
@@ -150,7 +150,7 @@ export default function UsersCrmPage({
       <PageHeader
         title={module.name}
         subtitle={module.description}
-        onDocs={() => setDocsOpen(true)}
+        onDocs={() => openDocs(module)}
         actions={
           <Stack direction="row" spacing={1}>
             <Button
@@ -361,8 +361,6 @@ export default function UsersCrmPage({
           </Button>
         </DialogActions>
       </Dialog>
-
-      <ModuleHelpDialog module={docsOpen ? module : null} onClose={() => setDocsOpen(false)} />
     </Box>
   );
 }

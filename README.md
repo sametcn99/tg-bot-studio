@@ -8,7 +8,7 @@ A self-hosted web application for managing multiple Telegram bots and Telegram M
 | --------- | ----------------------------------------------------------------------- |
 | Backend   | NestJS 11, grammY (multi-bot long-polling pool), class-validator        |
 | Database  | SQLite via Prisma 6 (WAL mode) at `data/studio.sqlite`, versioned `prisma/migrations` |
-| Dashboard | React 19, Vite, Material UI v7, React Router v7, i18next (English & Turkish) |
+| Dashboard | React 19, Vite, Material UI v7, React Router v7, i18next (English, Turkish, German & Russian) |
 | Mini Apps | React + Vite shell with the official Telegram WebApp SDK                |
 | Runtime   | Bun (`oven/bun:1-alpine` in Docker)                                     |
 
@@ -47,13 +47,25 @@ bunx prisma migrate resolve --applied 0_init
 
 ## Tests & CI
 
-Unit tests (bun test) cover the critical pure logic: Telegram initData HMAC validation, CSV serialization/escaping, message placeholder rendering, and spin prize weighting. GitHub Actions CI (`.github/workflows/ci.yml`) runs format check, ESLint, typecheck, tests, and a full build on every push/PR.
+Unit tests (bun test) cover the critical pure logic: Telegram initData HMAC validation, CSV serialization/escaping, message placeholder/template rendering, spin prize weighting, blocklist regex matching, chat-lock evaluation, duration/timezone helpers, and locale-pack parity for both bot replies (14 languages) and the dashboard i18n. GitHub Actions CI (`.github/workflows/ci.yml`) runs Prettier format check, ESLint, typecheck, tests, and a full build on every push/PR.
 
 ## Bot Portability & Operations
 
 - **Clone bot**: copy module toggles/configs, autoresponders, drip campaigns, and mini apps to a new bot from the bot dashboard (requires a fresh BotFather token).
 - **Export/Import**: full bot configuration as a JSON bundle (AI API keys excluded from exports).
+- **Template gallery**: save any bot's export bundle as a named template and apply it to other bots in one click.
 - **Backups**: one-click SQLite backups (`VACUUM INTO`) served by `/api/backup` with download and delete.
+- **Health monitoring**: the studio watches every bot's poller state, records failure/recovery events, and can push Telegram alerts to a configured chat (with a test alert button).
+- **Prometheus metrics**: `GET /api/metrics` exposes runtime gauges (bot statuses, daily volume, enabled modules, audience size, uptime, memory) in the Prometheus text format.
+
+## Automation & Content Features
+
+- **Visual flow builder**: multi-step conversation trees (message, input, condition, delay, tag nodes) triggered by commands, keywords, or `/start`, with persistent per-user sessions, inline-button navigation, and sandbox testing through the real middleware chain.
+- **Broadcast A/B experiments**: up to 3 variants sent to a deterministic test split, per-variant click-through tracking via redirect links, and one-click winner roll-out to the remaining audience.
+- **Shared media library**: reusable URL / Telegram file_id assets with a picker wired into the broadcast, welcome, flow, and autoresponder composers.
+- **Inline mode**: answer `@bot <query>` searches in any chat with saved quick answers, optionally routed through the AI assistant (requires `/setinline` in @BotFather).
+- **AI translation**: translate any studio text (welcome templates, rules, broadcasts) into a subset of the 14 supported bot languages in one provider call, then apply the result to the field.
+- **Mini App templates**: seven ready templates — e-commerce (Stars checkout), loyalty hub, forms, reward wheel, webview, points leaderboard, and a support desk that relays requests to the support module's admin chat.
 
 ## Docker Deployment
 
@@ -66,7 +78,7 @@ The container exposes port `3000`, persists SQLite data in the `./data` volume, 
 ## Project Structure
 
 ```text
-telegram-bot-studio/
+tg-bot-studio/
 ├── Dockerfile                  # Multi-stage production container build
 ├── docker-compose.yml          # Container orchestrator with volume persistence
 ├── vite.config.ts              # Dashboard build (dist/client)
@@ -79,19 +91,24 @@ telegram-bot-studio/
         ├── common/             # Guards, filters, interceptors, decorators, utils
         ├── database/           # SQLite service and migrations
         ├── auth/               # Master key authentication and sessions
-        ├── bots/               # Bot CRUD and status
+        ├── bots/               # Bot CRUD, clone, export/import, backups
         ├── bot-engine/         # Multi-bot runtime pool and grammY dispatch
-        └── modules/            # Isolated feature modules (20 toggleable)
+        ├── i18n/               # Bot-side locale packs (14 languages)
+        ├── metrics/            # Prometheus metrics endpoint (/api/metrics)
+        ├── templates/          # Bot template gallery (save/apply export bundles)
+        └── modules/            # Isolated feature modules (35 toggleable)
 ```
 
 ## Module Catalog
 
-| Category                  | Modules                                                                                                                              |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| Directory & Content       | Chat Connections, Start Menu, Channel Post Scheduler                                                                                |
-| Communication & CRM       | Support Desk (Livegram), Business Secretary, Drip Sequences, Broadcast Engine, Audience CRM                                          |
-| Community & Moderation    | Welcome & Clean Chat, Captcha Gatekeeper, Anti-Spam Moderation, Giveaways, Referral Leaderboard, Quizzes & Polls, Reaction Analytics, Message Score & Activity Leaderboard |
-| Automation & Monetization | AI Assistant, Custom Commands & Auto-Responder, Paid Media Paywall, VIP Subscriptions, Webhooks Hub                                  |
+All 35 modules are toggleable per bot from the Modules page and grouped into four sidebar categories:
+
+| Category                  | Modules                                                                                                                                                                                                                                                                                                    |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Directory & Content       | Chat Connections, Start Menu, Channel Post Scheduler, Shared Media Library                                                                                                                                                                                                                                 |
+| Communication & CRM       | Support Desk (Livegram), Business Secretary, Drip Sequences, Broadcast Engine, Audience CRM                                                                                                                                                                                                                |
+| Community & Moderation    | Group Welcome & Goodbye, Captcha Gatekeeper, Moderation & Anti-Spam, Group Moderation Commands, Group Admin Tools, Chat Locks, AntiRaid, Group Rules, Admin Log Channel, Message Cleaning, Forum Topic Management, Ban Federations, Bot Reply Language, Giveaways Engine, Referral Leaderboard, Quizzes & Polls, Reaction Analytics, Message Score & Leaderboard |
+| Automation & Monetization | AI Assistant, Commands & Auto-Responder, Paid Media Paywall, VIP Subscriptions, Webhooks Hub, Bot-to-Bot Commands, Inline Mode Answers, Visual Flow Builder                                                                                                                                                 |
 
 Every module ships with an integrated Documentation & Setup Guide dialog (Overview & Use Cases, Step-by-Step Setup, Placeholders Dictionary, Troubleshooting & Rate Limits) available from its dashboard page.
 
@@ -99,11 +116,15 @@ Every module ships with an integrated Documentation & Setup Guide dialog (Overvi
 
 Register groups and channels once in the Connections module; every target-chat field across the studio (Scheduler, Support Desk, Giveaways, VIP Subscriptions, Paid Media, Webhooks) becomes a dropdown powered by that shared list. Chats the bot is added to are learned automatically — the engine records every group/channel the bot operates in and a 30-second auto-sync imports them into the address book (titles and usernames enriched via `getChat`), so the Connections list stays current without any manual action. Auto-sync can be turned off per bot from the Connections page, and numeric ids (`-100…`) as well as public `@usernames` are supported. Modules without any matching connection show an inline notice linking straight to the Connections page while still allowing manual id entry.
 
-### Message Score & Activity Leaderboard
+### Message Score & Leaderboard
 
 Scores member activity in every group the bot operates in (messages, replies to others, and media, each with a configurable weight) and ranks the most active members per period (today, 7 days, 30 days, all time). The rich message composer selects one or many target chats, defines header, per-member row template, and footer with placeholders (`{rank}`, `{medal}`, `{mention}`, `{score}`, `{messages}`, `{group_name}`, ...), parse mode, medal emojis, and silent delivery — with a server-rendered live preview. Postings can be sent instantly or automated through schedules (once, hourly, daily, weekly in UTC) managed from the module page.
 
 > **Group privacy note:** Telegram hides regular member messages from bots unless the bot is a group administrator or bot privacy mode is disabled via BotFather. Enable one of the two so the module can score activity.
+
+### Group Moderation Suite
+
+Beyond automated moderation, the studio bundles a full in-group admin toolkit: ban/mute/kick command families with timed, delete and silent variants, persistent warnings with configurable limits, purge commands, fine-grained content locks (45+ types with allowlists and script/script-language filters), AntiRaid join-storm defense, per-group rules and reply language, user reports with approvals, forum topic management, message cleaning, and ban federations whose ban lists are enforced across every group of every studio bot. All actions can stream to an Admin Log Channel for a full audit trail.
 
 ### Visual Builders & Zero Raw JSON Experience
 
@@ -136,4 +157,4 @@ Manage and reply to customer tickets directly from the web dashboard. Features c
 
 - Placeholder dictionary (`{first_name}`, `{user_id}`, `{mention}`, `{group_name}`, ...) is available inside every module's help dialog with one-click copy.
 - Telegram rate limit guidance (429 backoff) and required bot permissions are documented per module in the dashboard.
-- Full bilingual interface (English & Turkish) switchable instantly from the top navigation bar.
+- Four interface languages (English, Turkish, German, Russian) switchable instantly from the top navigation bar; bots themselves reply in any of 14 languages, settable per group.

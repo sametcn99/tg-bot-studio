@@ -6,6 +6,8 @@ import Loyalty from './templates/Loyalty';
 import Forms from './templates/Forms';
 import Spin from './templates/Spin';
 import Webview from './templates/Webview';
+import Leaderboard from './templates/Leaderboard';
+import Support from './templates/Support';
 
 /**
  * Public Mini App runtime configuration served by `/api/tma/:slug`.
@@ -129,6 +131,10 @@ function TemplateRenderer({ config }: { config: TmaAppConfig }): React.ReactElem
       return <Spin config={config} />;
     case 'webview':
       return <Webview config={config} />;
+    case 'leaderboard':
+      return <Leaderboard config={config} />;
+    case 'support':
+      return <Support config={config} />;
     default:
       return <div className="state-message">Unknown template type.</div>;
   }

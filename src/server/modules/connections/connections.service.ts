@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import type { ChatConnection } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
-import { ChatConnectionModel } from '../../models/chat-connection.model';
+import { ChatConnectionModel } from './chat-connection.model';
 import { BotPoolService } from '../../bot-engine/bot-pool.service';
 import { StudioException } from '../../common/errors/studio-error';
 

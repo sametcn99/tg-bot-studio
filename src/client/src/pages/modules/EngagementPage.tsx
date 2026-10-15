@@ -21,9 +21,9 @@ import AddIcon from '@mui/icons-material/Add';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../../services/api';
 import PageHeader from '../../components/PageHeader';
-import ModuleHelpDialog from '../../components/ModuleHelpDialog';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import { useSnackbar } from '../../context/SnackbarContext';
+import { useModuleDocs } from '../../context/ModuleDocsContext';
 import ModuleConfigPage from '../ModuleConfigPage';
 import { useLocalizedModule } from '../../registry/localize';
 import type { ModuleEntry } from '../../registry/modules';
@@ -67,7 +67,7 @@ export default function EngagementPage({
   const [quizzes, setQuizzes] = useState<QuizRow[]>([]);
   const [reactions, setReactions] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
-  const [docsOpen, setDocsOpen] = useState(false);
+  const { openDocs } = useModuleDocs();
   const [form, setForm] = useState({ question: '', options: '', correctOptionId: 0, points: 1 });
   const [quizToDelete, setQuizToDelete] = useState<QuizRow | null>(null);
 
@@ -141,7 +141,7 @@ export default function EngagementPage({
       <PageHeader
         title={t('engagement.title')}
         subtitle={t('engagement.subtitle')}
-        onDocs={() => setDocsOpen(true)}
+        onDocs={() => openDocs(module)}
       />
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
@@ -311,8 +311,6 @@ export default function EngagementPage({
         onConfirm={handleDeleteQuiz}
         onCancel={() => setQuizToDelete(null)}
       />
-
-      <ModuleHelpDialog module={docsOpen ? module : null} onClose={() => setDocsOpen(false)} />
     </Box>
   );
 }

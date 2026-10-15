@@ -18,8 +18,8 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../../services/api';
 import PageHeader from '../../components/PageHeader';
-import ModuleHelpDialog from '../../components/ModuleHelpDialog';
 import { useSnackbar } from '../../context/SnackbarContext';
+import { useModuleDocs } from '../../context/ModuleDocsContext';
 import { formatDateTime } from '../../utils/format';
 import ModuleConfigPage from '../ModuleConfigPage';
 import { useLiveStream } from '../../hooks/useLiveStream';
@@ -82,7 +82,7 @@ export default function SupportPage({
   const [replyText, setReplyText] = useState('');
   const [sending, setSending] = useState(false);
   const [copilotLoading, setCopilotLoading] = useState(false);
-  const [docsOpen, setDocsOpen] = useState(false);
+  const { openDocs } = useModuleDocs();
 
   const loadData = useCallback((): void => {
     apiFetch<SupportThread[]>(`/api/bots/${botId}/support/threads`)
@@ -168,7 +168,7 @@ export default function SupportPage({
       <PageHeader
         title={module.name}
         subtitle={module.description}
-        onDocs={() => setDocsOpen(true)}
+        onDocs={() => openDocs(module)}
       />
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
@@ -438,8 +438,6 @@ export default function SupportPage({
           </CardContent>
         </Card>
       </Stack>
-
-      <ModuleHelpDialog module={docsOpen ? module : null} onClose={() => setDocsOpen(false)} />
     </Box>
   );
 }

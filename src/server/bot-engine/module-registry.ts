@@ -90,8 +90,42 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     name: 'Enterprise Broadcast Engine',
     category: 'Communication & CRM',
     description:
-      'Mass messaging with audience filters, rich media, inline buttons, and 429-aware rate limiting.',
-    defaultConfig: { rateLimitPerSecond: 20, pauseBetweenBatchesMs: 1000 },
+      'Mass messaging with audience filters, rich media, inline buttons, 429-aware rate limiting, A/B variant experiments, and click-through tracking.',
+    defaultConfig: {
+      rateLimitPerSecond: 20,
+      pauseBetweenBatchesMs: 1000,
+      batchSize: 30,
+      trackClicks: false,
+      publicBaseUrl: '',
+    },
+  },
+  {
+    key: 'media-library',
+    name: 'Shared Media Library',
+    category: 'Directory & Content',
+    description:
+      'Reusable URL and Telegram file_id assets for every media-capable composer (welcome, broadcast, drip, autoresponder, scheduler) with a one-click picker.',
+    defaultConfig: {},
+  },
+  {
+    key: 'inline-mode',
+    name: 'Inline Mode Answers',
+    category: 'Automation & Monetization',
+    description:
+      'Answers @bot queries in any chat with saved quick answers and an optional AI-generated answer (requires inline mode enabled in @BotFather).',
+    defaultConfig: {
+      suggestions: [],
+      enableAi: false,
+      cacheSeconds: 30,
+    },
+  },
+  {
+    key: 'flows',
+    name: 'Visual Flow Builder',
+    category: 'Automation & Monetization',
+    description:
+      'Multi-step conversation flows started by commands, keywords, or /start: message, input, condition, delay, and tag nodes with per-user sessions and sandbox testing.',
+    defaultConfig: {},
   },
   {
     key: 'crm',

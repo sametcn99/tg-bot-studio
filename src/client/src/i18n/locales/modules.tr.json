@@ -1238,5 +1238,70 @@
         "Bot göndericiler için kısıt yeteneği olan komutlarda botun kendi Telegram admin hakları da gerekir."
       ]
     }
+  },
+  "media-library": {
+    "name": "Ortak Medya Kütüphanesi",
+    "description": "Her medya alanında tek tıkla seçilebilen, yeniden kullanılabilir URL ve Telegram file_id varlıkları.",
+    "docs": {
+      "overview": [
+        "Yeniden kullanılacak medyayı bir kez kaydedin (URL veya Telegram file_id), her yerden kütüphaneden seçin.",
+        "Seçici broadcast, welcome, drip, akış ve oto yanıt düzenleyicilerine bağlıdır.",
+        "Varlıklar botta bazlıdır; etiketler büyüyen kütüphaneleri aranır kılar."
+      ],
+      "setup": [
+        "Modülü etkinleştirin ve kenar çubuğundan Ortak Medya Kütüphanesi'ni açın.",
+        "Varlık ekleyin: isim verin, URL veya file_id seçin, medya türünü belirleyin.",
+        "Stüdyoda herhangi bir medya alanının yanındaki \"Kütüphane\" düğmesine basın."
+      ],
+      "troubleshooting": [
+        "Telegram file_id değerleri yalnızca dosyayı gönderen/alan bot için geçerlidir.",
+        "URL varlıkları Telegram sunucuları tarafından erişilebilir olmalıdır (public https).",
+        "Süresi dolan file_id'ler sessizce başarısız olur — varlığı yeni kimlikle yeniden ekleyin."
+      ]
+    }
+  },
+  "inline-mode": {
+    "name": "Inline Mod Yanıtları",
+    "description": "Herhangi bir sohbette @bot sorgularını kayıtlı hazır yanıtlarla veya AI yanıtlarıyla cevaplar.",
+    "docs": {
+      "overview": [
+        "Kayıtlı hazır yanıtlarınızı aramak için herhangi bir sohbette @botunuz <sorgu> yazın.",
+        "Seçilen yanıt, bot adına sohbete mesaj olarak eklenir.",
+        "İsteğe bağlı olarak zor sorgular AI asistanına yönlendirilir (sağlayıcı yapılandırmasını kullanır)."
+      ],
+      "setup": [
+        "Önce @BotFather üzerinden botta inline modu etkinleştirin: /setinline.",
+        "Modülü etkinleştirin ve hazır yanıtlar ekleyin (başlık + mesaj içeriği).",
+        "İsteğe bağlı: AI asistan modülünü yapılandırdıktan sonra AI yanıtlarını açın."
+      ],
+      "troubleshooting": [
+        "\"Unexpected thing happened\" hatası inline modun @BotFather üzerinden açılmadığı anlamına gelir.",
+        "AI yanıtları için ai-assistant modülünün çalışan bir API anahtarıyla açık olması gerekir.",
+        "Inline sonuçlar kullanıcıya göre önbelleklenir — ayarlarken önbellek süresini düşürün."
+      ]
+    }
+  },
+  "flows": {
+    "name": "Görsel Akış Tasarımcısı",
+    "description": "Mesaj, girdi, koşul, bekleme ve etiket düğümleriyle çok adımlı konuşma ağaçları.",
+    "docs": {
+      "overview": [
+        "Yönlendirmeli konuşmalar tasarlayın: tetik → mesaj → girdi → dallanma → devam.",
+        "Düğümler: mesaj (medya + düğme), girdi (değişken yakalar), koşul (dallanır), bekleme (zamanlar), etiket (segmentler).",
+        "Oturumlar kullanıcıya aittir ve kalıcıdır — kullanıcılar kaldığı yerden devam eder, yeniden başlatmalarda bile.",
+        "Her akışı akış listesinden kum havuzu simülatöründe anında test edin."
+      ],
+      "setup": [
+        "Modülü etkinleştirin ve /komut, anahtar kelime veya /start tetikli bir akış oluşturun.",
+        "Düğümleri Sonraki seçicileriyle bağlayın; diğer düğümlere atlayan düğmeler ekleyin.",
+        "Yayına almadan önce oynat simgesiyle tetikleyiciyi kum havuzunda çalıştırın."
+      ],
+      "troubleshooting": [
+        "URL'si olmayan düğmeler bağlı olduğu düğüme atlar; URL'si olanlar düz bağlantıdır.",
+        "Akış tetikleyicileri yalnızca özel sohbetlerde başlar.",
+        "Akışı düzenlemek aktif oturumları sıfırlar; kullanıcılar yeni grafte yeniden başlar.",
+        "Bekleme düğümleri planlanan zamanın yaklaşık 30 saniye içinde devam eder."
+      ]
+    }
   }
 }

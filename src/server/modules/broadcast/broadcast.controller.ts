@@ -69,4 +69,26 @@ export class BroadcastController {
   cancel(@Param('botId', ParseIntPipe) botId: number, @Param('id', ParseIntPipe) id: number) {
     return this.service.cancel(botId, id);
   }
+
+  /**
+   * Picks the winner of an A/B experiment (manual variant override or best
+   * click-through) and queues the winner to the non-test audience.
+   * @param {number} botId - Owning bot id.
+   * @param {string} experimentId - Experiment group id.
+   * @param {Record<string, unknown>} body - Optional `variantBroadcastId`.
+   * @returns {Promise<object>} Winner and rollout broadcast rows.
+   */
+  @Post('experiments/:experimentId/choose-winner')
+  chooseWinner(
+    @Param('botId', ParseIntPipe) botId: number,
+    @Param('experimentId') experimentId: string,
+    @Body() body: Record<string, unknown>,
+  ) {
+    const override = Number(body.variantBroadcastId);
+    return this.service.chooseWinner(
+      botId,
+      experimentId,
+      Number.isFinite(override) && override > 0 ? override : undefined,
+    );
+  }
 }

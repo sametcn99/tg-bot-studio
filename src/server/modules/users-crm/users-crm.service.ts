@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { BotUserModel } from '../../models/bot-user.model';
+import { BotUserModel } from './bot-user.model';
 import type { BotUserRow } from '../../bot-engine/engine-helpers.service';
 
 /**

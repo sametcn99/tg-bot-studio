@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bot-module-handler';
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
 import { EngineHelpersService } from '../../bot-engine/engine-helpers.service';
-import { BotUserModel } from '../../models/bot-user.model';
+import { BotUserModel } from './bot-user.model';
 
 /**
  * Runtime for the Affiliate & Referral Leaderboard module. Parses `ref_<id>`

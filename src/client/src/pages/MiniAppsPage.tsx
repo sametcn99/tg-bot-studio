@@ -33,11 +33,11 @@ import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../services/api';
 import PageHeader from '../components/PageHeader';
 import PhonePreview from '../components/PhonePreview';
-import ModuleHelpDialog from '../components/ModuleHelpDialog';
 import VisualMiniAppConfigBuilder from '../components/VisualMiniAppConfigBuilder';
 import { EmptyState } from '../components/Feedback';
 import { useMiniAppsDocsEntry } from '../registry/localize';
 import { localizedErrorMessage } from '../utils/errors';
+import { useModuleDocs } from '../context/ModuleDocsContext';
 
 /**
  * Mini App row from the studio API (config and theme parsed).
@@ -69,6 +69,8 @@ const TEMPLATES = [
   { value: 'forms', labelKey: 'miniApps.templateForms' },
   { value: 'spin', labelKey: 'miniApps.templateSpin' },
   { value: 'webview', labelKey: 'miniApps.templateWebview' },
+  { value: 'leaderboard', labelKey: 'miniApps.templateLeaderboard' },
+  { value: 'support', labelKey: 'miniApps.templateSupport' },
 ];
 
 /**
@@ -79,11 +81,11 @@ const TEMPLATES = [
 export default function MiniAppsPage(): React.ReactElement {
   const { t } = useTranslation();
   const miniAppsDocsEntry = useMiniAppsDocsEntry();
+  const { openDocs } = useModuleDocs();
   const { botId } = useParams<{ botId: string }>();
   const [apps, setApps] = useState<MiniApp[]>([]);
   const [selected, setSelected] = useState<MiniApp | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
-  const [docsOpen, setDocsOpen] = useState(false);
   const [previewNonce, setPreviewNonce] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [publicBaseUrl, setPublicBaseUrl] = useState(
@@ -141,7 +143,7 @@ export default function MiniAppsPage(): React.ReactElement {
       <PageHeader
         title={t('nav.miniApps')}
         subtitle={t('miniApps.subtitle')}
-        onDocs={() => setDocsOpen(true)}
+        onDocs={() => openDocs(miniAppsDocsEntry)}
         actions={
           <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)}>
             {t('actions.create')}
@@ -256,10 +258,6 @@ export default function MiniAppsPage(): React.ReactElement {
         botId={Number(botId)}
         onClose={() => setCreateOpen(false)}
         onCreated={reload}
-      />
-      <ModuleHelpDialog
-        module={docsOpen ? miniAppsDocsEntry : null}
-        onClose={() => setDocsOpen(false)}
       />
     </Box>
   );
@@ -563,6 +561,10 @@ function sampleConfigFor(templateType: string): Record<string, unknown> {
       };
     case 'webview':
       return { url: 'https://example.com' };
+    case 'leaderboard':
+      return {};
+    case 'support':
+      return { greeting: 'Describe your issue and our team will reply here or in the bot chat.' };
     default:
       return {};
   }

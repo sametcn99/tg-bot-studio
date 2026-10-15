@@ -7,7 +7,6 @@ import {
   Stack,
   Tab,
   Tabs,
-  Tooltip,
   Typography,
   useMediaQuery,
 } from '@mui/material';
@@ -433,7 +432,9 @@ function SetupSection({ lines }: { lines: string[] }): React.ReactElement {
 
 /**
  * Placeholders section: hint paragraph plus a responsive grid of copyable
- * variable cards with their descriptions always visible.
+ * variable cards with their descriptions always visible. Cards use the
+ * native `title` hint instead of MUI Tooltips — nine Tooltip mounts made the
+ * Placeholders tab the slowest section to open.
  * @returns {React.ReactElement} The section.
  */
 function PlaceholdersSection(): React.ReactElement {
@@ -466,7 +467,8 @@ function PlaceholdersSection(): React.ReactElement {
 
 /**
  * Copyable placeholder card: monospace tag row with a copy affordance and the
- * description beneath it. Clicking anywhere on the card copies the tag.
+ * description beneath it. Clicking anywhere on the card copies the tag; the
+ * copy hint is a native `title` so the section stays cheap to mount.
  * @param {object} props - Component props.
  * @param {string} props.tag - Placeholder tag (e.g. `{first_name}`).
  * @param {string} props.description - Explanation shown under the tag.
@@ -498,58 +500,57 @@ function PlaceholderCard({
   }
 
   return (
-    <Tooltip title={copied ? t('actions.copied') : t('actions.copy')}>
-      <Box
-        component="button"
-        type="button"
-        onClick={copy}
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 0.75,
-          textAlign: 'left',
-          p: 1.5,
-          borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'divider',
-          bgcolor: 'background.paper',
-          cursor: 'pointer',
-          font: 'inherit',
-          transition: 'border-color 150ms ease, background-color 150ms ease',
-          '&:hover': {
-            borderColor: 'primary.main',
-            bgcolor: () => alpha(theme.palette.primary.main, 0.04),
-          },
-          '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main' },
-        }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
-          <Typography
-            component="code"
-            sx={{
-              fontFamily: MONO_FONT,
-              fontSize: 13,
-              fontWeight: 600,
-              color: 'primary.main',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {tag}
-          </Typography>
-          <Box sx={{ flexGrow: 1 }} />
-          {copied ? (
-            <CheckIcon sx={{ fontSize: 16, color: 'success.main' }} />
-          ) : (
-            <ContentCopyOutlinedIcon sx={{ fontSize: 15, color: 'text.disabled' }} />
-          )}
-        </Box>
-        <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.5 }}>
-          {description}
+    <Box
+      component="button"
+      type="button"
+      title={copied ? t('actions.copied') : t('actions.copy')}
+      onClick={copy}
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 0.75,
+        textAlign: 'left',
+        p: 1.5,
+        borderRadius: 2,
+        border: '1px solid',
+        borderColor: 'divider',
+        bgcolor: 'background.paper',
+        cursor: 'pointer',
+        font: 'inherit',
+        transition: 'border-color 150ms ease, background-color 150ms ease',
+        '&:hover': {
+          borderColor: 'primary.main',
+          bgcolor: () => alpha(theme.palette.primary.main, 0.04),
+        },
+        '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main' },
+      }}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
+        <Typography
+          component="code"
+          sx={{
+            fontFamily: MONO_FONT,
+            fontSize: 13,
+            fontWeight: 600,
+            color: 'primary.main',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {tag}
         </Typography>
+        <Box sx={{ flexGrow: 1 }} />
+        {copied ? (
+          <CheckIcon sx={{ fontSize: 16, color: 'success.main' }} />
+        ) : (
+          <ContentCopyOutlinedIcon sx={{ fontSize: 15, color: 'text.disabled' }} />
+        )}
       </Box>
-    </Tooltip>
+      <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.5 }}>
+        {description}
+      </Typography>
+    </Box>
   );
 }
 

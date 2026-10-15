@@ -10,7 +10,7 @@
  * @interface ConfigField
  * @property {string} key - Config object key.
  * @property {string} label - Display label.
- * @property {'text'|'number'|'switch'|'select'|'textarea'|'stringList'|'password'|'chatSelect'} type - Widget type.
+ * @property {'text'|'number'|'switch'|'select'|'textarea'|'stringList'|'password'|'chatSelect'|'mediaSelect'} type - Widget type.
  * @property {string[]} [options] - Choices for select fields.
  * @property {string} [help] - Tooltip text.
  * @property {string[]} [connectionTypes] - Connection type filter for chatSelect fields.
@@ -19,7 +19,15 @@ export interface ConfigField {
   key: string;
   label: string;
   type:
-    'text' | 'number' | 'switch' | 'select' | 'textarea' | 'stringList' | 'password' | 'chatSelect';
+    | 'text'
+    | 'number'
+    | 'switch'
+    | 'select'
+    | 'textarea'
+    | 'stringList'
+    | 'password'
+    | 'chatSelect'
+    | 'mediaSelect';
   options?: string[];
   help?: string;
   connectionTypes?: string[];
@@ -83,7 +91,7 @@ export interface CrudResource {
 
 /**
  * Dashboard page type dispatching for a module.
- * @typedef {'config'|'crud'|'broadcast'|'crm'|'support'|'monetization'|'webhooks'|'engagement'|'referrals'|'connections'|'message-score'} ModulePageType
+ * @typedef {'config'|'crud'|'broadcast'|'crm'|'support'|'monetization'|'webhooks'|'engagement'|'referrals'|'connections'|'message-score'|'media-library'|'inline'|'flows'} ModulePageType
  */
 export type ModulePageType =
   | 'config'
@@ -96,7 +104,10 @@ export type ModulePageType =
   | 'engagement'
   | 'referrals'
   | 'connections'
-  | 'message-score';
+  | 'message-score'
+  | 'media-library'
+  | 'inline'
+  | 'flows';
 
 /**
  * Client module catalog entry.
@@ -514,8 +525,8 @@ export const MODULES: ModuleEntry[] = [
       {
         key: 'mediaUrl',
         label: 'Welcome media URL',
-        type: 'text',
-        help: 'Photo or video sent with the greeting caption',
+        type: 'mediaSelect',
+        help: 'Photo or video sent with the greeting caption — pick from the media library',
       },
       {
         key: 'buttonsJson',
@@ -525,7 +536,7 @@ export const MODULES: ModuleEntry[] = [
       },
       { key: 'goodbyeEnabled', label: 'Goodbye messages enabled', type: 'switch' },
       { key: 'goodbyeText', label: 'Goodbye template', type: 'textarea' },
-      { key: 'goodbyeMediaUrl', label: 'Goodbye media URL', type: 'text' },
+      { key: 'goodbyeMediaUrl', label: 'Goodbye media URL', type: 'mediaSelect' },
       { key: 'deleteServiceMessages', label: 'Delete join service messages', type: 'switch' },
       { key: 'deleteLeaveMessages', label: 'Delete leave service messages', type: 'switch' },
     ],
@@ -1453,6 +1464,83 @@ export const MODULES: ModuleEntry[] = [
         'The acting bot still needs its own Telegram admin rights.',
         'Reviews live in memory and are dropped on restart.',
         'Bot senders still need their own Telegram admin rights for restrict-capable commands.',
+      ],
+    },
+  },
+  {
+    key: 'media-library',
+    name: 'Shared Media Library',
+    category: 'Directory & Content',
+    description:
+      'Reusable URL and Telegram file_id assets with a one-click picker in every media composer.',
+    pageType: 'media-library',
+    docs: {
+      overview: [
+        'Save reusable media once (URL or Telegram file_id) and pick it from a library everywhere.',
+        'The picker is wired into broadcast, welcome, drip, flow, and autoresponder composers.',
+        'Assets are per bot; tags keep growing libraries searchable.',
+      ],
+      setup: [
+        'Enable the module, then open Shared Media Library from the sidebar.',
+        'Add an asset: name it, choose URL or file_id, set the media kind.',
+        'Press "Library" next to any media field in the studio to pick it.',
+      ],
+      troubleshooting: [
+        'Telegram file_id values are only valid for the bot that sent/received the file.',
+        'URL assets must be reachable by Telegram servers (public https).',
+        'Expired file_ids fail silently — re-add the asset with a fresh id.',
+      ],
+    },
+  },
+  {
+    key: 'inline-mode',
+    name: 'Inline Mode Answers',
+    category: 'Automation & Monetization',
+    description:
+      'Answer @bot queries in any chat with saved quick answers or AI-generated replies.',
+    pageType: 'inline',
+    docs: {
+      overview: [
+        'Type @yourbot <query> in any chat to search your saved quick answers.',
+        'The picked answer is injected into the chat as a message on behalf of the bot.',
+        'Optionally route non-trivial queries through the AI assistant (uses its provider config).',
+      ],
+      setup: [
+        'Enable inline mode for the bot in @BotFather first: /setinline.',
+        'Enable the module and add quick answers (title + message content).',
+        'Optional: turn on AI answers after configuring the AI assistant module.',
+      ],
+      troubleshooting: [
+        '"Unexpected thing happened" means inline mode is not enabled via @BotFather.',
+        'AI answers need the ai-assistant module enabled with a working API key.',
+        'Inline results are cached per user — lower cache seconds while tuning.',
+      ],
+    },
+  },
+  {
+    key: 'flows',
+    name: 'Visual Flow Builder',
+    category: 'Automation & Monetization',
+    description:
+      'Multi-step conversation trees with message, input, condition, delay, and tag nodes.',
+    pageType: 'flows',
+    docs: {
+      overview: [
+        'Design guided conversations: trigger → message → input → branching → follow-up.',
+        'Nodes: message (media + buttons), input (capture variables), condition (branch), delay (schedule), tag (segment).',
+        'Sessions are per user and persistent — users resume where they left off, even after restarts.',
+        'Test any flow instantly in the sandbox simulator from the flow list.',
+      ],
+      setup: [
+        'Enable the module and create a flow with a /command, keyword, or /start trigger.',
+        'Wire nodes with the Next selectors; add buttons that jump to other nodes.',
+        'Press the play icon to run the trigger in the sandbox before going live.',
+      ],
+      troubleshooting: [
+        'Buttons without a URL jump to the wired node; buttons with a URL are plain links.',
+        'Flow triggers only start in private chats; edit the flow to change its trigger.',
+        'Editing a flow resets active sessions so users restart on the new graph.',
+        'Delay nodes resume within ~30 seconds of the scheduled time.',
       ],
     },
   },

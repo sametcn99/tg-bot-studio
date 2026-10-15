@@ -10,7 +10,8 @@ import { JwtService } from '@nestjs/jwt';
 import { argon2id, argon2Verify } from 'hash-wasm';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../database/prisma.service';
-import { SessionModel, type SecurityLogEntity, type SessionEntity } from '../models/session.model';
+import { SessionModel } from './session.model';
+import type { SecurityLogEntity, SessionEntity } from './session.entity';
 import { parseUserAgent } from '../common/utils/user-agent.util';
 
 /**

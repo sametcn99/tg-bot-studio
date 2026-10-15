@@ -1,0 +1,45 @@
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
+import { MediaLibraryService } from './media-library.service';
+
+/**
+ * Shared media library endpoints for a bot.
+ */
+@Controller('bots/:botId/media')
+export class MediaLibraryController {
+  /**
+   * @param {MediaLibraryService} service - Media library service.
+   */
+  constructor(private readonly service: MediaLibraryService) {}
+
+  /**
+   * Lists every library asset of the bot.
+   * @param {number} botId - Owning bot id.
+   * @returns {Promise<object[]>} Asset rows.
+   */
+  @Get()
+  list(@Param('botId', ParseIntPipe) botId: number) {
+    return this.service.list(botId);
+  }
+
+  /**
+   * Adds an asset.
+   * @param {number} botId - Owning bot id.
+   * @param {Record<string, unknown>} body - name, source, value, kind, tags.
+   * @returns {Promise<object>} Created asset row.
+   */
+  @Post()
+  create(@Param('botId', ParseIntPipe) botId: number, @Body() body: Record<string, unknown>) {
+    return this.service.create(botId, body);
+  }
+
+  /**
+   * Deletes an asset.
+   * @param {number} botId - Owning bot id.
+   * @param {number} id - Asset id.
+   * @returns {Promise<{success: boolean}>} Confirmation payload.
+   */
+  @Delete(':id')
+  remove(@Param('botId', ParseIntPipe) botId: number, @Param('id', ParseIntPipe) id: number) {
+    return this.service.remove(botId, id);
+  }
+}

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { AiModel } from '../../models/ai.model';
-import { BotUserModel } from '../../models/bot-user.model';
-import { MiniAppModel } from '../../models/mini-app.model';
+import { AiModel } from './ai.model';
+import { BotUserModel } from '../users-crm/bot-user.model';
+import { MiniAppModel } from '../mini-apps/mini-app.model';
 
 /**
  * Chat message exchanged with an AI provider.

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
-import { BotModel } from '../models/bot.model';
+import { BotModel } from './bot.model';
 
 /** One day of aggregated activity. */
 export interface ActivityDay {

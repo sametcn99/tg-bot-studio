@@ -40,6 +40,12 @@ import { MonetizationModule } from './modules/monetization/monetization.module';
 import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { UsersCrmModule } from './modules/users-crm/users-crm.module';
 import { MiniAppsModule } from './modules/mini-apps/mini-apps.module';
+import { MediaLibraryModule } from './modules/media-library/media-library.module';
+import { InlineModeModule } from './modules/inline-mode/inline-mode.module';
+import { FlowsModule } from './modules/flows/flows.module';
+import { HealthMonitorModule } from './modules/health-monitor/health-monitor.module';
+import { MetricsModule } from './metrics/metrics.module';
+import { TemplatesModule } from './templates/templates.module';
 
 /**
  * Root application module composing the unified single-port deployment:
@@ -101,6 +107,12 @@ import { MiniAppsModule } from './modules/mini-apps/mini-apps.module';
     WebhooksModule,
     UsersCrmModule,
     MiniAppsModule,
+    MediaLibraryModule,
+    InlineModeModule,
+    FlowsModule,
+    HealthMonitorModule,
+    MetricsModule,
+    TemplatesModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: JwtAuthGuard }],
