@@ -111,7 +111,9 @@ export class PrivacyRuntime extends BotModuleHandler {
     }
 
     const lines = [
-      profile ? `• <b>Profile</b>: @${profile.username ?? '—'}, points ${profile.points}, first seen ${profile.firstSeenAt ?? '—'}` : null,
+      profile
+        ? `• <b>Profile</b>: @${profile.username ?? '—'}, points ${profile.points}, first seen ${profile.firstSeenAt ?? '—'}`
+        : null,
       warns > 0 ? `• <b>Warnings</b>: ${warns}` : null,
       aiHistory > 0 ? `• <b>AI chat history</b>: ${aiHistory} message(s)` : null,
       support > 0 ? `• <b>Support messages</b>: ${support}` : null,

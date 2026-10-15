@@ -5,22 +5,100 @@ import { ChatSettingsService } from '../../bot-engine/chat-settings.service';
 
 /** Commands this bot classifies as admin-level for cleancommand. */
 const ADMIN_COMMANDS = new Set([
-  'ban', 'tban', 'dban', 'sban', 'unban', 'mute', 'tmute', 'dmute', 'smute', 'unmute',
-  'kick', 'dkick', 'skick', 'warn', 'dwarn', 'swarn', 'rmwarn', 'resetwarn', 'setwarnlimit',
-  'setwarnmode', 'warntime', 'del', 'purge', 'spurge', 'purgefrom', 'purgeto', 'pin',
-  'permapin', 'unpin', 'unpinall', 'approve', 'unapprove', 'approved', 'unapproveall',
-  'approval', 'setwelcome', 'resetwelcome', 'setgoodbye', 'resetgoodbye', 'setrules',
-  'resetrules', 'setflood', 'setfloodtimer', 'setfloodmode', 'lock', 'unlock', 'antiraid',
-  'addblocklist', 'rmblocklist', 'rmblocklistall', 'blocklistmode', 'disable', 'enable',
-  'silentactions', 'promote', 'demote', 'echo', 'say', 'setlang', 'newfed', 'joinfed',
-  'leavefed', 'fban', 'unfban', 'fedpromote', 'feddemote',
+  'ban',
+  'tban',
+  'dban',
+  'sban',
+  'unban',
+  'mute',
+  'tmute',
+  'dmute',
+  'smute',
+  'unmute',
+  'kick',
+  'dkick',
+  'skick',
+  'warn',
+  'dwarn',
+  'swarn',
+  'rmwarn',
+  'resetwarn',
+  'setwarnlimit',
+  'setwarnmode',
+  'warntime',
+  'del',
+  'purge',
+  'spurge',
+  'purgefrom',
+  'purgeto',
+  'pin',
+  'permapin',
+  'unpin',
+  'unpinall',
+  'approve',
+  'unapprove',
+  'approved',
+  'unapproveall',
+  'approval',
+  'setwelcome',
+  'resetwelcome',
+  'setgoodbye',
+  'resetgoodbye',
+  'setrules',
+  'resetrules',
+  'setflood',
+  'setfloodtimer',
+  'setfloodmode',
+  'lock',
+  'unlock',
+  'antiraid',
+  'addblocklist',
+  'rmblocklist',
+  'rmblocklistall',
+  'blocklistmode',
+  'disable',
+  'enable',
+  'silentactions',
+  'promote',
+  'demote',
+  'echo',
+  'say',
+  'setlang',
+  'newfed',
+  'joinfed',
+  'leavefed',
+  'fban',
+  'unfban',
+  'fedpromote',
+  'feddemote',
 ]);
 
 /** Commands this bot classifies as user-level for cleancommand. */
 const USER_COMMANDS = new Set([
-  'start', 'menu', 'rules', 'notes', 'filters', 'id', 'info', 'adminlist', 'warns',
-  'kickme', 'report', 'locks', 'locktypes', 'blocklist', 'flood', 'approved', 'fedstat',
-  'fbanstat', 'fedinfo', 'fedadmins', 'quiz', 'scoreboard', 'giveaway', 'top',
+  'start',
+  'menu',
+  'rules',
+  'notes',
+  'filters',
+  'id',
+  'info',
+  'adminlist',
+  'warns',
+  'kickme',
+  'report',
+  'locks',
+  'locktypes',
+  'blocklist',
+  'flood',
+  'approved',
+  'fedstat',
+  'fbanstat',
+  'fedinfo',
+  'fedadmins',
+  'quiz',
+  'scoreboard',
+  'giveaway',
+  'top',
 ]);
 
 /** Delay before used commands and bot messages are removed. */
@@ -64,7 +142,11 @@ export class CleaningRuntime extends BotModuleHandler {
       const text = update.msg.text;
       if (!text.startsWith('/')) return;
 
-      const config = await this.chatSettings.getEffectiveConfig(botId, update.chat.id, this.moduleKey);
+      const config = await this.chatSettings.getEffectiveConfig(
+        botId,
+        update.chat.id,
+        this.moduleKey,
+      );
       const setting = String(config.cleanCommand ?? 'off');
       if (setting === 'off') return;
 
@@ -95,7 +177,11 @@ export class CleaningRuntime extends BotModuleHandler {
       const type = this.serviceType(msg);
       if (!type) return;
 
-      const config = await this.chatSettings.getEffectiveConfig(botId, update.chat.id, this.moduleKey);
+      const config = await this.chatSettings.getEffectiveConfig(
+        botId,
+        update.chat.id,
+        this.moduleKey,
+      );
       const types = Array.isArray(config.cleanServiceTypes)
         ? (config.cleanServiceTypes as string[])
         : [];

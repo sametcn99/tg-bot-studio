@@ -53,7 +53,10 @@ function deepMerge(
 }
 
 /** Shell + module catalogs per language code. */
-const CATALOGS: Record<string, { shell: Record<string, unknown>; modules: Record<string, unknown> }> = {
+const CATALOGS: Record<
+  string,
+  { shell: Record<string, unknown>; modules: Record<string, unknown> }
+> = {
   en: { shell: en as Record<string, unknown>, modules: modulesEn as Record<string, unknown> },
   tr: { shell: tr as Record<string, unknown>, modules: modulesTr as Record<string, unknown> },
   de: { shell: de as Record<string, unknown>, modules: modulesDe as Record<string, unknown> },

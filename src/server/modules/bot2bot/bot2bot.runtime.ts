@@ -125,15 +125,11 @@ export class Bot2BotRuntime extends BotModuleHandler {
     this.pending.set(nonce, { botId, chatId: c.chat.id, label, execute });
     const lang = await this.i18n.getChatLanguage(botId, c.chat.id);
     await c.api
-      .sendMessage(
-        c.chat.id,
-        `🤖 ${label}\n${this.i18n.t(lang, 'common.missingPermission')}?`,
-        {
-          reply_markup: new InlineKeyboard()
-            .text('✅ Approve', `b2b:ok:${nonce}`)
-            .text('⛔ Deny', `b2b:no:${nonce}`),
-        },
-      )
+      .sendMessage(c.chat.id, `🤖 ${label}\n${this.i18n.t(lang, 'common.missingPermission')}?`, {
+        reply_markup: new InlineKeyboard()
+          .text('✅ Approve', `b2b:ok:${nonce}`)
+          .text('⛔ Deny', `b2b:no:${nonce}`),
+      })
       .catch(() => undefined);
     return true;
   }
@@ -166,7 +162,9 @@ export class Bot2BotRuntime extends BotModuleHandler {
     const chatId = await this.requireSettings(c, botId);
     if (chatId === null) return;
     const enable = ['on', 'yes', 'true'].includes(
-      String(typeof c.match === 'string' ? c.match : '').trim().toLowerCase(),
+      String(typeof c.match === 'string' ? c.match : '')
+        .trim()
+        .toLowerCase(),
     );
     const override = (await this.chatSettings.getOverride(botId, chatId, this.moduleKey)) ?? {};
     await this.chatSettings.setOverride(botId, chatId, this.moduleKey, {

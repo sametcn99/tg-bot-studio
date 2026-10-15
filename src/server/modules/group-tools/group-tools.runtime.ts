@@ -206,9 +206,7 @@ export class GroupToolsRuntime extends BotModuleHandler {
     if (!(await this.require(c, botId, chatId, lang, 'pin'))) return;
     const text = String(typeof c.match === 'string' ? c.match : '').trim();
     if (!text) return;
-    const sent = await c.api
-      .sendMessage(chatId, text, { parse_mode: 'HTML' })
-      .catch(() => null);
+    const sent = await c.api.sendMessage(chatId, text, { parse_mode: 'HTML' }).catch(() => null);
     if (!sent) return;
     await c.api.pinChatMessage(chatId, sent.message_id, { disable_notification: true });
     this.adminLog.emit({
@@ -231,9 +229,9 @@ export class GroupToolsRuntime extends BotModuleHandler {
       ? await c.api.unpinAllChatMessages(chatId).catch(() => false)
       : await c.api.unpinChatMessage(chatId).catch(() => false);
     if (ok) {
-      await c.reply(this.i18n.t(lang, all ? 'pins.unpinnedAll' : 'pins.unpinned')).catch(
-        () => undefined,
-      );
+      await c
+        .reply(this.i18n.t(lang, all ? 'pins.unpinnedAll' : 'pins.unpinned'))
+        .catch(() => undefined);
     }
   }
 
@@ -358,9 +356,9 @@ export class GroupToolsRuntime extends BotModuleHandler {
       ...override,
       reportsEnabled: enable,
     });
-    await c.reply(this.i18n.t(lang, enable ? 'reports.reportsOn' : 'reports.reportsOff')).catch(
-      () => undefined,
-    );
+    await c
+      .reply(this.i18n.t(lang, enable ? 'reports.reportsOn' : 'reports.reportsOff'))
+      .catch(() => undefined);
   }
 
   /**
@@ -565,7 +563,9 @@ export class GroupToolsRuntime extends BotModuleHandler {
     await c
       .reply(
         disabled.length > 0
-          ? this.i18n.t(lang, 'disable.listTitle', { list: disabled.map((d) => `/${d}`).join(', ') })
+          ? this.i18n.t(lang, 'disable.listTitle', {
+              list: disabled.map((d) => `/${d}`).join(', '),
+            })
           : this.i18n.t(lang, 'disable.none'),
       )
       .catch(() => undefined);
@@ -577,9 +577,9 @@ export class GroupToolsRuntime extends BotModuleHandler {
   private async handleDisableableList(c: Context, botId: number): Promise<void> {
     const group = await this.guard(c, botId, 'disableable');
     if (!group) return;
-    await c.reply(DISABLEABLE_COMMANDS.map((command) => `/${command}`).join(', ')).catch(
-      () => undefined,
-    );
+    await c
+      .reply(DISABLEABLE_COMMANDS.map((command) => `/${command}`).join(', '))
+      .catch(() => undefined);
   }
 
   /**
@@ -591,7 +591,9 @@ export class GroupToolsRuntime extends BotModuleHandler {
     const { chatId, lang } = group;
     if (!(await this.require(c, botId, chatId, lang, 'change_info'))) return;
     const enable = ['on', 'yes', 'true'].includes(
-      String(typeof c.match === 'string' ? c.match : '').trim().toLowerCase(),
+      String(typeof c.match === 'string' ? c.match : '')
+        .trim()
+        .toLowerCase(),
     );
     const override = (await this.chatSettings.getOverride(botId, chatId, this.moduleKey)) ?? {};
     await this.chatSettings.setOverride(botId, chatId, this.moduleKey, {
@@ -610,7 +612,9 @@ export class GroupToolsRuntime extends BotModuleHandler {
     const { chatId, lang } = group;
     if (!(await this.require(c, botId, chatId, lang, 'change_info'))) return;
     const enable = ['on', 'yes', 'true'].includes(
-      String(typeof c.match === 'string' ? c.match : '').trim().toLowerCase(),
+      String(typeof c.match === 'string' ? c.match : '')
+        .trim()
+        .toLowerCase(),
     );
     const override = (await this.chatSettings.getOverride(botId, chatId, this.moduleKey)) ?? {};
     await this.chatSettings.setOverride(botId, chatId, this.moduleKey, {

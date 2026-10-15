@@ -133,9 +133,9 @@ export class RestrictionsService {
       return cached.permissions;
     }
     const chat = await api.getChat(chatId).catch(() => null);
-    const base: ChatPermissions = (chat && 'permissions' in chat
-      ? { ...(chat.permissions as ChatPermissions) }
-      : {}) as ChatPermissions;
+    const base: ChatPermissions = (
+      chat && 'permissions' in chat ? { ...(chat.permissions as ChatPermissions) } : {}
+    ) as ChatPermissions;
     const permissions: ChatPermissions = {
       ...base,
       can_send_messages: true,

@@ -16,10 +16,26 @@ import uzMessages from '../i18n/locales/bot-messages.uz.json';
 import { PrismaService } from '../database/prisma.service';
 
 /** Supported bot-reply languages (extend by adding locale JSON files). */
-export type BotLanguage = 'en' | 'tr' | 'de' | 'ru' | 'es' | 'az' | 'ar' | 'fr' | 'it' | 'pt' | 'uk' | 'fa' | 'id' | 'uz';
+export type BotLanguage =
+  'en' | 'tr' | 'de' | 'ru' | 'es' | 'az' | 'ar' | 'fr' | 'it' | 'pt' | 'uk' | 'fa' | 'id' | 'uz';
 
 /** Every supported language code, in /setlang display order. */
-export const BOT_LANGUAGES: readonly BotLanguage[] = ['en', 'tr', 'de', 'ru', 'es', 'az', 'ar', 'fr', 'it', 'pt', 'uk', 'fa', 'id', 'uz'];
+export const BOT_LANGUAGES: readonly BotLanguage[] = [
+  'en',
+  'tr',
+  'de',
+  'ru',
+  'es',
+  'az',
+  'ar',
+  'fr',
+  'it',
+  'pt',
+  'uk',
+  'fa',
+  'id',
+  'uz',
+];
 
 /** Flat "a.b.c" -> value lookup tree. */
 type MessageTree = Record<string, unknown>;
@@ -160,9 +176,7 @@ export class BotI18nService {
    */
   private normalizeLanguage(raw: unknown): BotLanguage {
     const value = String(raw ?? '').toLowerCase();
-    return (BOT_LANGUAGES as readonly string[]).includes(value)
-      ? (value as BotLanguage)
-      : 'en';
+    return (BOT_LANGUAGES as readonly string[]).includes(value) ? (value as BotLanguage) : 'en';
   }
 
   /**

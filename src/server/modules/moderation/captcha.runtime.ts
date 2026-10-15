@@ -116,8 +116,7 @@ export class CaptchaRuntime extends BotModuleHandler {
       // In groups only the challenged member's numeric reply counts.
       const groupKey = isGroup ? `${botId}:${update.chat!.id}:${update.from.id}` : null;
       const pmCandidates = [...this.pending.entries()].filter(
-        ([key, value]) =>
-          key.endsWith(`:${update.from!.id}`) && value.captchaMessageId === -1,
+        ([key, value]) => key.endsWith(`:${update.from!.id}`) && value.captchaMessageId === -1,
       );
       const key = groupKey && this.pending.has(groupKey) ? groupKey : pmCandidates[0]?.[0];
       if (!key) return;
@@ -179,7 +178,9 @@ export class CaptchaRuntime extends BotModuleHandler {
     // Solved once per group: skip repeat joiners (persisted).
     const state = await this.prisma.chatMemberState
       .findUnique({
-        where: { botId_chatId_telegramId: { botId, chatId: String(chatId), telegramId: member.id } },
+        where: {
+          botId_chatId_telegramId: { botId, chatId: String(chatId), telegramId: member.id },
+        },
       })
       .catch(() => null);
     if (state?.captchaVerified === 1) return;
@@ -208,9 +209,13 @@ export class CaptchaRuntime extends BotModuleHandler {
         // User never started the bot: fall back to a group button challenge.
         const keyboard = new InlineKeyboard().text('Verify', `captcha:${member.id}:${nonce}`);
         sent = await bot.api
-          .sendMessage(chatId, this.i18n.t(lang, 'captcha.welcomeCaptcha', { user: member.first_name }), {
-            reply_markup: keyboard,
-          })
+          .sendMessage(
+            chatId,
+            this.i18n.t(lang, 'captcha.welcomeCaptcha', { user: member.first_name }),
+            {
+              reply_markup: keyboard,
+            },
+          )
           .catch(() => null);
         answer = 0;
       }
@@ -230,9 +235,13 @@ export class CaptchaRuntime extends BotModuleHandler {
         `captcha:${member.id}:${nonce}`,
       );
       sent = await bot.api
-        .sendMessage(chatId, this.i18n.t(lang, 'captcha.welcomeCaptcha', { user: member.first_name }), {
-          reply_markup: keyboard,
-        })
+        .sendMessage(
+          chatId,
+          this.i18n.t(lang, 'captcha.welcomeCaptcha', { user: member.first_name }),
+          {
+            reply_markup: keyboard,
+          },
+        )
         .catch(() => null);
     }
 
@@ -252,11 +261,7 @@ export class CaptchaRuntime extends BotModuleHandler {
    * Marks a challenge solved: unmutes (or approves the join request),
    * persists the verified flag, cleans up timers and messages.
    */
-  private async verify(
-    ctx: ModuleRuntimeContext,
-    key: string,
-    firstName: string,
-  ): Promise<void> {
+  private async verify(ctx: ModuleRuntimeContext, key: string, firstName: string): Promise<void> {
     const { bot, botId } = ctx;
     const pending = this.pending.get(key);
     if (!pending) return;

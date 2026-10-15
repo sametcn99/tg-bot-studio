@@ -109,7 +109,16 @@ export class ModerationRuntime extends BotModuleHandler {
       if (blockedWords.length > 0 && config.blocklistDelete !== false) {
         const hit = matchBlocklist(blockedWords, update.msg, from);
         if (hit) {
-          await this.applyBlocklistHit(ctx, update, chatId, from, config, hit.trigger, hit.action, hit.durationSeconds);
+          await this.applyBlocklistHit(
+            ctx,
+            update,
+            chatId,
+            from,
+            config,
+            hit.trigger,
+            hit.action,
+            hit.durationSeconds,
+          );
           return;
         }
       }
@@ -149,9 +158,7 @@ export class ModerationRuntime extends BotModuleHandler {
    */
   private registerCommands(bot: import('grammy').Bot, botId: number): void {
     bot.command('setflood', (c) => this.handleSetFlood(c, botId, 'floodMessageLimit'));
-    bot.command('setfloodtimer', (c) =>
-      this.handleSetFloodTimer(c, botId),
-    );
+    bot.command('setfloodtimer', (c) => this.handleSetFloodTimer(c, botId));
     bot.command('setfloodmode', (c) => this.handleSetFloodMode(c, botId));
     bot.command('clearflood', (c) => this.handleClearFlood(c, botId));
     bot.command('flood', (c) => this.handleFloodStatus(c, botId));
@@ -167,7 +174,12 @@ export class ModerationRuntime extends BotModuleHandler {
   /**
    * Checks whether a sender is exempt from automated moderation.
    */
-  private async isImmune(botId: number, update: Context, chatId: number, from: User): Promise<boolean> {
+  private async isImmune(
+    botId: number,
+    update: Context,
+    chatId: number,
+    from: User,
+  ): Promise<boolean> {
     if (from.is_bot) return true;
     if (await this.adminGate.isAdmin(update.api, chatId, from.id)) return true;
     const approved = await this.prisma.chatApproval
@@ -206,7 +218,11 @@ export class ModerationRuntime extends BotModuleHandler {
     });
 
     if (action === 'nothing' || action === 'warn') {
-      const gmConfig = await this.chatSettings.getEffectiveConfig(botId, chatId, 'group-moderation');
+      const gmConfig = await this.chatSettings.getEffectiveConfig(
+        botId,
+        chatId,
+        'group-moderation',
+      );
       const limit = Number(gmConfig.warnLimit ?? 3);
       await this.prisma.chatWarn.create({
         data: {
@@ -243,7 +259,13 @@ export class ModerationRuntime extends BotModuleHandler {
       return;
     }
 
-    await this.applyAction(update, chatId, from.id, action, entryDuration ?? Number(config.blocklistDurationSeconds ?? 0));
+    await this.applyAction(
+      update,
+      chatId,
+      from.id,
+      action,
+      entryDuration ?? Number(config.blocklistDurationSeconds ?? 0),
+    );
   }
 
   /**
@@ -343,7 +365,8 @@ export class ModerationRuntime extends BotModuleHandler {
       await c.reply(this.i18n.t(group.lang, 'common.error')).catch(() => undefined);
       return;
     }
-    const override = (await this.chatSettings.getOverride(botId, group.chatId, this.moduleKey)) ?? {};
+    const override =
+      (await this.chatSettings.getOverride(botId, group.chatId, this.moduleKey)) ?? {};
     await this.chatSettings.setOverride(botId, group.chatId, this.moduleKey, {
       ...override,
       [field]: value,
@@ -365,7 +388,8 @@ export class ModerationRuntime extends BotModuleHandler {
       await c.reply(this.i18n.t(group.lang, 'common.invalidDuration')).catch(() => undefined);
       return;
     }
-    const override = (await this.chatSettings.getOverride(botId, group.chatId, this.moduleKey)) ?? {};
+    const override =
+      (await this.chatSettings.getOverride(botId, group.chatId, this.moduleKey)) ?? {};
     await this.chatSettings.setOverride(botId, group.chatId, this.moduleKey, {
       ...override,
       floodMessageLimit: limit,
@@ -391,7 +415,8 @@ export class ModerationRuntime extends BotModuleHandler {
       await c.reply(this.i18n.t(group.lang, 'common.invalidDuration')).catch(() => undefined);
       return;
     }
-    const override = (await this.chatSettings.getOverride(botId, group.chatId, this.moduleKey)) ?? {};
+    const override =
+      (await this.chatSettings.getOverride(botId, group.chatId, this.moduleKey)) ?? {};
     await this.chatSettings.setOverride(botId, group.chatId, this.moduleKey, {
       ...override,
       floodMode: mode,
@@ -407,9 +432,12 @@ export class ModerationRuntime extends BotModuleHandler {
     const group = await this.guard(c, botId);
     if (!group) return;
     const enable = ['on', 'yes', 'true'].includes(
-      String(typeof c.match === 'string' ? c.match : '').trim().toLowerCase(),
+      String(typeof c.match === 'string' ? c.match : '')
+        .trim()
+        .toLowerCase(),
     );
-    const override = (await this.chatSettings.getOverride(botId, group.chatId, this.moduleKey)) ?? {};
+    const override =
+      (await this.chatSettings.getOverride(botId, group.chatId, this.moduleKey)) ?? {};
     await this.chatSettings.setOverride(botId, group.chatId, this.moduleKey, {
       ...override,
       clearFlood: enable,
@@ -559,9 +587,12 @@ export class ModerationRuntime extends BotModuleHandler {
     const group = await this.guard(c, botId);
     if (!group) return;
     const enable = ['on', 'yes', 'true'].includes(
-      String(typeof c.match === 'string' ? c.match : '').trim().toLowerCase(),
+      String(typeof c.match === 'string' ? c.match : '')
+        .trim()
+        .toLowerCase(),
     );
-    const override = (await this.chatSettings.getOverride(botId, group.chatId, this.moduleKey)) ?? {};
+    const override =
+      (await this.chatSettings.getOverride(botId, group.chatId, this.moduleKey)) ?? {};
     await this.chatSettings.setOverride(botId, group.chatId, this.moduleKey, {
       ...override,
       blocklistDelete: enable,
@@ -576,7 +607,8 @@ export class ModerationRuntime extends BotModuleHandler {
     const group = await this.guard(c, botId);
     if (!group) return;
     const reason = String(typeof c.match === 'string' ? c.match : '').trim();
-    const override = (await this.chatSettings.getOverride(botId, group.chatId, this.moduleKey)) ?? {};
+    const override =
+      (await this.chatSettings.getOverride(botId, group.chatId, this.moduleKey)) ?? {};
     await this.chatSettings.setOverride(botId, group.chatId, this.moduleKey, {
       ...override,
       blocklistReason: reason,

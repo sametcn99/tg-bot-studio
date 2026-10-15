@@ -1,14 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Chip,
-  Stack,
-  Typography,
-} from '@mui/material';
+import { Alert, Box, Button, Card, CardContent, Chip, Stack, Typography } from '@mui/material';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -75,9 +66,22 @@ export default function ConnectionSettingsPage(): React.ReactElement {
       modules.filter(
         (entry) =>
           entry.configFields !== undefined &&
-          ['group-moderation', 'group-tools', 'locks', 'antiraid', 'rules', 'admin-log', 'cleaning', 'topics', 'federation', 'language', 'bot2bot', 'moderation', 'welcome', 'captcha'].includes(
-            entry.key,
-          ),
+          [
+            'group-moderation',
+            'group-tools',
+            'locks',
+            'antiraid',
+            'rules',
+            'admin-log',
+            'cleaning',
+            'topics',
+            'federation',
+            'language',
+            'bot2bot',
+            'moderation',
+            'welcome',
+            'captcha',
+          ].includes(entry.key),
       ),
     [modules],
   );
@@ -88,10 +92,10 @@ export default function ConnectionSettingsPage(): React.ReactElement {
   function saveModule(moduleKey: string): void {
     setError(null);
     setSaved(null);
-    apiFetch(
-      `/api/bots/${numericBotId}/connections/${numericConnectionId}/settings/${moduleKey}`,
-      { method: 'PUT', body: JSON.stringify(drafts[moduleKey] ?? {}) },
-    )
+    apiFetch(`/api/bots/${numericBotId}/connections/${numericConnectionId}/settings/${moduleKey}`, {
+      method: 'PUT',
+      body: JSON.stringify(drafts[moduleKey] ?? {}),
+    })
       .then(() => {
         setSaved(moduleKey);
         setTimeout(() => setSaved(null), 2_500);
@@ -104,10 +108,9 @@ export default function ConnectionSettingsPage(): React.ReactElement {
    */
   function resetModule(moduleKey: string): void {
     setError(null);
-    apiFetch(
-      `/api/bots/${numericBotId}/connections/${numericConnectionId}/settings/${moduleKey}`,
-      { method: 'DELETE' },
-    )
+    apiFetch(`/api/bots/${numericBotId}/connections/${numericConnectionId}/settings/${moduleKey}`, {
+      method: 'DELETE',
+    })
       .then(() => {
         setOverrides((prev) =>
           prev.map((row) =>
@@ -130,13 +133,11 @@ export default function ConnectionSettingsPage(): React.ReactElement {
   }
 
   if (connectionsLoading || loading) {
-    return <LoadingState label={t('connectionSettings.loading')} />
+    return <LoadingState label={t('connectionSettings.loading')} />;
   }
 
   if (!connection) {
-    return (
-      <Alert severity="error">{t('connectionSettings.connectionNotFound')}</Alert>
-    );
+    return <Alert severity="error">{t('connectionSettings.connectionNotFound')}</Alert>;
   }
 
   return (
@@ -154,7 +155,11 @@ export default function ConnectionSettingsPage(): React.ReactElement {
         }
       />
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
       <Stack spacing={2}>
         {overridable.map((entry: ModuleEntry) => {
@@ -276,7 +281,11 @@ function ConnectionFieldInput({
             </option>
           ))}
         </select>
-        {help && <Typography variant="caption" color="text.secondary">{help}</Typography>}
+        {help && (
+          <Typography variant="caption" color="text.secondary">
+            {help}
+          </Typography>
+        )}
       </label>
     );
   }
@@ -301,7 +310,11 @@ function ConnectionFieldInput({
           rows={4}
           style={{ width: '100%', padding: '8px', marginTop: 4, borderRadius: 6 }}
         />
-        {help && <Typography variant="caption" color="text.secondary">{help}</Typography>}
+        {help && (
+          <Typography variant="caption" color="text.secondary">
+            {help}
+          </Typography>
+        )}
       </label>
     );
   }
@@ -315,13 +328,15 @@ function ConnectionFieldInput({
       <input
         type={numeric ? 'number' : 'text'}
         value={value === undefined || value === null ? '' : String(value)}
-        onChange={(event) =>
-          onChange(numeric ? Number(event.target.value) : event.target.value)
-        }
+        onChange={(event) => onChange(numeric ? Number(event.target.value) : event.target.value)}
         placeholder={type === 'textarea' ? t('connectionSettings.placeholder') : ''}
         style={{ width: '100%', padding: '8px', marginTop: 4, borderRadius: 6 }}
       />
-      {help && <Typography variant="caption" color="text.secondary">{help}</Typography>}
+      {help && (
+        <Typography variant="caption" color="text.secondary">
+          {help}
+        </Typography>
+      )}
     </label>
   );
 }

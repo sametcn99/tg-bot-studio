@@ -53,7 +53,10 @@ export class LanguageRuntime extends BotModuleHandler {
     const { bot, botId } = ctx;
 
     bot.command('setlang', async (c) => {
-      if (!c.chat || (c.chat.type !== 'supergroup' && c.chat.type !== 'group' && c.chat.type !== 'private')) {
+      if (
+        !c.chat ||
+        (c.chat.type !== 'supergroup' && c.chat.type !== 'group' && c.chat.type !== 'private')
+      ) {
         return;
       }
       const lang = await this.i18n.getChatLanguage(botId, c.chat.id);
@@ -108,9 +111,7 @@ export class LanguageRuntime extends BotModuleHandler {
       ? (requested as BotLanguage)
       : null;
     if (!language) {
-      await c
-        .reply(this.i18n.t(fallbackLang, 'language.unsupported'))
-        .catch(() => undefined);
+      await c.reply(this.i18n.t(fallbackLang, 'language.unsupported')).catch(() => undefined);
       return;
     }
     await this.i18n.setChatLanguage(botId, c.chat.id, language);

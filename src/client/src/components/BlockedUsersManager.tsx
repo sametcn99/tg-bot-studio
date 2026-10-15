@@ -122,7 +122,11 @@ export default function BlockedUsersManager({ botId }: { botId: number }): React
           </Stack>
         </Stack>
 
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
 
         {rows.length === 0 ? (
           <Typography variant="body2" color="text.secondary">
@@ -175,9 +179,7 @@ export default function BlockedUsersManager({ botId }: { botId: number }): React
             <TextField
               label={t('moderation.colTelegramId')}
               value={form.telegramId}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, telegramId: event.target.value }))
-              }
+              onChange={(event) => setForm((prev) => ({ ...prev, telegramId: event.target.value }))}
               fullWidth
             />
             <TextField

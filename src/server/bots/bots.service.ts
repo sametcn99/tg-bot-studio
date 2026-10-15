@@ -412,15 +412,15 @@ export class BotsService {
         );
       }
 
-    // 3b. reference-parity group command modules need admin rights.
-    const groupCommandModules = activeModules.filter((m) =>
-      ['group-moderation', 'antiraid', 'admin-log', 'topics'].includes(String(m.key)),
-    );
-    if (groupCommandModules.length > 0) {
-      recommendations.push(
-        'Group command modules (Group Moderation, AntiRaid, Admin Log, Topics) act only where the bot is a group administrator with the matching Telegram rights (restrict, delete, pin, manage topics).',
+      // 3b. reference-parity group command modules need admin rights.
+      const groupCommandModules = activeModules.filter((m) =>
+        ['group-moderation', 'antiraid', 'admin-log', 'topics'].includes(String(m.key)),
       );
-    }
+      if (groupCommandModules.length > 0) {
+        recommendations.push(
+          'Group command modules (Group Moderation, AntiRaid, Admin Log, Topics) act only where the bot is a group administrator with the matching Telegram rights (restrict, delete, pin, manage topics).',
+        );
+      }
     }
 
     // 4. Chat connections
@@ -519,7 +519,10 @@ export class BotsService {
   async simulateMessage(
     botId: number,
     text: string,
-    options: { chatType?: 'private' | 'supergroup' | 'group'; event?: 'message' | 'join' | 'leave' | 'chat_member' } = {},
+    options: {
+      chatType?: 'private' | 'supergroup' | 'group';
+      event?: 'message' | 'join' | 'leave' | 'chat_member';
+    } = {},
   ): Promise<{
     text: string;
     mediaUrl?: string | null;

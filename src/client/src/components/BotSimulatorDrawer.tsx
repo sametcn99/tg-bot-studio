@@ -134,13 +134,10 @@ export default function BotSimulatorDrawer(): React.ReactElement {
     if (!activeBot || loading) return;
     setLoading(true);
     try {
-      const res = await apiFetch<{ text: string }>(
-        `/api/bots/${activeBot.id}/simulator/send`,
-        {
-          method: 'POST',
-          body: JSON.stringify({ message: '', chatType: 'supergroup', event }),
-        },
-      );
+      const res = await apiFetch<{ text: string }>(`/api/bots/${activeBot.id}/simulator/send`, {
+        method: 'POST',
+        body: JSON.stringify({ message: '', chatType: 'supergroup', event }),
+      });
       setMessages((prev) => [
         ...prev,
         {

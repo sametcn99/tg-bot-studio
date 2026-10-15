@@ -15,10 +15,54 @@ function msg(partial: Partial<Message>): Message {
 
 describe('matchesLock', () => {
   test('media types', () => {
-    expect(matchesLock('photo', msg({ photo: [{ file_id: 'x', file_unique_id: 'x', width: 1, height: 1 }] }), CHAT)).toBe(true);
-    expect(matchesLock('sticker', msg({ sticker: { file_id: 'x', file_unique_id: 'x', width: 1, height: 1, is_animated: true, is_video: false, type: 'regular' } }), CHAT)).toBe(true);
-    expect(matchesLock('stickeranimated', msg({ sticker: { file_id: 'x', file_unique_id: 'x', width: 1, height: 1, is_animated: true, is_video: false, type: 'regular' } }), CHAT)).toBe(true);
-    expect(matchesLock('gif', msg({ animation: { file_id: 'x', file_unique_id: 'x', width: 1, height: 1, duration: 1 } }), CHAT)).toBe(true);
+    expect(
+      matchesLock(
+        'photo',
+        msg({ photo: [{ file_id: 'x', file_unique_id: 'x', width: 1, height: 1 }] }),
+        CHAT,
+      ),
+    ).toBe(true);
+    expect(
+      matchesLock(
+        'sticker',
+        msg({
+          sticker: {
+            file_id: 'x',
+            file_unique_id: 'x',
+            width: 1,
+            height: 1,
+            is_animated: true,
+            is_video: false,
+            type: 'regular',
+          },
+        }),
+        CHAT,
+      ),
+    ).toBe(true);
+    expect(
+      matchesLock(
+        'stickeranimated',
+        msg({
+          sticker: {
+            file_id: 'x',
+            file_unique_id: 'x',
+            width: 1,
+            height: 1,
+            is_animated: true,
+            is_video: false,
+            type: 'regular',
+          },
+        }),
+        CHAT,
+      ),
+    ).toBe(true);
+    expect(
+      matchesLock(
+        'gif',
+        msg({ animation: { file_id: 'x', file_unique_id: 'x', width: 1, height: 1, duration: 1 } }),
+        CHAT,
+      ),
+    ).toBe(true);
   });
 
   test('url and invitelink', () => {
@@ -38,15 +82,30 @@ describe('matchesLock', () => {
 
   test('anonchannel excludes anonymous admin senders', () => {
     expect(
-      matchesLock('anonchannel', msg({ sender_chat: { id: 555, type: 'channel', title: 'C' } }), CHAT),
+      matchesLock(
+        'anonchannel',
+        msg({ sender_chat: { id: 555, type: 'channel', title: 'C' } }),
+        CHAT,
+      ),
     ).toBe(true);
     expect(
-      matchesLock('anonchannel', msg({ sender_chat: { id: CHAT, type: 'supergroup', title: 'G' } }), CHAT),
+      matchesLock(
+        'anonchannel',
+        msg({ sender_chat: { id: CHAT, type: 'supergroup', title: 'G' } }),
+        CHAT,
+      ),
     ).toBe(false);
   });
 
   test('forward variants', () => {
-    const m = msg({ forward_origin: { type: 'channel', date: 0, chat: { id: 9, type: 'channel', title: 'C' }, message_id: 1 } });
+    const m = msg({
+      forward_origin: {
+        type: 'channel',
+        date: 0,
+        chat: { id: 9, type: 'channel', title: 'C' },
+        message_id: 1,
+      },
+    });
     expect(matchesLock('forward', m, CHAT)).toBe(true);
     expect(matchesLock('forwardchannel', m, CHAT)).toBe(true);
     expect(matchesLock('forwarduser', m, CHAT)).toBe(false);
@@ -55,7 +114,11 @@ describe('matchesLock', () => {
 
 describe('evaluateLocks', () => {
   test('returns violated subset', () => {
-    const violated = evaluateLocks(['url', 'photo', 'rtl'], msg({ text: 'https://x.com hi' }), CHAT);
+    const violated = evaluateLocks(
+      ['url', 'photo', 'rtl'],
+      msg({ text: 'https://x.com hi' }),
+      CHAT,
+    );
     expect(violated).toEqual(['url']);
   });
 });
@@ -67,12 +130,26 @@ describe('isAllowlisted', () => {
   });
 
   test('stickerpack entries', () => {
-    const m = msg({ sticker: { file_id: 'x', file_unique_id: 'x', width: 1, height: 1, is_animated: false, is_video: false, type: 'regular', set_name: 'Ducks' } });
+    const m = msg({
+      sticker: {
+        file_id: 'x',
+        file_unique_id: 'x',
+        width: 1,
+        height: 1,
+        is_animated: false,
+        is_video: false,
+        type: 'regular',
+        set_name: 'Ducks',
+      },
+    });
     expect(isAllowlisted(['stickerpack:ducks'], m)).toBe(true);
   });
 
   test('command entries', () => {
-    const m = msg({ text: '/rules@somebot', entities: [{ offset: 0, length: 6, type: 'bot_command' }] });
+    const m = msg({
+      text: '/rules@somebot',
+      entities: [{ offset: 0, length: 6, type: 'bot_command' }],
+    });
     expect(isAllowlisted(['command:/rules'], m)).toBe(true);
   });
 });

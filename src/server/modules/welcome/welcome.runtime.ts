@@ -102,9 +102,7 @@ export class WelcomeRuntime extends BotModuleHandler {
       const config = await this.chatSettings.getEffectiveConfig(botId, chatId, this.moduleKey);
 
       if (config.goodbyeEnabled === true && member && !member.is_bot) {
-        const template = String(
-          config.goodbyeText ?? 'Nice knowing you, {first_name}!',
-        );
+        const template = String(config.goodbyeText ?? 'Nice knowing you, {first_name}!');
         const text = renderTemplate(template, {
           first_name: member.first_name,
           last_name: member.last_name,
@@ -119,7 +117,10 @@ export class WelcomeRuntime extends BotModuleHandler {
           date: new Date().toISOString().slice(0, 10),
           time: new Date().toISOString().slice(11, 16),
         });
-        await this.sendGreeting(update, chatId, text, { ...config, mediaUrl: config.goodbyeMediaUrl });
+        await this.sendGreeting(update, chatId, text, {
+          ...config,
+          mediaUrl: config.goodbyeMediaUrl,
+        });
       }
 
       if (config.deleteLeaveMessages === true) {

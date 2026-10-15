@@ -132,7 +132,11 @@ export default function FederationManager({ botId }: { botId: number }): React.R
           <Chip size="small" label={`${feds.length}`} />
         </Stack>
 
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
         {feds.length === 0 && (
           <Typography variant="body2" color="text.secondary">
             {t('federation.managerEmpty')}
@@ -170,11 +174,7 @@ export default function FederationManager({ botId }: { botId: number }): React.R
                   <Button size="small" onClick={() => openBans(fed)}>
                     {t('federation.viewBans')}
                   </Button>
-                  <Button
-                    size="small"
-                    component="label"
-                    startIcon={<UploadFileIcon />}
-                  >
+                  <Button size="small" component="label" startIcon={<UploadFileIcon />}>
                     {t('federation.import')}
                     <input
                       type="file"
@@ -195,7 +195,12 @@ export default function FederationManager({ botId }: { botId: number }): React.R
       </CardContent>
 
       {/* Dashboard fban dialog */}
-      <Dialog open={Boolean(banDialogFed)} onClose={() => setBanDialogFed(null)} maxWidth="xs" fullWidth>
+      <Dialog
+        open={Boolean(banDialogFed)}
+        onClose={() => setBanDialogFed(null)}
+        maxWidth="xs"
+        fullWidth
+      >
         <DialogTitle>
           {t('federation.addBan')} — {banDialogFed?.name}
         </DialogTitle>
@@ -226,12 +231,7 @@ export default function FederationManager({ botId }: { botId: number }): React.R
       </Dialog>
 
       {/* Ban list dialog */}
-      <Dialog
-        open={Boolean(bansFor)}
-        onClose={() => setBansFor(null)}
-        maxWidth="md"
-        fullWidth
-      >
+      <Dialog open={Boolean(bansFor)} onClose={() => setBansFor(null)} maxWidth="md" fullWidth>
         <DialogTitle>
           {t('federation.viewBans')} — {bansFor?.name}
         </DialogTitle>

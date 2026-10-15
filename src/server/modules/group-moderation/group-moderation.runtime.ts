@@ -9,11 +9,7 @@ import { BotI18nService, type BotLanguage } from '../../bot-engine/bot-i18n.serv
 import { ChatSettingsService } from '../../bot-engine/chat-settings.service';
 import { RestrictionsService } from '../../bot-engine/restrictions.service';
 import { splitDurationArg, formatDuration } from '../../common/utils/duration.util';
-import {
-  escapeHtml,
-  resolveTarget,
-  userMentionHtml,
-} from '../../common/utils/telegram-text.util';
+import { escapeHtml, resolveTarget, userMentionHtml } from '../../common/utils/telegram-text.util';
 
 /** Hard cap for a single /purge sweep (mirrors the reference bot's practical ceiling). */
 const PURGE_HARD_CAP = 500;
@@ -184,9 +180,7 @@ export class GroupModerationRuntime extends BotModuleHandler {
     if (config.adminError !== false) {
       const isAdmin = await this.adminGate.isAdmin(c.api, chatId, c.from!.id);
       await c
-        .reply(
-          this.i18n.t(lang, isAdmin ? 'common.missingPermission' : 'common.adminOnly'),
-        )
+        .reply(this.i18n.t(lang, isAdmin ? 'common.missingPermission' : 'common.adminOnly'))
         .catch(() => undefined);
     }
     return false;
@@ -223,7 +217,10 @@ export class GroupModerationRuntime extends BotModuleHandler {
    * @param {RestrictionInvocation} invocation - Parsed invocation.
    * @returns {Promise<number | null>} Numeric id, or null when unresolvable.
    */
-  private async resolveUserId(c: Context, invocation: RestrictionInvocation): Promise<number | null> {
+  private async resolveUserId(
+    c: Context,
+    invocation: RestrictionInvocation,
+  ): Promise<number | null> {
     if (invocation.userId) return invocation.userId;
     if (invocation.username) {
       const chat = await c.api.getChat(`@${invocation.username}`).catch(() => null);
@@ -309,7 +306,8 @@ export class GroupModerationRuntime extends BotModuleHandler {
             if (action === 'ban') await this.restrictions.ban(c.api, chatId, targetId);
             else if (action === 'tban') await this.restrictions.ban(c.api, chatId, targetId, until);
             else if (action === 'mute') await this.restrictions.mute(c.api, chatId, targetId);
-            else if (action === 'tmute') await this.restrictions.mute(c.api, chatId, targetId, until);
+            else if (action === 'tmute')
+              await this.restrictions.mute(c.api, chatId, targetId, until);
             else if (action === 'kick') await this.restrictions.kick(c.api, chatId, targetId);
           },
         );
@@ -327,9 +325,7 @@ export class GroupModerationRuntime extends BotModuleHandler {
 
     if (options.delete || silent) {
       if (c.msg?.reply_to_message) {
-        await c.api
-          .deleteMessage(chatId, c.msg.reply_to_message.message_id)
-          .catch(() => undefined);
+        await c.api.deleteMessage(chatId, c.msg.reply_to_message.message_id).catch(() => undefined);
       }
     }
 
@@ -416,9 +412,14 @@ export class GroupModerationRuntime extends BotModuleHandler {
     });
     if (ok) {
       await c
-        .reply(this.i18n.t(lang, 'restrictions.unbanned', { user: await this.describeUser(c, targetId) }), {
-          parse_mode: 'HTML',
-        })
+        .reply(
+          this.i18n.t(lang, 'restrictions.unbanned', {
+            user: await this.describeUser(c, targetId),
+          }),
+          {
+            parse_mode: 'HTML',
+          },
+        )
         .catch(() => undefined);
     }
   }
@@ -447,9 +448,12 @@ export class GroupModerationRuntime extends BotModuleHandler {
     });
     if (ok) {
       await c
-        .reply(this.i18n.t(lang, 'restrictions.unmuted', { user: await this.describeUser(c, targetId) }), {
-          parse_mode: 'HTML',
-        })
+        .reply(
+          this.i18n.t(lang, 'restrictions.unmuted', { user: await this.describeUser(c, targetId) }),
+          {
+            parse_mode: 'HTML',
+          },
+        )
         .catch(() => undefined);
     }
   }
@@ -487,9 +491,8 @@ export class GroupModerationRuntime extends BotModuleHandler {
     telegramId: number,
     expirySeconds: number,
   ): Promise<number> {
-    const cutoff = expirySeconds > 0
-      ? new Date(Date.now() - expirySeconds * 1000).toISOString()
-      : undefined;
+    const cutoff =
+      expirySeconds > 0 ? new Date(Date.now() - expirySeconds * 1000).toISOString() : undefined;
     return this.prisma.chatWarn.count({
       where: {
         botId,
@@ -543,9 +546,7 @@ export class GroupModerationRuntime extends BotModuleHandler {
 
     if (options.delete || options.silent) {
       if (c.msg?.reply_to_message) {
-        await c.api
-          .deleteMessage(chatId, c.msg.reply_to_message.message_id)
-          .catch(() => undefined);
+        await c.api.deleteMessage(chatId, c.msg.reply_to_message.message_id).catch(() => undefined);
       }
     }
 
@@ -561,9 +562,14 @@ export class GroupModerationRuntime extends BotModuleHandler {
       await this.clearWarns(botId, chatId, targetId);
       await this.applyWarnMode(c, botId, chatId, targetId, warnMode, warnDuration);
       await c
-        .reply(this.i18n.t(lang, 'warnings.warnLimitReached', { user: await this.describeUser(c, targetId) }), {
-          parse_mode: 'HTML',
-        })
+        .reply(
+          this.i18n.t(lang, 'warnings.warnLimitReached', {
+            user: await this.describeUser(c, targetId),
+          }),
+          {
+            parse_mode: 'HTML',
+          },
+        )
         .catch(() => undefined);
       return;
     }
@@ -666,9 +672,12 @@ export class GroupModerationRuntime extends BotModuleHandler {
     if (all) {
       await this.clearWarns(botId, chatId, targetId);
       await c
-        .reply(this.i18n.t(lang, 'warnings.warnsReset', { user: await this.describeUser(c, targetId) }), {
-          parse_mode: 'HTML',
-        })
+        .reply(
+          this.i18n.t(lang, 'warnings.warnsReset', { user: await this.describeUser(c, targetId) }),
+          {
+            parse_mode: 'HTML',
+          },
+        )
         .catch(() => undefined);
     } else {
       const latest = await this.prisma.chatWarn.findFirst({
@@ -680,9 +689,15 @@ export class GroupModerationRuntime extends BotModuleHandler {
       }
       const count = await this.countWarns(botId, chatId, targetId, warnTime);
       await c
-        .reply(this.i18n.t(lang, 'warnings.warnRemoved', { user: await this.describeUser(c, targetId), count }), {
-          parse_mode: 'HTML',
-        })
+        .reply(
+          this.i18n.t(lang, 'warnings.warnRemoved', {
+            user: await this.describeUser(c, targetId),
+            count,
+          }),
+          {
+            parse_mode: 'HTML',
+          },
+        )
         .catch(() => undefined);
     }
     this.adminLog.emit({
@@ -704,7 +719,9 @@ export class GroupModerationRuntime extends BotModuleHandler {
   ): Promise<void> {
     const lang = await this.i18n.getChatLanguage(botId, chatId);
     if (!c.from || !(await this.adminGate.hasCapability(c.api, chatId, c.from.id, 'restrict'))) {
-      await c.answerCallbackQuery({ text: this.i18n.t(lang, 'common.adminOnly') }).catch(() => undefined);
+      await c
+        .answerCallbackQuery({ text: this.i18n.t(lang, 'common.adminOnly') })
+        .catch(() => undefined);
       return;
     }
     const latest = await this.prisma.chatWarn.findFirst({
@@ -715,8 +732,15 @@ export class GroupModerationRuntime extends BotModuleHandler {
       await this.prisma.chatWarn.delete({ where: { id: latest.id } });
     }
     const config = await this.chatSettings.getEffectiveConfig(botId, chatId, this.moduleKey);
-    const count = await this.countWarns(botId, chatId, targetId, Number(config.warnTimeSeconds ?? 0));
-    await c.answerCallbackQuery({ text: this.i18n.t(lang, 'warnings.warnRemoved', { user: '', count }) }).catch(() => undefined);
+    const count = await this.countWarns(
+      botId,
+      chatId,
+      targetId,
+      Number(config.warnTimeSeconds ?? 0),
+    );
+    await c
+      .answerCallbackQuery({ text: this.i18n.t(lang, 'warnings.warnRemoved', { user: '', count }) })
+      .catch(() => undefined);
     this.adminLog.emit({
       botId,
       chatId,
@@ -735,7 +759,7 @@ export class GroupModerationRuntime extends BotModuleHandler {
     if (!(await this.requireCapability(c, botId, chatId, lang, 'restrict'))) return;
 
     const invocation = this.parseInvocation(c, false);
-    const targetId = await this.resolveUserId(c, invocation) ?? c.from!.id;
+    const targetId = (await this.resolveUserId(c, invocation)) ?? c.from!.id;
     const config = await this.chatSettings.getEffectiveConfig(botId, chatId, this.moduleKey);
     const warnTime = Number(config.warnTimeSeconds ?? 0);
     const limit = Number(config.warnLimit ?? 3);
@@ -743,16 +767,17 @@ export class GroupModerationRuntime extends BotModuleHandler {
 
     if (count === 0) {
       await c
-        .reply(this.i18n.t(lang, 'warnings.noWarns', { user: await this.describeUser(c, targetId) }), {
-          parse_mode: 'HTML',
-        })
+        .reply(
+          this.i18n.t(lang, 'warnings.noWarns', { user: await this.describeUser(c, targetId) }),
+          {
+            parse_mode: 'HTML',
+          },
+        )
         .catch(() => undefined);
       return;
     }
 
-    const cutoff = warnTime > 0
-      ? new Date(Date.now() - warnTime * 1000).toISOString()
-      : undefined;
+    const cutoff = warnTime > 0 ? new Date(Date.now() - warnTime * 1000).toISOString() : undefined;
     const warns = await this.prisma.chatWarn.findMany({
       where: {
         botId,
@@ -799,7 +824,9 @@ export class GroupModerationRuntime extends BotModuleHandler {
       ...override,
       warnLimit: value,
     });
-    await c.reply(this.i18n.t(lang, 'warnings.warnLimitSet', { limit: value })).catch(() => undefined);
+    await c
+      .reply(this.i18n.t(lang, 'warnings.warnLimitSet', { limit: value }))
+      .catch(() => undefined);
     this.adminLog.emit({
       botId,
       chatId,
@@ -909,9 +936,10 @@ export class GroupModerationRuntime extends BotModuleHandler {
       return;
     }
     const countArg = Number((typeof c.match === 'string' ? c.match : '').trim());
-    const limit = Number.isFinite(countArg) && countArg > 0
-      ? Math.min(countArg, PURGE_HARD_CAP)
-      : Math.min(c.msg.message_id - replied.message_id, PURGE_HARD_CAP);
+    const limit =
+      Number.isFinite(countArg) && countArg > 0
+        ? Math.min(countArg, PURGE_HARD_CAP)
+        : Math.min(c.msg.message_id - replied.message_id, PURGE_HARD_CAP);
 
     let deleted = 0;
     for (
@@ -1028,9 +1056,12 @@ export class GroupModerationRuntime extends BotModuleHandler {
       update: { reason: invocation.reason || null },
     });
     await c
-      .reply(this.i18n.t(lang, 'approvals.approved', { user: await this.describeUser(c, targetId) }), {
-        parse_mode: 'HTML',
-      })
+      .reply(
+        this.i18n.t(lang, 'approvals.approved', { user: await this.describeUser(c, targetId) }),
+        {
+          parse_mode: 'HTML',
+        },
+      )
       .catch(() => undefined);
     this.adminLog.emit({
       botId,
@@ -1069,9 +1100,12 @@ export class GroupModerationRuntime extends BotModuleHandler {
       .catch(() => false);
     if (removed) {
       await c
-        .reply(this.i18n.t(lang, 'approvals.unapproved', { user: await this.describeUser(c, targetId) }), {
-          parse_mode: 'HTML',
-        })
+        .reply(
+          this.i18n.t(lang, 'approvals.unapproved', { user: await this.describeUser(c, targetId) }),
+          {
+            parse_mode: 'HTML',
+          },
+        )
         .catch(() => undefined);
     }
   }
@@ -1134,12 +1168,16 @@ export class GroupModerationRuntime extends BotModuleHandler {
       return;
     }
     const lines = rows.map(
-      (row) => `• <a href="tg://user?id=${row.telegramId}">${row.telegramId}</a>${row.reason ? ` — ${escapeHtml(row.reason)}` : ''}`,
+      (row) =>
+        `• <a href="tg://user?id=${row.telegramId}">${row.telegramId}</a>${row.reason ? ` — ${escapeHtml(row.reason)}` : ''}`,
     );
     await c
-      .reply(`${this.i18n.t(lang, 'approvals.approvedList', { count: rows.length })}\n${lines.join('\n')}`, {
-        parse_mode: 'HTML',
-      })
+      .reply(
+        `${this.i18n.t(lang, 'approvals.approvedList', { count: rows.length })}\n${lines.join('\n')}`,
+        {
+          parse_mode: 'HTML',
+        },
+      )
       .catch(() => undefined);
   }
 
@@ -1231,17 +1269,21 @@ export class GroupModerationRuntime extends BotModuleHandler {
     const nonce = crypto.randomUUID().slice(0, 10);
     this.botReviews.set(nonce, { chatId, execute });
     await c.api
-      .sendMessage(chatId, `🤖 Bot action requires review:
-${label}`, {
-        reply_markup: {
-          inline_keyboard: [
-            [
-              { text: '✅ Approve', callback_data: `gm:b2bok:${nonce}` },
-              { text: '⛔ Deny', callback_data: `gm:b2bno:${nonce}` },
+      .sendMessage(
+        chatId,
+        `🤖 Bot action requires review:
+${label}`,
+        {
+          reply_markup: {
+            inline_keyboard: [
+              [
+                { text: '✅ Approve', callback_data: `gm:b2bok:${nonce}` },
+                { text: '⛔ Deny', callback_data: `gm:b2bno:${nonce}` },
+              ],
             ],
-          ],
+          },
         },
-      })
+      )
       .catch(() => undefined);
     void botId;
   }

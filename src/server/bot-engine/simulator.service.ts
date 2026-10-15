@@ -155,7 +155,11 @@ export class SimulatorService {
       first_name: 'Tester',
       username: 'studio_test',
     };
-    const privateChat = { id: SIMULATOR_TELEGRAM_ID, type: 'private' as const, first_name: 'Tester' };
+    const privateChat = {
+      id: SIMULATOR_TELEGRAM_ID,
+      type: 'private' as const,
+      first_name: 'Tester',
+    };
     const groupChat = {
       id: SIMULATOR_GROUP_ID,
       type: 'supergroup' as const,

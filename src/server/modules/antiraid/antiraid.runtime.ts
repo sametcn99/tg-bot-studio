@@ -116,7 +116,9 @@ export class AntiraidRuntime extends BotModuleHandler {
     const group = await this.guard(c, botId);
     if (!group) return;
     const { chatId, lang, config } = group;
-    const args = String(typeof c.match === 'string' ? c.match : '').trim().toLowerCase();
+    const args = String(typeof c.match === 'string' ? c.match : '')
+      .trim()
+      .toLowerCase();
     const key = `${botId}:${chatId}`;
     const state = this.state.get(key) ?? { until: 0, joins: [] };
 
@@ -178,9 +180,10 @@ export class AntiraidRuntime extends BotModuleHandler {
     const group = await this.guard(c, botId);
     if (!group) return;
     const { chatId, lang } = group;
-    const args = String(typeof c.match === 'string' ? c.match : '').trim().toLowerCase();
-    const threshold =
-      args === 'off' || args === 'no' ? 0 : Number(args.split(/\s+/)[0]) || -1;
+    const args = String(typeof c.match === 'string' ? c.match : '')
+      .trim()
+      .toLowerCase();
+    const threshold = args === 'off' || args === 'no' ? 0 : Number(args.split(/\s+/)[0]) || -1;
     if (threshold < 0) {
       await c.reply(this.i18n.t(lang, 'common.error')).catch(() => undefined);
       return;

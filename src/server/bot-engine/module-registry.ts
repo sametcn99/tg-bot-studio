@@ -228,7 +228,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     name: 'Message Cleaning',
     category: 'Community & Moderation',
     description:
-      'Auto-deletes used commands, Telegram service messages (joins, pins, titles), and the bot\'s own action messages.',
+      "Auto-deletes used commands, Telegram service messages (joins, pins, titles), and the bot's own action messages.",
     defaultConfig: {
       cleanCommand: 'off',
       cleanServiceTypes: [],
@@ -250,7 +250,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     name: 'Ban Federations',
     category: 'Community & Moderation',
     description:
-      'Shared ban lists across all of your bots\' groups: /fban removes users everywhere, with fed admins, logs, and subscriptions.',
+      "Shared ban lists across all of your bots' groups: /fban removes users everywhere, with fed admins, logs, and subscriptions.",
     defaultConfig: {
       quietFed: false,
       fedNotif: true,
@@ -272,7 +272,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     name: 'Bot-to-Bot Commands',
     category: 'Automation & Monetization',
     description:
-      'Lets other bots use this bot\'s group commands (off / admin-bots-only / all) with an admin review safety gate.',
+      "Lets other bots use this bot's group commands (off / admin-bots-only / all) with an admin review safety gate.",
     defaultConfig: {
       mode: 'off',
       skipReview: false,

@@ -50,7 +50,8 @@ export class AdminLogRuntime extends BotModuleHandler {
       if (!c.from || !(await this.adminGate.isOwner(c.api, c.chat.id, c.from.id))) return;
       const args = String(typeof c.match === 'string' ? c.match : '').trim();
       if (!/^-?\d+$/.test(args)) return;
-      const override = (await this.chatSettings.getOverride(botId, c.chat.id, this.moduleKey)) ?? {};
+      const override =
+        (await this.chatSettings.getOverride(botId, c.chat.id, this.moduleKey)) ?? {};
       await this.chatSettings.setOverride(botId, c.chat.id, this.moduleKey, {
         ...override,
         logChatId: Number(args),
@@ -61,7 +62,8 @@ export class AdminLogRuntime extends BotModuleHandler {
     bot.command('unsetlog', async (c) => {
       if (c.chat?.type !== 'supergroup' && c.chat?.type !== 'group') return;
       if (!c.from || !(await this.adminGate.isOwner(c.api, c.chat.id, c.from.id))) return;
-      const override = (await this.chatSettings.getOverride(botId, c.chat.id, this.moduleKey)) ?? {};
+      const override =
+        (await this.chatSettings.getOverride(botId, c.chat.id, this.moduleKey)) ?? {};
       await this.chatSettings.setOverride(botId, c.chat.id, this.moduleKey, {
         ...override,
         logChatId: 0,
@@ -71,7 +73,10 @@ export class AdminLogRuntime extends BotModuleHandler {
 
     bot.command('logchannel', async (c) => {
       if (c.chat?.type !== 'supergroup' && c.chat?.type !== 'group') return;
-      if (!c.from || !(await this.adminGate.hasCapability(c.api, c.chat.id, c.from.id, 'change_info'))) {
+      if (
+        !c.from ||
+        !(await this.adminGate.hasCapability(c.api, c.chat.id, c.from.id, 'change_info'))
+      ) {
         return;
       }
       const config = await this.chatSettings.getEffectiveConfig(botId, c.chat.id, this.moduleKey);
@@ -105,11 +110,9 @@ export class AdminLogRuntime extends BotModuleHandler {
         : ['settings', 'admin', 'user', 'automated', 'reports', 'other'];
       if (!categories.includes(category)) return;
 
-      await ctx.bot.api.sendMessage(
-        logChatId,
-        `[${category}] ${escapeHtml(text)}`,
-        { parse_mode: 'HTML' },
-      );
+      await ctx.bot.api.sendMessage(logChatId, `[${category}] ${escapeHtml(text)}`, {
+        parse_mode: 'HTML',
+      });
     } catch (error) {
       this.logger.warn(
         `Log forward failed for bot ${ctx.botId}: ${error instanceof Error ? error.message : String(error)}`,

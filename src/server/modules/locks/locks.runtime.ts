@@ -112,7 +112,12 @@ export class LocksRuntime extends BotModuleHandler {
   /**
    * Admins, approved users, and bots we manage are immune to locks.
    */
-  private async isImmune(botId: number, update: Context, chatId: number, userId: number): Promise<boolean> {
+  private async isImmune(
+    botId: number,
+    update: Context,
+    chatId: number,
+    userId: number,
+  ): Promise<boolean> {
     if (await this.adminGate.isAdmin(update.api, chatId, userId)) return true;
     const approved = await this.prisma.chatApproval
       .findUnique({
@@ -294,10 +299,14 @@ export class LocksRuntime extends BotModuleHandler {
     }
 
     const override = (await this.chatSettings.getOverride(botId, chatId, this.moduleKey)) ?? {};
-    const current = Array.isArray(override.lockedTypes) ? [...(override.lockedTypes as string[])] : [];
+    const current = Array.isArray(override.lockedTypes)
+      ? [...(override.lockedTypes as string[])]
+      : [];
     const next = lock
       ? [...new Set([...current, ...valid])]
-      : current.filter((type) => !valid.includes(type) && !(valid.includes('all') && type !== 'all'));
+      : current.filter(
+          (type) => !valid.includes(type) && !(valid.includes('all') && type !== 'all'),
+        );
     const rules = { ...((override.lockRules as Record<string, LockRule>) ?? {}) };
     if (rule) {
       for (const type of valid) rules[type] = rule;
@@ -311,7 +320,9 @@ export class LocksRuntime extends BotModuleHandler {
       lockRules: rules,
     });
     await c
-      .reply(this.i18n.t(lang, lock ? 'locks.locked' : 'locks.unlocked', { types: valid.join(', ') }))
+      .reply(
+        this.i18n.t(lang, lock ? 'locks.locked' : 'locks.unlocked', { types: valid.join(', ') }),
+      )
       .catch(() => undefined);
     this.adminLog.emit({
       botId,
@@ -332,9 +343,7 @@ export class LocksRuntime extends BotModuleHandler {
       : [];
     await c
       .reply(
-        lockedTypes.length > 0
-          ? `🔒 ${lockedTypes.map((type) => `\`${type}\``).join(', ')}`
-          : '🔓',
+        lockedTypes.length > 0 ? `🔒 ${lockedTypes.map((type) => `\`${type}\``).join(', ')}` : '🔓',
         { parse_mode: 'HTML' },
       )
       .catch(() => undefined);
@@ -357,7 +366,9 @@ export class LocksRuntime extends BotModuleHandler {
     if (!group) return;
     const { chatId, lang } = group;
     const enable = ['on', 'yes', 'true'].includes(
-      String(typeof c.match === 'string' ? c.match : '').trim().toLowerCase(),
+      String(typeof c.match === 'string' ? c.match : '')
+        .trim()
+        .toLowerCase(),
     );
     const override = (await this.chatSettings.getOverride(botId, chatId, this.moduleKey)) ?? {};
     await this.chatSettings.setOverride(botId, chatId, this.moduleKey, {
@@ -397,9 +408,7 @@ export class LocksRuntime extends BotModuleHandler {
       ...override,
       allowlist,
     });
-    await c
-      .reply(this.i18n.t(lang, 'locks.allowlisted', { item: entry }))
-      .catch(() => undefined);
+    await c.reply(this.i18n.t(lang, 'locks.allowlisted', { item: entry })).catch(() => undefined);
   }
 
   /**

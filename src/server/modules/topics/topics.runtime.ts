@@ -39,75 +39,91 @@ export class TopicsRuntime extends BotModuleHandler {
   register(ctx: ModuleRuntimeContext): void {
     const { bot, botId } = ctx;
 
-    bot.command('newtopic', (c) => this.withGuard(c, botId, async (chatId, lang, args) => {
-      if (!args) return;
-      const created = await bot.api.createForumTopic(chatId, args).catch(() => null);
-      if (created) {
-        await c.reply(this.i18n.t(lang, 'topics.created', { name: args })).catch(() => undefined);
-      }
-    }));
+    bot.command('newtopic', (c) =>
+      this.withGuard(c, botId, async (chatId, lang, args) => {
+        if (!args) return;
+        const created = await bot.api.createForumTopic(chatId, args).catch(() => null);
+        if (created) {
+          await c.reply(this.i18n.t(lang, 'topics.created', { name: args })).catch(() => undefined);
+        }
+      }),
+    );
 
-    bot.command('renametopic', (c) => this.withGuard(c, botId, async (chatId, lang, args) => {
-      if (!args || !c.msg?.is_topic_message) return;
-      const threadId = c.msg.message_thread_id!;
-      const ok = await bot.api
-        .editForumTopic(chatId, threadId, { name: args })
-        .catch(() => false);
-      if (ok) {
-        await c.reply(this.i18n.t(lang, 'topics.renamed', { name: args })).catch(() => undefined);
-      }
-    }));
+    bot.command('renametopic', (c) =>
+      this.withGuard(c, botId, async (chatId, lang, args) => {
+        if (!args || !c.msg?.is_topic_message) return;
+        const threadId = c.msg.message_thread_id!;
+        const ok = await bot.api
+          .editForumTopic(chatId, threadId, { name: args })
+          .catch(() => false);
+        if (ok) {
+          await c.reply(this.i18n.t(lang, 'topics.renamed', { name: args })).catch(() => undefined);
+        }
+      }),
+    );
 
-    bot.command('closetopic', (c) => this.withGuard(c, botId, async (chatId, lang) => {
-      if (!c.msg?.is_topic_message) return;
-      const ok = await bot.api
-        .closeForumTopic(chatId, c.msg.message_thread_id!)
-        .catch(() => false);
-      if (ok) {
-        await c.reply(this.i18n.t(lang, 'topics.closed')).catch(() => undefined);
-      }
-    }));
+    bot.command('closetopic', (c) =>
+      this.withGuard(c, botId, async (chatId, lang) => {
+        if (!c.msg?.is_topic_message) return;
+        const ok = await bot.api
+          .closeForumTopic(chatId, c.msg.message_thread_id!)
+          .catch(() => false);
+        if (ok) {
+          await c.reply(this.i18n.t(lang, 'topics.closed')).catch(() => undefined);
+        }
+      }),
+    );
 
-    bot.command('reopentopic', (c) => this.withGuard(c, botId, async (chatId, lang) => {
-      if (!c.msg?.is_topic_message) return;
-      const ok = await bot.api
-        .reopenForumTopic(chatId, c.msg.message_thread_id!)
-        .catch(() => false);
-      if (ok) {
-        await c.reply(this.i18n.t(lang, 'topics.reopened')).catch(() => undefined);
-      }
-    }));
+    bot.command('reopentopic', (c) =>
+      this.withGuard(c, botId, async (chatId, lang) => {
+        if (!c.msg?.is_topic_message) return;
+        const ok = await bot.api
+          .reopenForumTopic(chatId, c.msg.message_thread_id!)
+          .catch(() => false);
+        if (ok) {
+          await c.reply(this.i18n.t(lang, 'topics.reopened')).catch(() => undefined);
+        }
+      }),
+    );
 
-    bot.command('deletetopic', (c) => this.withGuard(c, botId, async (chatId, lang) => {
-      if (!c.msg?.is_topic_message) return;
-      const ok = await bot.api
-        .deleteForumTopic(chatId, c.msg.message_thread_id!)
-        .catch(() => false);
-      if (ok) {
-        await c.reply(this.i18n.t(lang, 'topics.deleted')).catch(() => undefined);
-      }
-    }));
+    bot.command('deletetopic', (c) =>
+      this.withGuard(c, botId, async (chatId, lang) => {
+        if (!c.msg?.is_topic_message) return;
+        const ok = await bot.api
+          .deleteForumTopic(chatId, c.msg.message_thread_id!)
+          .catch(() => false);
+        if (ok) {
+          await c.reply(this.i18n.t(lang, 'topics.deleted')).catch(() => undefined);
+        }
+      }),
+    );
 
-    bot.command('actiontopic', (c) => this.withGuard(c, botId, async (chatId, lang) => {
-      const config = await this.chatSettings.getEffectiveConfig(botId, chatId, this.moduleKey);
-      await c
-        .reply(`Action topic: ${Number(config.actionTopicId ?? 0) || this.i18n.t(lang, 'common.error')}`)
-        .catch(() => undefined);
-    }));
+    bot.command('actiontopic', (c) =>
+      this.withGuard(c, botId, async (chatId, lang) => {
+        const config = await this.chatSettings.getEffectiveConfig(botId, chatId, this.moduleKey);
+        await c
+          .reply(
+            `Action topic: ${Number(config.actionTopicId ?? 0) || this.i18n.t(lang, 'common.error')}`,
+          )
+          .catch(() => undefined);
+      }),
+    );
 
-    bot.command('setactiontopic', (c) => this.withGuard(c, botId, async (chatId, lang) => {
-      if (!c.msg?.is_topic_message) {
-        await c.reply(this.i18n.t(lang, 'topics.forumOnly')).catch(() => undefined);
-        return;
-      }
-      const threadId = c.msg.message_thread_id;
-      const override = (await this.chatSettings.getOverride(botId, chatId, this.moduleKey)) ?? {};
-      await this.chatSettings.setOverride(botId, chatId, this.moduleKey, {
-        ...override,
-        actionTopicId: threadId,
-      });
-      await c.reply(this.i18n.t(lang, 'topics.actionTopicSet')).catch(() => undefined);
-    }));
+    bot.command('setactiontopic', (c) =>
+      this.withGuard(c, botId, async (chatId, lang) => {
+        if (!c.msg?.is_topic_message) {
+          await c.reply(this.i18n.t(lang, 'topics.forumOnly')).catch(() => undefined);
+          return;
+        }
+        const threadId = c.msg.message_thread_id;
+        const override = (await this.chatSettings.getOverride(botId, chatId, this.moduleKey)) ?? {};
+        await this.chatSettings.setOverride(botId, chatId, this.moduleKey, {
+          ...override,
+          actionTopicId: threadId,
+        });
+        await c.reply(this.i18n.t(lang, 'topics.actionTopicSet')).catch(() => undefined);
+      }),
+    );
   }
 
   /**

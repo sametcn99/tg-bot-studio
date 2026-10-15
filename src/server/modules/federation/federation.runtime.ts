@@ -147,7 +147,10 @@ export class FederationRuntime extends BotModuleHandler {
    * Resolves the fed in scope: the chat's fed for groups, the sender's own
    * fed for PMs.
    */
-  private async scopedFed(c: Context, botId: number): Promise<{ fed: Fed; chatFed: boolean } | null> {
+  private async scopedFed(
+    c: Context,
+    botId: number,
+  ): Promise<{ fed: Fed; chatFed: boolean } | null> {
     if (c.chat?.type === 'supergroup' || c.chat?.type === 'group') {
       const membership = await this.prisma.fedChat.findFirst({
         where: { botId, chatId: String(c.chat.id) },
@@ -166,9 +169,11 @@ export class FederationRuntime extends BotModuleHandler {
    */
   private async isFedAdmin(fedId: string, telegramId: number, isOwner: boolean): Promise<boolean> {
     if (isOwner) return true;
-    const admin = await this.prisma.fedAdmin.findUnique({
-      where: { fedId_telegramId: { fedId, telegramId: BigInt(telegramId) } },
-    }).catch(() => null);
+    const admin = await this.prisma.fedAdmin
+      .findUnique({
+        where: { fedId_telegramId: { fedId, telegramId: BigInt(telegramId) } },
+      })
+      .catch(() => null);
     return admin !== null;
   }
 
@@ -186,9 +191,7 @@ export class FederationRuntime extends BotModuleHandler {
     }
     const existing = await this.ownedFed(botId, c.from.id);
     if (existing) {
-      await c
-        .reply(this.i18n.t(lang, 'federation.onePerOwner'))
-        .catch(() => undefined);
+      await c.reply(this.i18n.t(lang, 'federation.onePerOwner')).catch(() => undefined);
       return;
     }
     const fed = await this.prisma.fed.create({
@@ -221,7 +224,9 @@ export class FederationRuntime extends BotModuleHandler {
       await c.reply(this.i18n.t(lang, 'federation.noFed')).catch(() => undefined);
       return;
     }
-    const name = String(typeof c.match === 'string' ? c.match : '').trim().slice(0, 64);
+    const name = String(typeof c.match === 'string' ? c.match : '')
+      .trim()
+      .slice(0, 64);
     if (!name) return;
     await this.prisma.fed.update({ where: { id: fed.id }, data: { name } });
     await c.reply(this.i18n.t(lang, 'federation.renamed', { name })).catch(() => undefined);
@@ -307,7 +312,9 @@ export class FederationRuntime extends BotModuleHandler {
     });
     if (!membership) return;
     const enable = ['on', 'yes', 'true'].includes(
-      String(typeof c.match === 'string' ? c.match : '').trim().toLowerCase(),
+      String(typeof c.match === 'string' ? c.match : '')
+        .trim()
+        .toLowerCase(),
     );
     await this.prisma.fedChat.update({
       where: { fedId_botId_chatId: membership },
@@ -344,11 +351,7 @@ export class FederationRuntime extends BotModuleHandler {
       await c.reply(this.i18n.t(lang, 'common.userNotFound')).catch(() => undefined);
       return;
     }
-    const reason = args
-      .split(/\s+/)
-      .slice(1)
-      .join(' ')
-      .trim();
+    const reason = args.split(/\s+/).slice(1).join(' ').trim();
 
     if (ban) {
       if (!reason && scope.fed.fedReasonRequired === 1) {
@@ -453,9 +456,9 @@ export class FederationRuntime extends BotModuleHandler {
       return;
     }
     void botId;
-    await c.reply('Use the dashboard federation manager to import ban lists.').catch(
-      () => undefined,
-    );
+    await c
+      .reply('Use the dashboard federation manager to import ban lists.')
+      .catch(() => undefined);
   }
 
   /**
@@ -488,7 +491,9 @@ export class FederationRuntime extends BotModuleHandler {
       });
     } else {
       await this.prisma.fedAdmin
-        .delete({ where: { fedId_telegramId: { fedId: scope.fed.id, telegramId: BigInt(userId) } } })
+        .delete({
+          where: { fedId_telegramId: { fedId: scope.fed.id, telegramId: BigInt(userId) } },
+        })
         .catch(() => undefined);
     }
     await c
@@ -568,7 +573,9 @@ export class FederationRuntime extends BotModuleHandler {
     const scope = await this.scopedFed(c, botId);
     if (!scope || scope.fed.ownerTelegramId !== BigInt(c.from.id)) return;
     const enable = ['on', 'yes', 'true'].includes(
-      String(typeof c.match === 'string' ? c.match : '').trim().toLowerCase(),
+      String(typeof c.match === 'string' ? c.match : '')
+        .trim()
+        .toLowerCase(),
     );
     await this.prisma.fed.update({
       where: { id: scope.fed.id },
@@ -585,7 +592,9 @@ export class FederationRuntime extends BotModuleHandler {
     const scope = await this.scopedFed(c, botId);
     if (!scope || scope.fed.ownerTelegramId !== BigInt(c.from.id)) return;
     const enable = ['on', 'yes', 'true'].includes(
-      String(typeof c.match === 'string' ? c.match : '').trim().toLowerCase(),
+      String(typeof c.match === 'string' ? c.match : '')
+        .trim()
+        .toLowerCase(),
     );
     void enable; // Notifications ride the admin-log bus; flag kept for dashboards.
     await c.reply('✅').catch(() => undefined);

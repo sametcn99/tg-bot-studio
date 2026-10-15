@@ -41,7 +41,15 @@ function normalize(text: string): string {
 
 /** Strips common lookalike character substitutions (0→o, 1→i, 3→e, ...). */
 function foldLookalikes(text: string): string {
-  const map: Record<string, string> = { '0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '@': 'a', $: 's' };
+  const map: Record<string, string> = {
+    '0': 'o',
+    '1': 'i',
+    '3': 'e',
+    '4': 'a',
+    '5': 's',
+    '@': 'a',
+    $: 's',
+  };
   return text.replace(/[01345@$]/g, (char) => map[char] ?? char);
 }
 
@@ -108,7 +116,11 @@ function parseEntry(raw: string): { body: string; action?: string; durationSecon
  * @param {User} from - Message author (for name/username triggers).
  * @returns {BlocklistMatch | null} Match details, or null when clean.
  */
-export function matchBlocklist(triggers: string[], msg: Message, from: User): BlocklistMatch | null {
+export function matchBlocklist(
+  triggers: string[],
+  msg: Message,
+  from: User,
+): BlocklistMatch | null {
   const text = msg.text ?? msg.caption ?? '';
   const normalized = normalize(text);
   const displayName = normalize([from.first_name, from.last_name].filter(Boolean).join(' '));

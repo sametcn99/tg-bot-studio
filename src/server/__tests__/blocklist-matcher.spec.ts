@@ -2,7 +2,13 @@ import { describe, expect, test } from 'bun:test';
 import { matchBlocklist } from '../modules/moderation/blocklist-matcher';
 import type { Message, User } from 'grammy/types';
 
-const USER: User = { id: 10, is_bot: false, first_name: 'Ada', last_name: 'Lovelace', username: 'ada' };
+const USER: User = {
+  id: 10,
+  is_bot: false,
+  first_name: 'Ada',
+  last_name: 'Lovelace',
+  username: 'ada',
+};
 
 function msg(partial: Partial<Message>): Message {
   return {
@@ -27,7 +33,9 @@ describe('matchBlocklist', () => {
     expect(matchBlocklist(['bit?'], msg({ text: 'bits and bytes' }), USER)).not.toBeNull();
     expect(matchBlocklist(['bit?'], msg({ text: 'bit' }), USER)).toBeNull();
     expect(matchBlocklist(['bit*'], msg({ text: 'bite me' }), USER)).not.toBeNull();
-    expect(matchBlocklist(['hi ** you'], msg({ text: 'hi there, how are you' }), USER)).not.toBeNull();
+    expect(
+      matchBlocklist(['hi ** you'], msg({ text: 'hi there, how are you' }), USER),
+    ).not.toBeNull();
   });
 
   test('prefix and exact modes', () => {
@@ -44,9 +52,7 @@ describe('matchBlocklist', () => {
 
   test('name and username triggers', () => {
     expect(matchBlocklist(['name:*ham*'], msg({ text: 'hello' }), USER)).toBeNull();
-    expect(
-      matchBlocklist(['name:*love*'], msg({ text: 'hello' }), USER),
-    ).not.toBeNull();
+    expect(matchBlocklist(['name:*love*'], msg({ text: 'hello' }), USER)).not.toBeNull();
     expect(matchBlocklist(['username:ad'], msg({ text: 'hello' }), USER)).not.toBeNull();
   });
 

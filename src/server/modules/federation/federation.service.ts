@@ -156,11 +156,7 @@ export class FederationService {
    * Imports bans from CSV (header row with `id` and `reason`) or NDJSON
    * (`{"user_id":1234,...}` per line), reference-compatible formats.
    */
-  async importBans(
-    fedId: string,
-    content: string,
-    bannedBy: number,
-  ): Promise<number> {
+  async importBans(fedId: string, content: string, bannedBy: number): Promise<number> {
     let imported = 0;
     const trimmed = content.trim();
     if (trimmed.startsWith('{') || trimmed.includes('"user_id"')) {

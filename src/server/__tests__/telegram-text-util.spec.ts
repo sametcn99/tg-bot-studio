@@ -14,9 +14,9 @@ describe('escapeHtml', () => {
 
 describe('userMentionHtml', () => {
   test('prefers username', () => {
-    expect(
-      userMentionHtml({ id: 1, is_bot: false, first_name: 'Ada' } as never),
-    ).toBe('<a href="tg://user?id=1">Ada</a>');
+    expect(userMentionHtml({ id: 1, is_bot: false, first_name: 'Ada' } as never)).toBe(
+      '<a href="tg://user?id=1">Ada</a>',
+    );
   });
 
   test('falls back to invisible mention link', () => {

@@ -82,7 +82,9 @@ function extractUrls(msg: Message): string[] {
   for (const entity of msg.entities ?? msg.caption_entities ?? []) {
     if (entity.type === 'url' || entity.type === 'text_link') {
       const value =
-        entity.type === 'text_link' && entity.url ? entity.url : text.slice(entity.offset, entity.offset + entity.length);
+        entity.type === 'text_link' && entity.url
+          ? entity.url
+          : text.slice(entity.offset, entity.offset + entity.length);
       urls.push(value.toLowerCase());
     }
     if (entity.type === 'email' || entity.type === 'phone_number' || entity.type === 'cashtag') {
@@ -166,9 +168,7 @@ export function matchesLock(type: LockType, msg: Message, chatId: number): boole
     case 'invitelink':
       return urls.some((url) => url.includes('t.me/') || url.includes('t.me/joinchat'));
     case 'botlink':
-      return urls.some(
-        (url) => /^t\.me\/[a-z0-9_]+$/i.test(url.replace('https://', '')),
-      );
+      return urls.some((url) => /^t\.me\/[a-z0-9_]+$/i.test(url.replace('https://', '')));
     case 'bot':
       return msg.from?.is_bot === true;
     case 'button':
@@ -186,9 +186,7 @@ export function matchesLock(type: LockType, msg: Message, chatId: number): boole
     case 'forwarduser':
       return msg.forward_origin?.type === 'user' || msg.forward_origin?.type === 'hidden_user';
     case 'forwardbot':
-      return (
-        msg.forward_origin?.type === 'user' && msg.forward_origin.sender_user?.is_bot === true
-      );
+      return msg.forward_origin?.type === 'user' && msg.forward_origin.sender_user?.is_bot === true;
     case 'forwardchannel':
       return msg.forward_origin?.type === 'channel';
     case 'forwardstory':
@@ -196,7 +194,11 @@ export function matchesLock(type: LockType, msg: Message, chatId: number): boole
     case 'externalreply':
       return msg.external_reply !== undefined;
     case 'anonchannel':
-      return msg.sender_chat !== undefined && msg.sender_chat.id !== chatId && msg.sender_chat.type === 'channel';
+      return (
+        msg.sender_chat !== undefined &&
+        msg.sender_chat.id !== chatId &&
+        msg.sender_chat.type === 'channel'
+      );
     case 'comment':
       return msg.is_automatic_forward === true;
     case 'spoiler':
@@ -256,7 +258,9 @@ export function isAllowlisted(allowlist: string[], msg: Message): boolean {
   const commands = (msg.entities ?? msg.caption_entities ?? [])
     .filter((entity) => entity.type === 'bot_command')
     .map((entity) =>
-      (msg.text ?? msg.caption ?? '').slice(entity.offset, entity.offset + entity.length).toLowerCase(),
+      (msg.text ?? msg.caption ?? '')
+        .slice(entity.offset, entity.offset + entity.length)
+        .toLowerCase(),
     );
 
   for (const rawEntry of allowlist) {
@@ -264,7 +268,10 @@ export function isAllowlisted(allowlist: string[], msg: Message): boolean {
     if (!entry) continue;
 
     if (entry.startsWith('stickerpack:')) {
-      if (msg.sticker && msg.sticker.set_name?.toLowerCase() === entry.slice('stickerpack:'.length)) {
+      if (
+        msg.sticker &&
+        msg.sticker.set_name?.toLowerCase() === entry.slice('stickerpack:'.length)
+      ) {
         return true;
       }
       continue;
