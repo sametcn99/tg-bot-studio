@@ -1,0 +1,183 @@
+{
+  "common": {
+    "adminOnly": "Bu buyruqdan faqat administratorlar foydalanishi mumkin.",
+    "missingPermission": "Bu amal uchun kerakli ruxsatingiz yoʻq.",
+    "userNotFound": "Bu foydalanuvchini topa olmadim. Uning xabariga javob bering yoki id/@foydalanuvchi nomini kiriting.",
+    "invalidDuration": "Notoʻgʻri davomiylik. 5m, 1h30m, 3d, 2w kabi formatlardan foydalaning.",
+    "done": "Bajarildi.",
+    "error": "Muammo yuz berdi. Qayta urinib koʻring."
+  },
+  "restrictions": {
+    "banned": "{user} banlandi. {reason}",
+    "tempBanned": "{user} {duration} muddatga banlandi. {reason}",
+    "unbanned": "{user} bandan olindi.",
+    "muted": "{user} ovozlandi. {reason}",
+    "tempMuted": "{user} {duration} muddatga ovozlandi. {reason}",
+    "unmuted": "{user} yana gapirishi mumkin.",
+    "kicked": "{user} guruhdan chiqarildi. {reason}",
+    "kickme": "Oʻzing soʻradiṅ — xayr!",
+    "notBanned": "Bu foydalanuvchi banli emas.",
+    "notMuted": "Bu foydalanuvchi ovozlanmagan."
+  },
+  "warnings": {
+    "warned": "{user} foydalanuvchisining {count}/{limit} ogohlantirishi bor. {reason}",
+    "warnLimitReached": "{user} ogohlantirish chegarasiga yetdi.",
+    "warnRemoved": "{user} foydalanuvchisining oxirgi ogohlantirishi olindi. Endi {count}.",
+    "warnsReset": "{user} foydalanuvchisining barcha ogohlantirishlari tiklandi.",
+    "warnList": "{user} ogohlantirishlari: {count}/{limit}",
+    "warnItem": "• {reason} — {date}",
+    "noWarns": "{user} foydalanuvchisining ogohlantirishi yoʻq.",
+    "warnLimitSet": "Ogohlantirish chegarasi {limit} qilib belgilandi.",
+    "warnModeSet": "Ogohlantirish rejimi {mode} qilib belgilandi.",
+    "warnTimeSet": "Ogohlantirishlar endi {duration}dan keyin tushadi.",
+    "warnTimeOff": "Ogohlantirishlarning tugashi oʻchirildi."
+  },
+  "purges": {
+    "purgeComplete": "Tozalash tugadi. {count} xabar oʻchirildi.",
+    "purgeRange": "Eng eski xabarga /purgefrom, eng yangisiga /purgeto bilan javob bering."
+  },
+  "pins": {
+    "pinned": "Mahkamlandi.",
+    "unpinned": "Mahkamlash olindi.",
+    "unpinnedAll": "Barcha mahkamlashlar olindi."
+  },
+  "reports": {
+    "reported": "Administratorlar xabardor qilindi.",
+    "reportsOn": "Shikoyatlar yoqildi.",
+    "reportsOff": "Shikoyatlar oʻchirildi.",
+    "cannotReportAdmin": "Administratorlar haqida shikoyat qilish mumkin emas."
+  },
+  "approvals": {
+    "approved": "{user} tasdiqlandi — avtomatik moderatsiyadan himoyalangan.",
+    "unapproved": "{user} endi tasdiqlanmagan.",
+    "notApproved": "{user} tasdiqlanmagan.",
+    "isApproved": "{user} tasdiqlangan. {reason}",
+    "approvedList": "Tasdiqlangan foydalanuvchilar: {count}",
+    "approvedAllCleared": "Barcha tasdiqlar olindi.",
+    "approvalEmpty": "Hozircha tasdiqlangan foydalanuvchi yoʻq."
+  },
+  "locks": {
+    "locked": "Qulflandi: {types}.",
+    "unlocked": "Qulf olindi: {types}.",
+    "lockWarned": "{user} foydalanuvchisi qulflangan kontent yuborishga urindi: {types}. {count}/{limit}",
+    "allowlisted": "Ruxsat roʻyxatiga qoʻshildi: {item}",
+    "allowlistRemoved": "Ruxsat roʻyxatidan olindi: {item}",
+    "allowlistCleared": "Ruxsat roʻyxati tozalandi.",
+    "allowlistEmpty": "Ruxsat roʻyxati boʻsh."
+  },
+  "blocklist": {
+    "added": "Qora roʻyxat tetikleyicisi qoʻshildi.",
+    "removed": "Qora roʻyxat tetikleyicisi olindi.",
+    "cleared": "Barcha qora roʻyxat tetikleyicilari olindi.",
+    "listTitle": "Qora roʻyxat tetikleyicilari ({count}):",
+    "empty": "Qora roʻyxat boʻsh.",
+    "hit": "Xabar oʻchirildi (qora roʻyxat mosligi). {count}/{limit}"
+  },
+  "flood": {
+    "hit": "Flood aniqlandi. {user} {duration} muddatga ovozlandi.",
+    "settingsSet": "Antiflood yangilandi."
+  },
+  "antiraid": {
+    "enabled": "AntiRaid {duration} muddatga yoqildi. Barcha yangi aʼzolar {actionTime} muddatga banlanadi.",
+    "disabled": "AntiRaid oʻchirildi.",
+    "status": "AntiRaid hozircha {status}.",
+    "raidBan": "Reyd himoyasi: yangi aʼzo banlandi."
+  },
+  "captcha": {
+    "welcomeCaptcha": "{user}, xush kelibsiz! Inson ekaningizni tasdiqlash uchun pastdagi tugmani bosing.",
+    "verified": "Tasdiq muvaffaqiyatli. Jamiyatdan bahramand boʻling.",
+    "kicked": "Vaqtida tasdiqlamadi — chiqarildi.",
+    "alreadyVerified": "Siz allaqachon tasdiqlangansiz."
+  },
+  "rules": {
+    "noneSet": "Bu suhbat uchun qoidalar belgilanmagan.",
+    "dmPrompt": "Qoidalarni oʻqish uchun pastdagi tugmani bosing.",
+    "buttonLabel": "Qoidalar"
+  },
+  "notes": {
+    "saved": "Qayd saqlandi: #{trigger}",
+    "cleared": "Qayd olindi: #{trigger}",
+    "notFound": "Bunday qayd yoʻq.",
+    "listTitle": "Qaydlar ({count}):",
+    "empty": "Hozircha saqlangan qayd yoʻq."
+  },
+  "filters": {
+    "saved": "Filtr saqlandi: {trigger}",
+    "stopped": "Filtr olindi: {trigger}",
+    "stoppedAll": "Barcha filtrlar olindi.",
+    "listTitle": "Filtrlar ({count}):",
+    "empty": "Hozircha saqlangan filtr yoʻq."
+  },
+  "federation": {
+    "created": "\"<b>{name}</b>\" federatsiyasi yaratildi.\nFederatsiya ID: <code>{fedId}</code>\nGuruhlaringizda qoʻllash uchun /joinfed {fedId} dan foydalaning.",
+    "deleted": "Federatsiya oʻchirildi. Banli foydalanuvchilar banli qoladi.",
+    "renamed": "Federatsiya nomi \"{name}\" ga oʻzgartirildi.",
+    "onePerOwner": "Sizning allaqachon federatsiyangiz bor.",
+    "nameTooLong": "Federatsiya nomlari 64 belgidan oshmasligi kerak.",
+    "joined": "Bu suhbat \"{name}\" federatsiyasiga qoʻshildi.",
+    "left": "Bu suhbat federatsiyadan chiqdi.",
+    "notJoined": "Bu suhbat hech qanday federatsiyada emas.",
+    "ownerRequired": "Federatsiya aʼzoligini faqat guruh egasi boshqarishi mumkin.",
+    "fbanned": "{user} federatsiyadan banlandi. {reason}",
+    "funbanned": "{user} federatsiya bandan olindi.",
+    "fedBanHit": "{user} bu federatsiyada banli ({reason}) va chiqarib yuborildi.",
+    "fedBanHitQuiet": "{user} biror federatsiyada banli.",
+    "alreadyFedBanned": "{user} bu federatsiyada allaqachon banli.",
+    "notFedBanned": "{user} bu federatsiyada banli emas.",
+    "fedAdminAdded": "{user} endi federatsiya administratori.",
+    "fedAdminRemoved": "{user} endi federatsiya administratori emas.",
+    "noFed": "Sizning federatsiyangiz yoʻq. /newfed <nom> bilan yarating.",
+    "fedInfo": "<b>{name}</b>\nFederatsiya ID: <code>{fedId}</code>\nSuhbatlar: {chats}\nBanlar: {bans}\nAdministratorlar: {admins}",
+    "fedstatSelf": "Siz {count} federatsiyadan banlisiz.",
+    "fedstatClean": "Siz hech qanday federatsiyadan banli emassiz.",
+    "fedstatUser": "{user} {count} federatsiyadan banli.",
+    "fedstatReason": "Federatsiya {fedId}: {reason} ({date})",
+    "subscribed": "{fedId} federatsiyasiga obuna boʻldingiz.",
+    "unsubscribed": "{fedId} federatsiyasiga obuna bekor qilindi.",
+    "subLimit": "Koʻpi bilan 5 federatsiyaga obuna boʻlishingiz mumkin.",
+    "importDone": "{count} federatsiya bani import qilindi.",
+    "listRateLimited": "Ban roʻyxatlari 30 daqiqada bir marta olinadi. Keyinroq urinib koʻring."
+  },
+  "adminlog": {
+    "format": "[{category}] {text}"
+  },
+  "cleaning": {
+    "settingsSaved": "Tozalash sozlamalari yangilandi."
+  },
+  "language": {
+    "set": "Til yangilandi: {lang}.",
+    "choose": "Til tanlang:",
+    "unsupported": "Qoʻllab-quvvatlanadigan tillar: en, tr, de, ru, es, az, ar, fr, it, pt, uk, fa, id, uz."
+  },
+  "topics": {
+    "created": "Mavzu yaratildi: {name}",
+    "renamed": "Mavzu nomi {name} qilib oʻzgartirildi.",
+    "closed": "Mavzu yopildi.",
+    "reopened": "Mavzu qayta ochildi.",
+    "deleted": "Mavzu oʻchirildi.",
+    "forumOnly": "Bu buyruq faqat forum mavzularida ishlaydi.",
+    "actionTopicSet": "Bot xabarlari endi shu mavzuga boradi."
+  },
+  "privacy": {
+    "intro": "Quyida bu bot siz haqingizda saqlaydigan maʼlumotlar. Boshqarish uchun tugmalardan foydalaning.",
+    "noData": "Siz haqingizda hech qanday maʼlumot saqlanmagan.",
+    "deleted": "Maʼlumotlaringiz oʻchirildi.",
+    "deleteConfirm": "Ishonchingiz komilmi? Bu profilingizni, ogohlantirishlaringizni va bot bilan suhbat tarixingizni oʻchiradi."
+  },
+  "silent": {
+    "enabled": "Jim amallar yoqildi. Mavjud buyruqlar endi jim qoʻllanadi.",
+    "disabled": "Jim amallar oʻchirildi."
+  },
+  "disable": {
+    "disabled": "Buyruq oʻchirildi: /{command}",
+    "enabled": "Buyruq yoqildi: /{command}",
+    "listTitle": "Oʻchirilgan buyruqlar: {list}",
+    "none": "Oʻchirilgan buyruq yoʻq.",
+    "notDisableable": "Bu buyruqni oʻchirib boʻlmaydi."
+  },
+  "info": {
+    "userId": "ID: <code>{id}</code>",
+    "userInfo": "<b>{name}</b>\nID: <code>{id}</code>\nFoydalanuvchi nomi: {username}\nAʼzo: {member}",
+    "chatId": "Suhbat ID: <code>{id}</code>"
+  }
+}

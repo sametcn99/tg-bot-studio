@@ -1,0 +1,183 @@
+{
+  "common": {
+    "adminOnly": "You must be an admin to use this.",
+    "missingPermission": "You don't have the required permission for this action.",
+    "userNotFound": "I couldn't find that user. Reply to their message or pass an id/@username.",
+    "invalidDuration": "Invalid duration. Use formats like 5m, 1h30m, 3d, 2w.",
+    "done": "Done.",
+    "error": "Something went wrong. Please try again."
+  },
+  "restrictions": {
+    "banned": "{user} was banned. {reason}",
+    "tempBanned": "{user} was banned for {duration}. {reason}",
+    "unbanned": "{user} was unbanned.",
+    "muted": "{user} was muted. {reason}",
+    "tempMuted": "{user} was muted for {duration}. {reason}",
+    "unmuted": "{user} can talk again.",
+    "kicked": "{user} was kicked. {reason}",
+    "kickme": "You asked for it — goodbye!",
+    "notBanned": "That user isn't banned.",
+    "notMuted": "That user isn't muted."
+  },
+  "warnings": {
+    "warned": "{user} has {count}/{limit} warnings. {reason}",
+    "warnLimitReached": "{user} reached the warning limit.",
+    "warnRemoved": "Removed {user}'s most recent warning. They now have {count}.",
+    "warnsReset": "All warnings for {user} have been reset.",
+    "warnList": "Warnings for {user}: {count}/{limit}",
+    "warnItem": "• {reason} — {date}",
+    "noWarns": "{user} has no warnings.",
+    "warnLimitSet": "Warning limit set to {limit}.",
+    "warnModeSet": "Warning mode set to {mode}.",
+    "warnTimeSet": "Warnings now expire after {duration}.",
+    "warnTimeOff": "Warning expiry disabled."
+  },
+  "purges": {
+    "purgeComplete": "Purge complete. {count} message(s) deleted.",
+    "purgeRange": "Reply to the oldest message with /purgefrom, then the newest with /purgeto."
+  },
+  "pins": {
+    "pinned": "Pinned.",
+    "unpinned": "Unpinned.",
+    "unpinnedAll": "All pins removed."
+  },
+  "reports": {
+    "reported": "Admins have been notified.",
+    "reportsOn": "Reports enabled.",
+    "reportsOff": "Reports disabled.",
+    "cannotReportAdmin": "Admins cannot be reported."
+  },
+  "approvals": {
+    "approved": "{user} is now approved — immune to automated moderation.",
+    "unapproved": "{user} is no longer approved.",
+    "notApproved": "{user} is not approved.",
+    "isApproved": "{user} is approved. {reason}",
+    "approvedList": "Approved users: {count}",
+    "approvedAllCleared": "All approvals cleared.",
+    "approvalEmpty": "No approved users yet."
+  },
+  "locks": {
+    "locked": "Locked: {types}.",
+    "unlocked": "Unlocked: {types}.",
+    "lockWarned": "User {user} attempted locked content: {types}. {count}/{limit}",
+    "allowlisted": "Added to the allowlist: {item}",
+    "allowlistRemoved": "Removed from the allowlist: {item}",
+    "allowlistCleared": "Allowlist cleared.",
+    "allowlistEmpty": "The allowlist is empty."
+  },
+  "blocklist": {
+    "added": "Blocklist trigger added.",
+    "removed": "Blocklist trigger removed.",
+    "cleared": "All blocklist triggers removed.",
+    "listTitle": "Blocklist triggers ({count}):",
+    "empty": "The blocklist is empty.",
+    "hit": "Message removed (blocklist match). {count}/{limit}"
+  },
+  "flood": {
+    "hit": "Flooding detected. {user} was muted for {duration}.",
+    "settingsSet": "Antiflood updated."
+  },
+  "antiraid": {
+    "enabled": "AntiRaid enabled for {duration}. All new joins will be banned for {actionTime}.",
+    "disabled": "AntiRaid disabled.",
+    "status": "AntiRaid is {status}.",
+    "raidBan": "Raid protection: new joiner banned."
+  },
+  "captcha": {
+    "welcomeCaptcha": "{user}, welcome! Press the button below to verify you're human.",
+    "verified": "Verification successful. Enjoy the community.",
+    "kicked": "Didn't verify in time — removed.",
+    "alreadyVerified": "You're already verified."
+  },
+  "rules": {
+    "noneSet": "No rules have been set for this chat.",
+    "dmPrompt": "Tap the button below to read the rules.",
+    "buttonLabel": "Rules"
+  },
+  "notes": {
+    "saved": "Note saved: #{trigger}",
+    "cleared": "Note removed: #{trigger}",
+    "notFound": "That note doesn't exist.",
+    "listTitle": "Notes ({count}):",
+    "empty": "No notes saved yet."
+  },
+  "filters": {
+    "saved": "Filter saved: {trigger}",
+    "stopped": "Filter removed: {trigger}",
+    "stoppedAll": "All filters removed.",
+    "listTitle": "Filters ({count}):",
+    "empty": "No filters saved yet."
+  },
+  "federation": {
+    "created": "Federation \"<b>{name}</b>\" created.\nFed ID: <code>{fedId}</code>\nUse /joinfed {fedId} in your groups to enforce it.",
+    "deleted": "Federation deleted. Banned users stay banned.",
+    "renamed": "Federation renamed to \"{name}\".",
+    "onePerOwner": "You already own a federation.",
+    "nameTooLong": "Federation names are limited to 64 characters.",
+    "joined": "This chat joined the federation \"{name}\".",
+    "left": "This chat left the federation.",
+    "notJoined": "This chat isn't in a federation.",
+    "ownerRequired": "Only the group owner can manage federation membership.",
+    "fbanned": "{user} was banned from the federation. {reason}",
+    "funbanned": "{user} was unbanned from the federation.",
+    "fedBanHit": "{user} is banned in this federation ({reason}) and has been removed.",
+    "fedBanHitQuiet": "{user} is banned in a federation.",
+    "alreadyFedBanned": "{user} is already banned in this federation.",
+    "notFedBanned": "{user} isn't banned in this federation.",
+    "fedAdminAdded": "{user} is now a federation admin.",
+    "fedAdminRemoved": "{user} is no longer a federation admin.",
+    "noFed": "You don't own a federation. Create one with /newfed <name>.",
+    "fedInfo": "<b>{name}</b>\nFed ID: <code>{fedId}</code>\nChats: {chats}\nBans: {bans}\nAdmins: {admins}",
+    "fedstatSelf": "You are banned from {count} federation(s).",
+    "fedstatClean": "You are not banned from any federation.",
+    "fedstatUser": "{user} is banned from {count} federation(s).",
+    "fedstatReason": "Fed {fedId}: {reason} ({date})",
+    "subscribed": "Subscribed to federation {fedId}.",
+    "unsubscribed": "Unscribed from federation {fedId}.",
+    "subLimit": "You can subscribe to at most 5 federations.",
+    "importDone": "Imported {count} federation bans.",
+    "listRateLimited": "Ban lists can be fetched once every 30 minutes. Try again later."
+  },
+  "adminlog": {
+    "format": "[{category}] {text}"
+  },
+  "cleaning": {
+    "settingsSaved": "Cleaning settings updated."
+  },
+  "language": {
+    "set": "Language updated: {lang}.",
+    "choose": "Choose a language:",
+    "unsupported": "Supported languages: en, tr, de, ru, es, az, ar, fr, it, pt, uk, fa, id, uz."
+  },
+  "topics": {
+    "created": "Topic created: {name}",
+    "renamed": "Topic renamed to {name}.",
+    "closed": "Topic closed.",
+    "reopened": "Topic reopened.",
+    "deleted": "Topic deleted.",
+    "forumOnly": "This command only works in forum topics.",
+    "actionTopicSet": "Bot messages will now go to this topic."
+  },
+  "privacy": {
+    "intro": "Below is the data this bot stores about you. Use the buttons to manage it.",
+    "noData": "No data is stored about you.",
+    "deleted": "Your data has been deleted.",
+    "deleteConfirm": "Are you sure? This removes your profile, warnings, and chat history with this bot."
+  },
+  "silent": {
+    "enabled": "Silent actions enabled. Existing commands will now act silently.",
+    "disabled": "Silent actions disabled."
+  },
+  "disable": {
+    "disabled": "Command disabled: /{command}",
+    "enabled": "Command enabled: /{command}",
+    "listTitle": "Disabled commands: {list}",
+    "none": "No commands are disabled.",
+    "notDisableable": "That command cannot be disabled."
+  },
+  "info": {
+    "userId": "ID: <code>{id}</code>",
+    "userInfo": "<b>{name}</b>\nID: <code>{id}</code>\nUsername: {username}\nMember: {member}",
+    "chatId": "Chat ID: <code>{id}</code>"
+  }
+}

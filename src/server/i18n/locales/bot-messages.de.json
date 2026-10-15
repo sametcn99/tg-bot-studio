@@ -1,0 +1,183 @@
+{
+  "common": {
+    "adminOnly": "Diesen Befehl dürfen nur Administratoren verwenden.",
+    "missingPermission": "Dir fehlt die Berechtigung für diese Aktion.",
+    "userNotFound": "Ich konnte diesen Benutzer nicht finden. Antworte auf seine Nachricht oder gib eine ID/@Benutzername an.",
+    "invalidDuration": "Ungültige Dauer. Verwende Formate wie 5m, 1h30m, 3d, 2w.",
+    "done": "Erledigt.",
+    "error": "Etwas ist schiefgelaufen. Bitte versuche es erneut."
+  },
+  "restrictions": {
+    "banned": "{user} wurde gesperrt. {reason}",
+    "tempBanned": "{user} wurde für {duration} gesperrt. {reason}",
+    "unbanned": "{user} wurde entsperrt.",
+    "muted": "{user} wurde stummgeschaltet. {reason}",
+    "tempMuted": "{user} wurde für {duration} stummgeschaltet. {reason}",
+    "unmuted": "{user} darf wieder schreiben.",
+    "kicked": "{user} wurde entfernt. {reason}",
+    "kickme": "Du hast es selbst gewollt — auf Wiedersehen!",
+    "notBanned": "Dieser Benutzer ist nicht gesperrt.",
+    "notMuted": "Dieser Benutzer ist nicht stummgeschaltet."
+  },
+  "warnings": {
+    "warned": "{user} hat {count}/{limit} Verwarnungen. {reason}",
+    "warnLimitReached": "{user} hat das Verwarnungslimit erreicht.",
+    "warnRemoved": "Die letzte Verwarnung von {user} wurde entfernt. Jetzt {count}.",
+    "warnsReset": "Alle Verwarnungen von {user} wurden zurückgesetzt.",
+    "warnList": "Verwarnungen für {user}: {count}/{limit}",
+    "warnItem": "• {reason} — {date}",
+    "noWarns": "{user} hat keine Verwarnungen.",
+    "warnLimitSet": "Verwarnungslimit auf {limit} gesetzt.",
+    "warnModeSet": "Verwarnungsmodus auf {mode} gesetzt.",
+    "warnTimeSet": "Verwarnungen verfallen jetzt nach {duration}.",
+    "warnTimeOff": "Verwarnungsablauf deaktiviert."
+  },
+  "purges": {
+    "purgeComplete": "Bereinigung abgeschlossen. {count} Nachricht(en) gelöscht.",
+    "purgeRange": "Antworte auf die älteste Nachricht mit /purgefrom, dann auf die neueste mit /purgeto."
+  },
+  "pins": {
+    "pinned": "Angeheftet.",
+    "unpinned": "Nicht mehr angeheftet.",
+    "unpinnedAll": "Alle Pins entfernt."
+  },
+  "reports": {
+    "reported": "Die Administratoren wurden benachrichtigt.",
+    "reportsOn": "Meldungen aktiviert.",
+    "reportsOff": "Meldungen deaktiviert.",
+    "cannotReportAdmin": "Administratoren können nicht gemeldet werden."
+  },
+  "approvals": {
+    "approved": "{user} ist jetzt freigegeben — immun gegen automatische Moderation.",
+    "unapproved": "{user} ist nicht mehr freigegeben.",
+    "notApproved": "{user} ist nicht freigegeben.",
+    "isApproved": "{user} ist freigegeben. {reason}",
+    "approvedList": "Freigegebene Benutzer: {count}",
+    "approvedAllCleared": "Alle Freigaben entfernt.",
+    "approvalEmpty": "Noch keine freigegebenen Benutzer."
+  },
+  "locks": {
+    "locked": "Gesperrt: {types}.",
+    "unlocked": "Entsperrt: {types}.",
+    "lockWarned": "Benutzer {user} hat gesperrte Inhalte versucht: {types}. {count}/{limit}",
+    "allowlisted": "Zur Allowlist hinzugefügt: {item}",
+    "allowlistRemoved": "Von der Allowlist entfernt: {item}",
+    "allowlistCleared": "Allowlist geleert.",
+    "allowlistEmpty": "Die Allowlist ist leer."
+  },
+  "blocklist": {
+    "added": "Blocklist-Auslöser hinzugefügt.",
+    "removed": "Blocklist-Auslöser entfernt.",
+    "cleared": "Alle Blocklist-Auslöser entfernt.",
+    "listTitle": "Blocklist-Auslöser ({count}):",
+    "empty": "Die Blocklist ist leer.",
+    "hit": "Nachricht entfernt (Blocklist-Treffer). {count}/{limit}"
+  },
+  "flood": {
+    "hit": "Flooding erkannt. {user} wurde für {duration} stummgeschaltet.",
+    "settingsSet": "Antiflood aktualisiert."
+  },
+  "antiraid": {
+    "enabled": "AntiRaid für {duration} aktiviert. Alle neuen Beitritte werden für {actionTime} gesperrt.",
+    "disabled": "AntiRaid deaktiviert.",
+    "status": "AntiRaid ist derzeit {status}.",
+    "raidBan": "Raid-Schutz: Neubeigetreter gesperrt."
+  },
+  "captcha": {
+    "welcomeCaptcha": "{user}, willkommen! Drücke die Taste unten, um zu bestätigen, dass du ein Mensch bist.",
+    "verified": "Verifizierung erfolgreich. Viel Spaß in der Community.",
+    "kicked": "Nicht rechtzeitig verifiziert — entfernt.",
+    "alreadyVerified": "Du bist bereits verifiziert."
+  },
+  "rules": {
+    "noneSet": "Für diesen Chat wurden keine Regeln festgelegt.",
+    "dmPrompt": "Tippe auf die Taste unten, um die Regeln zu lesen.",
+    "buttonLabel": "Regeln"
+  },
+  "notes": {
+    "saved": "Notiz gespeichert: #{trigger}",
+    "cleared": "Notiz entfernt: #{trigger}",
+    "notFound": "Diese Notiz existiert nicht.",
+    "listTitle": "Notizen ({count}):",
+    "empty": "Noch keine Notizen gespeichert."
+  },
+  "filters": {
+    "saved": "Filter gespeichert: {trigger}",
+    "stopped": "Filter entfernt: {trigger}",
+    "stoppedAll": "Alle Filter entfernt.",
+    "listTitle": "Filter ({count}):",
+    "empty": "Noch keine Filter gespeichert."
+  },
+  "federation": {
+    "created": "Föderation \"<b>{name}</b>\" erstellt.\nFed-ID: <code>{fedId}</code>\nVerwende /joinfed {fedId} in deinen Gruppen, um sie durchzusetzen.",
+    "deleted": "Föderation gelöscht. Gesperrte Benutzer bleiben gesperrt.",
+    "renamed": "Föderation in \"{name}\" umbenannt.",
+    "onePerOwner": "Du besitzt bereits eine Föderation.",
+    "nameTooLong": "Föderationsnamen sind auf 64 Zeichen begrenzt.",
+    "joined": "Dieser Chat ist der Föderation \"{name}\" beigetreten.",
+    "left": "Dieser Chat hat die Föderation verlassen.",
+    "notJoined": "Dieser Chat ist in keiner Föderation.",
+    "ownerRequired": "Nur der Gruppenbesitzer kann die Föderationsmitgliedschaft verwalten.",
+    "fbanned": "{user} wurde aus der Föderation gesperrt. {reason}",
+    "funbanned": "Föderationssperre von {user} aufgehoben.",
+    "fedBanHit": "{user} ist in dieser Föderation gesperrt ({reason}) und wurde entfernt.",
+    "fedBanHitQuiet": "{user} ist in einer Föderation gesperrt.",
+    "alreadyFedBanned": "{user} ist in dieser Föderation bereits gesperrt.",
+    "notFedBanned": "{user} ist in dieser Föderation nicht gesperrt.",
+    "fedAdminAdded": "{user} ist jetzt Föderationsadministrator.",
+    "fedAdminRemoved": "{user} ist kein Föderationsadministrator mehr.",
+    "noFed": "Du besitzt keine Föderation. Erstelle eine mit /newfed <Name>.",
+    "fedInfo": "<b>{name}</b>\nFed-ID: <code>{fedId}</code>\nChats: {chats}\nSperren: {bans}\nAdmins: {admins}",
+    "fedstatSelf": "Du bist aus {count} Föderation(en) gesperrt.",
+    "fedstatClean": "Du bist aus keiner Föderation gesperrt.",
+    "fedstatUser": "{user} ist aus {count} Föderation(en) gesperrt.",
+    "fedstatReason": "Fed {fedId}: {reason} ({date})",
+    "subscribed": "Föderation {fedId} abonniert.",
+    "unsubscribed": "Abonnement von Föderation {fedId} entfernt.",
+    "subLimit": "Du kannst höchstens 5 Föderationen abonnieren.",
+    "importDone": "{count} Föderationssperren importiert.",
+    "listRateLimited": "Sperrlisten können alle 30 Minuten abgerufen werden. Versuche es später erneut."
+  },
+  "adminlog": {
+    "format": "[{category}] {text}"
+  },
+  "cleaning": {
+    "settingsSaved": "Bereinigungseinstellungen aktualisiert."
+  },
+  "language": {
+    "set": "Sprache geändert: {lang}.",
+    "choose": "Wähle eine Sprache:",
+    "unsupported": "Unterstützte Sprachen: en, tr, de, ru, es, az, ar, fr, it, pt, uk, fa, id, uz."
+  },
+  "topics": {
+    "created": "Thema erstellt: {name}",
+    "renamed": "Thema in {name} umbenannt.",
+    "closed": "Thema geschlossen.",
+    "reopened": "Thema wieder geöffnet.",
+    "deleted": "Thema gelöscht.",
+    "forumOnly": "Dieser Befehl funktioniert nur in Forum-Themen.",
+    "actionTopicSet": "Bot-Nachrichten gehen jetzt in dieses Thema."
+  },
+  "privacy": {
+    "intro": "Nachfolgend die Daten, die dieser Bot über dich speichert. Verwende die Schaltflächen zur Verwaltung.",
+    "noData": "Über dich werden keine Daten gespeichert.",
+    "deleted": "Deine Daten wurden gelöscht.",
+    "deleteConfirm": "Bist du sicher? Dies entfernt dein Profil, deine Verwarnungen und deinen Chatverlauf mit diesem Bot."
+  },
+  "silent": {
+    "enabled": "Stille Aktionen aktiviert. Vorhandene Befehle wirken jetzt still.",
+    "disabled": "Stille Aktionen deaktiviert."
+  },
+  "disable": {
+    "disabled": "Befehl deaktiviert: /{command}",
+    "enabled": "Befehl aktiviert: /{command}",
+    "listTitle": "Deaktivierte Befehle: {list}",
+    "none": "Keine Befehle sind deaktiviert.",
+    "notDisableable": "Dieser Befehl kann nicht deaktiviert werden."
+  },
+  "info": {
+    "userId": "ID: <code>{id}</code>",
+    "userInfo": "<b>{name}</b>\nID: <code>{id}</code>\nBenutzername: {username}\nMitglied: {member}",
+    "chatId": "Chat-ID: <code>{id}</code>"
+  }
+}

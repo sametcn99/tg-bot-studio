@@ -1,0 +1,183 @@
+{
+  "common": {
+    "adminOnly": "هذا الأمر متاح للمشرفين فقط.",
+    "missingPermission": "ليست لديك الصلاحية المطلوبة لهذا الإجراء.",
+    "userNotFound": "لم أتمكن من العثور على هذا المستخدم. رد على رسالته أو أدخل المعرّف/@اسم_المستخدم.",
+    "invalidDuration": "مدة غير صالحة. استخدم صيغًا مثل 5m و1h30m و3d و2w.",
+    "done": "تم.",
+    "error": "حدث خطأ ما. حاول مرة أخرى."
+  },
+  "restrictions": {
+    "banned": "تم حظر {user}. {reason}",
+    "tempBanned": "تم حظر {user} لمدة {duration}. {reason}",
+    "unbanned": "تم إلغاء حظر {user}.",
+    "muted": "تم كتم {user}. {reason}",
+    "tempMuted": "تم كتم {user} لمدة {duration}. {reason}",
+    "unmuted": "يمكن لـ {user} التحدث مجددًا.",
+    "kicked": "تم طرد {user}. {reason}",
+    "kickme": "لقد طلبت ذلك — وداعًا!",
+    "notBanned": "هذا المستخدم ليس محظورًا.",
+    "notMuted": "هذا المستخدم ليس مكتومًا."
+  },
+  "warnings": {
+    "warned": "لدى {user} {count}/{limit} تحذيرات. {reason}",
+    "warnLimitReached": "وصل {user} إلى حد التحذيرات.",
+    "warnRemoved": "تمت إزالة آخر تحذير لـ {user}. الآن {count}.",
+    "warnsReset": "تمت إعادة تعيين جميع تحذيرات {user}.",
+    "warnList": "تحذيرات {user}: {count}/{limit}",
+    "warnItem": "• {reason} — {date}",
+    "noWarns": "لا توجد تحذيرات لـ {user}.",
+    "warnLimitSet": "تم تعيين حد التحذيرات على {limit}.",
+    "warnModeSet": "تم تعيين وضع التحذير على {mode}.",
+    "warnTimeSet": "تنتهي التحذيرات الآن بعد {duration}.",
+    "warnTimeOff": "تم تعطيل انتهاء صلاحية التحذيرات."
+  },
+  "purges": {
+    "purgeComplete": "اكتمل التنظيف. تم حذف {count} رسالة.",
+    "purgeRange": "رد على أقدم رسالة بـ /purgefrom ثم على أحدث رسالة بـ /purgeto."
+  },
+  "pins": {
+    "pinned": "تم التثبيت.",
+    "unpinned": "تم إلغاء التثبيت.",
+    "unpinnedAll": "تمت إزالة جميع التثبيتات."
+  },
+  "reports": {
+    "reported": "تم إشعار المشرفين.",
+    "reportsOn": "تم تفعيل التقارير.",
+    "reportsOff": "تم تعطيل التقارير.",
+    "cannotReportAdmin": "لا يمكن الإبلاغ عن المشرفين."
+  },
+  "approvals": {
+    "approved": "{user} أصبح معتمدًا — محصّن من الإشراف التلقائي.",
+    "unapproved": "{user} لم يعد معتمدًا.",
+    "notApproved": "{user} غير معتمد.",
+    "isApproved": "{user} معتمد. {reason}",
+    "approvedList": "المستخدمون المعتمدون: {count}",
+    "approvedAllCleared": "تم مسح جميع الاعتمادات.",
+    "approvalEmpty": "لا يوجد مستخدمون معتمدون بعد."
+  },
+  "locks": {
+    "locked": "تم القفل: {types}.",
+    "unlocked": "تم إلغاء القفل: {types}.",
+    "lockWarned": "حاول المستخدم {user} إرسال محتوى مقفل: {types}. {count}/{limit}",
+    "allowlisted": "أُضيف إلى قائمة السماح: {item}",
+    "allowlistRemoved": "أُزيل من قائمة السماح: {item}",
+    "allowlistCleared": "تم مسح قائمة السماح.",
+    "allowlistEmpty": "قائمة السماح فارغة."
+  },
+  "blocklist": {
+    "added": "تمت إضافة مُشغِّل القائمة السوداء.",
+    "removed": "تمت إزالة مُشغِّل القائمة السوداء.",
+    "cleared": "تمت إزالة جميع مُشغِّلات القائمة السوداء.",
+    "listTitle": "مُشغِّلات القائمة السوداء ({count}):",
+    "empty": "القائمة السوداء فارغة.",
+    "hit": "تم حذف الرسالة (تطابق القائمة السوداء). {count}/{limit}"
+  },
+  "flood": {
+    "hit": "تم اكتشاف إرسال متكرر. تم كتم {user} لمدة {duration}.",
+    "settingsSet": "تم تحديث مضاد التكرار."
+  },
+  "antiraid": {
+    "enabled": "تم تفعيل مضاد الغارات لمدة {duration}. سيتم حظر جميع المنضمين الجدد لمدة {actionTime}.",
+    "disabled": "تم تعطيل مضاد الغارات.",
+    "status": "مضاد الغارات حاليًا {status}.",
+    "raidBan": "حماية من الغارات: تم حظر منضم جديد."
+  },
+  "captcha": {
+    "welcomeCaptcha": "{user}، مرحبًا بك! اضغط الزر أدناه للتأكد من أنك إنسان.",
+    "verified": "تم التحقق بنجاح. استمتع بالمجتمع.",
+    "kicked": "لم يتم التحقق في الوقت المحدد — تم الطرد.",
+    "alreadyVerified": "تم التحقق منك بالفعل."
+  },
+  "rules": {
+    "noneSet": "لم يتم تعيين قواعد لهذه الدردشة.",
+    "dmPrompt": "اضغط الزر أدناه لقراءة القواعد.",
+    "buttonLabel": "القواعد"
+  },
+  "notes": {
+    "saved": "تم حفظ الملاحظة: #{trigger}",
+    "cleared": "تمت إزالة الملاحظة: #{trigger}",
+    "notFound": "هذه الملاحظة غير موجودة.",
+    "listTitle": "الملاحظات ({count}):",
+    "empty": "لا توجد ملاحظات محفوظة بعد."
+  },
+  "filters": {
+    "saved": "تم حفظ الفلتر: {trigger}",
+    "stopped": "تمت إزالة الفلتر: {trigger}",
+    "stoppedAll": "تمت إزالة جميع الفلاتر.",
+    "listTitle": "الفلاتر ({count}):",
+    "empty": "لا توجد فلاتر محفوظة بعد."
+  },
+  "federation": {
+    "created": "تم إنشاء الاتحاد \"<b>{name}</b>\".\nمعرّف الاتحاد: <code>{fedId}</code>\nاستخدم /joinfed {fedId} في مجموعاتك لتطبيقه.",
+    "deleted": "تم حذف الاتحاد. يبقى المستخدمون المحظورون محظورين.",
+    "renamed": "تمت إعادة تسمية الاتحاد إلى \"{name}\".",
+    "onePerOwner": "تمتلك اتحادًا بالفعل.",
+    "nameTooLong": "تقتصر أسماء الاتحادات على 64 حرفًا.",
+    "joined": "انضمت هذه الدردشة إلى اتحاد \"{name}\".",
+    "left": "غادرت هذه الدردشة الاتحاد.",
+    "notJoined": "هذه الدردشة ليست في أي اتحاد.",
+    "ownerRequired": "مالك المجموعة فقط يمكنه إدارة عضوية الاتحاد.",
+    "fbanned": "تم حظر {user} من الاتحاد. {reason}",
+    "funbanned": "تم إلغاء حظر {user} من الاتحاد.",
+    "fedBanHit": "{user} محظور في هذا الاتحاد ({reason}) وتم إزالته.",
+    "fedBanHitQuiet": "{user} محظور في أحد الاتحادات.",
+    "alreadyFedBanned": "{user} محظور بالفعل في هذا الاتحاد.",
+    "notFedBanned": "{user} غير محظور في هذا الاتحاد.",
+    "fedAdminAdded": "أصبح {user} مشرف اتحاد.",
+    "fedAdminRemoved": "{user} لم يعد مشرف اتحاد.",
+    "noFed": "لا تملك اتحادًا. أنشئ واحدًا باستخدام /newfed <الاسم>.",
+    "fedInfo": "<b>{name}</b>\nمعرّف الاتحاد: <code>{fedId}</code>\nالدردشات: {chats}\nالحظر: {bans}\nالمشرفون: {admins}",
+    "fedstatSelf": "أنت محظور من {count} اتحاد.",
+    "fedstatClean": "أنت غير محظور من أي اتحاد.",
+    "fedstatUser": "{user} محظور من {count} اتحاد.",
+    "fedstatReason": "الاتحاد {fedId}: {reason} ({date})",
+    "subscribed": "تم الاشتراك في الاتحاد {fedId}.",
+    "unsubscribed": "تم إلغاء الاشتراك في الاتحاد {fedId}.",
+    "subLimit": "يمكنك الاشتراك في 5 اتحادات كحد أقصى.",
+    "importDone": "تم استيراد {count} حظر اتحاد.",
+    "listRateLimited": "يمكن جلب قوائم الحظر مرة كل 30 دقيقة. حاول لاحقًا."
+  },
+  "adminlog": {
+    "format": "[{category}] {text}"
+  },
+  "cleaning": {
+    "settingsSaved": "تم تحديث إعدادات التنظيف."
+  },
+  "language": {
+    "set": "تم تغيير اللغة: {lang}.",
+    "choose": "اختر لغة:",
+    "unsupported": "اللغات المدعومة: en, tr, de, ru, es, az, ar, fr, it, pt, uk, fa, id, uz."
+  },
+  "topics": {
+    "created": "تم إنشاء الموضوع: {name}",
+    "renamed": "تمت إعادة تسمية الموضوع إلى {name}.",
+    "closed": "تم إغلاق الموضوع.",
+    "reopened": "تم إعادة فتح الموضوع.",
+    "deleted": "تم حذف الموضوع.",
+    "forumOnly": "يعمل هذا الأمر في مواضيع المنتدى فقط.",
+    "actionTopicSet": "ستذهب رسائل البوت الآن إلى هذا الموضوع."
+  },
+  "privacy": {
+    "intro": "فيما يلي البيانات التي يخزنها هذا البوت عنك. استخدم الأزرار لإدارتها.",
+    "noData": "لا توجد بيانات مخزنة عنك.",
+    "deleted": "تم حذف بياناتك.",
+    "deleteConfirm": "هل أنت متأكد؟ سيؤدي هذا إلى إزالة ملفك الشخصي وتحذيراتك وسجل محادثتك مع هذا البوت."
+  },
+  "silent": {
+    "enabled": "تم تفعيل الإجراءات الصامتة. ستعمل الأوامر الحالية بصمت الآن.",
+    "disabled": "تم تعطيل الإجراءات الصامتة."
+  },
+  "disable": {
+    "disabled": "تم تعطيل الأمر: /{command}",
+    "enabled": "تم تفعيل الأمر: /{command}",
+    "listTitle": "الأوامر المعطلة: {list}",
+    "none": "لا توجد أوامر معطلة.",
+    "notDisableable": "لا يمكن تعطيل هذا الأمر."
+  },
+  "info": {
+    "userId": "المعرّف: <code>{id}</code>",
+    "userInfo": "<b>{name}</b>\nالمعرّف: <code>{id}</code>\nاسم المستخدم: {username}\nعضو: {member}",
+    "chatId": "معرّف الدردشة: <code>{id}</code>"
+  }
+}

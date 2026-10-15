@@ -32,6 +32,36 @@ interface BotRuntime {
 }
 
 /**
+ * Every Telegram update type the engine subscribes to. Telegram's default
+ * delivery silently omits `chat_member`, `message_reaction(_count)`, and
+ * `chat_join_request` unless explicitly requested — without this list the
+ * reactions module, join tracking (anti-raid, passive fed bans), and join
+ * request flows never receive their updates.
+ */
+const ALLOWED_UPDATE_TYPES = [
+  'message',
+  'edited_message',
+  'channel_post',
+  'edited_channel_post',
+  'business_connection',
+  'business_message',
+  'edited_business_message',
+  'deleted_business_messages',
+  'message_reaction',
+  'message_reaction_count',
+  'inline_query',
+  'chosen_inline_result',
+  'callback_query',
+  'shipping_query',
+  'pre_checkout_query',
+  'poll',
+  'poll_answer',
+  'my_chat_member',
+  'chat_member',
+  'chat_join_request',
+] as const;
+
+/**
  * Multi-bot runtime pool. Loads every active bot on application bootstrap,
  * attaches engine middleware plus all enabled module handlers, and keeps
  * long polling alive with graceful shutdown on SIGTERM/SIGINT.
@@ -137,8 +167,13 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
         retryCount: attempt,
       });
 
+      // Register the group command menu (reference parity) for bots running any
+      // in-group module; idempotent and best-effort.
+      void this.registerGroupCommands(bot, row.id);
+
       void bot
         .start({
+          allowed_updates: [...ALLOWED_UPDATE_TYPES],
           onStart: () => {
             const runtime = this.runtimes.get(row.id);
             if (runtime) {
@@ -361,6 +396,63 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
           `Module ${row.moduleKey} failed to attach on bot ${botId}: ${error instanceof Error ? error.message : String(error)}`,
         );
       }
+    }
+  }
+
+  /**
+   * Publishes the bot's group-chat command list via setMyCommands, derived
+   * from the enabled reference-parity modules. Fire-and-forget: token errors are
+   * surfaced by the poller itself.
+   *
+   * @param {Bot} bot - Live grammY instance.
+   * @param {number} botId - Studio bot id.
+   * @returns {Promise<void>} Resolves once attempted.
+   */
+  private async registerGroupCommands(bot: Bot, botId: number): Promise<void> {
+    try {
+      const rows = await this.prisma.botModule.findMany({
+        where: { botId, isEnabled: 1 },
+        select: { moduleKey: true },
+      });
+      const enabled = new Set(rows.map((row) => row.moduleKey));
+
+      const commands: Array<{ command: string; description: string }> = [];
+      if (enabled.has('group-moderation')) {
+        commands.push(
+          { command: 'ban', description: 'Ban a member' },
+          { command: 'mute', description: 'Mute a member' },
+          { command: 'kick', description: 'Kick a member' },
+          { command: 'warn', description: 'Warn a member' },
+          { command: 'warns', description: 'List warnings' },
+          { command: 'purge', description: 'Purge messages (reply)' },
+          { command: 'approve', description: 'Approve a member' },
+        );
+      }
+      if (enabled.has('group-tools')) {
+        commands.push(
+          { command: 'report', description: 'Report a message to admins' },
+          { command: 'adminlist', description: 'List group admins' },
+          { command: 'rules', description: 'Show the rules' },
+          { command: 'id', description: 'Show ids' },
+        );
+      }
+      if (enabled.has('locks')) {
+        commands.push(
+          { command: 'lock', description: 'Lock content types' },
+          { command: 'locks', description: 'Show active locks' },
+        );
+      }
+      if (enabled.has('antiraid')) {
+        commands.push({ command: 'antiraid', description: 'Toggle raid mode' });
+      }
+      if (enabled.has('language')) {
+        commands.push({ command: 'setlang', description: 'Set bot reply language' });
+      }
+      if (commands.length === 0) return;
+
+      await bot.api.setMyCommands(commands, { scope: { type: 'all_group_chats' } });
+    } catch {
+      // Command registration is cosmetic; poller errors surface elsewhere.
     }
   }
 

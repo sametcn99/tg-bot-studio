@@ -108,7 +108,14 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
       'Greets new group members with placeholder templates and auto-cleans join service messages.',
     defaultConfig: {
       template: 'Welcome {mention} to {group_name}!',
+      welcomeEnabled: true,
       autoDeleteSeconds: 0,
+      cleanWelcome: false,
+      mediaUrl: '',
+      buttonsJson: '',
+      goodbyeEnabled: false,
+      goodbyeText: 'Nice knowing you, {first_name}!',
+      goodbyeMediaUrl: '',
       deleteServiceMessages: true,
       deleteLeaveMessages: false,
     },
@@ -124,6 +131,8 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
       timeoutSeconds: 120,
       kickOnFail: true,
       successText: 'Verification successful. Enjoy the community.',
+      buttonText: 'Verify',
+      joinRequestIntegration: false,
     },
   },
   {
@@ -138,6 +147,135 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
       floodMessageLimit: 0,
       floodWindowSeconds: 10,
       autoBanAfterStrikes: 3,
+    },
+  },
+  {
+    key: 'group-moderation',
+    name: 'Group Moderation Commands',
+    category: 'Community & Moderation',
+    description:
+      'In-group admin commands: ban/mute/kick with timed, delete and silent variants, persistent warnings, purges, and approvals.',
+    defaultConfig: {
+      warnLimit: 3,
+      warnMode: 'ban',
+      warnDurationSeconds: 0,
+      warnTimeSeconds: 0,
+      silentActions: false,
+      adminError: true,
+    },
+  },
+  {
+    key: 'group-tools',
+    name: 'Group Admin Tools',
+    category: 'Community & Moderation',
+    description:
+      'Pins (incl. permapin), user reports (@admin), admin list, /id and /info lookups, echo, and per-group command disabling.',
+    defaultConfig: {
+      reportsEnabled: true,
+      antichannelPins: false,
+      cleanLinked: false,
+    },
+  },
+  {
+    key: 'locks',
+    name: 'Chat Locks',
+    category: 'Community & Moderation',
+    description:
+      'Fine-grained content locks: block stickers, gifs, polls, forwards, links, media types and more, with allowlists and custom punishments.',
+    defaultConfig: {
+      lockedTypes: [],
+      lockWarns: false,
+      allowlist: [],
+    },
+  },
+  {
+    key: 'antiraid',
+    name: 'AntiRaid',
+    category: 'Community & Moderation',
+    description:
+      'Temporarily bans every new joiner during raid attacks, manually or automatically when join rates spike.',
+    defaultConfig: {
+      raidTimeSeconds: 21_600,
+      raidActionTimeSeconds: 3_600,
+      autoRaidJoinThreshold: 0,
+    },
+  },
+  {
+    key: 'rules',
+    name: 'Group Rules',
+    category: 'Community & Moderation',
+    description:
+      'Per-group rules with /rules delivery via PM buttons and the {rules} template placeholder.',
+    defaultConfig: {
+      rulesText: '',
+      privateRules: true,
+      rulesButton: 'Rules',
+    },
+  },
+  {
+    key: 'admin-log',
+    name: 'Admin Log Channel',
+    category: 'Community & Moderation',
+    description:
+      'Forwards admin actions, automated punishments, settings changes and reports to a Telegram log channel with category filters.',
+    defaultConfig: {
+      logChatId: 0,
+      categories: ['settings', 'admin', 'user', 'automated', 'reports', 'other'],
+    },
+  },
+  {
+    key: 'cleaning',
+    name: 'Message Cleaning',
+    category: 'Community & Moderation',
+    description:
+      'Auto-deletes used commands, Telegram service messages (joins, pins, titles), and the bot\'s own action messages.',
+    defaultConfig: {
+      cleanCommand: 'off',
+      cleanServiceTypes: [],
+      cleanBotMessages: 'off',
+    },
+  },
+  {
+    key: 'topics',
+    name: 'Forum Topic Management',
+    category: 'Community & Moderation',
+    description:
+      'Create, rename, close, reopen and delete forum topics from chat commands, plus routing bot messages to an action topic.',
+    defaultConfig: {
+      actionTopicId: 0,
+    },
+  },
+  {
+    key: 'federation',
+    name: 'Ban Federations',
+    category: 'Community & Moderation',
+    description:
+      'Shared ban lists across all of your bots\' groups: /fban removes users everywhere, with fed admins, logs, and subscriptions.',
+    defaultConfig: {
+      quietFed: false,
+      fedNotif: true,
+      fedReasonRequired: false,
+    },
+  },
+  {
+    key: 'language',
+    name: 'Bot Reply Language',
+    category: 'Community & Moderation',
+    description:
+      'Per-group bot reply language (/setlang) for every moderation and system message the bot sends.',
+    defaultConfig: {
+      language: 'en',
+    },
+  },
+  {
+    key: 'bot2bot',
+    name: 'Bot-to-Bot Commands',
+    category: 'Automation & Monetization',
+    description:
+      'Lets other bots use this bot\'s group commands (off / admin-bots-only / all) with an admin review safety gate.',
+    defaultConfig: {
+      mode: 'off',
+      skipReview: false,
     },
   },
   {

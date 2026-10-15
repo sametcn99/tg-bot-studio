@@ -1,0 +1,183 @@
+{
+  "common": {
+    "adminOnly": "Hanya administrator yang dapat menggunakan perintah ini.",
+    "missingPermission": "Anda tidak memiliki izin yang diperlukan untuk tindakan ini.",
+    "userNotFound": "Saya tidak dapat menemukan pengguna itu. Balas pesannya atau berikan id/@username.",
+    "invalidDuration": "Durasi tidak valid. Gunakan format seperti 5m, 1h30m, 3d, 2w.",
+    "done": "Selesai.",
+    "error": "Terjadi kesalahan. Silakan coba lagi."
+  },
+  "restrictions": {
+    "banned": "{user} telah diblokir. {reason}",
+    "tempBanned": "{user} diblokir selama {duration}. {reason}",
+    "unbanned": "{user} telah dibuka blokirnya.",
+    "muted": "{user} telah dibisukan. {reason}",
+    "tempMuted": "{user} dibisukan selama {duration}. {reason}",
+    "unmuted": "{user} dapat berbicara lagi.",
+    "kicked": "{user} telah dikeluarkan. {reason}",
+    "kickme": "Kamu yang memintanya — sampai jumpa!",
+    "notBanned": "Pengguna ini tidak diblokir.",
+    "notMuted": "Pengguna ini tidak dibisukan."
+  },
+  "warnings": {
+    "warned": "{user} memiliki {count}/{limit} peringatan. {reason}",
+    "warnLimitReached": "{user} telah mencapai batas peringatan.",
+    "warnRemoved": "Peringatan terakhir {user} dihapus. Sekarang {count}.",
+    "warnsReset": "Semua peringatan {user} telah direset.",
+    "warnList": "Peringatan {user}: {count}/{limit}",
+    "warnItem": "• {reason} — {date}",
+    "noWarns": "{user} tidak memiliki peringatan.",
+    "warnLimitSet": "Batas peringatan diatur ke {limit}.",
+    "warnModeSet": "Mode peringatan diatur ke {mode}.",
+    "warnTimeSet": "Peringatan sekarang kedaluwarsa setelah {duration}.",
+    "warnTimeOff": "Kedaluwarsa peringatan dinonaktifkan."
+  },
+  "purges": {
+    "purgeComplete": "Pembersihan selesai. {count} pesan dihapus.",
+    "purgeRange": "Balas pesan tertua dengan /purgefrom, lalu yang terbaru dengan /purgeto."
+  },
+  "pins": {
+    "pinned": "Disematkan.",
+    "unpinned": "Sematan dilepas.",
+    "unpinnedAll": "Semua sematan dilepas."
+  },
+  "reports": {
+    "reported": "Administrator telah diberi tahu.",
+    "reportsOn": "Laporan diaktifkan.",
+    "reportsOff": "Laporan dinonaktifkan.",
+    "cannotReportAdmin": "Administrator tidak dapat dilaporkan."
+  },
+  "approvals": {
+    "approved": "{user} kini disetujui — kebal dari moderasi otomatis.",
+    "unapproved": "{user} tidak lagi disetujui.",
+    "notApproved": "{user} tidak disetujui.",
+    "isApproved": "{user} disetujui. {reason}",
+    "approvedList": "Pengguna disetujui: {count}",
+    "approvedAllCleared": "Semua persetujuan dihapus.",
+    "approvalEmpty": "Belum ada pengguna yang disetujui."
+  },
+  "locks": {
+    "locked": "Dikunci: {types}.",
+    "unlocked": "Dibuka: {types}.",
+    "lockWarned": "Pengguna {user} mencoba mengirim konten terkunci: {types}. {count}/{limit}",
+    "allowlisted": "Ditambahkan ke daftar izin: {item}",
+    "allowlistRemoved": "Dihapus dari daftar izin: {item}",
+    "allowlistCleared": "Daftar izin dibersihkan.",
+    "allowlistEmpty": "Daftar izin kosong."
+  },
+  "blocklist": {
+    "added": "Pemicu blocklist ditambahkan.",
+    "removed": "Pemicu blocklist dihapus.",
+    "cleared": "Semua pemicu blocklist dihapus.",
+    "listTitle": "Pemicu blocklist ({count}):",
+    "empty": "Blocklist kosong.",
+    "hit": "Pesan dihapus (kecocokan blocklist). {count}/{limit}"
+  },
+  "flood": {
+    "hit": "Flood terdeteksi. {user} dibisukan selama {duration}.",
+    "settingsSet": "Antiflood diperbarui."
+  },
+  "antiraid": {
+    "enabled": "AntiRaid aktif selama {duration}. Semua anggota baru akan diblokir selama {actionTime}.",
+    "disabled": "AntiRaid dinonaktifkan.",
+    "status": "AntiRaid saat ini {status}.",
+    "raidBan": "Perlindungan antiraid: anggota baru diblokir."
+  },
+  "captcha": {
+    "welcomeCaptcha": "{user}, selamat datang! Tekan tombol di bawah untuk membuktikan bahwa kamu manusia.",
+    "verified": "Verifikasi berhasil. Nikmati komunitasnya.",
+    "kicked": "Tidak memverifikasi tepat waktu — dikeluarkan.",
+    "alreadyVerified": "Kamu sudah terverifikasi."
+  },
+  "rules": {
+    "noneSet": "Belum ada aturan yang ditetapkan untuk obrolan ini.",
+    "dmPrompt": "Ketuk tombol di bawah untuk membaca aturan.",
+    "buttonLabel": "Aturan"
+  },
+  "notes": {
+    "saved": "Catatan disimpan: #{trigger}",
+    "cleared": "Catatan dihapus: #{trigger}",
+    "notFound": "Catatan itu tidak ada.",
+    "listTitle": "Catatan ({count}):",
+    "empty": "Belum ada catatan yang disimpan."
+  },
+  "filters": {
+    "saved": "Filter disimpan: {trigger}",
+    "stopped": "Filter dihapus: {trigger}",
+    "stoppedAll": "Semua filter dihapus.",
+    "listTitle": "Filter ({count}):",
+    "empty": "Belum ada filter yang disimpan."
+  },
+  "federation": {
+    "created": "Federasi \"<b>{name}</b>\" dibuat.\nID federasi: <code>{fedId}</code>\nGunakan /joinfed {fedId} di grup Anda untuk menerapkannya.",
+    "deleted": "Federasi dihapus. Pengguna yang diblokir tetap diblokir.",
+    "renamed": "Federasi diganti namanya menjadi \"{name}\".",
+    "onePerOwner": "Anda sudah memiliki sebuah federasi.",
+    "nameTooLong": "Nama federasi dibatasi hingga 64 karakter.",
+    "joined": "Obrolan ini bergabung dengan federasi \"{name}\".",
+    "left": "Obrolan ini keluar dari federasi.",
+    "notJoined": "Obrolan ini tidak berada dalam federasi mana pun.",
+    "ownerRequired": "Hanya pemilik grup yang dapat mengelola keanggotaan federasi.",
+    "fbanned": "{user} diblokir dari federasi. {reason}",
+    "funbanned": "{user} dibuka blokirnya dari federasi.",
+    "fedBanHit": "{user} diblokir di federasi ini ({reason}) dan telah dikeluarkan.",
+    "fedBanHitQuiet": "{user} diblokir di salah satu federasi.",
+    "alreadyFedBanned": "{user} sudah diblokir di federasi ini.",
+    "notFedBanned": "{user} tidak diblokir di federasi ini.",
+    "fedAdminAdded": "{user} kini administrator federasi.",
+    "fedAdminRemoved": "{user} bukan lagi administrator federasi.",
+    "noFed": "Anda tidak memiliki federasi. Buat dengan /newfed <nama>.",
+    "fedInfo": "<b>{name}</b>\nID federasi: <code>{fedId}</code>\nObrolan: {chats}\nBlokir: {bans}\nAdmin: {admins}",
+    "fedstatSelf": "Anda diblokir dari {count} federasi.",
+    "fedstatClean": "Anda tidak diblokir dari federasi mana pun.",
+    "fedstatUser": "{user} diblokir dari {count} federasi.",
+    "fedstatReason": "Federasi {fedId}: {reason} ({date})",
+    "subscribed": "Berlangganan federasi {fedId}.",
+    "unsubscribed": "Langganan federasi {fedId} dibatalkan.",
+    "subLimit": "Anda dapat berlangganan maksimal 5 federasi.",
+    "importDone": "{count} blokiran federasi diimpor.",
+    "listRateLimited": "Daftar blokir dapat diunduh sekali setiap 30 menit. Coba lagi nanti."
+  },
+  "adminlog": {
+    "format": "[{category}] {text}"
+  },
+  "cleaning": {
+    "settingsSaved": "Pengaturan pembersihan diperbarui."
+  },
+  "language": {
+    "set": "Bahasa diperbarui: {lang}.",
+    "choose": "Pilih bahasa:",
+    "unsupported": "Bahasa yang didukung: en, tr, de, ru, es, az, ar, fr, it, pt, uk, fa, id, uz."
+  },
+  "topics": {
+    "created": "Topik dibuat: {name}",
+    "renamed": "Topik diganti namanya menjadi {name}.",
+    "closed": "Topik ditutup.",
+    "reopened": "Topik dibuka kembali.",
+    "deleted": "Topik dihapus.",
+    "forumOnly": "Perintah ini hanya berfungsi di topik forum.",
+    "actionTopicSet": "Pesan bot sekarang akan masuk ke topik ini."
+  },
+  "privacy": {
+    "intro": "Berikut data yang disimpan bot ini tentang Anda. Gunakan tombol untuk mengelolanya.",
+    "noData": "Tidak ada data yang disimpan tentang Anda.",
+    "deleted": "Data Anda telah dihapus.",
+    "deleteConfirm": "Yakin? Ini menghapus profil, peringatan, dan riwayat obrolan Anda dengan bot ini."
+  },
+  "silent": {
+    "enabled": "Tindakan senyap diaktifkan. Perintah yang ada sekarang akan bekerja secara senyap.",
+    "disabled": "Tindakan senyap dinonaktifkan."
+  },
+  "disable": {
+    "disabled": "Perintah dinonaktifkan: /{command}",
+    "enabled": "Perintah diaktifkan: /{command}",
+    "listTitle": "Perintah yang dinonaktifkan: {list}",
+    "none": "Tidak ada perintah yang dinonaktifkan.",
+    "notDisableable": "Perintah ini tidak dapat dinonaktifkan."
+  },
+  "info": {
+    "userId": "ID: <code>{id}</code>",
+    "userInfo": "<b>{name}</b>\nID: <code>{id}</code>\nUsername: {username}\nAnggota: {member}",
+    "chatId": "ID obrolan: <code>{id}</code>"
+  }
+}

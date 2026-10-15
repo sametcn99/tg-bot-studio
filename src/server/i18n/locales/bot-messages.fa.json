@@ -1,0 +1,183 @@
+{
+  "common": {
+    "adminOnly": "این دستور فقط برای مدیران قابل استفاده است.",
+    "missingPermission": "شما مجوز لازم برای این کار را ندارید.",
+    "userNotFound": "این کاربر پیدا نشد. به پیام او پاسخ دهید یا شناسه/@نام‌کاربری را وارد کنید.",
+    "invalidDuration": "مدت زمان نامعتبر است. از قالب‌هایی مانند 5m، 1h30m، 3d، 2w استفاده کنید.",
+    "done": "انجام شد.",
+    "error": "مشکلی پیش آمد. دوباره تلاش کنید."
+  },
+  "restrictions": {
+    "banned": "{user} مسدود شد. {reason}",
+    "tempBanned": "{user} برای {duration} مسدود شد. {reason}",
+    "unbanned": "مسدودی {user} برداشته شد.",
+    "muted": "{user} ساکت شد. {reason}",
+    "tempMuted": "{user} برای {duration} ساکت شد. {reason}",
+    "unmuted": "{user} دوباره می‌تواند صحبت کند.",
+    "kicked": "{user} حذف شد. {reason}",
+    "kickme": "خودت خواستی — خداحافظ!",
+    "notBanned": "این کاربر مسدود نیست.",
+    "notMuted": "این کاربر ساکت نیست."
+  },
+  "warnings": {
+    "warned": "{user} دارای {count}/{limit} اخطار است. {reason}",
+    "warnLimitReached": "{user} به سقف اخطارها رسید.",
+    "warnRemoved": "آخرین اخطار {user} برداشته شد. اکنون {count}.",
+    "warnsReset": "همه اخطارهای {user} بازنشانی شد.",
+    "warnList": "اخطارهای {user}: {count}/{limit}",
+    "warnItem": "• {reason} — {date}",
+    "noWarns": "{user} اخطاری ندارد.",
+    "warnLimitSet": "سقف اخطار روی {limit} تنظیم شد.",
+    "warnModeSet": "حالت اخطار روی {mode} تنظیم شد.",
+    "warnTimeSet": "اخطارها اکنون پس از {duration} منقضی می‌شوند.",
+    "warnTimeOff": "انقضای اخطارها غیرفعال شد."
+  },
+  "purges": {
+    "purgeComplete": "پاک‌سازی کامل شد. {count} پیام حذف شد.",
+    "purgeRange": "به قدیمی‌ترین پیام با /purgefrom و به جدیدترین با /purgeto پاسخ دهید."
+  },
+  "pins": {
+    "pinned": "سنجاق شد.",
+    "unpinned": "سنجاق برداشته شد.",
+    "unpinnedAll": "همه سنجاق‌ها برداشته شد."
+  },
+  "reports": {
+    "reported": "مدیران مطلع شدند.",
+    "reportsOn": "گزارش‌دهی فعال شد.",
+    "reportsOff": "گزارش‌دهی غیرفعال شد.",
+    "cannotReportAdmin": "مدیران را نمی‌توان گزارش کرد."
+  },
+  "approvals": {
+    "approved": "{user} تأیید شد — از نظارت خودکار مصون است.",
+    "unapproved": "{user} دیگر تأییدشده نیست.",
+    "notApproved": "{user} تأییدشده نیست.",
+    "isApproved": "{user} تأییدشده است. {reason}",
+    "approvedList": "کاربران تأییدشده: {count}",
+    "approvedAllCleared": "همه تأییدها پاک شد.",
+    "approvalEmpty": "هنوز کاربر تأییدشده‌ای وجود ندارد."
+  },
+  "locks": {
+    "locked": "قفل شد: {types}.",
+    "unlocked": "باز شد: {types}.",
+    "lockWarned": "کاربر {user} سعی در ارسال محتوای قفل‌شده داشت: {types}. {count}/{limit}",
+    "allowlisted": "به فهرست مجاز اضافه شد: {item}",
+    "allowlistRemoved": "از فهرست مجاز حذف شد: {item}",
+    "allowlistCleared": "فهرست مجاز پاک شد.",
+    "allowlistEmpty": "فهرست مجاز خالی است."
+  },
+  "blocklist": {
+    "added": "محرک فهرست سیاه اضافه شد.",
+    "removed": "محرک فهرست سیاه حذف شد.",
+    "cleared": "همه محرک‌های فهرست سیاه حذف شدند.",
+    "listTitle": "محرک‌های فهرست سیاه ({count}):",
+    "empty": "فهرست سیاه خالی است.",
+    "hit": "پیام حذف شد (تطابق فهرست سیاه). {count}/{limit}"
+  },
+  "flood": {
+    "hit": "فلود تشخیص داده شد. {user} برای {duration} ساکت شد.",
+    "settingsSet": "ضدفلود به‌روزرسانی شد."
+  },
+  "antiraid": {
+    "enabled": "ضدریید برای {duration} فعال شد. همه اعضای جدید برای {actionTime} مسدود می‌شوند.",
+    "disabled": "ضدریید غیرفعال شد.",
+    "status": "ضدریید در حال حاضر {status} است.",
+    "raidBan": "محافظت ضدریید: عضو جدید مسدود شد."
+  },
+  "captcha": {
+    "welcomeCaptcha": "{user}، خوش آمدید! برای اثبات اینکه انسان هستید روی دکمه زیر بزنید.",
+    "verified": "تأیید با موفقیت انجام شد. از جامعه لذت ببرید.",
+    "kicked": "در زمان مقرر تأیید نکرد — حذف شد.",
+    "alreadyVerified": "شما قبلاً تأیید شده‌اید."
+  },
+  "rules": {
+    "noneSet": "برای این گفتگو قانونی تعیین نشده است.",
+    "dmPrompt": "برای خواندن قوانین روی دکمه زیر بزنید.",
+    "buttonLabel": "قوانین"
+  },
+  "notes": {
+    "saved": "یادداشت ذخیره شد: #{trigger}",
+    "cleared": "یادداشت حذف شد: #{trigger}",
+    "notFound": "چنین یادداشتی وجود ندارد.",
+    "listTitle": "یادداشت‌ها ({count}):",
+    "empty": "هنوز یادداشتی ذخیره نشده است."
+  },
+  "filters": {
+    "saved": "فیلتر ذخیره شد: {trigger}",
+    "stopped": "فیلتر حذف شد: {trigger}",
+    "stoppedAll": "همه فیلترها حذف شدند.",
+    "listTitle": "فیلترها ({count}):",
+    "empty": "هنوز فیلتری ذخیره نشده است."
+  },
+  "federation": {
+    "created": "فدراسیون \"<b>{name}</b>\" ایجاد شد.\nشناسه فدراسیون: <code>{fedId}</code>\nبرای اعمال آن در گروه‌هایتان از /joinfed {fedId} استفاده کنید.",
+    "deleted": "فدراسیون حذف شد. کاربران مسدود، مسدود می‌مانند.",
+    "renamed": "نام فدراسیون به \"{name}\" تغییر کرد.",
+    "onePerOwner": "شما از قبل یک فدراسیون دارید.",
+    "nameTooLong": "نام فدراسیون‌ها حداکثر ۶۴ نویسه است.",
+    "joined": "این گفتگو به فدراسیون \"{name}\" پیوست.",
+    "left": "این گفتگو از فدراسیون خارج شد.",
+    "notJoined": "این گفتگو در هیچ فدراسیونی نیست.",
+    "ownerRequired": "فقط مالک گروه می‌تواند عضویت فدراسیون را مدیریت کند.",
+    "fbanned": "{user} از فدراسیون مسدود شد. {reason}",
+    "funbanned": "مسدودی {user} از فدراسیون برداشته شد.",
+    "fedBanHit": "{user} در این فدراسیون مسدود است ({reason}) و حذف شد.",
+    "fedBanHitQuiet": "{user} در یکی از فدراسیون‌ها مسدود است.",
+    "alreadyFedBanned": "{user} از قبل در این فدراسیون مسدود است.",
+    "notFedBanned": "{user} در این فدراسیون مسدود نیست.",
+    "fedAdminAdded": "{user} اکنون مدیر فدراسیون است.",
+    "fedAdminRemoved": "{user} دیگر مدیر فدراسیون نیست.",
+    "noFed": "شما فدراسیونی ندارید. با /newfed <نام> یکی بسازید.",
+    "fedInfo": "<b>{name}</b>\nشناسه فدراسیون: <code>{fedId}</code>\nگفتگوها: {chats}\nمسدودی‌ها: {bans}\nمدیران: {admins}",
+    "fedstatSelf": "شما از {count} فدراسیون مسدودید.",
+    "fedstatClean": "شما از هیچ فدراسیونی مسدود نیستید.",
+    "fedstatUser": "{user} از {count} فدراسیون مسدود است.",
+    "fedstatReason": "فدراسیون {fedId}: {reason} ({date})",
+    "subscribed": "مشترک فدراسیون {fedId} شدید.",
+    "unsubscribed": "اشتراک فدراسیون {fedId} لغو شد.",
+    "subLimit": "حداکثر می‌توانید در ۵ فدراسیون مشترک شوید.",
+    "importDone": "{count} مسدودی فدراسیون وارد شد.",
+    "listRateLimited": "فهرست مسدودی‌ها هر ۳۰ دقیقه یک‌بار قابل دریافت است. بعداً تلاش کنید."
+  },
+  "adminlog": {
+    "format": "[{category}] {text}"
+  },
+  "cleaning": {
+    "settingsSaved": "تنظیمات پاک‌سازی به‌روزرسانی شد."
+  },
+  "language": {
+    "set": "زبان به‌روزرسانی شد: {lang}.",
+    "choose": "یک زبان انتخاب کنید:",
+    "unsupported": "زبان‌های پشتیبانی‌شده: en, tr, de, ru, es, az, ar, fr, it, pt, uk, fa, id, uz."
+  },
+  "topics": {
+    "created": "موضوع ایجاد شد: {name}",
+    "renamed": "نام موضوع به {name} تغییر کرد.",
+    "closed": "موضوع بسته شد.",
+    "reopened": "موضوع دوباره باز شد.",
+    "deleted": "موضوع حذف شد.",
+    "forumOnly": "این دستور فقط در موضوعات انجمن کار می‌کند.",
+    "actionTopicSet": "پیام‌های ربات اکنون به این موضوع می‌روند."
+  },
+  "privacy": {
+    "intro": "در ادامه داده‌هایی که این ربات درباره شما ذخیره می‌کند آمده است. برای مدیریت از دکمه‌ها استفاده کنید.",
+    "noData": "هیچ داده‌ای درباره شما ذخیره نشده است.",
+    "deleted": "داده‌های شما حذف شد.",
+    "deleteConfirm": "مطمئنید؟ این کار نمایه، اخطارها و تاریخچه گفتگوی شما با این ربات را حذف می‌کند."
+  },
+  "silent": {
+    "enabled": "اقدامات بی‌صدا فعال شد. دستورات موجود اکنون بی‌صدا اعمال می‌شوند.",
+    "disabled": "اقدامات بی‌صدا غیرفعال شد."
+  },
+  "disable": {
+    "disabled": "دستور غیرفعال شد: /{command}",
+    "enabled": "دستور فعال شد: /{command}",
+    "listTitle": "دستورات غیرفعال: {list}",
+    "none": "هیچ دستوری غیرفعال نیست.",
+    "notDisableable": "این دستور را نمی‌توان غیرفعال کرد."
+  },
+  "info": {
+    "userId": "شناسه: <code>{id}</code>",
+    "userInfo": "<b>{name}</b>\nشناسه: <code>{id}</code>\nنام کاربری: {username}\nعضو: {member}",
+    "chatId": "شناسه گفتگو: <code>{id}</code>"
+  }
+}

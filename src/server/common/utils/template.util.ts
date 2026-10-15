@@ -23,6 +23,14 @@
  * @property {number|string} [replies] - Reply count in the period.
  * @property {number|string} [media] - Media message count in the period.
  * @property {string} [period_label] - Human label of the leaderboard period.
+ * @property {string} [first] - reference-style alias of `first_name`.
+ * @property {string} [last] - reference-style alias of `last_name`.
+ * @property {string} [fullname] - First + last name combined.
+ * @property {string} [chatname] - reference-style alias of `group_name`.
+ * @property {string|number} [chat_id] - Telegram chat id of the target chat.
+ * @property {string|number} [count] - Generic counter (warns, purge count, ...).
+ * @property {string} [reason] - Reason text attached to a moderation action.
+ * @property {string} [rules] - Rules button URL or link text for the chat.
  */
 export interface TemplateContext {
   first_name?: string;
@@ -42,6 +50,14 @@ export interface TemplateContext {
   replies?: number | string;
   media?: number | string;
   period_label?: string;
+  first?: string;
+  last?: string;
+  fullname?: string;
+  chatname?: string;
+  chat_id?: string | number;
+  count?: number | string;
+  reason?: string;
+  rules?: string;
 }
 
 /**
@@ -55,9 +71,18 @@ export interface TemplateContext {
  * renderTemplate('Hello {mention}, welcome to {group_name}!', ctx);
  */
 export function renderTemplate(template: string, context: TemplateContext): string {
+  const resolved: TemplateContext = { ...context };
+  // reference-style aliases resolve to their canonical fields when absent.
+  resolved.first ??= context.first_name;
+  resolved.last ??= context.last_name;
+  resolved.chatname ??= context.group_name;
+  resolved.fullname ??= [context.first_name, context.last_name]
+    .filter((part) => part && part.trim())
+    .join(' ');
+
   return template.replace(/\{(\w+)\}/g, (match, key: string) =>
-    key in context && context[key as keyof TemplateContext] !== undefined
-      ? String(context[key as keyof TemplateContext])
+    key in resolved && resolved[key as keyof TemplateContext] !== undefined
+      ? String(resolved[key as keyof TemplateContext])
       : match,
   );
 }

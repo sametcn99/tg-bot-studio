@@ -1,0 +1,183 @@
+{
+  "common": {
+    "adminOnly": "Bu komutu kullanmak için yönetici olmalısın.",
+    "missingPermission": "Bu işlem için gerekli izne sahip değilsin.",
+    "userNotFound": "Bu kullanıcıyı bulamadım. Mesajına yanıt ver veya id/@kullanıcıadı belirt.",
+    "invalidDuration": "Geçersiz süre. 5m, 1h30m, 3d, 2w gibi biçimler kullan.",
+    "done": "Tamamlandı.",
+    "error": "Bir sorun oluştu. Lütfen tekrar dene."
+  },
+  "restrictions": {
+    "banned": "{user} banlandı. {reason}",
+    "tempBanned": "{user} {duration} boyunca banlandı. {reason}",
+    "unbanned": "{user} banı kaldırıldı.",
+    "muted": "{user} susturuldu. {reason}",
+    "tempMuted": "{user} {duration} boyunca susturuldu. {reason}",
+    "unmuted": "{user} artık konuşabilir.",
+    "kicked": "{user} gruptan atıldı. {reason}",
+    "kickme": "Kendin istedin — güle güle!",
+    "notBanned": "Bu kullanıcı banlı değil.",
+    "notMuted": "Bu kullanıcı susturulmuş değil."
+  },
+  "warnings": {
+    "warned": "{user} adlı kullanıcının {count}/{limit} uyarısı var. {reason}",
+    "warnLimitReached": "{user} uyarı limitine ulaştı.",
+    "warnRemoved": "{user} kullanıcısının son uyarısı kaldırıldı. Şimdi {count} uyarısı var.",
+    "warnsReset": "{user} kullanıcısının tüm uyarıları sıfırlandı.",
+    "warnList": "{user} uyarıları: {count}/{limit}",
+    "warnItem": "• {reason} — {date}",
+    "noWarns": "{user} kullanıcısının uyarısı yok.",
+    "warnLimitSet": "Uyarı limiti {limit} olarak ayarlandı.",
+    "warnModeSet": "Uyarı modu {mode} olarak ayarlandı.",
+    "warnTimeSet": "Uyarılar artık {duration} sonunda düşecek.",
+    "warnTimeOff": "Uyarı süre sona ermesi kapatıldı."
+  },
+  "purges": {
+    "purgeComplete": "Temizleme tamamlandı. {count} mesaj silindi.",
+    "purgeRange": "En eski mesaja /purgefrom, en yeniye /purgeto ile yanıt ver."
+  },
+  "pins": {
+    "pinned": "Sabitlendi.",
+    "unpinned": "Sabitleme kaldırıldı.",
+    "unpinnedAll": "Tüm sabitlemeler kaldırıldı."
+  },
+  "reports": {
+    "reported": "Yöneticiler bilgilendirildi.",
+    "reportsOn": "Raporlama açıldı.",
+    "reportsOff": "Raporlama kapatıldı.",
+    "cannotReportAdmin": "Yöneticiler raporlanamaz."
+  },
+  "approvals": {
+    "approved": "{user} onaylı kullanıcı oldu — otomatik moderasyondan muaf.",
+    "unapproved": "{user} artık onaylı değil.",
+    "notApproved": "{user} onaylı değil.",
+    "isApproved": "{user} onaylı. {reason}",
+    "approvedList": "Onaylı kullanıcılar: {count}",
+    "approvedAllCleared": "Tüm onaylar temizlendi.",
+    "approvalEmpty": "Henüz onaylı kullanıcı yok."
+  },
+  "locks": {
+    "locked": "Kilitlendi: {types}.",
+    "unlocked": "Kilit açıldı: {types}.",
+    "lockWarned": "{user} kilitli içerik göndermeye çalıştı: {types}. {count}/{limit}",
+    "allowlisted": "İzin listesine eklendi: {item}",
+    "allowlistRemoved": "İzin listesinden çıkarıldı: {item}",
+    "allowlistCleared": "İzin listesi temizlendi.",
+    "allowlistEmpty": "İzin listesi boş."
+  },
+  "blocklist": {
+    "added": "Blacklist tetikleyicisi eklendi.",
+    "removed": "Blacklist tetikleyicisi kaldırıldı.",
+    "cleared": "Tüm blacklist tetikleyicileri kaldırıldı.",
+    "listTitle": "Blacklist tetikleyicileri ({count}):",
+    "empty": "Blacklist boş.",
+    "hit": "Mesaj kaldırıldı (blacklist eşleşmesi). {count}/{limit}"
+  },
+  "flood": {
+    "hit": "Flood tespit edildi. {user} {duration} boyunca susturuldu.",
+    "settingsSet": "Antiflood güncellendi."
+  },
+  "antiraid": {
+    "enabled": "AntiRaid {duration} boyunca etkin. Tüm yeni katılımlar {actionTime} banlanacak.",
+    "disabled": "AntiRaid kapatıldı.",
+    "status": "AntiRaid şu an {status}.",
+    "raidBan": "Raid koruması: yeni katılan banlandı."
+  },
+  "captcha": {
+    "welcomeCaptcha": "{user}, hoş geldin! İnsan olduğunu doğrulamak için aşağıdaki düğmeye bas.",
+    "verified": "Doğrulama başarılı. Topluluğun keyfini çıkar.",
+    "kicked": "Zamanında doğrulanmadı — çıkarıldı.",
+    "alreadyVerified": "Zaten doğrulandın."
+  },
+  "rules": {
+    "noneSet": "Bu sohbet için kurallar belirlenmedi.",
+    "dmPrompt": "Kuralları okumak için aşağıdaki düğmeye dokun.",
+    "buttonLabel": "Kurallar"
+  },
+  "notes": {
+    "saved": "Not kaydedildi: #{trigger}",
+    "cleared": "Not kaldırıldı: #{trigger}",
+    "notFound": "Böyle bir not yok.",
+    "listTitle": "Notlar ({count}):",
+    "empty": "Henüz kayıtlı not yok."
+  },
+  "filters": {
+    "saved": "Filtre kaydedildi: {trigger}",
+    "stopped": "Filtre kaldırıldı: {trigger}",
+    "stoppedAll": "Tüm filtreler kaldırıldı.",
+    "listTitle": "Filtreler ({count}):",
+    "empty": "Henüz kayıtlı filtre yok."
+  },
+  "federation": {
+    "created": "\"<b>{name}</b>\" federasyonu oluşturuldu.\nFed ID: <code>{fedId}</code>\nGruplarında uygulamak için /joinfed {fedId} kullan.",
+    "deleted": "Federasyon silindi. Banlı kullanıcılar banlı kalır.",
+    "renamed": "Federasyonun adı \"{name}\" olarak değiştirildi.",
+    "onePerOwner": "Zaten bir federasyonun var.",
+    "nameTooLong": "Federasyon adları en fazla 64 karakter olabilir.",
+    "joined": "Bu sohbet \"{name}\" federasyonuna katıldı.",
+    "left": "Bu sohbet federasyondan ayrıldı.",
+    "notJoined": "Bu sohbet bir federasyonda değil.",
+    "ownerRequired": "Federasyon üyeliğini yalnızca grup sahibi yönetebilir.",
+    "fbanned": "{user} federasyondan banlandı. {reason}",
+    "funbanned": "{user} federasyon banı kaldırıldı.",
+    "fedBanHit": "{user} bu federasyonda banlı ({reason}) ve çıkarıldı.",
+    "fedBanHitQuiet": "{user} bir federasyonda banlı.",
+    "alreadyFedBanned": "{user} bu federasyonda zaten banlı.",
+    "notFedBanned": "{user} bu federasyonda banlı değil.",
+    "fedAdminAdded": "{user} artık federasyon yöneticisi.",
+    "fedAdminRemoved": "{user} artık federasyon yöneticisi değil.",
+    "noFed": "Sahibi olduğun bir federasyon yok. /newfed <ad> ile oluştur.",
+    "fedInfo": "<b>{name}</b>\nFed ID: <code>{fedId}</code>\nSohbet: {chats}\nBan: {bans}\nYönetici: {admins}",
+    "fedstatSelf": "{count} federasyondan banlısın.",
+    "fedstatClean": "Hiçbir federasyondan banlı değilsin.",
+    "fedstatUser": "{user}, {count} federasyondan banlı.",
+    "fedstatReason": "Fed {fedId}: {reason} ({date})",
+    "subscribed": "{fedId} federasyonuna abone olundu.",
+    "unsubscribed": "{fedId} federasyonu aboneliği kaldırıldı.",
+    "subLimit": "En fazla 5 federasyona abone olabilirsin.",
+    "importDone": "{count} federasyon banı içe aktarıldı.",
+    "listRateLimited": "Ban listeleri 30 dakikada bir çekilebilir. Daha sonra tekrar dene."
+  },
+  "adminlog": {
+    "format": "[{category}] {text}"
+  },
+  "cleaning": {
+    "settingsSaved": "Temizlik ayarları güncellendi."
+  },
+  "language": {
+    "set": "Dil güncellendi: {lang}.",
+    "choose": "Bir dil seç:",
+    "unsupported": "Desteklenen diller: en, tr, de, ru, es, az, ar, fr, it, pt, uk, fa, id, uz."
+  },
+  "topics": {
+    "created": "Konu oluşturuldu: {name}",
+    "renamed": "Konu adı {name} yapıldı.",
+    "closed": "Konu kapatıldı.",
+    "reopened": "Konu yeniden açıldı.",
+    "deleted": "Konu silindi.",
+    "forumOnly": "Bu komut yalnızca forum konularında çalışır.",
+    "actionTopicSet": "Bot mesajları artık bu konuya gidecek."
+  },
+  "privacy": {
+    "intro": "Bu botun hakkınızda sakladığı veriler aşağıda. Yönetmek için düğmeleri kullanın.",
+    "noData": "Hakkınızda saklanan veri yok.",
+    "deleted": "Verileriniz silindi.",
+    "deleteConfirm": "Emin misin? Bu işlem profilini, uyarılarını ve bu botla olan geçmişini siler."
+  },
+  "silent": {
+    "enabled": "Sessiz aksiyonlar açıldı. Mevcut komutlar artık sessizce uygulanacak.",
+    "disabled": "Sessiz aksiyonlar kapatıldı."
+  },
+  "disable": {
+    "disabled": "Komut devre dışı: /{command}",
+    "enabled": "Komut etkinleştirildi: /{command}",
+    "listTitle": "Devre dışı komutlar: {list}",
+    "none": "Devre dışı komut yok.",
+    "notDisableable": "Bu komut devre dışı bırakılamaz."
+  },
+  "info": {
+    "userId": "ID: <code>{id}</code>",
+    "userInfo": "<b>{name}</b>\nID: <code>{id}</code>\nKullanıcı adı: {username}\nÜye: {member}",
+    "chatId": "Sohbet ID: <code>{id}</code>"
+  }
+}

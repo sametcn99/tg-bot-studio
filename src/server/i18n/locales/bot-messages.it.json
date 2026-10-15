@@ -1,0 +1,183 @@
+{
+  "common": {
+    "adminOnly": "Solo gli amministratori possono usare questo comando.",
+    "missingPermission": "Non hai il permesso necessario per questa azione.",
+    "userNotFound": "Non ho trovato questo utente. Rispondi al suo messaggio o fornisci un id/@username.",
+    "invalidDuration": "Durata non valida. Usa formati come 5m, 1h30m, 3d, 2w.",
+    "done": "Fatto.",
+    "error": "Qualcosa è andato storto. Riprova."
+  },
+  "restrictions": {
+    "banned": "{user} è stato bannato. {reason}",
+    "tempBanned": "{user} è stato bannato per {duration}. {reason}",
+    "unbanned": "{user} è stato sbannato.",
+    "muted": "{user} è stato silenziato. {reason}",
+    "tempMuted": "{user} è stato silenziato per {duration}. {reason}",
+    "unmuted": "{user} può di nuovo scrivere.",
+    "kicked": "{user} è stato espulso. {reason}",
+    "kickme": "L'hai chiesto tu — arrivederci!",
+    "notBanned": "Questo utente non è bannato.",
+    "notMuted": "Questo utente non è silenziato."
+  },
+  "warnings": {
+    "warned": "{user} ha {count}/{limit} avvertimenti. {reason}",
+    "warnLimitReached": "{user} ha raggiunto il limite di avvertimenti.",
+    "warnRemoved": "L'ultimo avvertimento di {user} è stato rimosso. Ora ne ha {count}.",
+    "warnsReset": "Tutti gli avvertimenti di {user} sono stati azzerati.",
+    "warnList": "Avvertimenti di {user}: {count}/{limit}",
+    "warnItem": "• {reason} — {date}",
+    "noWarns": "{user} non ha avvertimenti.",
+    "warnLimitSet": "Limite avvertimenti impostato a {limit}.",
+    "warnModeSet": "Modalità avvertimento impostata su {mode}.",
+    "warnTimeSet": "Gli avvertimenti ora scadono dopo {duration}.",
+    "warnTimeOff": "Scadenza degli avvertimenti disattivata."
+  },
+  "purges": {
+    "purgeComplete": "Pulizia completata. {count} messaggi(o) eliminati(o).",
+    "purgeRange": "Rispondi al messaggio più vecchio con /purgefrom, poi al più recente con /purgeto."
+  },
+  "pins": {
+    "pinned": "Fissato.",
+    "unpinned": "Sfissato.",
+    "unpinnedAll": "Tutti i messaggi fissati sono stati rimossi."
+  },
+  "reports": {
+    "reported": "Gli amministratori sono stati avvisati.",
+    "reportsOn": "Segnalazioni attivate.",
+    "reportsOff": "Segnalazioni disattivate.",
+    "cannotReportAdmin": "Gli amministratori non possono essere segnalati."
+  },
+  "approvals": {
+    "approved": "{user} è ora approvato — immune dalla moderazione automatica.",
+    "unapproved": "{user} non è più approvato.",
+    "notApproved": "{user} non è approvato.",
+    "isApproved": "{user} è approvato. {reason}",
+    "approvedList": "Utenti approvati: {count}",
+    "approvedAllCleared": "Tutte le approvazioni sono state rimosse.",
+    "approvalEmpty": "Ancora nessun utente approvato."
+  },
+  "locks": {
+    "locked": "Bloccato: {types}.",
+    "unlocked": "Sbloccato: {types}.",
+    "lockWarned": "L'utente {user} ha tentato di inviare contenuto bloccato: {types}. {count}/{limit}",
+    "allowlisted": "Aggiunto alla whitelist: {item}",
+    "allowlistRemoved": "Rimosso dalla whitelist: {item}",
+    "allowlistCleared": "Whitelist svuotata.",
+    "allowlistEmpty": "La whitelist è vuota."
+  },
+  "blocklist": {
+    "added": "Attivatore blacklist aggiunto.",
+    "removed": "Attivatore blacklist rimosso.",
+    "cleared": "Tutti gli attivatori blacklist sono stati rimossi.",
+    "listTitle": "Attivatori blacklist ({count}):",
+    "empty": "La blacklist è vuota.",
+    "hit": "Messaggio rimosso (corrispondenza blacklist). {count}/{limit}"
+  },
+  "flood": {
+    "hit": "Flood rilevato. {user} è stato silenziato per {duration}.",
+    "settingsSet": "Antiflood aggiornato."
+  },
+  "antiraid": {
+    "enabled": "AntiRaid attivato per {duration}. Tutti i nuovi ingressi verranno bannati per {actionTime}.",
+    "disabled": "AntiRaid disattivato.",
+    "status": "AntiRaid è attualmente {status}.",
+    "raidBan": "Protezione antiraid: nuovo entrante bannato."
+  },
+  "captcha": {
+    "welcomeCaptcha": "{user}, benvenuto! Premi il pulsante qui sotto per confermare che sei umano.",
+    "verified": "Verifica riuscita. Goditi la community.",
+    "kicked": "Non ha verificato in tempo — espulso.",
+    "alreadyVerified": "Sei già verificato."
+  },
+  "rules": {
+    "noneSet": "Nessuna regola è stata impostata per questa chat.",
+    "dmPrompt": "Tocca il pulsante qui sotto per leggere le regole.",
+    "buttonLabel": "Regole"
+  },
+  "notes": {
+    "saved": "Nota salvata: #{trigger}",
+    "cleared": "Nota rimossa: #{trigger}",
+    "notFound": "Questa nota non esiste.",
+    "listTitle": "Note ({count}):",
+    "empty": "Ancora nessuna nota salvata."
+  },
+  "filters": {
+    "saved": "Filtro salvato: {trigger}",
+    "stopped": "Filtro rimosso: {trigger}",
+    "stoppedAll": "Tutti i filtri sono stati rimossi.",
+    "listTitle": "Filtri ({count}):",
+    "empty": "Ancora nessun filtro salvato."
+  },
+  "federation": {
+    "created": "Federazione \"<b>{name}</b>\" creata.\nID federazione: <code>{fedId}</code>\nUsa /joinfed {fedId} nei tuoi gruppi per applicarla.",
+    "deleted": "Federazione eliminata. Gli utenti bannati restano bannati.",
+    "renamed": "Federazione rinominata in \"{name}\".",
+    "onePerOwner": "Possiedi già una federazione.",
+    "nameTooLong": "I nomi delle federazioni sono limitati a 64 caratteri.",
+    "joined": "Questa chat è entrata nella federazione \"{name}\".",
+    "left": "Questa chat ha lasciato la federazione.",
+    "notJoined": "Questa chat non è in nessuna federazione.",
+    "ownerRequired": "Solo il proprietario del gruppo può gestire l'adesione alla federazione.",
+    "fbanned": "{user} è stato bannato dalla federazione. {reason}",
+    "funbanned": "{user} è stato sbannato dalla federazione.",
+    "fedBanHit": "{user} è bannato in questa federazione ({reason}) ed è stato espulso.",
+    "fedBanHitQuiet": "{user} è bannato in una federazione.",
+    "alreadyFedBanned": "{user} è già bannato in questa federazione.",
+    "notFedBanned": "{user} non è bannato in questa federazione.",
+    "fedAdminAdded": "{user} è ora amministratore della federazione.",
+    "fedAdminRemoved": "{user} non è più amministratore della federazione.",
+    "noFed": "Non possiedi una federazione. Creane una con /newfed <nome>.",
+    "fedInfo": "<b>{name}</b>\nID federazione: <code>{fedId}</code>\nChat: {chats}\nBan: {bans}\nAdmin: {admins}",
+    "fedstatSelf": "Sei bannato da {count} federazioni.",
+    "fedstatClean": "Non sei bannato da nessuna federazione.",
+    "fedstatUser": "{user} è bannato da {count} federazioni.",
+    "fedstatReason": "Federazione {fedId}: {reason} ({date})",
+    "subscribed": "Iscritto alla federazione {fedId}.",
+    "unsubscribed": "Annullata l'iscrizione alla federazione {fedId}.",
+    "subLimit": "Puoi iscriverti ad al massimo 5 federazioni.",
+    "importDone": "{count} ban di federazione importati.",
+    "listRateLimited": "Le liste di ban possono essere scaricate una volta ogni 30 minuti. Riprova più tardi."
+  },
+  "adminlog": {
+    "format": "[{category}] {text}"
+  },
+  "cleaning": {
+    "settingsSaved": "Impostazioni di pulizia aggiornate."
+  },
+  "language": {
+    "set": "Lingua aggiornata: {lang}.",
+    "choose": "Scegli una lingua:",
+    "unsupported": "Lingue supportate: en, tr, de, ru, es, az, ar, fr, it, pt, uk, fa, id, uz."
+  },
+  "topics": {
+    "created": "Argomento creato: {name}",
+    "renamed": "Argomento rinominato in {name}.",
+    "closed": "Argomento chiuso.",
+    "reopened": "Argomento riaperto.",
+    "deleted": "Argomento eliminato.",
+    "forumOnly": "Questo comando funziona solo negli argomenti del forum.",
+    "actionTopicSet": "I messaggi del bot andranno ora in questo argomento."
+  },
+  "privacy": {
+    "intro": "Di seguito i dati che questo bot memorizza su di te. Usa i pulsanti per gestirli.",
+    "noData": "Nessun dato memorizzato su di te.",
+    "deleted": "I tuoi dati sono stati eliminati.",
+    "deleteConfirm": "Sei sicuro? Questo rimuove il tuo profilo, i tuoi avvertimenti e la cronologia della chat con questo bot."
+  },
+  "silent": {
+    "enabled": "Azioni silenziose attivate. I comandi esistenti ora agiranno in silenzio.",
+    "disabled": "Azioni silenziose disattivate."
+  },
+  "disable": {
+    "disabled": "Comando disattivato: /{command}",
+    "enabled": "Comando attivato: /{command}",
+    "listTitle": "Comandi disattivati: {list}",
+    "none": "Nessun comando è disattivato.",
+    "notDisableable": "Questo comando non può essere disattivato."
+  },
+  "info": {
+    "userId": "ID: <code>{id}</code>",
+    "userInfo": "<b>{name}</b>\nID: <code>{id}</code>\nUsername: {username}\nMembro: {member}",
+    "chatId": "ID chat: <code>{id}</code>"
+  }
+}

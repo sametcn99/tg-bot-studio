@@ -1,0 +1,183 @@
+{
+  "common": {
+    "adminOnly": "Цю команду можуть використовувати лише адміністратори.",
+    "missingPermission": "У вас немає потрібного дозволу для цієї дії.",
+    "userNotFound": "Не вдалося знайти цього користувача. Відповідьте на його повідомлення або вкажіть id/@username.",
+    "invalidDuration": "Неправильна тривалість. Використовуйте формати як 5m, 1h30m, 3d, 2w.",
+    "done": "Готово.",
+    "error": "Щось пішло не так. Спробуйте ще раз."
+  },
+  "restrictions": {
+    "banned": "{user} забанено. {reason}",
+    "tempBanned": "{user} забанено на {duration}. {reason}",
+    "unbanned": "{user} розбановано.",
+    "muted": "{user} заглушено. {reason}",
+    "tempMuted": "{user} заглушено на {duration}. {reason}",
+    "unmuted": "{user} знову може писати.",
+    "kicked": "{user} виключено. {reason}",
+    "kickme": "Ти сам цього захотів — бувай!",
+    "notBanned": "Цей користувач не забанений.",
+    "notMuted": "Цей користувач не заглушений."
+  },
+  "warnings": {
+    "warned": "У {user} {count}/{limit} попереджень. {reason}",
+    "warnLimitReached": "{user} досяг ліміту попереджень.",
+    "warnRemoved": "Останнє попередження {user} знято. Тепер {count}.",
+    "warnsReset": "Усі попередження {user} скинуто.",
+    "warnList": "Попередження {user}: {count}/{limit}",
+    "warnItem": "• {reason} — {date}",
+    "noWarns": "У {user} немає попереджень.",
+    "warnLimitSet": "Ліміт попереджень встановлено: {limit}.",
+    "warnModeSet": "Режим попереджень встановлено: {mode}.",
+    "warnTimeSet": "Попередження тепер згорають через {duration}.",
+    "warnTimeOff": "Згорання попереджень вимкнено."
+  },
+  "purges": {
+    "purgeComplete": "Очищення завершено. Видалено повідомлень: {count}.",
+    "purgeRange": "Відповідьте на найстаріше повідомлення командою /purgefrom, потім на найновіше — /purgeto."
+  },
+  "pins": {
+    "pinned": "Закріплено.",
+    "unpinned": "Відкріплено.",
+    "unpinnedAll": "Усі закріплення знято."
+  },
+  "reports": {
+    "reported": "Адміністраторів повідомлено.",
+    "reportsOn": "Скарги увімкнено.",
+    "reportsOff": "Скарги вимкнено.",
+    "cannotReportAdmin": "На адміністраторів скаржитися не можна."
+  },
+  "approvals": {
+    "approved": "{user} схвалений — захищений від автоматичної модерації.",
+    "unapproved": "{user} більше не схвалений.",
+    "notApproved": "{user} не схвалений.",
+    "isApproved": "{user} схвалений. {reason}",
+    "approvedList": "Схвалені користувачі: {count}",
+    "approvedAllCleared": "Усі схвалення знято.",
+    "approvalEmpty": "Схвалених користувачів ще немає."
+  },
+  "locks": {
+    "locked": "Заблоковано: {types}.",
+    "unlocked": "Розблоковано: {types}.",
+    "lockWarned": "Користувач {user} спробував надіслати заблокований вміст: {types}. {count}/{limit}",
+    "allowlisted": "Додано до білого списку: {item}",
+    "allowlistRemoved": "Видалено з білого списку: {item}",
+    "allowlistCleared": "Білий список очищено.",
+    "allowlistEmpty": "Білий список порожній."
+  },
+  "blocklist": {
+    "added": "Тригер чорного списку додано.",
+    "removed": "Тригер чорного списку видалено.",
+    "cleared": "Усі тригери чорного списку видалено.",
+    "listTitle": "Тригери чорного списку ({count}):",
+    "empty": "Чорний список порожній.",
+    "hit": "Повідомлення видалено (збіг чорного списку). {count}/{limit}"
+  },
+  "flood": {
+    "hit": "Виявлено флуд. {user} заглушено на {duration}.",
+    "settingsSet": "Антифлуд оновлено."
+  },
+  "antiraid": {
+    "enabled": "AntiRaid увімкнено на {duration}. Усі нові учасники будуть забанені на {actionTime}.",
+    "disabled": "AntiRaid вимкнено.",
+    "status": "AntiRaid зараз {status}.",
+    "raidBan": "Захист від рейду: нового учасника забанено."
+  },
+  "captcha": {
+    "welcomeCaptcha": "{user}, вітаємо! Натисніть кнопку нижче, щоб підтвердити, що ви людина.",
+    "verified": "Перевірку пройдено. Насолоджуйтесь спільнотою.",
+    "kicked": "Не пройшов перевірку вчасно — виключено.",
+    "alreadyVerified": "Ви вже верифіковані."
+  },
+  "rules": {
+    "noneSet": "Для цього чату правила не встановлено.",
+    "dmPrompt": "Торкніться кнопки нижче, щоб прочитати правила.",
+    "buttonLabel": "Правила"
+  },
+  "notes": {
+    "saved": "Нотатку збережено: #{trigger}",
+    "cleared": "Нотатку видалено: #{trigger}",
+    "notFound": "Такої нотатки немає.",
+    "listTitle": "Нотатки ({count}):",
+    "empty": "Збережених нотаток ще немає."
+  },
+  "filters": {
+    "saved": "Фільтр збережено: {trigger}",
+    "stopped": "Фільтр видалено: {trigger}",
+    "stoppedAll": "Усі фільтри видалено.",
+    "listTitle": "Фільтри ({count}):",
+    "empty": "Збережених фільтрів ще немає."
+  },
+  "federation": {
+    "created": "Федерацію \"<b>{name}</b>\" створено.\nID федерації: <code>{fedId}</code>\nВикористовуйте /joinfed {fedId} у своїх групах.",
+    "deleted": "Федерацію видалено. Забанені користувачі залишаються забаненими.",
+    "renamed": "Федерацію перейменовано на \"{name}\".",
+    "onePerOwner": "У вас уже є федерація.",
+    "nameTooLong": "Назви федерацій обмежені 64 символами.",
+    "joined": "Цей чат приєднався до федерації \"{name}\".",
+    "left": "Цей чат залишив федерацію.",
+    "notJoined": "Цей чат не перебуває у федерації.",
+    "ownerRequired": "Лише власник групи може керувати участю у федерації.",
+    "fbanned": "{user} забанено у федерації. {reason}",
+    "funbanned": "{user} розбановано у федерації.",
+    "fedBanHit": "{user} забанений у цій федерації ({reason}) і був виключений.",
+    "fedBanHitQuiet": "{user} забанений в одній із федерацій.",
+    "alreadyFedBanned": "{user} уже забанений у цій федерації.",
+    "notFedBanned": "{user} не забанений у цій федерації.",
+    "fedAdminAdded": "{user} тепер адміністратор федерації.",
+    "fedAdminRemoved": "{user} більше не адміністратор федерації.",
+    "noFed": "У вас немає федерації. Створіть її через /newfed <назва>.",
+    "fedInfo": "<b>{name}</b>\nID федерації: <code>{fedId}</code>\nЧати: {chats}\nБани: {bans}\nАдміни: {admins}",
+    "fedstatSelf": "Ви забанені у {count} федераціях.",
+    "fedstatClean": "Ви не забанені ані в одній федерації.",
+    "fedstatUser": "{user} забанений у {count} федераціях.",
+    "fedstatReason": "Федерація {fedId}: {reason} ({date})",
+    "subscribed": "Підписку на федерацію {fedId} оформлено.",
+    "unsubscribed": "Підписку на федерацію {fedId} скасовано.",
+    "subLimit": "Можна підписатися максимум на 5 федерацій.",
+    "importDone": "Імпортовано банів федерації: {count}.",
+    "listRateLimited": "Списки банів можна отримувати раз на 30 хвилин. Спробуйте пізніше."
+  },
+  "adminlog": {
+    "format": "[{category}] {text}"
+  },
+  "cleaning": {
+    "settingsSaved": "Налаштування очищення оновлено."
+  },
+  "language": {
+    "set": "Мову змінено: {lang}.",
+    "choose": "Виберіть мову:",
+    "unsupported": "Підтримувані мови: en, tr, de, ru, es, az, ar, fr, it, pt, uk, fa, id, uz."
+  },
+  "topics": {
+    "created": "Тему створено: {name}",
+    "renamed": "Тему перейменовано на {name}.",
+    "closed": "Тему закрито.",
+    "reopened": "Тему знову відкрито.",
+    "deleted": "Тему видалено.",
+    "forumOnly": "Ця команда працює лише у темах форуму.",
+    "actionTopicSet": "Повідомлення бота тепер йдуть у цю тему."
+  },
+  "privacy": {
+    "intro": "Нижче — дані, які цей бот зберігає про вас. Використовуйте кнопки для керування.",
+    "noData": "Про вас не зберігається жодних даних.",
+    "deleted": "Ваші дані видалено.",
+    "deleteConfirm": "Ви впевнені? Це видалить ваш профіль, попередження та історію листування з цим ботом."
+  },
+  "silent": {
+    "enabled": "Тихі дії увімкнено. Наявні команди тепер діятимуть тихо.",
+    "disabled": "Тихі дії вимкнено."
+  },
+  "disable": {
+    "disabled": "Команду вимкнено: /{command}",
+    "enabled": "Команду увімкнено: /{command}",
+    "listTitle": "Вимкнені команди: {list}",
+    "none": "Вимкнених команд немає.",
+    "notDisableable": "Цю команду не можна вимкнути."
+  },
+  "info": {
+    "userId": "ID: <code>{id}</code>",
+    "userInfo": "<b>{name}</b>\nID: <code>{id}</code>\nUsername: {username}\nУчасник: {member}",
+    "chatId": "ID чату: <code>{id}</code>"
+  }
+}

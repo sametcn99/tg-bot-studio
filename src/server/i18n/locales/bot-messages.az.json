@@ -1,0 +1,183 @@
+{
+  "common": {
+    "adminOnly": "Bu əmri yalnız administratorlar istifadə edə bilər.",
+    "missingPermission": "Bu əməliyyat üçün lazımi icazəniz yoxdur.",
+    "userNotFound": "Bu istifadəçini tapa bilmədim. Onun mesajına cavab verin və ya id/@istifadəçiadı göstərin.",
+    "invalidDuration": "Yanlış müddət. 5m, 1h30m, 3d, 2w kimi formatlardan istifadə edin.",
+    "done": "Tamamlandı.",
+    "error": "Bir problem yarandı. Yenidən cəhd edin."
+  },
+  "restrictions": {
+    "banned": "{user} banlandı. {reason}",
+    "tempBanned": "{user} {duration} müddətinə banlandı. {reason}",
+    "unbanned": "{user}-in banı götürülüb.",
+    "muted": "{user} susduruldu. {reason}",
+    "tempMuted": "{user} {duration} müddətinə susduruldu. {reason}",
+    "unmuted": "{user} yenidən danışa bilər.",
+    "kicked": "{user} qrupdan qovuldu. {reason}",
+    "kickme": "Özün istədin — sağ ol!",
+    "notBanned": "Bu istifadəçi banlı deyil.",
+    "notMuted": "Bu istifadəçi susdurulmayıb."
+  },
+  "warnings": {
+    "warned": "{user} istifadəçisinin {count}/{limit} xəbərdarlığı var. {reason}",
+    "warnLimitReached": "{user} xəbərdarlıq limitinə çatdı.",
+    "warnRemoved": "{user} istifadəçisinin son xəbərdarlığı götürülüb. İndi {count}.",
+    "warnsReset": "{user} istifadəçisinin bütün xəbərdarlıqları sıfırlanıb.",
+    "warnList": "{user} xəbərdarlıqları: {count}/{limit}",
+    "warnItem": "• {reason} — {date}",
+    "noWarns": "{user} istifadəçisinin xəbərdarlığı yoxdur.",
+    "warnLimitSet": "Xəbərdarlıq limiti {limit} olaraq təyin edildi.",
+    "warnModeSet": "Xəbərdarlıq rejimi {mode} olaraq təyin edildi.",
+    "warnTimeSet": "Xəbərdarlıqlar artıq {duration} sonra düşəcək.",
+    "warnTimeOff": "Xəbərdarlıqların sona erməsi bağlandı."
+  },
+  "purges": {
+    "purgeComplete": "Təmizləmə tamamlandı. {count} mesaj silindi.",
+    "purgeRange": "Ən köhnə mesaja /purgefrom, ən yeni mesaja /purgeto ilə cavab verin."
+  },
+  "pins": {
+    "pinned": "Sabitləndi.",
+    "unpinned": "Sabitləmə götürülüb.",
+    "unpinnedAll": "Bütün sabitləmələr götürülüb."
+  },
+  "reports": {
+    "reported": "Administratorlar məlumatlandırıldı.",
+    "reportsOn": "Şikayətlər açıqdır.",
+    "reportsOff": "Şikayətlər bağlıdır.",
+    "cannotReportAdmin": "Administratorlar şikayət oluna bilməz."
+  },
+  "approvals": {
+    "approved": "{user} təsdiqlənib — avtomatik moderasiyadan muafdir.",
+    "unapproved": "{user} artıq təsdiqlənmir.",
+    "notApproved": "{user} təsdiqlənməyib.",
+    "isApproved": "{user} təsdiqlənib. {reason}",
+    "approvedList": "Təsdiqlənmiş istifadəçilər: {count}",
+    "approvedAllCleared": "Bütün təsdiqlər götürülüb.",
+    "approvalEmpty": "Hələ təsdiqlənmiş istifadəçi yoxdur."
+  },
+  "locks": {
+    "locked": "Kilitləndi: {types}.",
+    "unlocked": "Kilit açıldı: {types}.",
+    "lockWarned": "{user} istifadəçisi kilitli məzmun göndərməyə çalışdı: {types}. {count}/{limit}",
+    "allowlisted": "İcazə siyahısına əlavə olundu: {item}",
+    "allowlistRemoved": "İcazə siyahısından çıxarıldı: {item}",
+    "allowlistCleared": "İcazə siyahısı təmizləndi.",
+    "allowlistEmpty": "İcazə siyahısı boşdur."
+  },
+  "blocklist": {
+    "added": "Qara siyahı tetikleyicisi əlavə edildi.",
+    "removed": "Qara siyahı tetikleyicisi götürülüb.",
+    "cleared": "Bütün qara siyahı tetikleyiciləri götürülüb.",
+    "listTitle": "Qara siyahı tetikleyiciləri ({count}):",
+    "empty": "Qara siyahı boşdur.",
+    "hit": "Mesaj götürülüb (qara siyahı uyğunluğu). {count}/{limit}"
+  },
+  "flood": {
+    "hit": "Flood aşkarlandı. {user} {duration} müddətinə susduruldu.",
+    "settingsSet": "Antiflood yeniləndi."
+  },
+  "antiraid": {
+    "enabled": "AntiRaid {duration} müddətinə aktivdir. Bütün yeni qoşulanlar {actionTime} banlanacaq.",
+    "disabled": "AntiRaid bağlandı.",
+    "status": "AntiRaid hazırda {status}.",
+    "raidBan": "Reyd qoruması: yeni qoşulan banlandı."
+  },
+  "captcha": {
+    "welcomeCaptcha": "{user}, xoş gəlmisiniz! İnsan olduğunuzu təsdiqləmək üçün aşağıdakı düyməyə basın.",
+    "verified": "Təsdiq uğurludur. İcmanın dadını çıxarın.",
+    "kicked": "Vaxtında təsdiqləmədi — çıxarıldı.",
+    "alreadyVerified": "Artıq təsdiqlənmisiniz."
+  },
+  "rules": {
+    "noneSet": "Bu söhbət üçün qaydalar müəyyən edilməyib.",
+    "dmPrompt": "Qaydaları oxumaq üçün aşağıdakı düyməyə toxunun.",
+    "buttonLabel": "Qaydalar"
+  },
+  "notes": {
+    "saved": "Qeyd saxlanıldı: #{trigger}",
+    "cleared": "Qeyd götürülüb: #{trigger}",
+    "notFound": "Belə bir qeyd yoxdur.",
+    "listTitle": "Qeydlər ({count}):",
+    "empty": "Hələ saxlanmış qeyd yoxdur."
+  },
+  "filters": {
+    "saved": "Filtr saxlanıldı: {trigger}",
+    "stopped": "Filtr götürülüb: {trigger}",
+    "stoppedAll": "Bütün filtrlər götürülüb.",
+    "listTitle": "Filtrlər ({count}):",
+    "empty": "Hələ saxlanmış filtr yoxdur."
+  },
+  "federation": {
+    "created": "\"<b>{name}</b>\" federasiyası yaradıldı.\nFed ID: <code>{fedId}</code>\nQruplarınızda tətbiq etmək üçün /joinfed {fedId} istifadə edin.",
+    "deleted": "Federasiya silindi. Banlı istifadəçilər banlı qalır.",
+    "renamed": "Federasiyanın adı \"{name}\" olaraq dəyişdirildi.",
+    "onePerOwner": "Artıq bir federasiyanız var.",
+    "nameTooLong": "Federasiya adları ən çox 64 simvol ola bilər.",
+    "joined": "Bu söhbət \"{name}\" federasiyasına qoşuldu.",
+    "left": "Bu söhbət federasiyadan ayrıldı.",
+    "notJoined": "Bu söhbət federasiyada deyil.",
+    "ownerRequired": "Federasiya üzvlüyünü yalnız qrup sahibi idarə edə bilər.",
+    "fbanned": "{user} federasiyadan banlandı. {reason}",
+    "funbanned": "{user} federasiya banı götürülüb.",
+    "fedBanHit": "{user} bu federasiyada banlıdır ({reason}) və çıxarıldı.",
+    "fedBanHitQuiet": "{user} bir federasiyada banlıdır.",
+    "alreadyFedBanned": "{user} bu federasiyada artıq banlıdır.",
+    "notFedBanned": "{user} bu federasiyada banlı deyil.",
+    "fedAdminAdded": "{user} artıq federasiya administratorudur.",
+    "fedAdminRemoved": "{user} artıq federasiya administratoru deyil.",
+    "noFed": "Sahibi olduğunuz federasiya yoxdur. /newfed <ad> ilə yaradın.",
+    "fedInfo": "<b>{name}</b>\nFed ID: <code>{fedId}</code>\nSöhbət: {chats}\nBan: {bans}\nAdministrator: {admins}",
+    "fedstatSelf": "{count} federasiyadan banlısınız.",
+    "fedstatClean": "Heç bir federasiyadan banlı deyilsiniz.",
+    "fedstatUser": "{user}, {count} federasiyadan banlıdır.",
+    "fedstatReason": "Federasiya {fedId}: {reason} ({date})",
+    "subscribed": "{fedId} federasiyasına abunə olundu.",
+    "unsubscribed": "{fedId} federasiyasına abunəlik götürülüb.",
+    "subLimit": "Ən çox 5 federasiyaya abunə ola bilərsiniz.",
+    "importDone": "{count} federasiya banı idxal edildi.",
+    "listRateLimited": "Ban siyahıları 30 dəqiqədə bir çəkilə bilər. Sonra yenidən cəhd edin."
+  },
+  "adminlog": {
+    "format": "[{category}] {text}"
+  },
+  "cleaning": {
+    "settingsSaved": "Təmizləmə tənzimləmələri yeniləndi."
+  },
+  "language": {
+    "set": "Dil yeniləndi: {lang}.",
+    "choose": "Bir dil seçin:",
+    "unsupported": "Dəstəklənən dillər: en, tr, de, ru, es, az, ar, fr, it, pt, uk, fa, id, uz."
+  },
+  "topics": {
+    "created": "Mövzu yaradıldı: {name}",
+    "renamed": "Mövzunun adı {name} edildi.",
+    "closed": "Mövzu bağlandı.",
+    "reopened": "Mövzu yenidən açıldı.",
+    "deleted": "Mövzu silindi.",
+    "forumOnly": "Bu əmr yalnız forum mövzularında işləyir.",
+    "actionTopicSet": "Bot mesajları artıq bu mövzuya gedəcək."
+  },
+  "privacy": {
+    "intro": "Aşağıda bu botun haqqınızda saxladığı məlumatlar var. İdarə etmək üçün düymələrdən istifadə edin.",
+    "noData": "Haqqınızda saxlanan məlumat yoxdur.",
+    "deleted": "Məlumatlarınız silindi.",
+    "deleteConfirm": "Əminsiniz? Bu, profilinizi, xəbərdarlıqlarınızı və bu botla olan tarixçənizi silir."
+  },
+  "silent": {
+    "enabled": "Səssiz əməliyyatlar açıqdır. Mövcud əmrlər artıq səssizcə tətbiq olunacaq.",
+    "disabled": "Səssiz əməliyyatlar bağlandı."
+  },
+  "disable": {
+    "disabled": "Əmr deaktiv edildi: /{command}",
+    "enabled": "Əmr aktivləşdirildi: /{command}",
+    "listTitle": "Deaktiv əmrlər: {list}",
+    "none": "Deaktiv əmr yoxdur.",
+    "notDisableable": "Bu əmr deaktiv edilə bilməz."
+  },
+  "info": {
+    "userId": "ID: <code>{id}</code>",
+    "userInfo": "<b>{name}</b>\nID: <code>{id}</code>\nİstifadəçi adı: {username}\nÜzv: {member}",
+    "chatId": "Söhbət ID: <code>{id}</code>"
+  }
+}

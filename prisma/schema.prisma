@@ -39,8 +39,152 @@ model Bot {
   aiChatHistories  AiChatHistory[]
   aiKnowledgeDocs  AiKnowledgeDoc[]
   aiKnowledgeChunks AiKnowledgeChunk[]
+  chatModuleSettings ChatModuleSetting[]
+  chatMemberStates ChatMemberState[]
+  chatWarns        ChatWarn[]
+  chatApprovals    ChatApproval[]
+  fedChats         FedChat[]
 
   @@map("bots")
+}
+
+/// Reference-parity per-chat module configuration override. Effective config for a
+/// chat is registry defaults <- bot-level `bot_modules.config_json` <- this.
+model ChatModuleSetting {
+  botId      Int    @map("bot_id")
+  chatId     String @map("chat_id")
+  moduleKey  String @map("module_key")
+  configJson String @map("config_json")
+
+  bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@id([botId, chatId, moduleKey])
+  @@map("chat_module_settings")
+}
+
+/// Persistent per-member moderation state: strike counters, captcha solved
+/// flag, active mute expiry, and module scratch data (flood windows, ...).
+model ChatMemberState {
+  botId           Int     @map("bot_id")
+  chatId          String  @map("chat_id")
+  telegramId      BigInt  @map("telegram_id")
+  strikes         Int     @default(0)
+  captchaVerified Int     @default(0) @map("captcha_verified")
+  mutedUntil      String? @map("muted_until")
+  dataJson        String? @map("data_json")
+  updatedAt       String? @map("updated_at")
+
+  bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@id([botId, chatId, telegramId])
+  @@map("chat_member_state")
+}
+
+/// Individual warning event issued by admins or automated blocklists.
+model ChatWarn {
+  id          Int    @id @default(autoincrement())
+  botId       Int    @map("bot_id")
+  chatId      String @map("chat_id")
+  telegramId  BigInt @map("telegram_id")
+  reason      String
+  createdAt   String? @map("created_at")
+
+  bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@index([botId, chatId, telegramId])
+  @@map("chat_warns")
+}
+
+/// Reference-style approved users: immune to automated moderation (flood,
+/// blocklists, locks) while staying enforced for everyone else.
+model ChatApproval {
+  botId      Int     @map("bot_id")
+  chatId     String  @map("chat_id")
+  telegramId BigInt  @map("telegram_id")
+  reason     String?
+  approvedAt String? @map("approved_at")
+
+  bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@id([botId, chatId, telegramId])
+  @@map("chat_approvals")
+}
+
+/// A ban federation: shared ban list enforced across every joined chat of
+/// every bot in the studio (reference federations, generalized cross-bot).
+model Fed {
+  id               String  @id @default(uuid())
+  name             String
+  /// Telegram id of the owning user (fed creator).
+  ownerTelegramId  BigInt  @map("owner_telegram_id")
+  /// Studio bot through which the federation was created.
+  ownerBotId       Int     @map("owner_bot_id")
+  /// Optional channel/group that receives federation log events.
+  logChatId        BigInt? @map("log_chat_id")
+  fedReasonRequired Int    @default(0) @map("fed_reason_required")
+  createdAt        String? @map("created_at")
+
+  bans    FedBan[]
+  admins  FedAdmin[]
+  chats   FedChat[]
+  subs    FedSub[] @relation("FedSubscriptions")
+  subbedBy FedSub[] @relation("FedSubscribers")
+
+  @@map("feds")
+}
+
+/// A banned user inside a federation.
+model FedBan {
+  fedId       String  @map("fed_id")
+  telegramId  BigInt  @map("telegram_id")
+  reason      String
+  bannedBy    BigInt  @map("banned_by")
+  createdAt   String? @map("created_at")
+
+  fed Fed @relation(fields: [fedId], references: [id], onDelete: Cascade)
+
+  @@id([fedId, telegramId])
+  @@map("fed_bans")
+}
+
+/// A federation administrator (beyond the owner).
+model FedAdmin {
+  fedId      String @map("fed_id")
+  telegramId BigInt @map("telegram_id")
+
+  fed Fed @relation(fields: [fedId], references: [id], onDelete: Cascade)
+
+  @@id([fedId, telegramId])
+  @@map("fed_admins")
+}
+
+/// A chat joined to a federation — scoped per studio bot so every bot in
+/// the studio can enforce the same fed.
+model FedChat {
+  fedId   String @map("fed_id")
+  botId   Int    @map("bot_id")
+  chatId  String @map("chat_id")
+  quiet   Int    @default(0)
+  joinedAt String? @map("joined_at")
+
+  fed Fed @relation(fields: [fedId], references: [id], onDelete: Cascade)
+  bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@id([fedId, botId, chatId])
+  @@map("fed_chats")
+}
+
+/// Federation subscription: enforce another fed's ban list without
+/// joining its chats (reference subfeds, max 5).
+model FedSub {
+  fedId         String @map("fed_id")
+  subscribedFedId String @map("subscribed_fed_id")
+
+  fed          Fed  @relation("FedSubscriptions", fields: [fedId], references: [id], onDelete: Cascade)
+  subscribedFed Fed @relation("FedSubscribers", fields: [subscribedFedId], references: [id], onDelete: Cascade)
+
+  @@id([fedId, subscribedFedId])
+  @@map("fed_subs")
 }
 
 model BotModule {
@@ -286,6 +430,13 @@ model Autoresponder {
   mediaUrl     String? @map("media_url")
   buttonsJson  String? @map("buttons_json")
   isActive     Int     @default(1) @map("is_active")
+  /// Reference-parity v2: scoping and matching (null chatId = every chat).
+  chatId       String? @map("chat_id")
+  scope        String  @default("private") @map("scope")
+  matchMode    String  @default("keyword") @map("match_mode")
+  adminOnly    Int     @default(0) @map("admin_only")
+  repeatSeconds Int    @default(0) @map("repeat_seconds")
+  lastRepeatAt String? @map("last_repeat_at")
 
   bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
 

@@ -18,6 +18,18 @@ import { BusinessModule } from './modules/business/business.module';
 import { DripModule } from './modules/drip/drip.module';
 import { WelcomeModule } from './modules/welcome/welcome.module';
 import { ModerationModule } from './modules/moderation/moderation.module';
+import { GroupModerationModule } from './modules/group-moderation/group-moderation.module';
+import { GroupToolsModule } from './modules/group-tools/group-tools.module';
+import { LocksModule } from './modules/locks/locks.module';
+import { AntiraidModule } from './modules/antiraid/antiraid.module';
+import { RulesModule } from './modules/rules/rules.module';
+import { AdminLogModule } from './modules/admin-log/admin-log.module';
+import { CleaningModule } from './modules/cleaning/cleaning.module';
+import { TopicsModule } from './modules/topics/topics.module';
+import { PrivacyModule } from './modules/privacy/privacy.module';
+import { FederationModule } from './modules/federation/federation.module';
+import { LanguageModule } from './modules/language/language.module';
+import { Bot2BotModule } from './modules/bot2bot/bot2bot.module';
 import { GiveawaysModule } from './modules/giveaways/giveaways.module';
 import { EngagementModule } from './modules/engagement/engagement.module';
 import { MessageScoreModule } from './modules/message-score/message-score.module';
@@ -67,6 +79,18 @@ import { MiniAppsModule } from './modules/mini-apps/mini-apps.module';
     DripModule,
     WelcomeModule,
     ModerationModule,
+    GroupModerationModule,
+    GroupToolsModule,
+    LocksModule,
+    AntiraidModule,
+    RulesModule,
+    AdminLogModule,
+    CleaningModule,
+    TopicsModule,
+    PrivacyModule,
+    FederationModule,
+    LanguageModule,
+    Bot2BotModule,
     GiveawaysModule,
     EngagementModule,
     MessageScoreModule,

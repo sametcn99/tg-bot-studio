@@ -4,7 +4,10 @@ import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bo
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
 import { AutoresponderService, type AutoresponderRow } from './autoresponder.service';
 import { BotModel } from '../../models/bot.model';
+import { AdminGateService } from '../../bot-engine/admin-gate.service';
+import { BotI18nService } from '../../bot-engine/bot-i18n.service';
 import { renderTemplate, type TemplateContext } from '../../common/utils/template.util';
+import { normalizeText } from '../../common/utils/telegram-text.util';
 
 /**
  * Button descriptor for autoresponder replies.
@@ -18,9 +21,10 @@ interface ReplyButton {
 }
 
 /**
- * Runtime for the Custom Commands & Auto-Responder module. Matches `/command`
- * rules exactly and keyword rules by substring, replying with templated text,
- * optional media, and inline buttons.
+ * Runtime for the Custom Commands & Auto-Responder module (v2, reference
+ * filters/notes parity): rules now work in groups too, scoped globally
+ * (chatId null) or per chat, with keyword/command/hashtag/prefix/exact
+ * matching modes, admin-only visibility, and #hashtag note triggers.
  */
 @Injectable()
 export class AutoresponderRuntime extends BotModuleHandler {
@@ -30,11 +34,15 @@ export class AutoresponderRuntime extends BotModuleHandler {
   /**
    * @param {AutoresponderService} service - Rule CRUD service.
    * @param {BotModel} botModel - Bot domain model.
+   * @param {AdminGateService} adminGate - Telegram permission gate.
+   * @param {BotI18nService} i18n - Bot-reply localization.
    * @param {ModuleHandlerRegistry} registry - Handler registry (self sign-up).
    */
   constructor(
     private readonly service: AutoresponderService,
     private readonly botModel: BotModel,
+    private readonly adminGate: AdminGateService,
+    private readonly i18n: BotI18nService,
     registry: ModuleHandlerRegistry,
   ) {
     super();
@@ -50,11 +58,15 @@ export class AutoresponderRuntime extends BotModuleHandler {
     const { bot } = ctx;
 
     bot.on('message:text', async (update) => {
-      if (update.chat?.type !== 'private') return;
+      const isPrivate = update.chat?.type === 'private';
+      const isGroup = update.chat?.type === 'supergroup' || update.chat?.type === 'group';
+      if (!isPrivate && !isGroup) return;
       const text = update.msg.text.trim();
       const from = update.from;
-      if (!from) return;
+      if (!from || from.id === bot.botInfo?.id) return;
+      if (from.is_bot && isGroup) return;
 
+      const chatId = String(update.chat!.id);
       const templateCtx: TemplateContext = {
         first_name: from.first_name,
         last_name: from.last_name,
@@ -63,13 +75,14 @@ export class AutoresponderRuntime extends BotModuleHandler {
         mention: from.username
           ? `@${from.username}`
           : `<a href="tg://user?id=${from.id}">${from.first_name}</a>`,
+        group_name: update.chat.title,
         bot_name: bot.botInfo?.first_name ?? '',
         date: new Date().toISOString().slice(0, 10),
         time: new Date().toISOString().slice(11, 16),
       };
 
       // Default /start message (skipped when the Start Menu module owns /start).
-      if (text.startsWith('/start')) {
+      if (isPrivate && text.startsWith('/start')) {
         const startMessage = String(ctx.config.startMessage ?? '');
         if (startMessage && !(await this.startMenuOwnsStart(ctx.botId))) {
           await update.reply(renderTemplate(startMessage, templateCtx), {
@@ -80,20 +93,92 @@ export class AutoresponderRuntime extends BotModuleHandler {
       }
 
       const rules = (await this.service.list(ctx.botId)).filter((rule) => rule.is_active);
-      const commandText = text.split(/[\s@]/)[0].toLowerCase();
-      const matched =
-        rules.find(
-          (rule) => rule.command.startsWith('/') && rule.command.toLowerCase() === commandText,
-        ) ??
-        rules.find(
-          (rule) =>
-            !rule.command.startsWith('/') &&
-            text.toLowerCase().includes(rule.command.toLowerCase()),
-        );
+      const matched = await this.findMatch(update, rules, text, chatId, isPrivate, ctx.botId);
       if (!matched) return;
+
+      // {admin} fillings: admin-only rules stay silent for regular users.
+      if (matched.admin_only === 1 && isGroup) {
+        const isAdmin = await this.adminGate.isAdmin(update.api, Number(chatId), from.id);
+        if (!isAdmin) return;
+      }
 
       await this.sendRule(update, matched, templateCtx);
     });
+  }
+
+  /**
+   * Finds the first matching rule for a message across all match modes.
+   *
+   * @param {Context} update - grammY context.
+   * @param {AutoresponderRow[]} rules - Active rule rows.
+   * @param {string} text - Raw message text.
+   * @param {string} chatId - Chat scope id.
+   * @param {boolean} isPrivate - Whether the chat is private.
+   * @param {number} botId - Studio bot id.
+   * @returns {Promise<AutoresponderRow | undefined>} Matched rule.
+   */
+  private async findMatch(
+    update: Context,
+    rules: AutoresponderRow[],
+    text: string,
+    chatId: string,
+    isPrivate: boolean,
+    botId: number,
+  ): Promise<AutoresponderRow | undefined> {
+    void update;
+    void botId;
+    const scoped = rules.filter((rule) => this.inScope(rule, chatId, isPrivate));
+    const lower = text.toLowerCase();
+    const normalized = normalizeText(text);
+    const commandText = lower.split(/[\s@]/)[0];
+
+    return (
+      // 1. Exact /command rules.
+      scoped.find(
+        (rule) =>
+          rule.command.startsWith('/') &&
+          !rule.command.includes(' ') &&
+          rule.command.toLowerCase() === commandText,
+      ) ??
+      // 2. Hashtag notes: "#trigger" anywhere in the text.
+      scoped.find((rule) => {
+        const mode = rule.match_mode ?? 'keyword';
+        const trigger = rule.command.toLowerCase();
+        return (
+          mode === 'hashtag' &&
+          (lower.split(/\s+/).includes(`#${trigger}`) || rule.command.startsWith('/'))
+        );
+      }) ??
+      // 3. prefix: triggers.
+      scoped.find((rule) => {
+        const mode = rule.match_mode ?? 'keyword';
+        return mode === 'prefix' && normalized.startsWith(normalizeText(rule.command));
+      }) ??
+      // 4. exact: triggers.
+      scoped.find((rule) => {
+        const mode = rule.match_mode ?? 'keyword';
+        return mode === 'exact' && normalized === normalizeText(rule.command);
+      }) ??
+      // 5. Plain keyword substring rules (backwards compatible).
+      scoped.find((rule) => {
+        const mode = rule.match_mode ?? 'keyword';
+        return !rule.command.startsWith('/') && mode === 'keyword'
+          ? normalized.includes(normalizeText(rule.command))
+          : rule.command.startsWith('/') && rule.command.includes(' ')
+            ? lower.startsWith(rule.command.toLowerCase())
+            : false;
+      })
+    );
+  }
+
+  /**
+   * Checks a rule's chat scope: private, group, or both; global (chatId
+   * null) or pinned to a single chat.
+   */
+  private inScope(rule: AutoresponderRow, chatId: string, isPrivate: boolean): boolean {
+    if (rule.chat_id && rule.chat_id !== chatId) return false;
+    const scope = rule.scope ?? 'private';
+    return scope === 'both' || (isPrivate ? scope === 'private' : scope === 'group');
   }
 
   /**

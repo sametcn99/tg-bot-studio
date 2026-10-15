@@ -8,6 +8,12 @@ import { findModule } from './module-registry';
 /** Reserved Telegram user id representing the sandbox tester (int32-safe). */
 export const SIMULATOR_TELEGRAM_ID = 2_000_000_000;
 
+/** Reserved chat id representing the sandbox supergroup (int32-safe). */
+export const SIMULATOR_GROUP_ID = -100_200_000_000;
+
+/** What the sandbox should synthesize for this run. */
+export type SimulationEvent = 'message' | 'join' | 'leave' | 'chat_member';
+
 /** Outgoing Telegram API call captured from the simulated bot. */
 interface CapturedCall {
   method: string;
@@ -21,6 +27,8 @@ export interface SimulationResult {
   buttons?: Array<{ text: string; url?: string; callback_data?: string }>;
   /** True when no enabled module produced a reply. */
   unmatched: boolean;
+  /** Chat surface the visible reply was addressed to. */
+  sentTo?: 'private' | 'group';
 }
 
 /** Methods that carry user-visible outgoing messages. */
@@ -36,19 +44,47 @@ const MESSAGE_METHODS = new Set([
 
 /** Methods the fake API answers with a full result object. */
 const OBJECT_RESULTS: Record<string, (payload: Record<string, unknown>) => unknown> = {
-  sendMessage: () => ({ message_id: 1, date: 0, chat: { id: SIMULATOR_TELEGRAM_ID } }),
-  sendPhoto: () => ({ message_id: 1, date: 0, chat: { id: SIMULATOR_TELEGRAM_ID } }),
-  sendVideo: () => ({ message_id: 1, date: 0, chat: { id: SIMULATOR_TELEGRAM_ID } }),
+  sendMessage: (payload) => ({
+    message_id: 1,
+    date: 0,
+    chat: { id: Number(payload.chat_id ?? SIMULATOR_TELEGRAM_ID) },
+  }),
+  sendPhoto: (payload) => ({
+    message_id: 1,
+    date: 0,
+    chat: { id: Number(payload.chat_id ?? SIMULATOR_TELEGRAM_ID) },
+  }),
+  sendVideo: (payload) => ({
+    message_id: 1,
+    date: 0,
+    chat: { id: Number(payload.chat_id ?? SIMULATOR_TELEGRAM_ID) },
+  }),
   sendChatAction: () => true,
   answerCallbackQuery: () => true,
   answerPreCheckoutQuery: () => true,
+  // Sandbox assumes the tester administrates the sandbox group so group
+  // moderation commands can be exercised without a live Telegram chat.
+  getChatAdministrators: () => [
+    {
+      status: 'creator',
+      user: { id: SIMULATOR_TELEGRAM_ID, is_bot: false, first_name: 'Tester' },
+    },
+  ],
+  getChatMember: () => ({ status: 'member', user: { id: SIMULATOR_TELEGRAM_ID, is_bot: false } }),
+  getChat: (payload) => ({
+    id: Number(payload.chat_id ?? SIMULATOR_TELEGRAM_ID),
+    type: 'supergroup',
+    title: 'Sandbox Group',
+    permissions: { can_send_messages: true },
+  }),
 };
 
 /**
  * In-studio bot simulator: drives a REAL grammY middleware chain (every
  * enabled module runtime attached, exactly like production) against a fake
  * Telegram API so sandbox messages exercise the same code paths as live
- * traffic — without touching the network.
+ * traffic — without touching the network. Supports private and group
+ * surfaces, joins/leaves, and raw `chat_member` transitions.
  */
 @Injectable()
 export class SimulatorService {
@@ -60,15 +96,21 @@ export class SimulatorService {
   ) {}
 
   /**
-   * Sends a sandbox text message or callback press through the bot's real
-   * module middleware chain.
+   * Sends a sandbox update through the bot's real module middleware chain.
+   *
    * @param {number} botId - Studio bot id.
-   * @param {object} input - Sandbox input (text and/or callback data).
+   * @param {object} input - Sandbox input: text/callback data, target surface
+   * (`chatType`), and optional synthetic event (`join`, `leave`, `chat_member`).
    * @returns {Promise<SimulationResult>} First captured outgoing message.
    */
   async send(
     botId: number,
-    input: { text?: string; callbackData?: string },
+    input: {
+      text?: string;
+      callbackData?: string;
+      chatType?: 'private' | 'supergroup' | 'group';
+      event?: SimulationEvent;
+    },
   ): Promise<SimulationResult> {
     const row = await this.prisma.bot.findUnique({ where: { id: botId } });
     if (!row) {
@@ -104,37 +146,63 @@ export class SimulatorService {
 
     await this.attachEnabledModules(simBot, botId);
 
+    const inGroup = input.chatType === 'supergroup' || input.chatType === 'group';
+    const targetChatId = inGroup ? SIMULATOR_GROUP_ID : SIMULATOR_TELEGRAM_ID;
+
     const baseFrom = {
       id: SIMULATOR_TELEGRAM_ID,
       is_bot: false,
       first_name: 'Tester',
       username: 'studio_test',
     };
-    const baseChat = { id: SIMULATOR_TELEGRAM_ID, type: 'private' as const, first_name: 'Tester' };
+    const privateChat = { id: SIMULATOR_TELEGRAM_ID, type: 'private' as const, first_name: 'Tester' };
+    const groupChat = {
+      id: SIMULATOR_GROUP_ID,
+      type: 'supergroup' as const,
+      title: 'Sandbox Group',
+    };
+    const baseChat = inGroup ? groupChat : privateChat;
+    const now = Math.floor(Date.now() / 1000);
 
     try {
+      const event = input.event ?? 'message';
       if (input.callbackData !== undefined) {
         await simBot.handleUpdate({
           update_id: Date.now(),
           callback_query: {
             id: String(Date.now()),
             from: baseFrom,
-            message: { message_id: 2, date: Math.floor(Date.now() / 1000), chat: baseChat },
+            message: { message_id: 2, date: now, chat: baseChat },
             chat_instance: 'sim',
             data: input.callbackData,
           },
         } as never);
-      } else {
+      } else if (event === 'chat_member') {
         await simBot.handleUpdate({
           update_id: Date.now(),
-          message: {
-            message_id: 1,
+          chat_member: {
+            chat: groupChat,
             from: baseFrom,
-            chat: baseChat,
-            date: Math.floor(Date.now() / 1000),
-            text: input.text ?? '',
+            date: now,
+            old_chat_member: { user: baseFrom, status: 'left' },
+            new_chat_member: { user: baseFrom, status: 'member' },
           },
         } as never);
+      } else {
+        const message: Record<string, unknown> = {
+          message_id: 1,
+          from: baseFrom,
+          chat: baseChat,
+          date: now,
+        };
+        if (event === 'join') {
+          message.new_chat_members = [baseFrom];
+        } else if (event === 'leave') {
+          message.left_chat_member = baseFrom;
+        } else {
+          message.text = input.text ?? '';
+        }
+        await simBot.handleUpdate({ update_id: Date.now(), message } as never);
       }
     } catch (error) {
       this.logger.warn(
@@ -152,7 +220,7 @@ export class SimulatorService {
       const chatTarget =
         (call.payload as { chat_id?: unknown; chat?: { id?: unknown } }).chat_id ??
         (call.payload as { chat?: { id?: unknown } }).chat?.id;
-      return Number(chatTarget ?? 0) === SIMULATOR_TELEGRAM_ID;
+      return Number(chatTarget ?? 0) === targetChatId;
     });
     if (!replyCall) {
       return {
@@ -161,6 +229,7 @@ export class SimulatorService {
             ? '(no reply to this button)'
             : 'Message received. (No enabled module responded — try /start or enable a module.)',
         unmatched: true,
+        sentTo: inGroup ? 'group' : 'private',
       };
     }
 
@@ -186,12 +255,14 @@ export class SimulatorService {
       mediaUrl,
       buttons: buttons.length > 0 ? buttons : undefined,
       unmatched: false,
+      sentTo: inGroup ? 'group' : 'private',
     };
   }
 
   /**
    * Attaches every enabled module runtime to the sandbox bot, mirroring
    * production's attachModules order and config merge.
+   *
    * @param {Bot} simBot - Sandbox grammY instance.
    * @param {number} botId - Studio bot id.
    * @returns {Promise<void>} Resolves once all handlers attached.
