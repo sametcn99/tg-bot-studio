@@ -599,10 +599,8 @@ function ModuleNavSections({
     [localizedModules],
   );
   const groups = useMemo(() => modulesByCategory(), []);
-  const [closed, setClosed] = useState<Set<string>>(() => {
-    const owner = groups.find(([, modules]) => modules.some((m) => m.key === activeModuleKey))?.[0];
-    return new Set(groups.map(([category]) => category).filter((c) => c !== owner));
-  });
+  // Categories start expanded; users can collapse any section manually.
+  const [closed, setClosed] = useState<Set<string>>(() => new Set());
 
   // Auto-expand the section owning the active module (including on later navigations).
   useEffect(() => {
