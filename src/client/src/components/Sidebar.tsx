@@ -806,6 +806,10 @@ export default function Sidebar({
   const currentLang = i18n.language || 'en';
   const currentLanguageMeta =
     UI_LANGUAGES.find((language) => language.code === currentLang) ?? UI_LANGUAGES[0];
+  // Tooltip must hide while the language dropdown is open (MUI tooltips
+  // render above menus and would otherwise overlap the option list).
+  const [languageTipHover, setLanguageTipHover] = useState(false);
+  const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
 
   /**
    * Applies a dashboard language choice.
@@ -1217,41 +1221,49 @@ export default function Sidebar({
           >
             <Stack direction="row" spacing={0.75} alignItems="center">
               {/* Language select */}
-              <Tooltip title={t('nav.language')} arrow>
-                <Select
-                  size="small"
-                  value={currentLanguageMeta.code}
-                  onChange={(event) => selectLanguage(String(event.target.value))}
-                  aria-label={t('nav.language')}
-                  sx={(th) => ({
-                    height: 34,
-                    minWidth: 104,
-                    borderRadius: '8px',
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    color: 'text.secondary',
-                    bgcolor: alpha(th.palette.text.primary, 0.02),
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                    '&:hover': {
-                      color: 'text.primary',
-                      bgcolor: alpha(th.palette.text.primary, 0.06),
-                    },
-                    '& .MuiSelect-select': {
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 0.75,
-                      py: 0.625,
-                    },
-                  })}
+              <Tooltip title={t('nav.language')} arrow open={languageTipHover && !languageMenuOpen}>
+                <span
+                  onMouseEnter={() => setLanguageTipHover(true)}
+                  onMouseLeave={() => setLanguageTipHover(false)}
+                  style={{ display: 'inline-flex' }}
                 >
-                  {UI_LANGUAGES.map((language) => (
-                    <MenuItem key={language.code} value={language.code} dense>
-                      {language.native}
-                    </MenuItem>
-                  ))}
-                </Select>
+                  <Select
+                    size="small"
+                    value={currentLanguageMeta.code}
+                    onChange={(event) => selectLanguage(String(event.target.value))}
+                    onOpen={() => setLanguageMenuOpen(true)}
+                    onClose={() => setLanguageMenuOpen(false)}
+                    aria-label={t('nav.language')}
+                    sx={(th) => ({
+                      height: 34,
+                      minWidth: 104,
+                      borderRadius: '8px',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      color: 'text.secondary',
+                      bgcolor: alpha(th.palette.text.primary, 0.02),
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+                      '&:hover': {
+                        color: 'text.primary',
+                        bgcolor: alpha(th.palette.text.primary, 0.06),
+                      },
+                      '& .MuiSelect-select': {
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 0.75,
+                        py: 0.625,
+                      },
+                    })}
+                  >
+                    {UI_LANGUAGES.map((language) => (
+                      <MenuItem key={language.code} value={language.code} dense>
+                        {language.native}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </span>
               </Tooltip>
 
               {/* Theme toggle */}
