@@ -9,11 +9,14 @@ import { randomUUID } from 'node:crypto';
 import { InlineKeyboard } from 'grammy';
 import { BotPoolService } from '../../bot-engine/bot-pool.service';
 import { BroadcastModel } from './broadcast.model';
+import type { AudienceUser } from './broadcast.model';
 import { toBroadcastRow } from './broadcast.mapper';
 import { type BroadcastRow } from './broadcast.entity';
+import { isInTestSplit, variantIndexFor, variantScore } from './broadcast-ab.util';
+import { escapeHtml } from '../../common/utils/telegram-text.util';
 import { BotModel } from '../../bots/bot.model';
 import { SystemSettingsService } from '../../database/system-settings.service';
-import { type BotUserEntity } from '../users-crm/bot-user.entity';
+import { safeJsonObjectParse, safeJsonParse } from '../../common/utils/json.util';
 
 export { BroadcastRow };
 
@@ -51,20 +54,24 @@ interface ExperimentMeta {
   winnerBroadcastId?: number;
 }
 
-/** Deterministic 0-99 bucket of a telegram id (stable A/B assignment). */
-function audienceBucket(telegramId: bigint | number): number {
-  const id = telegramId.toString();
-  let hash = 5381;
-  for (let i = 0; i < id.length; i++) {
-    hash = ((hash << 5) + hash + id.charCodeAt(i)) | 0;
-  }
-  return Math.abs(hash) % 100;
+/** Persisted per-broadcast target filters (language/recent) for resume. */
+interface TargetFilter {
+  language?: string;
+  recentDays?: number;
 }
 
+/** How often (in sends) the queue checkpoints progress to the database. */
+const PROGRESS_CHECKPOINT_EVERY = 25;
+
+/** How often (in sends) the queue re-reads the live bot instance. */
+const BOT_REFETCH_EVERY = 50;
+
 /**
- * Enterprise broadcast engine. Resolves the target audience, queues the
- * send-out with conservative rate limiting (Telegram 429 protection on top of
- * the grammY auto-retry transformer), and tracks per-broadcast counters.
+ * Enterprise broadcast engine. Resolves the target audience through a
+ * batched, cursor-paginated iterator (never hydrating the whole user table),
+ * queues the send-out with conservative rate limiting (Telegram 429
+ * protection on top of the grammY auto-retry transformer), checkpoints
+ * progress so interrupted runs can resume, and tracks per-broadcast counters.
  * Supports multi-variant A/B experiments: a deterministic test split receives
  * the variants, per-variant click-through is tracked through redirect links,
  * and the winner rolls out to the remaining audience.
@@ -83,6 +90,7 @@ export class BroadcastService implements OnModuleInit {
 
   /**
    * Cleans up stale in-flight broadcasts from previous runs on server boot.
+   * Interrupted rows keep their checkpoint cursor so operators can resume.
    */
   async onModuleInit(): Promise<void> {
     const swept = await this.broadcastModel.sweepInterrupted();
@@ -92,11 +100,11 @@ export class BroadcastService implements OnModuleInit {
   }
 
   /**
-   * Lists broadcast history for a bot (click counters reconciled first).
+   * Lists broadcast history for a bot. Click counts are maintained at the
+   * redirect endpoint (counter-on-write), so no read-side reconciliation.
    */
   async list(botId: number): Promise<BroadcastRow[]> {
     const broadcasts = await this.broadcastModel.list(botId);
-    await this.broadcastModel.syncClickCounts(broadcasts);
     return broadcasts.map(toBroadcastRow);
   }
 
@@ -109,8 +117,12 @@ export class BroadcastService implements OnModuleInit {
     data: Record<string, unknown>,
   ): Promise<BroadcastRow | BroadcastRow[]> {
     const variants = this.parseVariants(data);
+    const targetFilter = this.parseTargetFilter(data);
+    const targetFilterJson =
+      targetFilter.language || targetFilter.recentDays ? JSON.stringify(targetFilter) : null;
+
     if (variants.length > 1) {
-      return this.createExperiment(botId, data, variants);
+      return this.createExperiment(botId, data, variants, targetFilterJson);
     }
 
     const item = await this.broadcastModel.create({
@@ -119,6 +131,7 @@ export class BroadcastService implements OnModuleInit {
       messageText: String(data.messageText ?? ''),
       mediaUrl: (data.mediaUrl as string) || null,
       buttonsJson: data.buttons ? JSON.stringify(data.buttons) : null,
+      targetFilterJson,
     });
     const row = toBroadcastRow(item);
     void this.runQueue(botId, row.id, data);
@@ -134,6 +147,7 @@ export class BroadcastService implements OnModuleInit {
     botId: number,
     data: Record<string, unknown>,
     variants: BroadcastVariant[],
+    targetFilterJson: string | null,
   ): Promise<BroadcastRow[]> {
     const experimentId = randomUUID();
     const testSplitPercent = Math.min(50, Math.max(5, Number(data.testSplitPercent ?? 20) || 20));
@@ -149,6 +163,7 @@ export class BroadcastService implements OnModuleInit {
         messageText: variant.messageText,
         mediaUrl: variant.mediaUrl || null,
         buttonsJson: variant.buttons ? JSON.stringify(variant.buttons) : null,
+        targetFilterJson,
       });
       const withMeta = await this.broadcastModel.updateStatus(item.id, {
         experimentId,
@@ -158,40 +173,45 @@ export class BroadcastService implements OnModuleInit {
       rows.push(toBroadcastRow(withMeta));
     }
 
-    void this.runExperimentTestPhase(botId, experimentId, data, variants);
+    void this.runExperimentTestPhase(botId, experimentId, data, variants, targetFilterJson);
     return rows;
   }
 
   /**
-   * Sends each variant to its slice of the deterministic test split.
+   * Sends each variant to its slice of the deterministic test split. The
+   * audience is iterated once per variant through the batched generator —
+   * no full-table hydration.
    */
   private async runExperimentTestPhase(
     botId: number,
     experimentId: string,
     data: Record<string, unknown>,
     variants: BroadcastVariant[],
+    targetFilterJson: string | null,
   ): Promise<void> {
-    const audience = await this.resolveAudience(botId, data);
-    const testSplit = this.loadExperimentMeta(botId, experimentId);
-    if (!testSplit) return;
-    const limit = testSplit.testSplitPercent;
-    const testerIds = new Set(
-      audience.filter((user) => audienceBucket(user.telegram_id) < limit).map((u) => u.telegram_id),
-    );
+    const meta = await this.loadExperimentMeta(botId, experimentId);
+    if (!meta) return;
+
+    const dataFilters = {
+      targetType: data.targetType as string | undefined,
+      language: data.language as string | undefined,
+      recentDays: data.recentDays as number | undefined,
+    };
+    const audienceSize = await this.broadcastModel.countAudience(botId, dataFilters);
+    const testSplitSize = Math.round((audienceSize * meta.testSplitPercent) / 100);
 
     for (let i = 0; i < variants.length; i++) {
       const broadcastId = (await this.findExperimentRows(botId, experimentId))[i]?.id;
       if (!broadcastId) continue;
-      const variantAudience = audience.filter(
-        (user) =>
-          testerIds.has(user.telegram_id) &&
-          audienceBucket(user.telegram_id) % variants.length === i,
-      );
       await this.runQueue(botId, broadcastId, data, {
-        overrideAudience: variantAudience,
+        audienceFilter: (u) =>
+          isInTestSplit(u.telegram_id, meta.testSplitPercent) &&
+          variantIndexFor(u.telegram_id, variants.length) === i,
         buttons: variants[i].buttons,
         mediaUrl: variants[i].mediaUrl,
         messageText: variants[i].messageText,
+        targetFilterJson,
+        estimatedTotal: Math.round(testSplitSize / variants.length),
       });
     }
   }
@@ -223,7 +243,7 @@ export class BroadcastService implements OnModuleInit {
     if (testRows.length === 0) {
       throw new NotFoundException(`No test variants found for experiment ${experimentId}`);
     }
-    const meta = this.loadExperimentMeta(botId, experimentId);
+    const meta = await this.loadExperimentMeta(botId, experimentId);
     if (!meta) throw new NotFoundException(`Experiment ${experimentId} metadata missing`);
     if (meta.phase === 'final') {
       throw new BadRequestException('This experiment already rolled out its winner');
@@ -235,65 +255,59 @@ export class BroadcastService implements OnModuleInit {
       if (!manual) throw new NotFoundException(`Variant broadcast ${variantBroadcastId} not found`);
       winner = manual;
     } else {
-      await this.broadcastModel.syncClickCounts(
-        await this.broadcastModel.listByExperiment(botId, experimentId),
-      );
-      const fresh = await this.findExperimentRows(botId, experimentId);
-      const freshTest = fresh.filter((row) => row.phase === 'test');
-      winner = [...freshTest].sort((a, b) => this.variantScore(b) - this.variantScore(a))[0];
+      // Click counters are maintained at the redirect endpoint, so the
+      // in-memory rows are already current.
+      winner = [...testRows].sort((a, b) => variantScore(b) - variantScore(a))[0];
     }
 
     meta.phase = 'final';
     meta.winnerBroadcastId = winner.id;
     await this.saveExperimentMeta(botId, meta);
 
-    // Close the losing variants so history shows them as concluded.
-    for (const row of testRows) {
-      if (row.id !== winner.id && (row.status === 'done' || row.status === 'queued')) {
-        await this.broadcastModel.updateStatus(row.id, {
-          status: row.status === 'queued' ? 'cancelled' : row.status,
-        });
-      }
-    }
-
-    // Roll the winner out to everyone outside the deterministic test split.
-    const firstData = {
-      targetType: winner.targetType,
-      messageText: winner.messageText,
-      mediaUrl: winner.mediaUrl ?? undefined,
-      buttons: winner.buttonsJson ? JSON.parse(winner.buttonsJson) : undefined,
-    };
-    const rolloutItem = await this.broadcastModel.create({
+    // Close the still-queued losing variants and create the rollout row in
+    // one transaction so a crash cannot split the conclusion across states.
+    const rolloutItem = await this.broadcastModel.concludeExperiment(
       botId,
-      targetType: winner.targetType,
-      messageText: winner.messageText,
-      mediaUrl: winner.mediaUrl,
-      buttonsJson: winner.buttonsJson,
-    });
+      testRows
+        .filter((row) => row.id !== winner.id && row.status === 'queued')
+        .map((row) => row.id),
+      {
+        targetType: winner.targetType,
+        messageText: winner.messageText,
+        mediaUrl: winner.mediaUrl,
+        buttonsJson: winner.buttonsJson,
+      },
+    );
     const rolloutMeta = await this.broadcastModel.updateStatus(rolloutItem.id, {
       experimentId,
-      variantLabel: `${winner.variantLabel} (final)`,
+      variantLabel: `${winner.variantLabel ?? 'A'} (final)`,
       phase: 'final',
     });
     const bot = this.pool.getBot(botId);
     if (bot) {
-      void this.runQueue(botId, rolloutItem.id, firstData, {
-        audienceFilter: (user) => audienceBucket(user.telegram_id) >= meta.testSplitPercent,
-      });
+      void this.runQueue(
+        botId,
+        rolloutItem.id,
+        {
+          targetType: winner.targetType,
+          messageText: winner.messageText,
+          mediaUrl: winner.mediaUrl ?? undefined,
+          buttons: safeJsonParse<BroadcastButton[]>(winner.buttonsJson, [], 'broadcast:buttons'),
+        },
+        {
+          audienceFilter: (u) => !isInTestSplit(u.telegram_id, meta.testSplitPercent),
+          estimatedTotal: Math.round(
+            (await this.broadcastModel.countAudience(botId, {
+              targetType: winner.targetType,
+            })) *
+              ((100 - meta.testSplitPercent) / 100),
+          ),
+        },
+      );
     } else {
       await this.broadcastModel.updateStatus(rolloutItem.id, { status: 'failed' });
     }
     return { winner, rollout: toBroadcastRow(rolloutMeta) };
-  }
-
-  /**
-   * Click-through-first ranking score for a finished variant.
-   */
-  private variantScore(row: BroadcastRow): number {
-    const delivered = Math.max(1, row.successCount);
-    const ctr = row.clicks / delivered;
-    const deliveryRate = row.totalRecipients > 0 ? row.successCount / row.totalRecipients : 0;
-    return ctr * 1000 + deliveryRate;
   }
 
   /**
@@ -322,6 +336,40 @@ export class BroadcastService implements OnModuleInit {
   }
 
   /**
+   * Resumes an interrupted broadcast from its persisted cursor: recipients up
+   * to the checkpoint are skipped, the rest are delivered with the original
+   * content and target filters.
+   * @param {number} botId - Owning bot id.
+   * @param {number} id - Interrupted broadcast identifier.
+   * @returns {Promise<BroadcastRow>} The row now re-queued for delivery.
+   */
+  async resume(botId: number, id: number): Promise<BroadcastRow> {
+    const item = await this.broadcastModel.findById(botId, id);
+    if (!item) throw new NotFoundException(`Broadcast ${id} not found`);
+    if (item.status !== 'interrupted') {
+      throw new BadRequestException('Only interrupted broadcasts can be resumed');
+    }
+    const targetFilter = safeJsonObjectParse(item.targetFilterJson, {}) as TargetFilter;
+    await this.broadcastModel.updateStatus(id, { status: 'queued' });
+    void this.runQueue(
+      botId,
+      id,
+      {
+        targetType: item.targetType,
+        messageText: item.messageText,
+        mediaUrl: item.mediaUrl ?? undefined,
+        buttons: safeJsonParse<BroadcastButton[]>(item.buttonsJson, [], 'broadcast:buttons'),
+        language: targetFilter.language,
+        recentDays: targetFilter.recentDays,
+      },
+      {
+        resumeAfterId: item.sentCursor ? Number(item.sentCursor) : 0,
+      },
+    );
+    return this.findOne(botId, id);
+  }
+
+  /**
    * Parses optional A/B variants from the request payload.
    */
   private parseVariants(data: Record<string, unknown>): BroadcastVariant[] {
@@ -343,130 +391,206 @@ export class BroadcastService implements OnModuleInit {
   }
 
   /**
-   * Resolves the audience for a target type.
+   * Extracts persistable target filters (language/recent) from the payload.
    */
-  private async resolveAudience(
-    botId: number,
-    data: Record<string, unknown>,
-  ): Promise<BotUserEntity[]> {
-    return this.broadcastModel.resolveAudience(botId, {
-      targetType: data.targetType as string,
-      language: data.language as string,
-      recentDays: data.recentDays as number,
-    });
+  private parseTargetFilter(data: Record<string, unknown>): TargetFilter {
+    const filter: TargetFilter = {};
+    if (typeof data.language === 'string' && data.language) filter.language = data.language;
+    if (Number.isFinite(Number(data.recentDays)) && Number(data.recentDays) > 0) {
+      filter.recentDays = Number(data.recentDays);
+    }
+    return filter;
   }
 
   /**
-   * Executes the queued send-out with rate limiting and counter tracking.
-   * @param {object} options - Optional overrides used by experiment phases.
+   * Executes the queued send-out: batched audience iteration, rate limiting,
+   * progress checkpoints (for live progress + crash resume), periodic live
+   * bot re-reads, and cancellation handling without a final-write race.
+   * @param {object} options - Optional overrides used by experiment phases and resume.
    */
   private async runQueue(
     botId: number,
     broadcastId: number,
     data: Record<string, unknown>,
     options: {
-      overrideAudience?: BotUserEntity[];
-      audienceFilter?: (user: BotUserEntity) => boolean;
+      audienceFilter?: (user: AudienceUser) => boolean;
       messageText?: string;
       mediaUrl?: string;
       buttons?: BroadcastButton[];
+      targetFilterJson?: string | null;
+      resumeAfterId?: number;
+      estimatedTotal?: number;
     } = {},
   ): Promise<void> {
-    const bot = this.pool.getBot(botId);
-    if (!bot) {
-      await this.broadcastModel.updateStatus(broadcastId, { status: 'failed' });
-      return;
-    }
-
-    const moduleRow = await this.botModel.getModule(botId, 'broadcast');
-    const config = moduleRow?.configJson
-      ? (JSON.parse(moduleRow.configJson) as Record<string, unknown>)
-      : {};
-    const perSecond = Number(config.rateLimitPerSecond ?? 20);
-    const delayMs = Math.max(30, Math.round(1000 / Math.max(1, perSecond)));
-    const batchSize = Math.max(1, Number(config.batchSize ?? 30));
-    const pauseBetweenBatchesMs = Math.max(0, Number(config.pauseBetweenBatchesMs ?? 0));
-
-    let audience = options.overrideAudience ?? (await this.resolveAudience(botId, data));
-    if (options.audienceFilter) {
-      audience = audience.filter(options.audienceFilter);
-    }
-    await this.broadcastModel.updateStatus(broadcastId, {
-      status: 'running',
-      totalRecipients: audience.length,
-    });
-
-    const buttons = options.buttons ?? (data.buttons ? (data.buttons as BroadcastButton[]) : []);
-    const trackedButtons = await this.wrapButtonsForTracking(botId, broadcastId, buttons, config);
-    const keyboard = new InlineKeyboard();
-    for (const button of trackedButtons) {
-      keyboard.url(button.text, button.url).row();
-    }
-    const replyMarkup = buttons.length > 0 ? keyboard : undefined;
-    const mediaUrl = options.mediaUrl ?? ((data.mediaUrl as string) || undefined);
-    const messageText = options.messageText ?? (data.messageText as string);
-
-    let success = 0;
-    let failed = 0;
-    let batchCounter = 0;
-
-    for (const recipient of audience) {
-      if (this.cancelledBroadcasts.has(broadcastId)) {
-        this.cancelledBroadcasts.delete(broadcastId);
-        await this.broadcastModel.updateStatus(broadcastId, {
-          status: 'cancelled',
-          successCount: success,
-          failedCount: failed,
-        });
-        this.logger.log(`Broadcast ${broadcastId} stopped early due to cancellation`);
+    try {
+      let bot = this.pool.getBot(botId);
+      if (!bot) {
+        await this.broadcastModel.updateStatus(broadcastId, { status: 'failed' });
         return;
       }
 
-      try {
-        const mention = recipient.username
-          ? `@${recipient.username}`
-          : `<a href="tg://user?id=${recipient.telegram_id}">${recipient.first_name ?? recipient.telegram_id}</a>`;
-        const text = messageText
-          .replace(/\{first_name\}/g, recipient.first_name ?? '')
-          .replace(/\{last_name\}/g, recipient.last_name ?? '')
-          .replace(/\{username\}/g, recipient.username ?? '')
-          .replace(/\{user_id\}/g, String(recipient.telegram_id))
-          .replace(/\{mention\}/g, mention);
+      const moduleRow = await this.botModel.getModule(botId, 'broadcast');
+      const config = safeJsonObjectParse(moduleRow?.configJson, {}, 'broadcast:config');
+      const perSecond = Number(config.rateLimitPerSecond ?? 20);
+      const delayMs = Math.max(30, Math.round(1000 / Math.max(1, perSecond)));
+      const batchSize = Math.max(1, Number(config.batchSize ?? 30));
+      const pauseBetweenBatchesMs = Math.max(0, Number(config.pauseBetweenBatchesMs ?? 0));
 
-        const options_: Record<string, unknown> = {
-          parse_mode: 'HTML',
-          ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
-        };
-        if (mediaUrl) {
-          await bot.api.sendPhoto(recipient.telegram_id, mediaUrl, {
-            caption: text,
-            ...options_,
+      // Upfront total: database-side COUNT for unfiltered targets (exact);
+      // experiment slices pass an estimate (bucket math cannot run in SQL).
+      // Counters converge to exact values as the queue progresses.
+      const dataFilters = {
+        targetType: data.targetType as string | undefined,
+        language: data.language as string | undefined,
+        recentDays: data.recentDays as number | undefined,
+      };
+      const total =
+        options.estimatedTotal ?? (await this.broadcastModel.countAudience(botId, dataFilters));
+      await this.broadcastModel.updateStatus(broadcastId, {
+        status: 'running',
+        totalRecipients: total,
+      });
+
+      const buttons = options.buttons ?? (data.buttons ? (data.buttons as BroadcastButton[]) : []);
+      const trackedButtons = await this.wrapButtonsForTracking(botId, broadcastId, buttons, config);
+      const keyboard = new InlineKeyboard();
+      for (const button of trackedButtons) {
+        keyboard.url(button.text, button.url).row();
+      }
+      const replyMarkup = buttons.length > 0 ? keyboard : undefined;
+      const mediaUrl = options.mediaUrl ?? ((data.mediaUrl as string) || undefined);
+      const messageText = (options.messageText ?? data.messageText) as string;
+
+      let success = 0;
+      let failed = 0;
+      let batchCounter = 0;
+      let sinceCheckpoint = 0;
+      let lastSentId = options.resumeAfterId ?? 0;
+
+      const persistProgress = async (): Promise<void> => {
+        sinceCheckpoint = 0;
+        await this.broadcastModel
+          .updateStatus(broadcastId, {
+            successCount: success,
+            failedCount: failed,
+            sentCursor: lastSentId,
+          })
+          .catch((error: unknown) => {
+            this.logger.warn(
+              `Broadcast ${broadcastId} progress checkpoint failed: ${error instanceof Error ? error.message : String(error)}`,
+            );
           });
-        } else {
-          await bot.api.sendMessage(recipient.telegram_id, text, options_);
+      };
+
+      for await (const recipient of this.broadcastModel.iterateAudience(
+        botId,
+        dataFilters,
+        options.resumeAfterId ?? 0,
+      )) {
+        if (this.cancelledBroadcasts.has(broadcastId)) {
+          this.cancelledBroadcasts.delete(broadcastId);
+          await this.broadcastModel.updateStatus(broadcastId, {
+            status: 'cancelled',
+            successCount: success,
+            failedCount: failed,
+            sentCursor: lastSentId,
+          });
+          this.logger.log(`Broadcast ${broadcastId} stopped early due to cancellation`);
+          return;
         }
-        success++;
-      } catch (err) {
-        failed++;
-        this.logger.warn(
-          `Broadcast ${broadcastId} delivery failed for user ${recipient.telegram_id}: ${err instanceof Error ? err.message : String(err)}`,
-        );
+
+        if (options.audienceFilter && !options.audienceFilter(recipient)) {
+          lastSentId = recipient.telegram_id;
+          continue;
+        }
+
+        try {
+          // Periodically re-read the live bot so a token rotation mid-run
+          // switches to the fresh instance instead of silently failing.
+          if (batchCounter > 0 && batchCounter % BOT_REFETCH_EVERY === 0) {
+            const fresh = this.pool.getBot(botId);
+            if (fresh) bot = fresh;
+          }
+
+          // User-controlled names are escaped: they travel inside a
+          // parse_mode=HTML message and must never inject markup.
+          const mention = recipient.username
+            ? `@${recipient.username}`
+            : `<a href="tg://user?id=${recipient.telegram_id}">${escapeHtml(recipient.first_name ?? String(recipient.telegram_id))}</a>`;
+          const text = messageText
+            .replace(/\{first_name\}/g, escapeHtml(recipient.first_name ?? ''))
+            .replace(/\{last_name\}/g, escapeHtml(recipient.last_name ?? ''))
+            .replace(/\{username\}/g, escapeHtml(recipient.username ?? ''))
+            .replace(/\{user_id\}/g, String(recipient.telegram_id))
+            .replace(/\{mention\}/g, mention);
+
+          const sendOptions: Record<string, unknown> = {
+            parse_mode: 'HTML',
+            ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
+          };
+          if (mediaUrl) {
+            await bot.api.sendPhoto(recipient.telegram_id, mediaUrl, {
+              caption: text,
+              ...sendOptions,
+            });
+          } else {
+            await bot.api.sendMessage(recipient.telegram_id, text, sendOptions);
+          }
+          success++;
+        } catch (err) {
+          failed++;
+          this.logger.warn(
+            `Broadcast ${broadcastId} delivery failed for user ${recipient.telegram_id}: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        }
+
+        lastSentId = recipient.telegram_id;
+        batchCounter++;
+        sinceCheckpoint++;
+        if (sinceCheckpoint >= PROGRESS_CHECKPOINT_EVERY) {
+          await persistProgress();
+        }
+
+        if (pauseBetweenBatchesMs > 0 && batchCounter % batchSize === 0) {
+          await new Promise((resolve) => setTimeout(resolve, pauseBetweenBatchesMs));
+        } else {
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
       }
 
-      batchCounter++;
-      if (pauseBetweenBatchesMs > 0 && batchCounter % batchSize === 0) {
-        await new Promise((resolve) => setTimeout(resolve, pauseBetweenBatchesMs));
-      } else {
-        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      // Guard the final write: a cancel landing between the last loop check
+      // and here must not be overwritten with 'done'.
+      const current = await this.broadcastModel.findById(botId, broadcastId);
+      if (current?.status === 'cancelled') {
+        this.cancelledBroadcasts.delete(broadcastId);
+        await this.broadcastModel.updateStatus(broadcastId, {
+          successCount: success,
+          failedCount: failed,
+          sentCursor: lastSentId,
+        });
+        return;
       }
+
+      await this.broadcastModel.updateStatus(broadcastId, {
+        status: 'done',
+        successCount: success,
+        failedCount: failed,
+        totalRecipients: success + failed,
+        sentCursor: lastSentId,
+      });
+      this.logger.log(`Broadcast ${broadcastId} finished: ${success} sent, ${failed} failed`);
+    } catch (error) {
+      // A crash inside the queue (audience query, tracking wrap, …) must
+      // strand the row as failed with counters — never stuck in 'running'.
+      this.logger.error(
+        `Broadcast ${broadcastId} queue crashed: ${error instanceof Error ? error.stack : String(error)}`,
+      );
+      await this.broadcastModel
+        .updateStatus(broadcastId, { status: 'failed' })
+        .catch(() => undefined);
+    } finally {
+      this.cancelledBroadcasts.delete(broadcastId);
     }
-
-    await this.broadcastModel.updateStatus(broadcastId, {
-      status: 'done',
-      successCount: success,
-      failedCount: failed,
-    });
-    this.logger.log(`Broadcast ${broadcastId} finished: ${success} sent, ${failed} failed`);
   }
 
   /**
@@ -498,16 +622,24 @@ export class BroadcastService implements OnModuleInit {
   }
 
   /**
-   * Persists experiment metadata in bot_settings.
+   * Persists experiment metadata in bot_settings (awaited so a failed write
+   * surfaces before the experiment continues).
    */
-  private saveExperimentMeta(botId: number, meta: ExperimentMeta): void {
-    this.settings.setBotSetting(botId, `ab_experiment_${meta.experimentId}`, JSON.stringify(meta));
+  private async saveExperimentMeta(botId: number, meta: ExperimentMeta): Promise<void> {
+    await this.settings.setBotSetting(
+      botId,
+      `ab_experiment_${meta.experimentId}`,
+      JSON.stringify(meta),
+    );
   }
 
   /**
    * Loads experiment metadata from bot_settings.
    */
-  private loadExperimentMeta(botId: number, experimentId: string): ExperimentMeta | null {
+  private async loadExperimentMeta(
+    botId: number,
+    experimentId: string,
+  ): Promise<ExperimentMeta | null> {
     const raw = this.settings.getBotSetting(botId, `ab_experiment_${experimentId}`);
     if (!raw) return null;
     try {

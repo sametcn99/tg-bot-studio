@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Box,
@@ -11,6 +11,7 @@ import {
   DialogTitle,
   IconButton,
   InputAdornment,
+  MenuItem,
   Stack,
   Table,
   TableContainer,
@@ -28,6 +29,8 @@ import SearchIcon from '@mui/icons-material/Search';
 import DownloadIcon from '@mui/icons-material/Download';
 import { useTranslation } from 'react-i18next';
 import { apiDownload, apiFetch } from '../../services/api';
+import { useApi } from '../../hooks/useApi';
+import { parseUsersPage } from '../../utils/usersPage';
 import PageHeader from '../../components/PageHeader';
 import { LoadingState } from '../../components/Feedback';
 import { useSnackbar } from '../../context/SnackbarContext';
@@ -63,8 +66,9 @@ interface CrmUser {
 }
 
 /**
- * Audience CRM & Segmentation page: searchable subscriber table with tag and
- * note editing plus CSV/JSON export.
+ * Audience CRM & Segmentation page: server-paginated subscriber table with
+ * server-side search and tag filtering, tag and note editing, plus CSV/JSON
+ * export.
  * @param {object} props - Component props.
  * @param {number} props.botId - Active bot id.
  * @param {ModuleEntry} props.module - CRM catalog entry.
@@ -79,28 +83,50 @@ export default function UsersCrmPage({
 }): React.ReactElement {
   const { t } = useTranslation();
   const { showSuccess, showError } = useSnackbar();
-  const [users, setUsers] = useState<CrmUser[] | null>(null);
+  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
+  const [tag, setTag] = useState('');
   const [editing, setEditing] = useState<CrmUser | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const { openDocs } = useModuleDocs();
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [orderBy, setOrderBy] = useState<'name' | 'points' | 'last_seen_at'>('last_seen_at');
   const [order, setOrder] = useState<'asc' | 'desc'>('desc');
 
-  const reload = useCallback((): void => {
-    apiFetch<CrmUser[]>(`/api/bots/${botId}/users?search=${encodeURIComponent(search)}`)
-      .then(setUsers)
-      .catch((err: Error) => setError(localizedErrorMessage(err)));
-  }, [botId, search]);
-
+  // Debounced search: keystrokes land in the query only after a short pause.
   useEffect(() => {
     const timer = setTimeout(() => {
-      reload();
+      setSearch(searchInput.trim());
+      setPage(0);
     }, 350);
     return () => clearTimeout(timer);
-  }, [reload]);
+  }, [searchInput]);
+
+  const queryParams = new URLSearchParams({
+    page: String(page + 1),
+    pageSize: String(rowsPerPage),
+  });
+  if (search) queryParams.set('search', search);
+  if (tag) queryParams.set('tag', tag);
+  const query = queryParams.toString();
+
+  const {
+    data,
+    error: loadError,
+    loading,
+    reload,
+  } = useApi<unknown>(`/api/bots/${botId}/users?${query}`, [botId, search, tag, page, rowsPerPage]);
+
+  // Distinct tag inventory for the filter dropdown (single page, tiny).
+  const { data: tagsData } = useApi<string[]>(`/api/bots/${botId}/users/tags/distinct`, [botId]);
+  const availableTags = useMemo(() => tagsData ?? [], [tagsData]);
+
+  const usersPage = useMemo(
+    () => parseUsersPage<CrmUser>(data, page + 1, rowsPerPage),
+    [data, page, rowsPerPage],
+  );
+  const users = usersPage.items;
+  const [error, setError] = useState<string | null>(null);
 
   /**
    * Saves tags and notes for a subscriber.
@@ -117,9 +143,10 @@ export default function UsersCrmPage({
         showSuccess(t('crm.profileUpdated'));
         reload();
       })
-      .catch((err: Error) => {
-        setError(localizedErrorMessage(err));
-        showError(localizedErrorMessage(err));
+      .catch((err: unknown) => {
+        const message = localizedErrorMessage(err);
+        setError(message);
+        showError(message);
       });
   }
 
@@ -142,8 +169,6 @@ export default function UsersCrmPage({
       return order === 'desc' ? -diff : diff;
     });
   }, [users, orderBy, order]);
-
-  const paged = sorted.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   return (
     <Box>
@@ -175,26 +200,27 @@ export default function UsersCrmPage({
         }
       />
 
-      {error && (
+      {(loadError || error) && (
         <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
+          {loadError ?? error}
         </Alert>
       )}
 
       <Card>
-        {users === null ? (
+        {loading && data === null ? (
           <LoadingState label={t('common.loading')} />
         ) : (
           <>
-            <Stack direction="row" sx={{ p: 2 }}>
+            <Stack
+              direction="row"
+              sx={{ p: 2, flexWrap: 'wrap', gap: 1 }}
+              spacing={{ xs: 1, sm: 2 }}
+            >
               <TextField
                 size="small"
                 placeholder={t('common.search')}
-                value={search}
-                onChange={(event) => {
-                  setSearch(event.target.value);
-                  setPage(0);
-                }}
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -202,11 +228,30 @@ export default function UsersCrmPage({
                     </InputAdornment>
                   ),
                 }}
-                sx={{ maxWidth: 360 }}
+                sx={{ maxWidth: 360, flex: 1 }}
               />
+              <TextField
+                select
+                size="small"
+                label={t('crm.tagFilter')}
+                value={tag}
+                onChange={(event) => {
+                  setTag(event.target.value);
+                  setPage(0);
+                }}
+                sx={{ minWidth: 180 }}
+                disabled={availableTags.length === 0}
+              >
+                <MenuItem value="">{t('crm.allTags')}</MenuItem>
+                {availableTags.map((option) => (
+                  <MenuItem key={option} value={option}>
+                    {option}
+                  </MenuItem>
+                ))}
+              </TextField>
               <Box sx={{ flexGrow: 1 }} />
               <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center' }}>
-                {t('crm.subscriberCount', { count: (users ?? []).length })}
+                {t('crm.subscriberCount', { count: usersPage.total })}
               </Typography>
             </Stack>
             <TableContainer sx={{ overflowX: 'auto' }}>
@@ -258,7 +303,7 @@ export default function UsersCrmPage({
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {paged.map((user) => (
+                  {sorted.map((user) => (
                     <TableRow key={user.telegram_id}>
                       <TableCell>
                         <Typography variant="body2" fontWeight={600}>
@@ -286,7 +331,7 @@ export default function UsersCrmPage({
                       </TableCell>
                     </TableRow>
                   ))}
-                  {users !== null && users.length === 0 && (
+                  {sorted.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={6}>
                         <Typography color="text.secondary" align="center" sx={{ py: 3 }}>
@@ -300,7 +345,7 @@ export default function UsersCrmPage({
             </TableContainer>
             <TablePagination
               component="div"
-              count={(users ?? []).length}
+              count={usersPage.total}
               page={page}
               onPageChange={(_event, value: number) => setPage(value)}
               rowsPerPage={rowsPerPage}
@@ -330,7 +375,7 @@ export default function UsersCrmPage({
                         ...current,
                         tags: event.target.value
                           .split(',')
-                          .map((tag) => tag.trim())
+                          .map((entry) => entry.trim())
                           .filter(Boolean),
                       }
                     : current,

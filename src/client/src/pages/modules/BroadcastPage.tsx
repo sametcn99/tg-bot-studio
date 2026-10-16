@@ -21,7 +21,10 @@ import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
 import ScienceIcon from '@mui/icons-material/Science';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../../services/api';
+import { useApi } from '../../hooks/useApi';
+import { useUnsavedGuard } from '../../hooks/useUnsavedGuard';
 import PageHeader from '../../components/PageHeader';
+import { LoadingState } from '../../components/Feedback';
 import { useModuleDocs } from '../../context/ModuleDocsContext';
 import { formatDateTime } from '../../utils/format';
 import VisualButtonBuilder from '../../components/VisualButtonBuilder';
@@ -72,7 +75,6 @@ export default function BroadcastPage({
 }): React.ReactElement {
   const { t } = useTranslation();
   const { openDocs } = useModuleDocs();
-  const [rows, setRows] = useState<BroadcastRow[] | null>(null);
   const [targetType, setTargetType] = useState('all');
   const [language, setLanguage] = useState('en');
   const [recentDays, setRecentDays] = useState(7);
@@ -89,30 +91,36 @@ export default function BroadcastPage({
   const [mediaPickerFor, setMediaPickerFor] = useState<'main' | number | null>(null);
   const [translateOpen, setTranslateOpen] = useState(false);
 
+  // Broadcast history: shared fetch handle (SSE + interval + mutations all
+  // refetch through `reload`); failures surface instead of rendering empty.
+  const {
+    data: historyData,
+    error: historyError,
+    loading: historyLoading,
+    reload,
+  } = useApi<BroadcastRow[]>(`/api/bots/${botId}/broadcasts`, [botId]);
+  const rows = historyData;
+
+  // Unsaved-changes guard for the composer draft (route + tab close).
+  const hasDraft =
+    buttons.trim() !== '' ||
+    (abMode
+      ? variants.some((variant) => variant.messageText.trim() || variant.mediaUrl.trim())
+      : Boolean(messageText.trim() || mediaUrl.trim()));
+  const unsavedGuard = useUnsavedGuard(hasDraft);
+
   // SSE pings trigger an instant refetch during send-outs; the slow
   // interval is a backstop.
   useLiveStream('broadcasts', botId, reload);
 
   useEffect(() => {
-    reload();
     const timer = window.setInterval(() => {
       if (document.visibilityState === 'visible') {
         reload();
       }
     }, 15000);
     return () => window.clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [botId]);
-
-  /**
-   * Reloads broadcast history.
-   * @returns {void}
-   */
-  function reload(): void {
-    apiFetch<BroadcastRow[]>(`/api/bots/${botId}/broadcasts`)
-      .then(setRows)
-      .catch(() => undefined);
-  }
+  }, [reload]);
 
   /**
    * Cancels an active or queued broadcast.
@@ -490,41 +498,64 @@ export default function BroadcastPage({
           <Typography variant="subtitle2" sx={{ mb: 1 }} component="h3">
             {t('broadcast.history')}
           </Typography>
+          {historyError && (
+            <Alert
+              severity="error"
+              sx={{ mb: 2 }}
+              action={
+                <Button color="inherit" size="small" onClick={reload}>
+                  {t('actions.refresh')}
+                </Button>
+              }
+            >
+              {historyError}
+            </Alert>
+          )}
           <Stack spacing={2}>
-            {plainRows.map((row) => renderRow(row))}
-            {[...experiments.entries()].map(([experimentId, experimentRows]) => {
-              const testRows = experimentRows.filter((row) => row.phase === 'test');
-              const allDone = testRows.every(
-                (row) => row.status === 'done' || row.status === 'failed',
-              );
-              return (
-                <Box key={experimentId}>
-                  <Stack spacing={1}>
-                    {experimentRows.map((row) => renderRow(row, row.variant_label ?? undefined))}
-                  </Stack>
-                  {testRows.length >= 2 && allDone && (
-                    <>
-                      <Divider sx={{ my: 1 }} />
-                      <Button
-                        size="small"
-                        variant="contained"
-                        color="secondary"
-                        startIcon={<EmojiEventsIcon />}
-                        onClick={() => chooseWinner(experimentId)}
-                      >
-                        {t('broadcast.chooseWinner')}
-                      </Button>
-                    </>
-                  )}
-                </Box>
-              );
-            })}
-            {rows !== null && rows.length === 0 && (
-              <Typography color="text.secondary">{t('common.empty')}</Typography>
+            {historyLoading && rows === null ? (
+              <LoadingState label={t('common.loading')} />
+            ) : (
+              <>
+                {plainRows.map((row) => renderRow(row))}
+                {[...experiments.entries()].map(([experimentId, experimentRows]) => {
+                  const testRows = experimentRows.filter((row) => row.phase === 'test');
+                  const allDone = testRows.every(
+                    (row) => row.status === 'done' || row.status === 'failed',
+                  );
+                  return (
+                    <Box key={experimentId}>
+                      <Stack spacing={1}>
+                        {experimentRows.map((row) =>
+                          renderRow(row, row.variant_label ?? undefined),
+                        )}
+                      </Stack>
+                      {testRows.length >= 2 && allDone && (
+                        <>
+                          <Divider sx={{ my: 1 }} />
+                          <Button
+                            size="small"
+                            variant="contained"
+                            color="secondary"
+                            startIcon={<EmojiEventsIcon />}
+                            onClick={() => chooseWinner(experimentId)}
+                          >
+                            {t('broadcast.chooseWinner')}
+                          </Button>
+                        </>
+                      )}
+                    </Box>
+                  );
+                })}
+                {rows !== null && rows.length === 0 && (
+                  <Typography color="text.secondary">{t('common.empty')}</Typography>
+                )}
+              </>
             )}
           </Stack>
         </CardContent>
       </Card>
+
+      {unsavedGuard}
 
       <MediaPicker
         botId={botId}

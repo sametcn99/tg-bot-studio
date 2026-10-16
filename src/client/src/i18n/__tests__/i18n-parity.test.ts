@@ -169,3 +169,56 @@ describe('placeholder dictionary coverage', () => {
     });
   }
 });
+
+/**
+ * Extracts the `{{placeholder}}` interpolation tokens of an i18next string.
+ * Single-brace tokens (e.g. flow placeholder hints) are not interpolations
+ * and are ignored.
+ * @param {string} value - Catalog string value.
+ * @returns {string[]} Sorted placeholder names.
+ */
+function interpolationTokens(value: string): string[] {
+  return [...value.matchAll(/\{\{(\w+)\}\}/g)].map((match) => match[1]).sort();
+}
+
+describe('interpolation placeholder parity (all languages vs en)', () => {
+  for (const [code, catalogs] of Object.entries(LANGUAGES)) {
+    if (code === 'en') continue;
+    it(`keeps every {{placeholder}} of en in ${code}`, () => {
+      const problems: string[] = [];
+      for (const [path, enValue] of Object.entries(flatPairs(en))) {
+        const localeValue = getPath(catalogs.shell, path);
+        if (typeof enValue !== 'string' || typeof localeValue !== 'string') continue;
+        const expected = interpolationTokens(enValue);
+        const actual = interpolationTokens(localeValue);
+        const missing = expected.filter((token) => !actual.includes(token));
+        const extra = actual.filter((token) => !expected.includes(token));
+        if (missing.length > 0 || extra.length > 0) {
+          problems.push(
+            `${path}: en ${JSON.stringify(expected)} vs ${code} ${JSON.stringify(actual)}`,
+          );
+        }
+      }
+      expect(problems).toEqual([]);
+    });
+  }
+});
+
+/**
+ * Flattens a JSON object into dotted-path -> leaf-value pairs.
+ * @param {Json} obj - Object to flatten.
+ * @param {string} [prefix] - Recursion prefix.
+ * @returns {Record<string, unknown>} Leaf values keyed by dotted path.
+ */
+function flatPairs(obj: Json, prefix = ''): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    const path = prefix ? `${prefix}.${key}` : key;
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      Object.assign(out, flatPairs(value as Json, path));
+    } else {
+      out[path] = value;
+    }
+  }
+  return out;
+}

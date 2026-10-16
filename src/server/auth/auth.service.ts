@@ -13,6 +13,12 @@ import { PrismaService } from '../database/prisma.service';
 import { SessionModel } from './session.model';
 import type { SecurityLogEntity, SessionEntity } from './session.entity';
 import { parseUserAgent } from '../common/utils/user-agent.util';
+import {
+  DEFAULT_MASTER_KEY,
+  isDefaultJwtSecretEnv,
+  isDefaultMasterKeyEnv,
+  resolveMasterKey,
+} from './auth-defaults';
 
 /**
  * Session row persisted in the `sessions` table.
@@ -65,7 +71,7 @@ export class AuthService implements OnModuleInit {
       where: { key: 'master_key_hash' },
     });
     if (existing) return;
-    const masterKey = process.env.ADMIN_MASTER_KEY || 'admin123';
+    const masterKey = resolveMasterKey();
     const salt = new Uint8Array(16);
     crypto.getRandomValues(salt);
     const hash = await argon2id({ password: masterKey, salt, ...ARGON2_PARAMS });
@@ -73,6 +79,63 @@ export class AuthService implements OnModuleInit {
       data: { key: 'master_key_hash', value: hash },
     });
     this.logger.log('Master key seeded and hashed with Argon2id on first boot');
+  }
+
+  /**
+   * Loads the persisted failed-attempt record for an IP. Counters survive
+   * restarts (previously they reset, letting attackers wait out a reboot).
+   * @param {string} ip - Client IP address used as the throttle key.
+   * @returns {Promise<{count: number; lockedUntil: number} | null>} Persisted entry when fresh.
+   */
+  private async loadThrottle(ip: string): Promise<{ count: number; lockedUntil: number } | null> {
+    const key = `login_throttle:${ip}`;
+    const row = await this.prisma.systemSetting.findUnique({ where: { key } }).catch(() => null);
+    if (!row) return null;
+    try {
+      const parsed = JSON.parse(row.value) as { count: number; lockedUntil: number };
+      if (parsed.lockedUntil < Date.now() - 60 * 60 * 1000) {
+        await this.prisma.systemSetting.delete({ where: { key } }).catch(() => undefined);
+        return null;
+      }
+      return parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Persists the failed-attempt record so lockouts survive restarts.
+   * @param {string} ip - Client IP address used as the throttle key.
+   * @param {{count: number; lockedUntil: number}} entry - Counter and lockout deadline.
+   * @returns {Promise<void>} Resolves once persisted (failures only log).
+   */
+  private async saveThrottle(
+    ip: string,
+    entry: { count: number; lockedUntil: number },
+  ): Promise<void> {
+    await this.prisma.systemSetting
+      .upsert({
+        where: { key: `login_throttle:${ip}` },
+        create: { key: `login_throttle:${ip}`, value: JSON.stringify(entry) },
+        update: { value: JSON.stringify(entry) },
+      })
+      .catch((error: unknown) => {
+        this.logger.warn(
+          `Failed to persist login throttle state: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      });
+  }
+
+  /**
+   * Clears both the in-memory and persisted throttle state for an IP.
+   * @param {string} ip - Client IP address used as the throttle key.
+   * @returns {Promise<void>} Resolves once cleanup is attempted.
+   */
+  private async clearThrottle(ip: string): Promise<void> {
+    this.failedAttempts.delete(ip);
+    await this.prisma.systemSetting
+      .delete({ where: { key: `login_throttle:${ip}` } })
+      .catch(() => undefined);
   }
 
   /**
@@ -90,7 +153,8 @@ export class AuthService implements OnModuleInit {
     ip: string,
     userAgent: string,
   ): Promise<{ token: string; session: SessionRow }> {
-    const attempt = this.failedAttempts.get(ip);
+    const attempt = this.failedAttempts.get(ip) ?? (await this.loadThrottle(ip));
+    if (attempt) this.failedAttempts.set(ip, attempt);
     const now = Date.now();
     if (attempt && attempt.lockedUntil > now) {
       const remainingSeconds = Math.ceil((attempt.lockedUntil - now) / 1000);
@@ -111,7 +175,7 @@ export class AuthService implements OnModuleInit {
     });
     const ok = stored
       ? await argon2Verify({ password: masterKey, hash: stored.value })
-      : masterKey === (process.env.ADMIN_MASTER_KEY || 'admin123');
+      : masterKey === resolveMasterKey();
     if (!ok) {
       const currentCount = (attempt?.count ?? 0) + 1;
       let lockedUntil = 0;
@@ -120,7 +184,9 @@ export class AuthService implements OnModuleInit {
       } else if (currentCount >= 3) {
         lockedUntil = now + 30 * 1000; // 30s delay
       }
-      this.failedAttempts.set(ip, { count: currentCount, lockedUntil });
+      const entry = { count: currentCount, lockedUntil };
+      this.failedAttempts.set(ip, entry);
+      await this.saveThrottle(ip, entry);
       await this.logSecurityEvent(
         'login_failed',
         ip,
@@ -131,7 +197,7 @@ export class AuthService implements OnModuleInit {
     }
 
     // Reset failed counter on successful authentication
-    this.failedAttempts.delete(ip);
+    await this.clearThrottle(ip);
 
     const { browser, os, deviceType } = parseUserAgent(userAgent);
     const sessionId = randomUUID();
@@ -210,7 +276,7 @@ export class AuthService implements OnModuleInit {
     });
     const ok = stored
       ? await argon2Verify({ password: currentKey, hash: stored.value })
-      : currentKey === (process.env.ADMIN_MASTER_KEY || 'admin123');
+      : currentKey === resolveMasterKey();
     if (!ok) {
       await this.logSecurityEvent('master_key_change_failed', ip, null, 'Invalid current key');
       throw new UnauthorizedException('Current master key is incorrect');
@@ -264,21 +330,22 @@ export class AuthService implements OnModuleInit {
     isDefaultMasterKey: boolean;
     isDefaultJwtSecret: boolean;
   }> {
-    const isDefaultJwtSecret =
-      !process.env.JWT_SECRET ||
-      process.env.JWT_SECRET === 'tg-bot-studio-dev-secret-key-change-in-prod';
+    const isDefaultJwtSecret = isDefaultJwtSecretEnv();
     const stored = await this.prisma.systemSetting.findUnique({
       where: { key: 'master_key_hash' },
     });
     let isDefaultMasterKey: boolean;
     if (stored) {
       try {
-        isDefaultMasterKey = await argon2Verify({ password: 'admin123', hash: stored.value });
+        isDefaultMasterKey = await argon2Verify({
+          password: DEFAULT_MASTER_KEY,
+          hash: stored.value,
+        });
       } catch {
         isDefaultMasterKey = false;
       }
     } else {
-      isDefaultMasterKey = (process.env.ADMIN_MASTER_KEY || 'admin123') === 'admin123';
+      isDefaultMasterKey = isDefaultMasterKeyEnv();
     }
     return {
       isDefaultMasterKey,

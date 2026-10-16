@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { tmaFetch } from '../api';
 import { isInsideTelegram } from '../sdk/telegram';
+import { createT } from '../i18n';
 import type { TmaAppConfig } from '../App';
 
 /**
@@ -45,6 +46,7 @@ const MEDALS = ['🥇', '🥈', '🥉'];
  * @returns {React.ReactElement} The leaderboard view.
  */
 export default function Leaderboard({ config }: { config: TmaAppConfig }): React.ReactElement {
+  const t = createT(config.config);
   const [state, setState] = useState<LeaderboardState | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,7 +62,10 @@ export default function Leaderboard({ config }: { config: TmaAppConfig }): React
     return (
       <div className="card">
         <div className="muted">
-          Earn points in chats and check-ins to appear on the leaderboard.
+          {t(
+            'leaderboard.hint',
+            'Earn points in chats and check-ins to appear on the leaderboard.',
+          )}
         </div>
       </div>
     );
@@ -69,10 +74,17 @@ export default function Leaderboard({ config }: { config: TmaAppConfig }): React
   return (
     <>
       <div className="card">
-        <div style={{ fontWeight: 600, marginBottom: 4 }}>Top members</div>
+        <div style={{ fontWeight: 600, marginBottom: 4 }}>
+          {t('leaderboard.topMembers', 'Top members')}
+        </div>
         <div className="muted">
-          {state.total} ranked member{state.total === 1 ? '' : 's'}
-          {state.myPoints > 0 ? ` · you have ${state.myPoints} pts` : ''}
+          {t('leaderboard.rankedMembers', '{total} ranked member{plural}', {
+            total: state.total,
+            plural: state.total === 1 ? '' : 's',
+          })}
+          {state.myPoints > 0
+            ? ` · ${t('leaderboard.youHave', 'you have {points} pts', { points: state.myPoints })}`
+            : ''}
         </div>
       </div>
 
@@ -91,20 +103,20 @@ export default function Leaderboard({ config }: { config: TmaAppConfig }): React
               {MEDALS[entry.rank - 1] ?? `${entry.rank}.`} {entry.name}
             </span>
             <span className="muted" style={entry.isMe ? { color: '#fff' } : undefined}>
-              {entry.points} pts
+              {entry.points} {t('common.pts', 'pts')}
             </span>
           </div>
         ))}
         {state.entries.length === 0 && (
           <div className="muted" style={{ padding: 14 }}>
-            No ranked members yet — be the first!
+            {t('leaderboard.empty', 'No ranked members yet — be the first!')}
           </div>
         )}
       </div>
 
       {state.myRank !== null && (
         <div className="card">
-          <div className="muted">Your position</div>
+          <div className="muted">{t('leaderboard.yourPosition', 'Your position')}</div>
           <div style={{ fontSize: 26, fontWeight: 700 }}>#{state.myRank}</div>
         </div>
       )}

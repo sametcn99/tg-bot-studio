@@ -31,10 +31,12 @@ import BookmarkAddIcon from '@mui/icons-material/BookmarkAdd';
 import DashboardCustomizeIcon from '@mui/icons-material/DashboardCustomize';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../services/api';
+import { useApi } from '../hooks/useApi';
 import { useBots } from '../context/BotContext';
 import { useSnackbar } from '../context/SnackbarContext';
 import StatusDot from '../components/StatusDot';
 import PageHeader from '../components/PageHeader';
+import { LoadingState } from '../components/Feedback';
 import BotDiagnosticsDialog from '../components/BotDiagnosticsDialog';
 import BotPresetsDialog from '../components/BotPresetsDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -69,7 +71,14 @@ export default function BotDashboardPage(): React.ReactElement {
   const { t } = useTranslation();
   const { botId } = useParams<{ botId: string }>();
   const navigate = useNavigate();
-  const { bots, activeBot, setActiveBotId, refresh } = useBots();
+  const {
+    bots,
+    activeBot,
+    setActiveBotId,
+    refresh,
+    loading: botsLoading,
+    error: botsError,
+  } = useBots();
   const { showSuccess, showError } = useSnackbar();
 
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
@@ -90,28 +99,26 @@ export default function BotDashboardPage(): React.ReactElement {
   // File import ref
   const importFileRef = useRef<HTMLInputElement | null>(null);
 
-  const [securityPosture, setSecurityPosture] = useState<{
-    isDefaultMasterKey: boolean;
-    isDefaultJwtSecret: boolean;
-  } | null>(null);
-
   const bot = bots.find((entry) => entry.id === Number(botId)) ?? activeBot;
 
-  useEffect(() => {
-    apiFetch<{ isDefaultMasterKey: boolean; isDefaultJwtSecret: boolean }>(
-      '/api/auth/security-status',
-    )
-      .then(setSecurityPosture)
-      .catch(() => undefined);
-  }, []);
+  const {
+    data: securityPosture,
+    error: securityError,
+    reload: reloadSecurity,
+  } = useApi<{
+    isDefaultMasterKey: boolean;
+    isDefaultJwtSecret: boolean;
+  }>('/api/auth/security-status', []);
 
   const botIdNumber = bot?.id;
+  const { data: botSettings } = useApi<{ timezone: string }>(
+    botIdNumber ? `/api/bots/${botIdNumber}/settings` : null,
+    [botIdNumber],
+  );
+
   useEffect(() => {
-    if (!botIdNumber) return;
-    apiFetch<{ timezone: string }>(`/api/bots/${botIdNumber}/settings`)
-      .then((settings) => setTimezone(settings.timezone || 'UTC'))
-      .catch(() => undefined);
-  }, [botIdNumber]);
+    if (botSettings) setTimezone(botSettings.timezone || 'UTC');
+  }, [botSettings]);
 
   /**
    * Persists the bot time zone used by scheduled jobs (leaderboards etc.).
@@ -135,10 +142,27 @@ export default function BotDashboardPage(): React.ReactElement {
   }, [bot, activeBot, setActiveBotId]);
 
   if (!bot) {
+    // Deep link before the bot list resolved: show a loading state instead of
+    // the ambiguous "empty" state; on failure offer a retry.
     return (
       <Box>
         <PageHeader title={t('nav.botDashboard')} />
-        <Typography color="text.secondary">{t('common.empty')}</Typography>
+        {botsLoading ? (
+          <LoadingState label={t('common.loading')} />
+        ) : botsError ? (
+          <Alert
+            severity="error"
+            action={
+              <Button color="inherit" size="small" onClick={refresh}>
+                {t('actions.refresh')}
+              </Button>
+            }
+          >
+            {botsError}
+          </Alert>
+        ) : (
+          <Typography color="text.secondary">{t('common.empty')}</Typography>
+        )}
       </Box>
     );
   }
@@ -248,6 +272,20 @@ export default function BotDashboardPage(): React.ReactElement {
       {isInsecureUrl && (
         <Alert severity="warning" icon={<WarningAmberIcon />} sx={{ mb: 2 }}>
           {t('bots.insecureHttp')}
+        </Alert>
+      )}
+
+      {securityError && (
+        <Alert
+          severity="warning"
+          sx={{ mb: 2 }}
+          action={
+            <Button color="inherit" size="small" onClick={reloadSecurity}>
+              {t('actions.refresh')}
+            </Button>
+          }
+        >
+          {securityError}
         </Alert>
       )}
 

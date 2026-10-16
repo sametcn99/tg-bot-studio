@@ -53,12 +53,14 @@ interface WireDrag {
 
 /** Node/trigger card drag in progress. */
 interface NodeDrag {
-  kind: 'node' | 'trigger' | 'pan';
+  kind: 'node' | 'trigger' | 'pan' | 'pinch';
   pointerId: number;
   startClient: { x: number; y: number };
   startViewport: CanvasViewport;
   origins: Record<string, { x: number; y: number }>;
   moved: boolean;
+  /** Pinch start geometry (kind === 'pinch'): container-local midpoint + distance. */
+  pinch?: { startDist: number; startMid: { x: number; y: number } };
 }
 
 /** Quick "add node" menu opened by dropping on empty canvas. */
@@ -67,6 +69,14 @@ interface QuickMenu {
   graph: { x: number; y: number };
   wire: { from: string; field: CanvasWireField; buttonIndex?: number } | null;
 }
+
+/** Arrow-key nudge deltas for keyboard node movement. */
+const ARROW_DELTAS: Record<string, [number, number]> = {
+  ArrowLeft: [-1, 0],
+  ArrowRight: [1, 0],
+  ArrowUp: [0, -1],
+  ArrowDown: [0, 1],
+};
 
 /** Imperative surface exposed to the editor shell. */
 export interface FlowCanvasHandle {
@@ -164,6 +174,8 @@ function FlowCanvas(
   const [portPoints, setPortPoints] = useState<Record<string, { x: number; y: number }>>({});
   const portPointsRef = useRef<Record<string, { x: number; y: number }>>({});
   const quickMenuRef = useRef<QuickMenu | null>(null);
+  /** Live multi-touch pointers for the pinch gesture (screen coordinates). */
+  const pointersRef = useRef(new Map<number, { x: number; y: number }>());
 
   /** Mirrors props/state into refs for event handlers (post-commit). */
   useEffect(() => {
@@ -174,6 +186,9 @@ function FlowCanvas(
   });
 
   const edges = useMemo(() => collectEdges(graph), [graph]);
+
+  /** Node id -> node lookup, built once per graph change (no O(n) finds). */
+  const nodeById = useMemo(() => new Map(graph.nodes.map((node) => [node.id, node])), [graph]);
 
   /**
    * Port key for an output port of a node.
@@ -195,11 +210,46 @@ function FlowCanvas(
     };
   }, []);
 
-  /** Measures every port marker into graph coordinates after each render. */
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: re-measure on every render.
+  /**
+   * Pinch start geometry from the currently tracked pointers (container-local
+   * midpoint + distance), or null with fewer than two pointers.
+   */
+  const pinchGestureFromPointers = useCallback((): NodeDrag['pinch'] | null => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    const points = [...pointersRef.current.values()];
+    if (!rect || points.length < 2) return null;
+    return {
+      startMid: {
+        x: (points[0].x + points[1].x) / 2 - rect.left,
+        y: (points[0].y + points[1].y) / 2 - rect.top,
+      },
+      startDist: Math.max(1, Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y)),
+    };
+  }, []);
+
+  /**
+   * Re-measures every port marker into graph coordinates when the DOM
+   * geometry can have changed: graph edits (structure + card positions),
+   * trigger moves, and the auto-layout animation settling. Deliberately not
+   * on every render — port coordinates are viewport-independent graph-space
+   * values, so pan/zoom frames skip the measurement pass.
+   */
   useLayoutEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+    // Expected port keys derived from the graph — used to reject partially
+    // painted frames where some markers are not in the DOM yet.
+    const expected = new Set<string>([`${TRIGGER_NODE_ID}:out:start:`]);
+    for (const node of graph.nodes) {
+      expected.add(`${node.id}:in`);
+      for (const port of outputPorts(node, () => '')) {
+        expected.add(outKey(node.id, port.field, port.buttonIndex));
+      }
+    }
+    // These two also move ports without touching `graph` (trigger card drag,
+    // auto-layout animation end) — listed so the effect re-runs for them.
+    void triggerPos;
+    void animating;
     const rect = container.getBoundingClientRect();
     const vp = viewportRef.current;
     const next: Record<string, { x: number; y: number }> = {};
@@ -210,11 +260,19 @@ function FlowCanvas(
         y: (marker.top + marker.height / 2 - rect.top - vp.y) / vp.k,
       };
     });
-    if (JSON.stringify(next) !== JSON.stringify(portPointsRef.current)) {
+    const complete = [...expected].every((key) => Object.prototype.hasOwnProperty.call(next, key));
+    const previous = portPointsRef.current;
+    const changed =
+      Object.keys(next).length !== Object.keys(previous).length ||
+      Object.entries(next).some(([key, point]) => {
+        const old = previous[key];
+        return !old || Math.abs(old.x - point.x) > 0.01 || Math.abs(old.y - point.y) > 0.01;
+      });
+    if (complete && changed) {
       portPointsRef.current = next;
       setPortPoints(next);
     }
-  });
+  }, [graph, triggerPos, animating, outKey]);
 
   /** Zooms toward the cursor with a non-passive wheel listener. */
   useEffect(() => {
@@ -274,6 +332,7 @@ function FlowCanvas(
       const target = event.target as HTMLElement;
       if (target.closest('[data-quick-menu]')) return;
       setQuickMenu(null);
+      pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
 
       const port = target.closest<HTMLElement>('[data-port-out]');
       if (port) {
@@ -316,7 +375,7 @@ function FlowCanvas(
               origins[TRIGGER_NODE_ID] = { ...triggerPos };
               continue;
             }
-            const node = graph.nodes.find((item) => item.id === nodeId);
+            const node = nodeById.get(nodeId);
             origins[nodeId] = { x: node?.x ?? 0, y: node?.y ?? 0 };
           }
         }
@@ -333,8 +392,24 @@ function FlowCanvas(
         return;
       }
 
-      // Empty canvas: pan (selection clears via the click below).
+      // Empty canvas: pan (selection clears via the click below) — or pinch
+      // zoom once a second finger is down.
       event.preventDefault();
+      const pinch = pointersRef.current.size >= 2 ? pinchGestureFromPointers() : null;
+      if (pinch) {
+        onSelect([]);
+        dragRef.current = {
+          kind: 'pinch',
+          pointerId: event.pointerId,
+          startClient: { x: event.clientX, y: event.clientY },
+          startViewport: { ...viewportRef.current },
+          origins: {},
+          moved: false,
+          pinch,
+        };
+        event.currentTarget.setPointerCapture(event.pointerId);
+        return;
+      }
       onSelect([]);
       dragRef.current = {
         kind: 'pan',
@@ -346,7 +421,7 @@ function FlowCanvas(
       };
       event.currentTarget.setPointerCapture(event.pointerId);
     },
-    [graph.nodes, onDragStart, onSelect, selected, toGraph, triggerPos],
+    [nodeById, onDragStart, onSelect, pinchGestureFromPointers, selected, toGraph, triggerPos],
   );
 
   /**
@@ -354,6 +429,9 @@ function FlowCanvas(
    */
   const handlePointerMove = useCallback(
     (event: React.PointerEvent<HTMLDivElement>): void => {
+      if (pointersRef.current.has(event.pointerId)) {
+        pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      }
       const activeWire = wireRef.current;
       if (activeWire) {
         const cursor = toGraph(event.clientX, event.clientY);
@@ -372,6 +450,24 @@ function FlowCanvas(
       }
       const drag = dragRef.current;
       if (!drag) return;
+      if (drag.kind === 'pinch' && drag.pinch) {
+        const rect = containerRef.current?.getBoundingClientRect();
+        const points = [...pointersRef.current.values()];
+        if (!rect || points.length < 2) return;
+        const mid = {
+          x: (points[0].x + points[1].x) / 2 - rect.left,
+          y: (points[0].y + points[1].y) / 2 - rect.top,
+        };
+        const dist = Math.max(1, Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y));
+        const startVp = drag.startViewport;
+        const k = Math.min(2.5, Math.max(0.2, startVp.k * (dist / drag.pinch.startDist)));
+        // Anchor: keep the graph point under the gesture-start midpoint fixed
+        // under the live midpoint while the scale changes.
+        const anchorX = (drag.pinch.startMid.x - startVp.x) / startVp.k;
+        const anchorY = (drag.pinch.startMid.y - startVp.y) / startVp.k;
+        onViewportChange({ k, x: mid.x - anchorX * k, y: mid.y - anchorY * k });
+        return;
+      }
       if (drag.kind === 'pan') {
         onViewportChange({
           ...drag.startViewport,
@@ -401,6 +497,7 @@ function FlowCanvas(
    */
   const handlePointerUp = useCallback(
     (event: React.PointerEvent<HTMLDivElement>): void => {
+      pointersRef.current.delete(event.pointerId);
       const activeWire = wireRef.current;
       if (activeWire) {
         if (activeWire.hover) {
@@ -417,6 +514,12 @@ function FlowCanvas(
         return;
       }
       const drag = dragRef.current;
+      if (drag?.kind === 'pinch') {
+        // Pinch ends only when fewer than two fingers remain; the remaining
+        // finger does not resume panning.
+        if (pointersRef.current.size < 2) dragRef.current = null;
+        return;
+      }
       if (drag && drag.kind !== 'pan') onDragEnd(drag.moved);
       dragRef.current = null;
     },
@@ -539,6 +642,7 @@ function FlowCanvas(
     const isStart = graph.start === node.id;
     const Icon = NODE_ICONS[node.type];
     const ports = outputPorts(node, t);
+    const summary = nodeSummary(node);
     const wiredFields = new Set(
       ports
         .filter((port) => getWireTarget(node, port.field, port.buttonIndex))
@@ -554,6 +658,27 @@ function FlowCanvas(
         key={node.id}
         data-node-card
         data-node-id={node.id}
+        tabIndex={0}
+        role="button"
+        aria-label={
+          summary
+            ? `${t(`flows.nodeTypes.${node.type}`)} — ${summary}`
+            : t(`flows.nodeTypes.${node.type}`)
+        }
+        onKeyDown={(event: React.KeyboardEvent<HTMLDivElement>) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            onSelect([node.id]);
+            return;
+          }
+          const delta = ARROW_DELTAS[event.key];
+          if (!delta) return;
+          event.preventDefault();
+          const step = event.shiftKey ? 10 : 1;
+          onNodesMove({
+            [node.id]: { x: (node.x ?? 0) + delta[0] * step, y: (node.y ?? 0) + delta[1] * step },
+          });
+        }}
         sx={{
           position: 'absolute',
           width: NODE_WIDTH,
@@ -570,6 +695,7 @@ function FlowCanvas(
           userSelect: 'none',
           opacity: dimmed ? 0.45 : 1,
           '&:active': { cursor: 'grabbing' },
+          '&:focus-visible': { outline: `2px solid ${color}`, outlineOffset: 2 },
         }}
       >
         {/* Input port on the left edge */}
@@ -825,7 +951,7 @@ function FlowCanvas(
             const fromPoint = portPoints[outKey(edge.from, edge.field, edge.buttonIndex)];
             const toPoint = portPoints[`${edge.to}:in`];
             if (!fromPoint || !toPoint) return null;
-            const fromNode = graph.nodes.find((node) => node.id === edge.from);
+            const fromNode = nodeById.get(edge.from);
             const color = fromNode ? NODE_COLORS[fromNode.type] : accent;
             const isHot = hoverEdge === edge.id;
             const mid = bezierPoint(fromPoint.x, fromPoint.y, toPoint.x, toPoint.y, 0.5);
@@ -958,6 +1084,24 @@ function FlowCanvas(
         <Box
           data-node-card
           data-node-id={TRIGGER_NODE_ID}
+          tabIndex={0}
+          role="button"
+          aria-label={`${t('flows.triggerLabel')}: ${triggerLabel}`}
+          onKeyDown={(event: React.KeyboardEvent<HTMLDivElement>) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              onSelect([TRIGGER_NODE_ID]);
+              return;
+            }
+            const delta = ARROW_DELTAS[event.key];
+            if (!delta) return;
+            event.preventDefault();
+            const step = event.shiftKey ? 10 : 1;
+            onTriggerPosChange({
+              x: triggerPos.x + delta[0] * step,
+              y: triggerPos.y + delta[1] * step,
+            });
+          }}
           sx={{
             position: 'absolute',
             width: TRIGGER_WIDTH,
@@ -974,6 +1118,7 @@ function FlowCanvas(
             boxShadow: selected.includes(TRIGGER_NODE_ID)
               ? '0 0 0 2px rgba(234,179,8,0.3)'
               : 'none',
+            '&:focus-visible': { outline: '2px solid #eab308', outlineOffset: 2 },
           }}
         >
           <Stack direction="row" spacing={1} alignItems="center">

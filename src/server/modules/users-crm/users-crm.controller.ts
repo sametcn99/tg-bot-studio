@@ -12,19 +12,29 @@ export class UsersCrmController {
   constructor(private readonly crmService: UsersCrmService) {}
 
   /**
-   * Lists subscribers with optional `search` and `tag` filters.
+   * Lists subscribers with optional `search` and `tag` filters, evaluated
+   * server-side with pagination: responds `{items, total, page, pageSize}`.
    * @param {number} botId - Owning bot id.
    * @param {string} [search] - Free-text match on username/name/id.
    * @param {string} [tag] - Required tag.
-   * @returns {Promise<object[]>} Subscriber profiles.
+   * @param {string} [page] - 1-based page number.
+   * @param {string} [pageSize] - Page size (default 50, max 200).
+   * @returns {Promise<object>} Paginated subscriber page.
    */
   @Get()
   list(
     @Param('botId', ParseIntPipe) botId: number,
     @Query('search') search?: string,
     @Query('tag') tag?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
   ) {
-    return this.crmService.list(botId, { search, tag });
+    return this.crmService.listPage(botId, {
+      search,
+      tag,
+      page: Number(page) || 1,
+      pageSize: Number(pageSize) || 50,
+    });
   }
 
   /**

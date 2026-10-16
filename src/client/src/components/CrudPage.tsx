@@ -29,6 +29,7 @@ import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../services/api';
+import { useUnsavedGuard } from '../hooks/useUnsavedGuard';
 import PageHeader from './PageHeader';
 import ConfirmDialog from './ConfirmDialog';
 import DataTable, { type Column } from './DataTable';
@@ -123,15 +124,9 @@ export default function CrudPage({
       .catch(() => undefined);
   }, [reload, botId, module.key]);
 
-  // Warn before leaving with an open dialog or unsaved module config.
-  useEffect(() => {
-    if (!form && !configDirty) return;
-    const handler = (event: BeforeUnloadEvent): void => {
-      event.preventDefault();
-    };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
-  }, [form, configDirty]);
+  // Warn before leaving with an open dialog or unsaved module config — both
+  // on tab close/reload (beforeunload) and on in-app route changes (blocker).
+  const unsavedGuard = useUnsavedGuard(Boolean(form) || configDirty);
 
   /** The form field driving row order, when the resource is ordered. */
   const orderField = useMemo(
@@ -607,6 +602,8 @@ export default function CrudPage({
         onConfirm={confirmDelete}
         onCancel={() => setDeleting(null)}
       />
+
+      {unsavedGuard}
     </Box>
   );
 }
@@ -735,16 +732,41 @@ function CrudFormField({
         />
       );
     case 'datetime': {
+      /**
+       * Formats an ISO timestamp (or any Date-parseable value) as the local
+       * `YYYY-MM-DDTHH:mm` string a datetime-local input expects.
+       * @param {unknown} iso - Stored value.
+       * @returns {string} Local input value ('' when absent/invalid).
+       */
+      const toLocalInput = (iso: unknown): string => {
+        if (typeof iso !== 'string' || iso === '') return '';
+        const parsed = new Date(iso);
+        if (Number.isNaN(parsed.getTime())) return '';
+        const pad = (part: number): string => String(part).padStart(2, '0');
+        return `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())}T${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`;
+      };
       const setOffset = (minutes: number) => {
         onChange(new Date(Date.now() + minutes * 60000).toISOString());
       };
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
       return (
         <Stack spacing={0.5}>
           <TextField
             {...common}
-            placeholder="2026-01-01T12:00:00.000Z"
-            value={String(value ?? '')}
-            onChange={(event) => onChange(event.target.value)}
+            type="datetime-local"
+            value={toLocalInput(value)}
+            helperText={t('common.datetimeTzHint', { tz: timezone })}
+            onChange={(event) => {
+              const input = event.target.value;
+              if (!input) {
+                onChange('');
+                return;
+              }
+              // datetime-local values are interpreted in the operator's local
+              // timezone; persist ISO-8601 UTC like the API expects.
+              const parsed = new Date(input);
+              onChange(Number.isNaN(parsed.getTime()) ? input : parsed.toISOString());
+            }}
           />
           <Stack direction="row" spacing={0.5} sx={{ pt: 0.5 }}>
             <Chip size="small" label={t('common.now')} onClick={() => setOffset(0)} />

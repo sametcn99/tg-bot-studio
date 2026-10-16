@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, ParseIntPipe, Post, Sse } from '@nestjs/common';
 import type { MessageEvent } from '@nestjs/common';
 import { BroadcastService } from './broadcast.service';
+import { CreateBroadcastDto } from './dto/broadcast.dto';
 import { LiveEventsService } from '../../common/live/live-events.service';
 
 /**
@@ -37,15 +38,15 @@ export class BroadcastController {
   }
 
   /**
-   * Queues a new broadcast.
+   * Queues a new broadcast (validated DTO: text/media/button/variant caps).
    * @param {number} botId - Owning bot id.
-   * @param {Record<string, unknown>} body - targetType, language, recentDays,
-   * messageText, mediaUrl, buttons.
-   * @returns {object} Queued broadcast row.
+   * @param {CreateBroadcastDto} body - targetType, language, recentDays,
+   * messageText, mediaUrl, buttons, variants, testSplitPercent.
+   * @returns {object} Queued broadcast row(s).
    */
   @Post()
-  create(@Param('botId', ParseIntPipe) botId: number, @Body() body: Record<string, unknown>) {
-    return this.service.create(botId, body);
+  create(@Param('botId', ParseIntPipe) botId: number, @Body() body: CreateBroadcastDto) {
+    return this.service.create(botId, body as unknown as Record<string, unknown>);
   }
 
   /**
@@ -68,6 +69,18 @@ export class BroadcastController {
   @Post(':id/cancel')
   cancel(@Param('botId', ParseIntPipe) botId: number, @Param('id', ParseIntPipe) id: number) {
     return this.service.cancel(botId, id);
+  }
+
+  /**
+   * Resumes an interrupted broadcast from its persisted progress cursor;
+   * recipients already processed before the interruption are skipped.
+   * @param {number} botId - Owning bot id.
+   * @param {number} id - Interrupted broadcast identifier.
+   * @returns {Promise<object>} Broadcast row re-queued for delivery.
+   */
+  @Post(':id/resume')
+  resume(@Param('botId', ParseIntPipe) botId: number, @Param('id', ParseIntPipe) id: number) {
+    return this.service.resume(botId, id);
   }
 
   /**

@@ -107,9 +107,20 @@ export class FlowsRuntime extends BotModuleHandler implements OnModuleDestroy {
       await this.executeFrom(bot, botId, flowId, graph, update.from.id, targetId, vars);
     });
 
-    // Delay sweeper: resume flows whose wait elapsed.
+    // Delay sweeper: resume flows whose wait elapsed. Clear any previous
+    // ticker first — `register` runs on every restart/retry, and the old
+    // interval (holding the dead Bot instance) used to leak per restart.
+    // The sandbox simulator never registers a sweeper: its fake API would
+    // advance REAL users' sessions without delivering anything.
+    if (ctx.sandbox) return;
+    const previous = this.tickers.get(botId);
+    if (previous) clearInterval(previous);
     const ticker = setInterval(() => {
-      void this.resumeDueFlows(bot, botId);
+      void this.resumeDueFlows(bot, botId).catch((error: unknown) => {
+        this.logger.warn(
+          `Flow sweeper failed for bot ${botId}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      });
     }, 30_000);
     this.tickers.set(botId, ticker);
   }

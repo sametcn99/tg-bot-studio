@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Enterprise phone simulator embedding the given URL inside a device frame.
@@ -16,6 +17,7 @@ export default function PhonePreview({
   url: string;
   label?: string;
 }): React.ReactElement {
+  const { t } = useTranslation();
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
       <Box
@@ -49,13 +51,13 @@ export default function PhonePreview({
           <Box
             component="iframe"
             src={url}
-            title="Mini App preview"
+            title={t('miniApps.previewTitle')}
             sx={{ border: 0, flex: 1, width: '100%' }}
           />
         ) : (
           <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Typography variant="caption" color="text.secondary">
-              No preview URL
+              {t('miniApps.noPreviewUrl')}
             </Typography>
           </Box>
         )}

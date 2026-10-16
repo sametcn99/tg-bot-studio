@@ -1,4 +1,4 @@
-import { createHmac } from 'node:crypto';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 
 /**
  * Telegram API integration helpers shared across services.
@@ -64,31 +64,48 @@ export async function callGetMe(token: string): Promise<GetMeResult> {
 /**
  * Parsed Telegram Mini App `initData` validation outcome.
  * @interface InitDataValidation
- * @property {boolean} valid - True when the HMAC-SHA256 signature matches.
+ * @property {boolean} valid - True when the HMAC-SHA256 signature matches and
+ * the payload is fresh.
  * @property {number} [userId] - Telegram id of the Mini App user.
  * @property {string} [raw] - Original initData string.
+ * @property {'signature' | 'expired' | 'malformed'} [reason] - Rejection cause.
  */
 export interface InitDataValidation {
   valid: boolean;
   userId?: number;
   raw?: string;
+  reason?: 'signature' | 'expired' | 'malformed';
 }
 
 /**
+ * Maximum age of `initData` `auth_date`. Following Telegram's guidance,
+ * initData is treated as a short-lived credential: an intercepted query
+ * string older than this is rejected and cannot be replayed forever.
+ */
+export const INIT_DATA_MAX_AGE_SECONDS = 24 * 60 * 60;
+
+/**
  * Validates Telegram Mini App `initData` using the official HMAC-SHA256
- * scheme (secret = HMAC("WebAppData", botToken)).
+ * scheme (secret = HMAC("WebAppData", botToken)). The hash comparison is
+ * constant-time and `auth_date` must be fresher than
+ * {@link INIT_DATA_MAX_AGE_SECONDS} (replay protection).
  *
  * @param {string} initData - Raw initData query string from the WebApp SDK.
  * @param {string} botToken - Token of the bot owning the Mini App.
+ * @param {number} [maxAgeSeconds] - Freshness window override (tests).
  * @returns {InitDataValidation} Validation result including the parsed user id.
  * @example
  * const check = validateInitData(initData, botToken);
  */
-export function validateInitData(initData: string, botToken: string): InitDataValidation {
+export function validateInitData(
+  initData: string,
+  botToken: string,
+  maxAgeSeconds: number = INIT_DATA_MAX_AGE_SECONDS,
+): InitDataValidation {
   try {
     const params = new URLSearchParams(initData);
     const providedHash = params.get('hash');
-    if (!providedHash) return { valid: false };
+    if (!providedHash) return { valid: false, reason: 'malformed' };
 
     params.delete('hash');
     const dataCheckString = [...params.entries()]
@@ -97,9 +114,23 @@ export function validateInitData(initData: string, botToken: string): InitDataVa
       .join('\n');
 
     const secretKey = createHmac('sha256', 'WebAppData').update(botToken).digest();
-    const computedHash = createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
+    const computedHash = createHmac('sha256', secretKey).update(dataCheckString).digest();
 
-    if (computedHash !== providedHash) return { valid: false };
+    const providedBuffer = Buffer.from(providedHash, 'hex');
+    if (
+      providedBuffer.length !== computedHash.length ||
+      !timingSafeEqual(providedBuffer, computedHash)
+    ) {
+      return { valid: false, reason: 'signature' };
+    }
+
+    const authDate = Number(params.get('auth_date'));
+    if (!Number.isFinite(authDate) || authDate <= 0) {
+      return { valid: false, reason: 'malformed' };
+    }
+    if (authDate * 1000 < Date.now() - maxAgeSeconds * 1000) {
+      return { valid: false, reason: 'expired' };
+    }
 
     let userId: number | undefined;
     const userRaw = params.get('user');
@@ -109,6 +140,6 @@ export function validateInitData(initData: string, botToken: string): InitDataVa
     }
     return { valid: true, userId, raw: initData };
   } catch {
-    return { valid: false };
+    return { valid: false, reason: 'malformed' };
   }
 }

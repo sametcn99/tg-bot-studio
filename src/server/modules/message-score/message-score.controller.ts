@@ -10,6 +10,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { MessageScoreService, type ScorePeriod } from './message-score.service';
+import { ScorePayloadDto } from './dto/message-score.dto';
 
 /**
  * Message Score & Activity Leaderboard endpoints: leaderboard reads,
@@ -48,23 +49,23 @@ export class MessageScoreController {
   /**
    * Renders the leaderboard message for the requested chats without sending.
    * @param {number} botId - Owning bot id.
-   * @param {Record<string, unknown>} body - chatIds, period, format fields.
+   * @param {ScorePayloadDto} body - chatIds, period, format fields.
    * @returns {object[]} Per-chat rendered previews.
    */
   @Post('preview')
-  preview(@Param('botId', ParseIntPipe) botId: number, @Body() body: Record<string, unknown>) {
-    return this.service.preview(botId, body);
+  preview(@Param('botId', ParseIntPipe) botId: number, @Body() body: ScorePayloadDto) {
+    return this.service.preview(botId, body as unknown as Record<string, unknown>);
   }
 
   /**
    * Sends the leaderboard message to the requested chats right away.
    * @param {number} botId - Owning bot id.
-   * @param {Record<string, unknown>} body - chatIds, period, format fields.
+   * @param {ScorePayloadDto} body - chatIds, period, format fields.
    * @returns {Promise<object[]>} Per-chat delivery results.
    */
   @Post('send')
-  send(@Param('botId', ParseIntPipe) botId: number, @Body() body: Record<string, unknown>) {
-    return this.service.sendNow(botId, body);
+  send(@Param('botId', ParseIntPipe) botId: number, @Body() body: ScorePayloadDto) {
+    return this.service.sendNow(botId, body as unknown as Record<string, unknown>);
   }
 
   /**
@@ -80,31 +81,28 @@ export class MessageScoreController {
   /**
    * Creates a scheduled leaderboard posting.
    * @param {number} botId - Owning bot id.
-   * @param {Record<string, unknown>} body - Schedule payload.
+   * @param {ScorePayloadDto} body - Schedule payload.
    * @returns {object} Created schedule.
    */
   @Post('schedules')
-  createSchedule(
-    @Param('botId', ParseIntPipe) botId: number,
-    @Body() body: Record<string, unknown>,
-  ) {
-    return this.service.createSchedule(botId, body);
+  createSchedule(@Param('botId', ParseIntPipe) botId: number, @Body() body: ScorePayloadDto) {
+    return this.service.createSchedule(botId, body as unknown as Record<string, unknown>);
   }
 
   /**
    * Updates a scheduled leaderboard posting.
    * @param {number} botId - Owning bot id.
    * @param {number} id - Schedule identifier.
-   * @param {Record<string, unknown>} body - Patch fields.
+   * @param {ScorePayloadDto} body - Patch fields.
    * @returns {object} Updated schedule.
    */
   @Patch('schedules/:id')
   updateSchedule(
     @Param('botId', ParseIntPipe) botId: number,
     @Param('id', ParseIntPipe) id: number,
-    @Body() body: Record<string, unknown>,
+    @Body() body: ScorePayloadDto,
   ) {
-    return this.service.updateSchedule(botId, id, body);
+    return this.service.updateSchedule(botId, id, body as unknown as Record<string, unknown>);
   }
 
   /**

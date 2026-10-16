@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { tmaFetch } from '../api';
 import { haptic, isInsideTelegram, webApp } from '../sdk/telegram';
+import { createT } from '../i18n';
 import type { TmaAppConfig } from '../App';
 
 /**
@@ -11,13 +12,17 @@ import type { TmaAppConfig } from '../App';
  * @returns {React.ReactElement} The support desk view.
  */
 export default function Support({ config }: { config: TmaAppConfig }): React.ReactElement {
+  const t = createT(config.config);
   const [message, setMessage] = useState('');
   const [status, setStatus] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
 
   const greeting = String(
     config.config.greeting ??
-      'Describe your issue and our team will reply here or in the bot chat.',
+      t(
+        'support.greetingFallback',
+        'Describe your issue and our team will reply here or in the bot chat.',
+      ),
   );
 
   /**
@@ -38,10 +43,10 @@ export default function Support({ config }: { config: TmaAppConfig }): React.Rea
         body: JSON.stringify({ message, senderName: senderName || undefined }),
       });
       haptic('medium');
-      setStatus('Your request has been sent. We will get back to you soon.');
+      setStatus(t('support.sent', 'Your request has been sent. We will get back to you soon.'));
       setMessage('');
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Submission failed');
+      setStatus(error instanceof Error ? error.message : t('support.failed', 'Submission failed'));
     } finally {
       setSending(false);
     }
@@ -54,7 +59,7 @@ export default function Support({ config }: { config: TmaAppConfig }): React.Rea
         <div className="field" style={{ marginTop: 10 }}>
           <textarea
             style={{ minHeight: 120, resize: 'vertical' }}
-            placeholder="How can we help?"
+            placeholder={t('support.placeholder', 'How can we help?')}
             value={message}
             maxLength={3500}
             onChange={(event) => setMessage(event.target.value)}
@@ -66,7 +71,7 @@ export default function Support({ config }: { config: TmaAppConfig }): React.Rea
           onClick={() => void submit()}
           disabled={sending || !message.trim() || !isInsideTelegram()}
         >
-          {sending ? 'Sending…' : 'Send request'}
+          {sending ? t('support.sending', 'Sending…') : t('support.send', 'Send request')}
         </button>
       </div>
       {status && (

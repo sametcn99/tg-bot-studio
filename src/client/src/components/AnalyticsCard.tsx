@@ -1,6 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
+  Alert,
   Box,
+  Button,
   Card,
   CardContent,
   Chip,
@@ -10,9 +12,9 @@ import {
   Typography,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-import { apiFetch } from '../services/api';
+import { useApi } from '../hooks/useApi';
+import { LoadingState } from './Feedback';
 import { formatNumber } from '../utils/format';
-import { localizedErrorMessage } from '../utils/errors';
 
 /** One day of aggregated activity from the analytics endpoint. */
 interface ActivityDay {
@@ -39,14 +41,10 @@ interface BotAnalytics {
 export default function AnalyticsCard({ botId }: { botId: number }): React.ReactElement {
   const { t } = useTranslation();
   const [days, setDays] = useState<7 | 30>(7);
-  const [data, setData] = useState<BotAnalytics | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    apiFetch<BotAnalytics>(`/api/bots/${botId}/analytics?days=${days}`)
-      .then(setData)
-      .catch((err: Error) => setError(localizedErrorMessage(err)));
-  }, [botId, days]);
+  const { data, error, loading, reload } = useApi<BotAnalytics>(
+    `/api/bots/${botId}/analytics?days=${days}`,
+    [botId, days],
+  );
 
   const chart = useMemo(() => {
     if (!data) return null;
@@ -108,12 +106,21 @@ export default function AnalyticsCard({ botId }: { botId: number }): React.React
           </Stack>
         </Stack>
         {error ? (
-          <Typography variant="body2" color="text.secondary">
+          <Alert
+            severity="error"
+            action={
+              <Button color="inherit" size="small" onClick={reload}>
+                {t('actions.refresh')}
+              </Button>
+            }
+          >
             {error}
-          </Typography>
+          </Alert>
+        ) : loading && !data ? (
+          <LoadingState label={t('common.loading')} />
         ) : !chart ? (
           <Typography variant="body2" color="text.secondary">
-            {t('common.loading')}
+            {t('common.empty')}
           </Typography>
         ) : (
           <Box sx={{ overflowX: 'auto' }} role="img" aria-label={t('analytics.title')}>

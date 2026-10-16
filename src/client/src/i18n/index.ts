@@ -1,13 +1,10 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
+// English ships with the entry chunk as the fallback language; every other
+// catalog is loaded on demand (see `ensureLanguage`) so the initial bundle
+// only carries one language pair.
 import en from './locales/en.json';
-import tr from './locales/tr.json';
-import de from './locales/de.json';
-import ru from './locales/ru.json';
 import modulesEn from './locales/modules.en.json';
-import modulesTr from './locales/modules.tr.json';
-import modulesDe from './locales/modules.de.json';
-import modulesRu from './locales/modules.ru.json';
 
 /**
  * Every supported dashboard language with its native display name. The list
@@ -52,16 +49,33 @@ function deepMerge(
   return out;
 }
 
-/** Shell + module catalogs per language code. */
-const CATALOGS: Record<
-  string,
-  { shell: Record<string, unknown>; modules: Record<string, unknown> }
-> = {
-  en: { shell: en as Record<string, unknown>, modules: modulesEn as Record<string, unknown> },
-  tr: { shell: tr as Record<string, unknown>, modules: modulesTr as Record<string, unknown> },
-  de: { shell: de as Record<string, unknown>, modules: modulesDe as Record<string, unknown> },
-  ru: { shell: ru as Record<string, unknown>, modules: modulesRu as Record<string, unknown> },
-};
+/** Language codes whose shell + modules catalogs are already registered. */
+const loadedLanguages = new Set<string>(['en']);
+
+/**
+ * Loads the shell + modules catalogs for `code` via dynamic import and
+ * registers them as the `translation` bundle. Resolves immediately when the
+ * catalogs are already loaded (idempotent).
+ * @param {string} code - Language code to load.
+ * @returns {Promise<void>} Resolves once resources for `code` are available.
+ */
+export async function ensureLanguage(code: string): Promise<void> {
+  if (loadedLanguages.has(code)) return;
+  loadedLanguages.add(code);
+  const [shell, modules] = await Promise.all([
+    import(`./locales/${code}.json`),
+    import(`./locales/modules.${code}.json`),
+  ]);
+  i18n.addResourceBundle(
+    code,
+    'translation',
+    deepMerge(shell.default as Record<string, unknown>, {
+      modules: modules.default as Record<string, unknown>,
+    }),
+    true,
+    true,
+  );
+}
 
 /** First-run language: follow the browser locale (Turkish market first). */
 function detectLanguage(): string {
@@ -84,19 +98,39 @@ function applyDocumentLanguage(code: string): void {
   document.documentElement.dir = code === 'ar' || code === 'fa' ? 'rtl' : 'ltr';
 }
 
+const initialLanguage = detectLanguage();
+
 void i18n.use(initReactI18next).init({
-  resources: Object.fromEntries(
-    Object.entries(CATALOGS).map(([code, catalogs]) => [
-      code,
-      { translation: deepMerge(catalogs.shell, { modules: catalogs.modules }) },
-    ]),
-  ),
-  lng: detectLanguage(),
+  resources: {
+    en: {
+      translation: deepMerge(en as Record<string, unknown>, {
+        modules: modulesEn as Record<string, unknown>,
+      }),
+    },
+  },
+  lng: 'en',
   fallbackLng: 'en',
   interpolation: { escapeValue: false },
+  // The tree is not wrapped in a Suspense boundary for translations; key
+  // flashes are preferable to suspension while lazy catalogs load.
+  react: { useSuspense: false },
 });
 
-applyDocumentLanguage(i18n.language);
+applyDocumentLanguage(initialLanguage);
 i18n.on('languageChanged', applyDocumentLanguage);
+i18n.on('languageChanged', (code) => {
+  // Safety net: any language change (including direct i18n.changeLanguage
+  // calls) makes sure its catalogs exist.
+  void ensureLanguage(code);
+});
+
+// Switch to the detected language once its catalogs arrive — the first paint
+// renders in English (the fallback) for non-English operators instead of
+// flashing raw keys.
+if (initialLanguage !== 'en') {
+  void ensureLanguage(initialLanguage).then(() => {
+    void i18n.changeLanguage(initialLanguage);
+  });
+}
 
 export default i18n;

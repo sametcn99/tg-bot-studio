@@ -80,3 +80,43 @@ export class HealthEventsController {
     return this.service.listEvents();
   }
 }
+
+/**
+ * Studio-global operator alert transport (fallback bot for critical alerts
+ * the sick bot itself cannot deliver).
+ */
+@Controller('settings/health-operator')
+export class HealthOperatorController {
+  /**
+   * @param {HealthMonitorService} service - Health monitor service.
+   */
+  constructor(private readonly service: HealthMonitorService) {}
+
+  /**
+   * Reads the operator alert transport.
+   * @returns {Promise<object>} `{botToken, chatId}` (token masked when set).
+   */
+  @Get()
+  async get() {
+    const settings = await this.service.getOperatorSettings();
+    return {
+      botToken: settings.botToken ? `${settings.botToken.slice(0, 6)}…` : '',
+      chatId: settings.chatId,
+      configured: Boolean(settings.botToken && settings.chatId),
+    };
+  }
+
+  /**
+   * Stores the operator alert transport.
+   * @param {object} body - `{botToken, chatId}`.
+   * @returns {Promise<object>} Stored values (token masked when set).
+   */
+  @Put()
+  async update(@Body() body: { botToken?: string; chatId?: string }) {
+    await this.service.updateOperatorSettings({
+      botToken: String(body.botToken ?? ''),
+      chatId: String(body.chatId ?? ''),
+    });
+    return this.get();
+  }
+}

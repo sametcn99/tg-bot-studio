@@ -1,8 +1,29 @@
 import { Injectable } from '@nestjs/common';
-import type { Broadcast } from '@prisma/client';
+import type { Broadcast, Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { LiveEventsService } from '../../common/live/live-events.service';
-import type { BotUserEntity } from '../users-crm/bot-user.entity';
+
+/**
+ * Lean audience member handed to the broadcast queue. Single shape (no
+ * duplicated snake/camel copies) to keep per-recipient allocation minimal on
+ * large audiences.
+ */
+export interface AudienceUser {
+  telegram_id: number;
+  username: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  language_code: string | null;
+}
+
+/** Shared filter shape for audience queries. */
+export interface AudienceFilter {
+  targetType?: string;
+  language?: string;
+  recentDays?: number;
+}
+
+const AUDIENCE_BATCH_SIZE = 500;
 
 /**
  * Model managing Broadcast entities and audience queries via Prisma.
@@ -42,6 +63,7 @@ export class BroadcastModel {
     messageText: string;
     mediaUrl?: string | null;
     buttonsJson?: string | null;
+    targetFilterJson?: string | null;
   }): Promise<Broadcast> {
     const created = await this.prisma.broadcast.create({
       data: {
@@ -50,6 +72,7 @@ export class BroadcastModel {
         messageText: data.messageText,
         mediaUrl: data.mediaUrl ?? null,
         buttonsJson: data.buttonsJson ?? null,
+        targetFilterJson: data.targetFilterJson ?? null,
         totalRecipients: 0,
         successCount: 0,
         failedCount: 0,
@@ -62,7 +85,7 @@ export class BroadcastModel {
   }
 
   /**
-   * Updates status, counters, or experiment metadata of a broadcast.
+   * Updates status, counters, cursor, or experiment metadata of a broadcast.
    */
   async updateStatus(
     id: number,
@@ -71,6 +94,7 @@ export class BroadcastModel {
       totalRecipients?: number;
       successCount?: number;
       failedCount?: number;
+      sentCursor?: bigint | number | null;
       experimentId?: string;
       variantLabel?: string;
       phase?: string;
@@ -78,7 +102,15 @@ export class BroadcastModel {
   ): Promise<Broadcast> {
     const updated = await this.prisma.broadcast.update({
       where: { id },
-      data,
+      data: {
+        ...data,
+        sentCursor:
+          data.sentCursor === null
+            ? null
+            : data.sentCursor !== undefined
+              ? BigInt(data.sentCursor)
+              : undefined,
+      },
     });
     this.live.emit('broadcasts', updated.botId);
     return updated;
@@ -96,60 +128,76 @@ export class BroadcastModel {
   }
 
   /**
-   * Resolves target audience for a broadcast.
+   * Builds the Prisma `where` clause for an audience filter.
+   * @param {number} botId - Owning bot id.
+   * @param {AudienceFilter} data - Target filters.
+   * @returns {Prisma.BotUserWhereInput} Prisma where clause.
    */
-  async resolveAudience(
-    botId: number,
-    data: {
-      targetType?: string;
-      language?: string;
-      recentDays?: number;
-    },
-  ): Promise<BotUserEntity[]> {
+  private audienceWhere(botId: number, data: AudienceFilter): Prisma.BotUserWhereInput {
     const targetType = data.targetType ?? 'all';
-    let whereClause: Record<string, unknown> = { botId };
-
     if (targetType === 'language') {
-      whereClause = {
-        botId,
-        languageCode: data.language ?? 'en',
-      };
-    } else if (targetType === 'recent') {
+      return { botId, languageCode: data.language ?? 'en' };
+    }
+    if (targetType === 'recent') {
       const days = Number(data.recentDays ?? 7);
       const since = new Date(Date.now() - days * 86_400_000).toISOString();
-      whereClause = {
-        botId,
-        lastSeenAt: { gte: since },
-      };
+      return { botId, lastSeenAt: { gte: since } };
     }
+    return { botId };
+  }
 
-    const rows = await this.prisma.botUser.findMany({
-      where: whereClause,
-      orderBy: { lastSeenAt: 'desc' },
+  /**
+   * Counts the audience for a filter with a database-side COUNT — no row
+   * hydration. Used for upfront `totalRecipients`.
+   */
+  async countAudience(botId: number, data: AudienceFilter): Promise<number> {
+    return this.prisma.botUser.count({
+      where: this.audienceWhere(botId, data),
     });
+  }
 
-    return rows.map((r) => ({
-      bot_id: r.botId,
-      telegram_id: Number(r.telegramId),
-      username: r.username,
-      first_name: r.firstName,
-      last_name: r.lastName,
-      language_code: r.languageCode,
-      points: r.points,
-      referrer_id: r.referrerId ? Number(r.referrerId) : null,
-      tags_json: r.tagsJson,
-      first_seen_at: r.firstSeenAt,
-      last_seen_at: r.lastSeenAt,
-      botId: r.botId,
-      telegramId: Number(r.telegramId),
-      firstName: r.firstName,
-      lastName: r.lastName,
-      languageCode: r.languageCode,
-      referrerId: r.referrerId ? Number(r.referrerId) : null,
-      tagsJson: r.tagsJson,
-      firstSeenAt: r.firstSeenAt,
-      lastSeenAt: r.lastSeenAt,
-    }));
+  /**
+   * Iterates the audience in deterministic telegram-id order using cursor
+   * pagination, so a million-user broadcast never hydrates the whole table
+   * into memory. Each batch is fetched only after the previous one is
+   * consumed.
+   * @param {number} botId - Owning bot id.
+   * @param {AudienceFilter} data - Target filters.
+   * @param {number} [startAfterId] - Resume cursor: only ids greater than this are yielded.
+   * @yields {AudienceUser} Next audience member.
+   */
+  async *iterateAudience(
+    botId: number,
+    data: AudienceFilter,
+    startAfterId = 0,
+  ): AsyncGenerator<AudienceUser, void, unknown> {
+    let cursor = BigInt(startAfterId);
+    for (;;) {
+      const rows = await this.prisma.botUser.findMany({
+        where: { ...this.audienceWhere(botId, data), telegramId: { gt: cursor } },
+        orderBy: { telegramId: 'asc' },
+        take: AUDIENCE_BATCH_SIZE,
+        select: {
+          telegramId: true,
+          username: true,
+          firstName: true,
+          lastName: true,
+          languageCode: true,
+        },
+      });
+      if (rows.length === 0) return;
+      for (const r of rows) {
+        cursor = r.telegramId;
+        yield {
+          telegram_id: Number(r.telegramId),
+          username: r.username,
+          first_name: r.firstName,
+          last_name: r.lastName,
+          language_code: r.languageCode,
+        };
+      }
+      if (rows.length < AUDIENCE_BATCH_SIZE) return;
+    }
   }
 
   /**
@@ -168,24 +216,50 @@ export class BroadcastModel {
   }
 
   /**
-   * Sums redirect-link clicks tagged `bc:<broadcastId>:` back into
-   * `broadcasts.clicks` for the given rows (CTR tracking).
-   * @param {Broadcast[]} rows - Broadcast rows to reconcile (recent subset).
-   * @returns {Promise<Broadcast[]>} The same rows with up-to-date clicks.
+   * Concludes an A/B experiment atomically: closes the still-queued losing
+   * variants and creates the winner rollout row in one transaction, so a
+   * crash cannot leave losers open without a rollout (or vice versa).
+   * @param {number} botId - Owning bot id.
+   * @param {number[]} loserQueuedIds - Still-queued variant rows to cancel.
+   * @param {object} rollout - Rollout broadcast payload.
+   * @returns {Promise<Broadcast>} Created rollout row.
    */
-  async syncClickCounts(rows: Broadcast[]): Promise<Broadcast[]> {
-    for (const row of rows.slice(0, 50)) {
-      const links = await this.prisma.link.findMany({
-        where: { botId: row.botId, title: { startsWith: `bc:${row.id}:` } },
-        select: { clickCount: true },
-      });
-      const total = links.reduce((sum, link) => sum + link.clickCount, 0);
-      if (total !== row.clicks) {
-        await this.prisma.broadcast.update({ where: { id: row.id }, data: { clicks: total } });
-        row.clicks = total;
+  async concludeExperiment(
+    botId: number,
+    loserQueuedIds: number[],
+    rollout: {
+      targetType: string;
+      messageText: string;
+      mediaUrl?: string | null;
+      buttonsJson?: string | null;
+      targetFilterJson?: string | null;
+    },
+  ): Promise<Broadcast> {
+    const rolloutRow = await this.prisma.$transaction(async (tx) => {
+      if (loserQueuedIds.length > 0) {
+        await tx.broadcast.updateMany({
+          where: { id: { in: loserQueuedIds }, status: 'queued' },
+          data: { status: 'cancelled' },
+        });
       }
-    }
-    return rows;
+      return tx.broadcast.create({
+        data: {
+          botId,
+          targetType: rollout.targetType,
+          messageText: rollout.messageText,
+          mediaUrl: rollout.mediaUrl ?? null,
+          buttonsJson: rollout.buttonsJson ?? null,
+          targetFilterJson: rollout.targetFilterJson ?? null,
+          totalRecipients: 0,
+          successCount: 0,
+          failedCount: 0,
+          status: 'queued',
+          createdAt: new Date().toISOString(),
+        },
+      });
+    });
+    this.live.emit('broadcasts', botId);
+    return rolloutRow;
   }
 
   /**
@@ -218,5 +292,25 @@ export class BroadcastModel {
       },
     });
     return link.id;
+  }
+
+  /**
+   * Credits a tracked-redirect click to the owning broadcast. Called from the
+   * public redirect endpoint so `broadcasts.clicks` stays current without
+   * per-read reconciliation queries on the dashboard list.
+   * @param {number} linkId - Clicked link id.
+   * @returns {Promise<void>} Resolves once counters are updated.
+   */
+  async creditTrackingClick(linkId: number): Promise<void> {
+    const link = await this.prisma.link.findUnique({
+      where: { id: linkId },
+      select: { id: true, title: true },
+    });
+    if (!link || !link.title.startsWith('bc:')) return;
+    const broadcastId = Number(link.title.split(':')[1]);
+    if (!Number.isFinite(broadcastId) || broadcastId <= 0) return;
+    await this.prisma.broadcast
+      .update({ where: { id: broadcastId }, data: { clicks: { increment: 1 } } })
+      .catch(() => undefined);
   }
 }

@@ -98,6 +98,7 @@ export class ChatSettingsController {
   ) {
     this.assertChatScoped(moduleKey);
     this.assertNumericChatId(chatId);
+    this.assertOverrideFields(moduleKey, body ?? {});
     await this.chatSettings.setOverride(botId, chatId, moduleKey, body ?? {});
     return { success: true };
   }
@@ -132,6 +133,27 @@ export class ChatSettingsController {
   private assertChatScoped(moduleKey: string): void {
     if (!findModule(moduleKey)?.chatScoped) {
       throw new BadRequestException(`Module "${moduleKey}" does not support per-chat settings.`);
+    }
+  }
+
+  /**
+   * Registry-driven field whitelist: an override may only set keys the module
+   * actually defines (defaultConfig). Previously an arbitrary JSON blob could
+   * be persisted and would ride along in every effective-config merge.
+   *
+   * @param {string} moduleKey - Module registry key.
+   * @param {Record<string, unknown>} body - Submitted override fields.
+   * @returns {void}
+   */
+  private assertOverrideFields(moduleKey: string, body: Record<string, unknown>): void {
+    const definition = findModule(moduleKey);
+    if (!definition) return; // assertChatScoped already rejected unknown modules
+    const allowed = new Set(Object.keys(definition.defaultConfig ?? {}));
+    const unknown = Object.keys(body).filter((key) => !allowed.has(key));
+    if (unknown.length > 0) {
+      throw new BadRequestException(
+        `Unknown override field(s) for "${moduleKey}": ${unknown.join(', ')}`,
+      );
     }
   }
 

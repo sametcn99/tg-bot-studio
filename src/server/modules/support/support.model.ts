@@ -43,31 +43,35 @@ export class SupportModel {
   }
 
   /**
-   * Lists conversation threads grouped by user.
+   * Lists conversation threads grouped by user. Aggregation happens in SQL
+   * (groupBy + latest-message fetch); the old version hydrated every support
+   * message of the bot into memory on each inbox load.
    */
   async listThreads(botId: number): Promise<SupportThreadEntity[]> {
-    const all = await this.prisma.supportMessage.findMany({
+    const groups = await this.prisma.supportMessage.groupBy({
+      by: ['telegramId'],
       where: { botId },
-      orderBy: { id: 'desc' },
+      _count: { _all: true },
+      _max: { id: true },
     });
-
-    const groups = new Map<number, SupportMessage[]>();
-    for (const msg of all) {
-      const tid = Number(msg.telegramId);
-      if (!groups.has(tid)) {
-        groups.set(tid, []);
-      }
-      groups.get(tid)!.push(msg);
-    }
+    const latestIds = groups.map((g) => g._max.id).filter((id): id is number => id !== null);
+    const latestRows =
+      latestIds.length > 0
+        ? await this.prisma.supportMessage.findMany({
+            where: { id: { in: latestIds } },
+            select: { id: true, senderName: true, messageText: true, createdAt: true },
+          })
+        : [];
+    const byId = new Map(latestRows.map((row) => [row.id, row]));
 
     const threads: SupportThreadEntity[] = [];
-    for (const [telegram_id, msgs] of groups.entries()) {
-      const newest = msgs[0];
-      const sender_name = msgs.find((m) => m.senderName)?.senderName ?? null;
+    for (const group of groups) {
+      const newest = group._max.id !== null ? byId.get(group._max.id) : undefined;
+      if (!newest) continue;
       threads.push({
-        telegram_id,
-        sender_name,
-        message_count: msgs.length,
+        telegram_id: Number(group.telegramId),
+        sender_name: newest.senderName,
+        message_count: group._count._all,
         last_activity: newest.createdAt,
         last_message: newest.messageText,
       });

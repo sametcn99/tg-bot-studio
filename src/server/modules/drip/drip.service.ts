@@ -3,6 +3,7 @@ import { BotPoolService } from '../../bot-engine/bot-pool.service';
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
 import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bot-module-handler';
 import { renderTemplate } from '../../common/utils/template.util';
+import { safeJsonParse } from '../../common/utils/json.util';
 import { DripModel } from './drip.model';
 import { BotUserModel } from '../users-crm/bot-user.model';
 
@@ -36,6 +37,12 @@ export interface DripCampaignRow {
 
 /** Advancement ticker interval (30 seconds). */
 const TICK_INTERVAL_MS = 30_000;
+
+/** Minimum gap between drip sends (matches the broadcast default pacing). */
+const SEND_PACE_MS = 50;
+
+/** Transient failures tolerated before the subscriber is dropped. */
+const MAX_TRANSIENT_ATTEMPTS = 5;
 
 /**
  * Drip Marketing Sequences: campaign CRUD, subscriber management, and the
@@ -101,7 +108,7 @@ export class DripService extends BotModuleHandler implements OnApplicationShutdo
           botId: row.botId,
           stepsJson: row.stepsJson,
           isActive: row.isActive,
-          steps: JSON.parse(row.stepsJson) as DripStep[],
+          steps: safeJsonParse<DripStep[]>(row.stepsJson, [], 'drip:steps'),
           subscribers,
         };
       }),
@@ -127,7 +134,7 @@ export class DripService extends BotModuleHandler implements OnApplicationShutdo
       botId: created.botId,
       stepsJson: created.stepsJson,
       isActive: created.isActive,
-      steps: JSON.parse(created.stepsJson) as DripStep[],
+      steps: safeJsonParse<DripStep[]>(created.stepsJson, [], 'drip:steps'),
       subscribers: 0,
     };
   }
@@ -159,7 +166,7 @@ export class DripService extends BotModuleHandler implements OnApplicationShutdo
       botId: updated.botId,
       stepsJson: updated.stepsJson,
       isActive: updated.isActive,
-      steps: JSON.parse(updated.stepsJson) as DripStep[],
+      steps: safeJsonParse<DripStep[]>(updated.stepsJson, [], 'drip:steps'),
       subscribers,
     };
   }
@@ -177,7 +184,7 @@ export class DripService extends BotModuleHandler implements OnApplicationShutdo
   async subscribe(botId: number, campaignId: number, telegramId: number): Promise<void> {
     const campaign = await this.dripModel.findCampaignById(campaignId);
     if (!campaign) return;
-    const steps = JSON.parse(campaign.stepsJson) as DripStep[];
+    const steps = safeJsonParse<DripStep[]>(campaign.stepsJson, [], 'drip:steps');
     if (steps.length === 0) return;
     const firstDelay = Number(steps[0]?.delayMinutes ?? 0);
     const nextRunAt = new Date(Date.now() + firstDelay * 60_000).toISOString();
@@ -199,7 +206,11 @@ export class DripService extends BotModuleHandler implements OnApplicationShutdo
   }
 
   /**
-   * Delivers every due step and schedules the next one.
+   * Delivers every due step and schedules the next one. Sends are paced
+   * (unlike the old fire-hose) and failures are classified: a 403 means the
+   * user blocked the bot or deleted the account (unsubscribe immediately),
+   * while transient errors retry with backoff up to a limit instead of
+   * silently dropping the whole sequence.
    */
   private async advanceDue(): Promise<void> {
     const now = new Date().toISOString();
@@ -211,7 +222,7 @@ export class DripService extends BotModuleHandler implements OnApplicationShutdo
         await this.unsubscribe(subscriber.bot_id, subscriber.campaign_id, subscriber.telegram_id);
         continue;
       }
-      const steps = JSON.parse(campaign.stepsJson) as DripStep[];
+      const steps = safeJsonParse<DripStep[]>(campaign.stepsJson, [], 'drip:steps');
       const step = steps[subscriber.current_step];
       if (!step) {
         await this.unsubscribe(subscriber.bot_id, subscriber.campaign_id, subscriber.telegram_id);
@@ -234,10 +245,27 @@ export class DripService extends BotModuleHandler implements OnApplicationShutdo
         });
         await bot.api.sendMessage(subscriber.telegram_id, text, { parse_mode: 'HTML' });
       } catch (error) {
-        this.logger.warn(
-          `Drip step failed for ${subscriber.telegram_id}: ${error instanceof Error ? error.message : String(error)}`,
-        );
-        await this.unsubscribe(subscriber.bot_id, subscriber.campaign_id, subscriber.telegram_id);
+        const message = error instanceof Error ? error.message : String(error);
+        this.logger.warn(`Drip step failed for ${subscriber.telegram_id}: ${message}`);
+        if (message.includes('403') || message.toLowerCase().includes('forbidden')) {
+          // Bot blocked / account deleted — the sequence is undeliverable.
+          await this.unsubscribe(subscriber.bot_id, subscriber.campaign_id, subscriber.telegram_id);
+        } else {
+          const attempts = await this.dripModel.recordTransientFailure(
+            subscriber.campaign_id,
+            subscriber.telegram_id,
+          );
+          if (attempts >= MAX_TRANSIENT_ATTEMPTS) {
+            this.logger.warn(
+              `Drip subscriber ${subscriber.telegram_id} dropped after ${attempts} transient failures`,
+            );
+            await this.unsubscribe(
+              subscriber.bot_id,
+              subscriber.campaign_id,
+              subscriber.telegram_id,
+            );
+          }
+        }
         continue;
       }
 
@@ -256,6 +284,10 @@ export class DripService extends BotModuleHandler implements OnApplicationShutdo
           nextRunAt,
         );
       }
+
+      // Pace the backlog: after downtime, all due subscribers used to fire in
+      // one tight sequential burst against Telegram's limits.
+      await new Promise((resolve) => setTimeout(resolve, SEND_PACE_MS));
     }
   }
 }

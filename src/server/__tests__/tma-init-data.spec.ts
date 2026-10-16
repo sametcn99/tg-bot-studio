@@ -19,7 +19,11 @@ describe('Telegram Mini App initData HMAC validation', () => {
     return searchParams.toString();
   }
 
-  it('validates a legitimate initData string and extracts user id', () => {
+  function freshAuthDate(): string {
+    return String(Math.floor(Date.now() / 1000));
+  }
+
+  it('validates a legitimate fresh initData string and extracts user id', () => {
     const userPayload = JSON.stringify({
       id: 987654321,
       first_name: 'Antigravity',
@@ -27,7 +31,7 @@ describe('Telegram Mini App initData HMAC validation', () => {
     });
     const initData = generateValidInitData(
       {
-        auth_date: '1700000000',
+        auth_date: freshAuthDate(),
         query_id: 'AAHdF6IQAAAAAN0XohDhrP_1',
         user: userPayload,
       },
@@ -39,10 +43,37 @@ describe('Telegram Mini App initData HMAC validation', () => {
     expect(result.userId).toBe(987654321);
   });
 
+  it('rejects replayed initData older than the freshness window', () => {
+    const initData = generateValidInitData(
+      {
+        auth_date: '1700000000', // Nov 2023 — long expired
+        user: JSON.stringify({ id: 11111 }),
+      },
+      botToken,
+    );
+
+    const result = validateInitData(initData, botToken);
+    expect(result.valid).toBe(false);
+    expect(result.reason).toBe('expired');
+  });
+
+  it('accepts old initData only within an explicit (test) freshness override', () => {
+    const initData = generateValidInitData(
+      {
+        auth_date: '1700000000',
+        user: JSON.stringify({ id: 42 }),
+      },
+      botToken,
+    );
+
+    const result = validateInitData(initData, botToken, 10 * 365 * 24 * 60 * 60);
+    expect(result.valid).toBe(true);
+  });
+
   it('rejects tampered initData with altered parameters', () => {
     const validInitData = generateValidInitData(
       {
-        auth_date: '1700000000',
+        auth_date: freshAuthDate(),
         user: JSON.stringify({ id: 11111 }),
       },
       botToken,
@@ -52,13 +83,14 @@ describe('Telegram Mini App initData HMAC validation', () => {
     const tampered = validInitData.replace('11111', '99999');
     const result = validateInitData(tampered, botToken);
     expect(result.valid).toBe(false);
+    expect(result.reason).toBe('signature');
   });
 
   it('rejects initData signed with a different bot token', () => {
     const differentToken = '987654321:XYZ-different-token';
     const initData = generateValidInitData(
       {
-        auth_date: '1700000000',
+        auth_date: freshAuthDate(),
         user: JSON.stringify({ id: 42 }),
       },
       differentToken,

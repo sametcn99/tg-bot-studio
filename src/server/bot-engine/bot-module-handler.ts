@@ -8,11 +8,16 @@ import type { Bot } from 'grammy';
  * @property {number} botId - Studio database id of the bot.
  * @property {Record<string, unknown>} config - Effective module configuration
  * (stored config merged over registry defaults).
+ * @property {boolean} [sandbox] - True when attaching to the studio sandbox
+ * simulator. Side-effectful runtime machinery (delay sweepers, scheduled
+ * jobs) must not start in sandbox mode: the fake API swallows sends, so a
+ * live sweeper would advance real users' sessions without delivering.
  */
 export interface ModuleRuntimeContext {
   bot: Bot;
   botId: number;
   config: Record<string, unknown>;
+  sandbox?: boolean;
 }
 
 /**

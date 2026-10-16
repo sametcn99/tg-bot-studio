@@ -1,5 +1,3 @@
-import type { SecurityLog, Session } from '@prisma/client';
-
 /**
  * Domain shape for session row.
  */

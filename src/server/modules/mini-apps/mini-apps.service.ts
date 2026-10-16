@@ -6,6 +6,9 @@ import { SystemSettingsService } from '../../database/system-settings.service';
 import { BotPoolService } from '../../bot-engine/bot-pool.service';
 import { WebhooksService } from '../webhooks/webhooks.service';
 import { calculatePrizeWeights, drawPrizeByRoll } from '../../common/utils/spin.util';
+import { escapeHtml } from '../../common/utils/telegram-text.util';
+import { safeJsonObjectParse } from '../../common/utils/json.util';
+import { verifyCatalogOrder } from './catalog-order.util';
 import { StudioException } from '../../common/errors/studio-error';
 
 /**
@@ -266,14 +269,18 @@ export class MiniAppsService {
     });
     if (supportModule?.isEnabled === 1 && supportModule.configJson) {
       try {
-        const config = JSON.parse(supportModule.configJson) as Record<string, unknown>;
+        const config = safeJsonObjectParse(
+          supportModule.configJson,
+          {},
+          `mini-apps:support:${botId}`,
+        );
         const adminChatId = Number(config.adminChatId ?? 0);
         if (adminChatId) {
           const bot = this.pool.getBot(botId);
           if (bot) {
             await bot.api.sendMessage(
               adminChatId,
-              `🆘 <b>Mini App support request</b>\nFrom: ${senderName ?? telegramId} (<code>${telegramId}</code>)\n\n${clean.replace(/</g, '&lt;')}`,
+              `🆘 <b>Mini App support request</b>\nFrom: ${escapeHtml(senderName ?? String(telegramId))} (<code>${telegramId}</code>)\n\n${escapeHtml(clean)}`,
               { parse_mode: 'HTML' },
             );
             relayed = true;
@@ -377,37 +384,11 @@ export class MiniAppsService {
     verifiedItems: Array<{ id: string; title: string; price: number; quantity: number }>;
     total: number;
   } {
-    let catalog: Array<{ id: string; title: string; price: number }> = [];
-    if (app.configJson) {
-      try {
-        const parsed = JSON.parse(app.configJson);
-        if (Array.isArray(parsed.products)) {
-          catalog = parsed.products;
-        }
-      } catch {}
-    }
-
-    const verifiedItems: Array<{ id: string; title: string; price: number; quantity: number }> = [];
-    let total = 0;
-
-    for (const item of clientItems) {
-      const product = catalog.find((p) => String(p.id) === String(item.id));
-      if (!product) continue;
-      const qty = Math.max(1, Math.floor(Number(item.quantity) || 1));
-      const price = Math.max(0, Number(product.price) || 0);
-      total += price * qty;
-      verifiedItems.push({
-        id: String(product.id),
-        title: String(product.title ?? 'Item'),
-        price,
-        quantity: qty,
-      });
-    }
-
-    if (verifiedItems.length === 0) {
+    try {
+      return verifyCatalogOrder(app.configJson, clientItems);
+    } catch {
       throw new StudioException('ORDER_NO_PRODUCTS', 'No valid products found in order');
     }
-    return { verifiedItems, total };
   }
 
   /**

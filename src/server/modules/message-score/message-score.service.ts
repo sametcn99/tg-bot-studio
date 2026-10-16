@@ -132,7 +132,9 @@ export class MessageScoreService implements OnApplicationShutdown {
   }
 
   /**
-   * Records one activity event for a member in a chat.
+   * Records one activity event for a member in a chat. Fire-and-forget with a
+   * contained failure: a transient SQLite error must not become an unhandled
+   * rejection on the hot per-message path (scoring loss is non-critical).
    */
   recordActivity(
     botId: number,
@@ -140,7 +142,13 @@ export class MessageScoreService implements OnApplicationShutdown {
     telegramId: number,
     flags: { reply: boolean; media: boolean },
   ): void {
-    void this.scoreModel.recordActivity(botId, String(chatId), telegramId, flags);
+    this.scoreModel
+      .recordActivity(botId, String(chatId), telegramId, flags)
+      .catch((error: unknown) => {
+        this.logger.warn(
+          `recordActivity failed for bot ${botId}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      });
   }
 
   /**

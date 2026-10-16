@@ -2,6 +2,9 @@ import { Injectable, Logger, NotFoundException, OnApplicationShutdown } from '@n
 import { InlineKeyboard } from 'grammy';
 import { BotPoolService } from '../../bot-engine/bot-pool.service';
 import { renderTemplate } from '../../common/utils/template.util';
+import { safeTimeZone, wallTimeToUtc } from '../../common/utils/tz.util';
+import { safeJsonObjectParse } from '../../common/utils/json.util';
+import { SystemSettingsService } from '../../database/system-settings.service';
 import { SchedulerModel } from './scheduler.model';
 import { toScheduledPostRow } from './scheduler.mapper';
 import { type ScheduledPostRow } from './scheduler.entity';
@@ -26,6 +29,7 @@ export class SchedulerService implements OnApplicationShutdown {
     private readonly schedulerModel: SchedulerModel,
     private readonly botModel: BotModel,
     private readonly pool: BotPoolService,
+    private readonly settings: SystemSettingsService,
   ) {
     this.ticker = setInterval(() => {
       void this.dispatchDue().catch((error: Error) =>
@@ -53,7 +57,7 @@ export class SchedulerService implements OnApplicationShutdown {
     botId: number,
   ): Promise<{ watermarkText: string; timezoneOffsetMinutes: number }> {
     const row = await this.botModel.getModule(botId, 'scheduler');
-    const config = row?.configJson ? (JSON.parse(row.configJson) as Record<string, unknown>) : {};
+    const config = safeJsonObjectParse(row?.configJson, {}, `scheduler:${botId}`);
     return {
       watermarkText: String(config.watermarkText ?? ''),
       timezoneOffsetMinutes: Number(config.timezoneOffsetMinutes ?? 0),
@@ -61,18 +65,46 @@ export class SchedulerService implements OnApplicationShutdown {
   }
 
   /**
+   * Normalizes a submitted schedule instant to UTC. Naive wall times are
+   * interpreted in the bot's IANA timezone (DST-correct, via the tested
+   * wallTimeToUtc) when one is configured; the legacy fixed-offset module
+   * config applies otherwise, preserving existing deployments' behavior.
+   * @param {number} botId - Owning bot id.
+   * @param {string} scheduledAt - Submitted ISO-ish timestamp.
+   * @returns {Promise<string>} UTC ISO instant.
+   */
+  private async toUtcInstant(botId: number, scheduledAt: string): Promise<string> {
+    if (scheduledAt.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(scheduledAt)) {
+      return scheduledAt;
+    }
+    const parsed = new Date(scheduledAt);
+    if (Number.isNaN(parsed.getTime())) return scheduledAt;
+
+    const zone = safeTimeZone(this.settings.getBotSetting(botId, 'timezone'));
+    const wallMatch = scheduledAt.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/);
+    if (zone !== 'UTC' && wallMatch) {
+      return wallTimeToUtc(
+        zone,
+        Number(wallMatch[1]),
+        Number(wallMatch[2]),
+        Number(wallMatch[3]),
+        Number(wallMatch[4]),
+        Number(wallMatch[5]),
+      ).toISOString();
+    }
+
+    const config = await this.configFor(botId);
+    return new Date(parsed.getTime() - config.timezoneOffsetMinutes * 60_000).toISOString();
+  }
+
+  /**
    * Creates a scheduled post.
    */
   async create(botId: number, data: Record<string, unknown>): Promise<ScheduledPostRow> {
-    const config = await this.configFor(botId);
-    const offsetMs = config.timezoneOffsetMinutes * 60_000;
-    let scheduledAt = String(data.scheduledAt ?? new Date().toISOString());
-    if (!scheduledAt.endsWith('Z') && !/[+-]\d{2}:\d{2}$/.test(scheduledAt)) {
-      const parsed = new Date(scheduledAt).getTime();
-      if (!Number.isNaN(parsed)) {
-        scheduledAt = new Date(parsed - offsetMs).toISOString();
-      }
-    }
+    const scheduledAt = await this.toUtcInstant(
+      botId,
+      String(data.scheduledAt ?? new Date().toISOString()),
+    );
 
     const target = data.targetChatId;
     const targetChatId =
@@ -97,16 +129,10 @@ export class SchedulerService implements OnApplicationShutdown {
     data: Record<string, unknown>,
   ): Promise<ScheduledPostRow> {
     const existing = await this.findOne(botId, id);
-    const config = await this.configFor(botId);
-    const offsetMs = config.timezoneOffsetMinutes * 60_000;
-    let scheduledAt =
-      data.scheduledAt !== undefined ? String(data.scheduledAt) : existing.scheduled_at;
-    if (data.scheduledAt && !scheduledAt.endsWith('Z') && !/[+-]\d{2}:\d{2}$/.test(scheduledAt)) {
-      const parsed = new Date(scheduledAt).getTime();
-      if (!Number.isNaN(parsed)) {
-        scheduledAt = new Date(parsed - offsetMs).toISOString();
-      }
-    }
+    const scheduledAt =
+      data.scheduledAt !== undefined
+        ? await this.toUtcInstant(botId, String(data.scheduledAt))
+        : existing.scheduled_at;
 
     const target = data.targetChatId !== undefined ? data.targetChatId : existing.target_chat_id;
     const targetChatId =

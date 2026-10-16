@@ -23,6 +23,7 @@ import { useModuleDocs } from '../../context/ModuleDocsContext';
 import { formatDateTime } from '../../utils/format';
 import ModuleConfigPage from '../ModuleConfigPage';
 import { useLiveStream } from '../../hooks/useLiveStream';
+import { useApi } from '../../hooks/useApi';
 import type { ModuleEntry } from '../../registry/modules';
 import { localizedErrorMessage } from '../../utils/errors';
 
@@ -75,7 +76,6 @@ export default function SupportPage({
   const { t } = useTranslation();
   const { showSuccess, showError } = useSnackbar();
   const [threads, setThreads] = useState<SupportThread[]>([]);
-  const [escalations, setEscalations] = useState<Escalation[]>([]);
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -84,31 +84,43 @@ export default function SupportPage({
   const [copilotLoading, setCopilotLoading] = useState(false);
   const { openDocs } = useModuleDocs();
 
+  // Escalations load through the standard hook so failures surface with a
+  // retry instead of silently hiding open escalations.
+  const {
+    data: escalationsData,
+    error: escalationsError,
+    reload: reloadEscalations,
+  } = useApi<Escalation[]>(`/api/bots/${botId}/support/escalations`, [botId]);
+  const escalations = escalationsData ?? [];
+
   const loadData = useCallback((): void => {
     apiFetch<SupportThread[]>(`/api/bots/${botId}/support/threads`)
       .then(setThreads)
-      .catch(() => undefined);
-    apiFetch<Escalation[]>(`/api/bots/${botId}/support/escalations`)
-      .then(setEscalations)
-      .catch(() => undefined);
+      .catch((err: unknown) => setError(localizedErrorMessage(err)));
     const query = selectedUser ? `?limit=200` : '?limit=100';
     apiFetch<SupportMessage[]>(`/api/bots/${botId}/support/messages${query}`)
       .then(setMessages)
       .catch((err: Error) => setError(localizedErrorMessage(err)));
   }, [botId, selectedUser]);
 
+  /** Refetches everything (threads, messages, escalations). */
+  const refreshAll = useCallback((): void => {
+    loadData();
+    reloadEscalations();
+  }, [loadData, reloadEscalations]);
+
   // SSE pings trigger an instant refetch; the slow interval is a backstop.
-  useLiveStream('support', botId, loadData);
+  useLiveStream('support', botId, refreshAll);
 
   useEffect(() => {
-    loadData();
+    refreshAll();
     const timer = window.setInterval(() => {
       if (document.visibilityState === 'visible') {
-        loadData();
+        refreshAll();
       }
     }, 15000);
     return () => window.clearInterval(timer);
-  }, [loadData]);
+  }, [refreshAll]);
 
   const visible = selectedUser
     ? messages.filter((message) => message.telegram_id === selectedUser)
@@ -157,7 +169,7 @@ export default function SupportPage({
         method: 'POST',
       });
       showSuccess(t('support.resolved'));
-      loadData();
+      reloadEscalations();
     } catch (err: unknown) {
       showError(localizedErrorMessage(err));
     }
@@ -170,9 +182,9 @@ export default function SupportPage({
         subtitle={module.description}
         onDocs={() => openDocs(module)}
       />
-      {error && (
+      {(error || escalationsError) && (
         <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
+          {error ?? escalationsError}
         </Alert>
       )}
 

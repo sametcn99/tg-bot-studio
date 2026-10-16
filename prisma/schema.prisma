@@ -285,6 +285,8 @@ model Link {
 
   bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
 
+  /// Serves broadcast CTR tracking lookups (`bc:<broadcastId>:<index>`).
+  @@index([botId, title])
   @@map("links")
 }
 
@@ -295,10 +297,15 @@ model Broadcast {
   messageText     String  @map("message_text")
   mediaUrl        String? @map("media_url")
   buttonsJson     String? @map("buttons_json")
+  /// Persisted target filters ({language, recentDays}) so interrupted
+  /// broadcasts can resume with identical targeting.
+  targetFilterJson String? @map("target_filter_json")
   totalRecipients Int     @default(0) @map("total_recipients")
   successCount    Int     @default(0) @map("success_count")
   failedCount     Int     @default(0) @map("failed_count")
   status          String
+  /// Last processed recipient telegram id (progress checkpoint for resume).
+  sentCursor      BigInt? @map("sent_cursor")
   /// A/B experiment group id (uuid); null for single-shot broadcasts.
   experimentId    String? @map("experiment_id")
   /// Variant label within the experiment ("A", "B", ...).
@@ -313,6 +320,7 @@ model Broadcast {
   bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
 
   @@index([botId, experimentId])
+  @@index([botId, status])
   @@map("broadcasts")
 }
 
@@ -379,6 +387,10 @@ model FlowState {
   bot  Bot  @relation(fields: [botId], references: [id], onDelete: Cascade)
   flow Flow @relation(fields: [flowId], references: [id], onDelete: Cascade)
 
+  /// Serves the per-message session lookup for private chats.
+  @@index([botId, telegramId])
+  /// Serves the delay-node resume scan on every tick.
+  @@index([resumeAt])
   @@id([flowId, telegramId])
   @@map("flow_states")
 }
@@ -429,6 +441,8 @@ model SupportMessage {
 
   bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
 
+  /// Serves the per-bot inbox load (every dashboard inbox open).
+  @@index([botId])
   @@map("support_messages")
 }
 
@@ -455,6 +469,11 @@ model DripSubscriber {
   bot      Bot          @relation(fields: [botId], references: [id], onDelete: Cascade)
   campaign DripCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 
+  /// Consecutive transient delivery failures; unsubscribes after the limit.
+  attempts Int @default(0)
+
+  /// Serves the dispatcher's due-subscriber scan on every tick.
+  @@index([nextRunAt])
   @@id([campaignId, telegramId])
   @@map("drip_subscribers")
 }
@@ -486,6 +505,8 @@ model ScheduledPost {
 
   bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
 
+  /// Serves the dispatcher's due-post scan on every tick.
+  @@index([status, scheduledAt])
   @@map("scheduled_posts")
 }
 
@@ -565,6 +586,8 @@ model VipSubscription {
 
   bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
 
+  /// Serves the expiry sweeper scan.
+  @@index([isActive, expiresAt])
   @@map("vip_subscriptions")
 }
 
@@ -579,6 +602,8 @@ model Session {
   lastActiveAt String? @map("last_active_at")
   isRevoked    Int     @default(0) @map("is_revoked")
 
+  /// Serves the retention prune of stale sessions.
+  @@index([lastActiveAt])
   @@map("sessions")
 }
 
@@ -656,6 +681,8 @@ model AiChatHistory {
 
   bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
 
+  /// Serves the per-conversation history load on every AI message.
+  @@index([botId, telegramId])
   @@map("ai_chat_history")
 }
 

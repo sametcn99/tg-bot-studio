@@ -1,6 +1,8 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { createHash } from 'node:crypto';
 import * as fs from 'fs';
 import * as path from 'path';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from './prisma.service';
 
 export interface BackupInfo {
@@ -24,6 +26,49 @@ export class BackupService {
   }
 
   /**
+   * Writes a restore manifest next to a backup: schema version (latest applied
+   * migration), a fingerprint of the JWT secret, and row counts. Restore
+   * documentation uses the fingerprint to detect the "restored onto a host
+   * with a different JWT_SECRET → all sessions invalid" footgun.
+   * @param {string} filename - Backup filename the manifest describes.
+   * @returns {Promise<void>} Resolves once the manifest is written.
+   */
+  async writeManifest(filename: string): Promise<void> {
+    try {
+      const migrations = await this.prisma.$queryRaw<Array<{ migration_name: string }>>(
+        Prisma.sql`SELECT migration_name FROM _prisma_migrations ORDER BY finished_at DESC LIMIT 1`,
+      );
+      const counts = await Promise.all([
+        this.prisma.bot.count(),
+        this.prisma.botUser.count(),
+        this.prisma.broadcast.count(),
+      ]);
+      const jwtSecret = process.env.JWT_SECRET || '';
+      const manifest = {
+        filename,
+        createdAt: new Date().toISOString(),
+        schemaVersion: migrations[0]?.migration_name ?? 'unknown',
+        jwtSecretFingerprint: jwtSecret
+          ? createHash('sha256').update(jwtSecret).digest('hex').slice(0, 12)
+          : null,
+        counts: {
+          bots: counts[0],
+          botUsers: counts[1],
+          broadcasts: counts[2],
+        },
+      };
+      fs.writeFileSync(
+        path.join(this.backupDir, `${filename}.manifest.json`),
+        JSON.stringify(manifest, null, 2),
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Backup manifest write failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  /**
    * Triggers an atomic VACUUM INTO backup of the SQLite database.
    */
   async createBackup(): Promise<BackupInfo> {
@@ -38,8 +83,9 @@ export class BackupService {
     const stats = fs.statSync(fullPath);
     this.logger.log(`Backup completed successfully: ${filename} (${stats.size} bytes)`);
 
-    // Prune old backups, keep last 10
+    // Prune old backups, keep last 10, and record the restore manifest.
     this.pruneOldBackups(10);
+    await this.writeManifest(filename);
 
     return {
       filename,

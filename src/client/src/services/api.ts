@@ -1,12 +1,32 @@
 /**
- * Typed fetch wrapper for the Studio REST API. Attaches the JWT session
- * token, unwraps the `{success, data}` envelope, and surfaces a normalized
- * error with server-provided messages.
+ * Typed fetch wrapper for the Studio REST API. Attaches the in-memory JWT
+ * session token when present (same-origin requests are otherwise covered by
+ * the HttpOnly `studio_session` cookie), unwraps the `{success, data}`
+ * envelope, and surfaces a normalized error with server-provided messages.
+ * The token is deliberately never persisted to storage: a page reload falls
+ * back to cookie authentication and re-validates via `/api/auth/me`.
  * @module services/api
  */
 
-/** Local storage key holding the dashboard JWT. */
-const TOKEN_KEY = 'studio-token';
+/** Module-scoped session token — memory only, never written to storage. */
+let memoryToken: string | null = null;
+
+/**
+ * Reads the in-memory session token.
+ * @returns {string | null} JWT or null when signed out / cookie-only.
+ */
+export function getToken(): string | null {
+  return memoryToken;
+}
+
+/**
+ * Sets or clears the in-memory session token.
+ * @param {string | null} token - JWT to keep for bearer requests, or null.
+ * @returns {void}
+ */
+export function setToken(token: string | null): void {
+  memoryToken = token;
+}
 
 /**
  * Normalized API error carrying the HTTP status.
@@ -27,27 +47,6 @@ export class ApiError extends Error {
     super(message);
     this.status = status;
     this.code = code;
-  }
-}
-
-/**
- * Reads the stored session token.
- * @returns {string | null} JWT or null when signed out.
- */
-export function getToken(): string | null {
-  return window.localStorage.getItem(TOKEN_KEY);
-}
-
-/**
- * Persists or clears the session token.
- * @param {string | null} token - JWT to store, or null to sign out.
- * @returns {void}
- */
-export function setToken(token: string | null): void {
-  if (token) {
-    window.localStorage.setItem(TOKEN_KEY, token);
-  } else {
-    window.localStorage.removeItem(TOKEN_KEY);
   }
 }
 

@@ -261,7 +261,13 @@
     "off": "Aus",
     "yes": "Ja",
     "no": "Nein",
-    "optional": "(optional)"
+    "optional": "(optional)",
+    "help": "Hilfe",
+    "dataTable": "Datentabelle",
+    "errorTitle": "Etwas ist schiefgelaufen",
+    "errorReturnDashboard": "Zurück zum Dashboard",
+    "unsavedTitle": "Ungespeicherte Änderungen",
+    "datetimeTzHint": "Zeiten werden als UTC gesendet — Eingabe in Ihrer Ortszeit ({{tz}})"
   },
   "security": {
     "sessions": "Aktive Sitzungen",
@@ -316,7 +322,9 @@
     "templateLeaderboard": "Punkt-Bestenliste",
     "templateSupport": "Support-Schalter",
     "deleteTitle": "Mini App löschen",
-    "deleteConfirm": "Mini App \"{{name}}\" wirklich löschen? Zugehörige Bestellungen und Formularübermittlungen werden ebenfalls entfernt. Diese Aktion kann nicht rückgängig gemacht werden."
+    "deleteConfirm": "Mini App \"{{name}}\" wirklich löschen? Zugehörige Bestellungen und Formularübermittlungen werden ebenfalls entfernt. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "previewTitle": "Mini-App-Vorschau",
+    "noPreviewUrl": "Keine Vorschau-URL"
   },
   "support": {
     "title": "Support-Desk",
@@ -443,7 +451,9 @@
     "unknown": "Unbekannt",
     "subscriber": "Abonnent",
     "tagsLabel": "Tags (durch Komma getrennt)",
-    "internalNotes": "Interne Notizen"
+    "internalNotes": "Interne Notizen",
+    "tagFilter": "Nach Tag filtern",
+    "allTags": "Alle Tags"
   },
   "referrals": {
     "leaderboard": "Bestenliste",
@@ -739,7 +749,8 @@
     "pick": "Auswählen…",
     "title": "Abonnent auswählen",
     "searchPlaceholder": "Nach Benutzername, Name oder ID suchen…",
-    "empty": "Noch keine passenden Abonnenten."
+    "empty": "Noch keine passenden Abonnenten.",
+    "loadMore": "Mehr laden"
   },
   "aiGenerate": {
     "button": "✨ Mit KI erstellen",
@@ -913,6 +924,7 @@
     "emptyCanvasHint": "Ziehen Sie einen Baustein aus der Palette oder doppelklicken Sie hier.",
     "palette": "Bausteine",
     "paletteHint": "Zum Hinzufügen klicken oder auf die Canvas ziehen.",
+    "paletteTapHint": "Tippen Sie auf einen Baustein, um ihn der Canvas hinzuzufügen.",
     "flowSettings": "Ablaufeinstellungen",
     "triggerSettingsHint": "Die Auslöserkarte ist der Einstieg des Ablaufs — verbinden Sie sie mit dem ersten Knoten.",
     "inspector": "Eigenschaften",

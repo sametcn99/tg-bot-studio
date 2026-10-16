@@ -47,16 +47,30 @@ bunx prisma migrate resolve --applied 0_init
 
 ## Tests & CI
 
-Unit tests (bun test) cover the critical pure logic: Telegram initData HMAC validation, CSV serialization/escaping, message placeholder/template rendering, spin prize weighting, blocklist regex matching, chat-lock evaluation, duration/timezone helpers, and locale-pack parity for both bot replies (14 languages) and the dashboard i18n. GitHub Actions CI (`.github/workflows/ci.yml`) runs Prettier format check, ESLint, typecheck, tests, and a full build on every push/PR.
+Unit and integration tests (bun test, 160+ cases) cover the critical pure logic: Telegram initData HMAC validation **with replay freshness**, CSV serialization/escaping, message placeholder/template rendering, spin prize weighting, blocklist regex matching, chat-lock evaluation, duration/timezone helpers, locale-pack parity (including `{{placeholder}}` preservation) for both bot replies (14 languages) and the dashboard i18n, broadcast A/B bucketing and winner scoring, Stars cart re-pricing, and a full **export/import round-trip against a scratch SQLite database** (Mini Apps survive, re-import is idempotent). GitHub Actions CI runs the suite on **Linux and Windows**, verifies there is no drift between `schema.prisma` and the versioned migrations, builds the production Docker image, and uploads the build artifact on push.
+
+## Security Posture
+
+- **Production credential guard**: the server refuses to boot when `NODE_ENV=production` and `ADMIN_MASTER_KEY`/`JWT_SECRET` are unset or still at their documented defaults. Login throttle counters persist across restarts and are keyed on the proxy-aware client IP (`trust proxy` = 1 hop).
+- **Session transport**: the dashboard JWT ships as an `HttpOnly` `SameSite=Strict` cookie (bearer headers still accepted for API clients). SSE streams authenticate with a 30-second single-use ticket (`POST /api/auth/sse-ticket`) instead of a URL-borne token. A strict CSP is enabled with allowances for Telegram's WebApp SDK and https media.
+- **Mini App initData**: HMAC validation is constant-time and `auth_date` must be fresher than 24 hours (replay protection).
+- **Webhooks**: inbound hooks require `X-Webhook-Signature: hex(hmac_sha256(secret, rawBody))` (the secret is shown once when the hook is created), use high-entropy ids, and are rate limited; outgoing deliveries are signed, timed out after 10 s, and blocked from private/loopback targets unless `WEBHOOKS_ALLOW_PRIVATE=1`.
+- **Metrics scraping**: `GET /api/metrics` requires either `Authorization: Bearer $METRICS_BEARER_TOKEN` or an authenticated dashboard session — bot usernames and audience sizes are no longer public.
+- **Secrets never echo**: module configs mask credential-shaped fields (`apiKey`, tokens) in GET responses; the sentinel `__MASKED__` preserves stored values when saving a form back.
+
+## Backup & Restore
+
+Backups are atomic (`VACUUM INTO`) and run **automatically once per UTC day** (disable with `DISABLE_NIGHTLY_BACKUP=1`); the studio keeps the newest 10 in `data/backups/` and writes a `<file>.manifest.json` next to each containing the schema version (latest applied migration) and a fingerprint of the JWT secret. Restore procedure: stop the container, replace `data/studio.sqlite` with the backup file (remove any `-wal`/`-shm` siblings), start again — `prisma migrate deploy` brings the restored file up to date if it was older. If the manifest's `jwtSecretFingerprint` differs from your current secret, all dashboard sessions will need re-login (expected). The studio must run as a **single instance**: SQLite allows one writer and Telegram answers concurrent `getUpdates` for the same token with 409 conflicts — do not scale the compose service.
 
 ## Bot Portability & Operations
 
 - **Clone bot**: copy module toggles/configs, autoresponders, drip campaigns, and mini apps to a new bot from the bot dashboard (requires a fresh BotFather token).
-- **Export/Import**: full bot configuration as a JSON bundle (AI API keys excluded from exports).
+- **Export/Import**: full bot configuration as a JSON bundle (AI API keys excluded from exports, version-checked and idempotent on re-import — Mini Apps included).
 - **Template gallery**: save any bot's export bundle as a named template and apply it to other bots in one click.
-- **Backups**: one-click SQLite backups (`VACUUM INTO`) served by `/api/backup` with download and delete.
-- **Health monitoring**: the studio watches every bot's poller state, records failure/recovery events, and can push Telegram alerts to a configured chat (with a test alert button).
-- **Prometheus metrics**: `GET /api/metrics` exposes runtime gauges (bot statuses, daily volume, enabled modules, audience size, uptime, memory) in the Prometheus text format.
+- **Backups**: one-click SQLite backups (`VACUUM INTO`) served by `/api/backup` with download and delete, plus automatic nightly backups with restore manifests (see Backup & Restore below).
+- **Health monitoring**: the studio watches every bot's poller state, records failure/recovery events, and can push Telegram alerts to a configured chat — with a studio-wide operator bot fallback (`HEALTH_ALERT_BOT_TOKEN` + `HEALTH_ALERT_CHAT_ID`) so even a revoked token page gets out, and automatic retry of undelivered alerts.
+- **Resumable broadcasts**: the engine checkpoints progress (cursor + counters) every 25 sends; interrupted broadcasts expose a one-click resume from the dashboard instead of re-sending to everyone.
+- **Prometheus metrics**: `GET /api/metrics` exposes runtime gauges (bot statuses, daily volume, enabled modules, audience size, uptime, memory, DB size, HTTP latency histogram) in the Prometheus text format; scraping requires a bearer token or an authenticated session.
 
 ## Automation & Content Features
 
@@ -73,7 +87,7 @@ Unit tests (bun test) cover the critical pure logic: Telegram initData HMAC vali
 docker compose up -d --build
 ```
 
-The container exposes port `3000`, persists SQLite data in the `./data` volume, and reports health via `GET /api/health`. Configure `ADMIN_MASTER_KEY` and `JWT_SECRET` in the environment before deploying publicly.
+The container exposes port `3000`, persists SQLite data in the `./data` volume, and reports health via `GET /api/health`. `docker-compose.yml` intentionally ships **no credential defaults**: set a strong `ADMIN_MASTER_KEY` and `JWT_SECRET` in the environment (or `.env`) before deploying publicly — with `NODE_ENV=production` the server refuses to boot on the documented defaults. Run exactly **one instance** (SQLite single-writer + per-token long polling).
 
 ## Project Structure
 
@@ -158,3 +172,6 @@ Manage and reply to customer tickets directly from the web dashboard. Features c
 - Placeholder dictionary (`{first_name}`, `{user_id}`, `{mention}`, `{group_name}`, ...) is available inside every module's help dialog with one-click copy.
 - Telegram rate limit guidance (429 backoff) and required bot permissions are documented per module in the dashboard.
 - Four interface languages (English, Turkish, German, Russian) switchable instantly from the top navigation bar; bots themselves reply in any of 14 languages, settable per group.
+- API reference lives at `/api/docs` (OpenAPI/Swagger UI) on any running instance.
+
+> **Manifest note:** frontend libraries (React, MUI, i18next, …) are intentionally declared in `devDependencies` — Vite bundles them into `dist/client`, and the Docker runner's `bun install --production` correctly excludes them, keeping the runtime image small. Do not import them from server code; it would build locally and crash in the container. Dependabot keeps both npm and GitHub Actions dependencies fresh (weekly, grouped minor/patch).

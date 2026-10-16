@@ -1,17 +1,22 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Box,
   Button,
   Chip,
   Dialog,
   Divider,
+  Drawer,
+  Fab,
   IconButton,
   InputBase,
   Stack,
   Tooltip,
   Typography,
+  useMediaQuery,
   useTheme,
 } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import TuneIcon from '@mui/icons-material/Tune';
 import CloseIcon from '@mui/icons-material/Close';
 import UndoRoundedIcon from '@mui/icons-material/UndoRounded';
 import RedoRoundedIcon from '@mui/icons-material/RedoRounded';
@@ -26,6 +31,7 @@ import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../../../services/api';
 import { useSnackbar } from '../../../context/SnackbarContext';
 import ConfirmDialog from '../../../components/ConfirmDialog';
+import { useUnsavedGuard } from '../../../hooks/useUnsavedGuard';
 import { localizedErrorMessage } from '../../../utils/errors';
 import FlowCanvas, {
   type CanvasViewport,
@@ -37,6 +43,8 @@ import {
   TRIGGER_NODE_ID,
   autoLayout,
   blankNode,
+  bumpRevision,
+  currentRevision,
   duplicateNode,
   isFullyPositioned,
   removeReferencesTo,
@@ -45,7 +53,7 @@ import {
   type FlowNode,
   type WireField,
 } from './flowEditorModel';
-import { PALETTE_TYPES, NodeTypeIconTile } from './nodeVisuals';
+import { NODE_ICONS, PALETTE_TYPES, NodeTypeIconTile } from './nodeVisuals';
 
 /** Flow row shape needed by the editor. */
 export interface EditorFlow {
@@ -101,6 +109,13 @@ export default function FlowEditorDialog({
   const canvasRef = useRef<FlowCanvasHandle>(null);
   const canvasWrapRef = useRef<HTMLDivElement | null>(null);
 
+  // Mobile layout switches: the palette sidebar hides below `sm`, the
+  // inspector below `md` — both become drawers with a FAB trigger instead.
+  const isSmallDown = useMediaQuery(theme.breakpoints.down('sm'));
+  const isMediumDown = useMediaQuery(theme.breakpoints.down('md'));
+  const [paletteDrawerOpen, setPaletteDrawerOpen] = useState(false);
+  const [inspectorDrawerOpen, setInspectorDrawerOpen] = useState(false);
+
   const [settings, setSettings] = useState<FlowSettings>({
     name: flow.name,
     triggerType: flow.triggerType,
@@ -129,19 +144,16 @@ export default function FlowEditorDialog({
     stateRef.current = { settings, graph, triggerPos };
   });
 
-  const serialized = useMemo(() => JSON.stringify({ settings, graph }), [settings, graph]);
-  const [savedJson, setSavedJson] = useState<string>(() =>
-    JSON.stringify({
-      settings: {
-        name: flow.name,
-        triggerType: flow.triggerType,
-        triggerValue: flow.triggerValue,
-        isActive: flow.isActive,
-      },
-      graph: flow.graph,
-    }),
-  );
-  const dirty = serialized !== savedJson;
+  // Dirty tracking via the model's monotonic revision counter: mutations bump
+  // it, and the serialized JSON is only built when actually saving.
+  const [revision, setRevision] = useState(currentRevision);
+  const [savedRevision, setSavedRevision] = useState(currentRevision);
+  const dirty = revision !== savedRevision;
+
+  /** Bumps the edit revision (call after/with every committed mutation). */
+  const bump = useCallback((): void => {
+    setRevision(bumpRevision());
+  }, []);
 
   /**
    * Snapshot helper for history entries.
@@ -177,10 +189,14 @@ export default function FlowEditorDialog({
   /**
    * Restores a snapshot (undo/redo share the mechanics).
    */
-  const restore = useCallback((entry: EditorSnapshot): void => {
-    setSettings({ ...entry.settings });
-    setGraph(JSON.parse(JSON.stringify(entry.graph)) as FlowGraph);
-  }, []);
+  const restore = useCallback(
+    (entry: EditorSnapshot): void => {
+      bump();
+      setSettings({ ...entry.settings });
+      setGraph(JSON.parse(JSON.stringify(entry.graph)) as FlowGraph);
+    },
+    [bump],
+  );
 
   /**
    * Undoes the last discrete edit.
@@ -280,6 +296,7 @@ export default function FlowEditorDialog({
       wire: { from: string; field: CanvasWireField; buttonIndex?: number } | null,
     ): void => {
       pushHistory();
+      bump();
       const node = { ...blankNode(type), x: pos.x, y: pos.y };
       setGraph((current) => {
         let next: FlowGraph = {
@@ -303,7 +320,7 @@ export default function FlowEditorDialog({
       });
       setSelectedIds([node.id]);
     },
-    [pushHistory],
+    [bump, pushHistory],
   );
 
   /**
@@ -312,6 +329,7 @@ export default function FlowEditorDialog({
   const wireConnection = useCallback(
     (from: string, field: CanvasWireField, buttonIndex: number | undefined, to: string): void => {
       pushHistory();
+      bump();
       if (from === TRIGGER_NODE_ID) {
         setGraph((current) => ({ ...current, start: to }));
         return;
@@ -324,7 +342,7 @@ export default function FlowEditorDialog({
         ),
       }));
     },
-    [pushHistory],
+    [bump, pushHistory],
   );
 
   /**
@@ -333,6 +351,7 @@ export default function FlowEditorDialog({
   const unwireConnection = useCallback(
     (from: string, field: CanvasWireField, buttonIndex?: number): void => {
       pushHistory();
+      bump();
       if (from === TRIGGER_NODE_ID || field === 'start') {
         setGraph((current) => ({ ...current, start: '' }));
         return;
@@ -345,7 +364,7 @@ export default function FlowEditorDialog({
         ),
       }));
     },
-    [pushHistory],
+    [bump, pushHistory],
   );
 
   /**
@@ -354,6 +373,7 @@ export default function FlowEditorDialog({
   const deleteNodes = useCallback(
     (ids: string[]): void => {
       pushHistory();
+      bump();
       setGraph((current) => {
         let next = current;
         for (const id of ids) next = removeReferencesTo(next, id);
@@ -361,7 +381,7 @@ export default function FlowEditorDialog({
       });
       setSelectedIds([]);
     },
-    [pushHistory],
+    [bump, pushHistory],
   );
 
   /**
@@ -370,25 +390,30 @@ export default function FlowEditorDialog({
   const patchNode = useCallback(
     (id: string, patch: Partial<FlowNode>): void => {
       scheduleHistory();
+      bump();
       setGraph((current) => ({
         ...current,
         nodes: current.nodes.map((node) => (node.id === id ? { ...node, ...patch } : node)),
       }));
     },
-    [scheduleHistory],
+    [bump, scheduleHistory],
   );
 
   /**
    * Moves nodes on the canvas (live during drag, no history here).
    */
-  const moveNodes = useCallback((positions: Record<string, { x: number; y: number }>): void => {
-    setGraph((current) => ({
-      ...current,
-      nodes: current.nodes.map((node) =>
-        positions[node.id] ? { ...node, ...positions[node.id] } : node,
-      ),
-    }));
-  }, []);
+  const moveNodes = useCallback(
+    (positions: Record<string, { x: number; y: number }>): void => {
+      bump();
+      setGraph((current) => ({
+        ...current,
+        nodes: current.nodes.map((node) =>
+          positions[node.id] ? { ...node, ...positions[node.id] } : node,
+        ),
+      }));
+    },
+    [bump],
+  );
 
   /**
    * Duplicates a node next to the original.
@@ -398,11 +423,12 @@ export default function FlowEditorDialog({
       const node = stateRef.current.graph.nodes.find((item) => item.id === id);
       if (!node) return;
       pushHistory();
+      bump();
       const clone = duplicateNode(node);
       setGraph((current) => ({ ...current, nodes: [...current.nodes, clone] }));
       setSelectedIds([clone.id]);
     },
-    [pushHistory],
+    [bump, pushHistory],
   );
 
   /**
@@ -410,6 +436,7 @@ export default function FlowEditorDialog({
    */
   const runAutoLayout = useCallback((): void => {
     pushHistory();
+    bump();
     const laid = autoLayout(graph);
     setAnimating(true);
     setGraph(laid);
@@ -418,7 +445,7 @@ export default function FlowEditorDialog({
       setAnimating(false);
       canvasRef.current?.fitView();
     }, 340);
-  }, [graph, placeTriggerBesideStart, pushHistory]);
+  }, [bump, graph, placeTriggerBesideStart, pushHistory]);
 
   /**
    * Zooms by a factor around the canvas center.
@@ -443,6 +470,7 @@ export default function FlowEditorDialog({
    */
   const save = useCallback((): void => {
     setSaving(true);
+    const savedAtRevision = revision;
     apiFetch(`/api/bots/${botId}/flows/${flow.id}`, {
       method: 'PUT',
       body: JSON.stringify({
@@ -455,7 +483,7 @@ export default function FlowEditorDialog({
     })
       .then(() => {
         setSaving(false);
-        setSavedJson(JSON.stringify({ settings, graph }));
+        setSavedRevision(savedAtRevision);
         showSuccess(t('flows.saved'));
         onSaved();
       })
@@ -463,7 +491,7 @@ export default function FlowEditorDialog({
         setSaving(false);
         showError(localizedErrorMessage(err));
       });
-  }, [botId, flow.id, graph, onSaved, settings, showError, showSuccess, t]);
+  }, [botId, flow.id, graph, onSaved, revision, settings, showError, showSuccess, t]);
 
   /**
    * Runs the flow trigger in the sandbox simulator.
@@ -552,6 +580,43 @@ export default function FlowEditorDialog({
     '&:hover': { backgroundColor: 'action.hover' },
   } as const;
 
+  /**
+   * Drops a palette block at the center of the canvas (mobile drawer taps —
+   * drag-and-drop from the drawer is impractical on phones).
+   * @param {FlowNode['type']} type - Node type to create.
+   */
+  const addNodeFromPalette = useCallback((type: FlowNode['type']): void => {
+    const rect = canvasWrapRef.current?.getBoundingClientRect();
+    if (!rect || !canvasRef.current) return;
+    canvasRef.current.dropNodeAt(type, rect.left + rect.width / 2, rect.top + rect.height / 2);
+    setPaletteDrawerOpen(false);
+  }, []);
+
+  /** Shared inspector element (desktop sidebar + mobile drawer). */
+  const inspector = (
+    <FlowInspector
+      graph={graph}
+      selectedIds={selectedIds}
+      settings={settings}
+      onPatchSettings={(patch) => {
+        scheduleHistory();
+        bump();
+        setSettings((current) => ({ ...current, ...patch }));
+      }}
+      onPatchNode={patchNode}
+      onSetStart={(id) => {
+        pushHistory();
+        bump();
+        setGraph((current) => ({ ...current, start: id }));
+      }}
+      onDuplicate={duplicate}
+      onDeleteNodes={deleteNodes}
+    />
+  );
+
+  // Route + tab-close guard while the flow has unsaved edits.
+  const unsavedGuard = useUnsavedGuard(dirty);
+
   return (
     <Dialog
       open
@@ -580,6 +645,7 @@ export default function FlowEditorDialog({
             value={settings.name}
             onChange={(event) => {
               scheduleHistory();
+              bump();
               setSettings((current) => ({ ...current, name: event.target.value }));
             }}
             sx={{
@@ -809,29 +875,109 @@ export default function FlowEditorDialog({
               onViewportChange={setViewport}
               animating={animating}
             />
+
+            {/* Mobile: palette + inspector are drawers, opened from FABs */}
+            {isMediumDown && (
+              <Stack spacing={1} sx={{ position: 'absolute', right: 12, bottom: 12, zIndex: 5 }}>
+                {isSmallDown && (
+                  <Fab
+                    size="small"
+                    color="primary"
+                    aria-label={t('flows.addNode')}
+                    onClick={() => setPaletteDrawerOpen(true)}
+                  >
+                    <AddIcon fontSize="small" />
+                  </Fab>
+                )}
+                <Fab
+                  size="small"
+                  color="secondary"
+                  aria-label={t('flows.inspector')}
+                  onClick={() => setInspectorDrawerOpen(true)}
+                >
+                  <TuneIcon fontSize="small" />
+                </Fab>
+              </Stack>
+            )}
           </Box>
 
-          {/* Inspector */}
-          <Box sx={{ display: { xs: 'none', md: 'block' } }}>
-            <FlowInspector
-              graph={graph}
-              selectedIds={selectedIds}
-              settings={settings}
-              onPatchSettings={(patch) => {
-                scheduleHistory();
-                setSettings((current) => ({ ...current, ...patch }));
-              }}
-              onPatchNode={patchNode}
-              onSetStart={(id) => {
-                pushHistory();
-                setGraph((current) => ({ ...current, start: id }));
-              }}
-              onDuplicate={duplicate}
-              onDeleteNodes={deleteNodes}
-            />
-          </Box>
+          {/* Inspector (desktop) */}
+          <Box sx={{ display: { xs: 'none', md: 'block' } }}>{inspector}</Box>
         </Stack>
       </Stack>
+
+      {/* Mobile palette drawer: tap a block to drop it in the canvas center */}
+      <Drawer
+        anchor="bottom"
+        open={paletteDrawerOpen}
+        onClose={() => setPaletteDrawerOpen(false)}
+        PaperProps={{
+          sx: { maxHeight: '72vh', borderTopLeftRadius: 16, borderTopRightRadius: 16 },
+        }}
+      >
+        <Box sx={{ p: 2 }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+            <Typography variant="subtitle2">{t('flows.palette')}</Typography>
+            <IconButton
+              size="small"
+              aria-label={t('actions.close')}
+              onClick={() => setPaletteDrawerOpen(false)}
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </Stack>
+          <Stack spacing={0.5}>
+            {PALETTE_TYPES.map((type) => {
+              const Icon = NODE_ICONS[type];
+              return (
+                <Stack
+                  key={type}
+                  direction="row"
+                  spacing={1}
+                  alignItems="center"
+                  data-testid={`palette-drawer-item-${type}`}
+                  sx={{
+                    p: 1.25,
+                    borderRadius: 1.5,
+                    cursor: 'pointer',
+                    '&:active': { backgroundColor: 'action.hover' },
+                  }}
+                  onClick={() => addNodeFromPalette(type)}
+                >
+                  <NodeTypeIconTile type={type} size={24} />
+                  <Typography variant="body2">{t(`flows.nodeTypes.${type}`)}</Typography>
+                  <Box sx={{ flex: 1 }} />
+                  <Icon sx={{ fontSize: 14, color: 'text.secondary' }} />
+                </Stack>
+              );
+            })}
+          </Stack>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5 }}>
+            {t('flows.paletteTapHint')}
+          </Typography>
+        </Box>
+      </Drawer>
+
+      {/* Mobile inspector drawer */}
+      <Drawer
+        anchor="bottom"
+        open={inspectorDrawerOpen}
+        onClose={() => setInspectorDrawerOpen(false)}
+        PaperProps={{
+          sx: { maxHeight: '85vh', borderTopLeftRadius: 16, borderTopRightRadius: 16 },
+        }}
+      >
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: 1.5, pt: 1 }}>
+          <IconButton
+            size="small"
+            aria-label={t('actions.close')}
+            onClick={() => setInspectorDrawerOpen(false)}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </Box>
+        <Box sx={{ px: 2, pb: 3, overflowY: 'auto' }}>{inspector}</Box>
+      </Drawer>
 
       {/* Palette drag ghost */}
       {paletteDrag && (
@@ -864,7 +1010,7 @@ export default function FlowEditorDialog({
         </Box>
       )}
 
-      {/* Unsaved-changes guard */}
+      {/* Unsaved-changes guard (dialog close) */}
       <ConfirmDialog
         open={closeConfirm}
         title={t('flows.unsavedTitle')}
@@ -875,6 +1021,9 @@ export default function FlowEditorDialog({
         }}
         onCancel={() => setCloseConfirm(false)}
       />
+
+      {/* Unsaved-changes guard (route navigation / tab close) */}
+      {unsavedGuard}
     </Dialog>
   );
 }

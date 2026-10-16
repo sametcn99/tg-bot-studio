@@ -1,15 +1,19 @@
 import React from 'react';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import InboxOutlinedIcon from '@mui/icons-material/InboxOutlined';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Centered loading indicator used by every page while data is fetched.
  * Announced politely to screen readers via the ARIA live region role.
  * @param {object} [props] - Component props.
- * @param {string} [props.label='Loading'] - Accessible description.
+ * @param {string} [props.label] - Accessible description (defaults to the
+ * localized "Loading..." string).
  * @returns {React.ReactElement} The loading state.
  */
-export function LoadingState({ label = 'Loading' }: { label?: string }): React.ReactElement {
+export function LoadingState({ label }: { label?: string }): React.ReactElement {
+  const { t } = useTranslation();
+  const resolvedLabel = label ?? t('common.loading');
   return (
     <Box
       role="status"
@@ -18,7 +22,7 @@ export function LoadingState({ label = 'Loading' }: { label?: string }): React.R
     >
       <CircularProgress size={32} aria-hidden="true" />
       <Typography variant="body2" color="text.secondary">
-        {label}...
+        {resolvedLabel}
       </Typography>
     </Box>
   );

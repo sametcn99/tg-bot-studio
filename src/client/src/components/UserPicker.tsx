@@ -19,7 +19,11 @@ import CloseIcon from '@mui/icons-material/Close';
 import PersonSearchIcon from '@mui/icons-material/PersonSearch';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../services/api';
+import { parseUsersPage } from '../utils/usersPage';
 import { formatDateTime } from '../utils/format';
+
+/** Page size requested from the server per load (page 1 + "load more"). */
+const PAGE_SIZE = 50;
 
 /**
  * Subscriber row returned by the CRM list endpoint.
@@ -34,11 +38,12 @@ interface CrmUser {
 }
 
 /**
- * Subscriber picker: searchable modal over the Audience CRM endpoint so
- * operators can target real subscribers (VIP grants, broadcast tests)
- * instead of typing raw Telegram ids. Manual numeric entry stays available.
+ * Subscriber picker: searchable modal over the Audience CRM endpoint (server
+ * side search + paging with a "load more" button) so operators can target
+ * real subscribers (VIP grants, broadcast tests) instead of typing raw
+ * Telegram ids. Manual numeric entry stays available.
  * @param {object} props - Component props.
- * @param {number} props.botId - Active bot id.
+ * @param {number | string} props.botId - Active bot id.
  * @param {string | number} props.value - Currently selected Telegram id.
  * @param {(value: number) => void} props.onChange - Selection callback.
  * @param {string} [props.label] - Field label.
@@ -60,18 +65,54 @@ export default function UserPicker({
 }): React.ReactElement {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [users, setUsers] = useState<CrmUser[] | null>(null);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
+  // Debounce keystrokes into the server query; reset the list when it lands.
   useEffect(() => {
     if (!open) return;
     const handle = window.setTimeout(() => {
-      apiFetch<CrmUser[]>(`/api/bots/${botId}/users?search=${encodeURIComponent(search)}`)
-        .then(setUsers)
-        .catch(() => setUsers([]));
+      setSearch(searchInput.trim());
+      setPage(1);
+      setUsers(null);
     }, 300);
     return () => window.clearTimeout(handle);
-  }, [open, search, botId]);
+  }, [searchInput, open]);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setLoading(true);
+    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+    if (search) params.set('search', search);
+    apiFetch<unknown>(`/api/bots/${botId}/users?${params.toString()}`)
+      .then((payload) => {
+        if (cancelled) return;
+        const result = parseUsersPage<CrmUser>(payload, page, PAGE_SIZE);
+        setTotal(result.total);
+        setUsers((current) => (page === 1 ? result.items : [...(current ?? []), ...result.items]));
+        setError(null);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : String(err));
+        setUsers((current) => current ?? []);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, search, page, botId]);
+
+  const loadedCount = users?.length ?? 0;
+  const hasMore = loadedCount < total;
 
   /**
    * Builds a display name for a subscriber row.
@@ -133,8 +174,8 @@ export default function UserPicker({
             size="small"
             fullWidth
             placeholder={t('userPicker.searchPlaceholder')}
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
             slotProps={{
               input: {
                 startAdornment: (
@@ -146,6 +187,11 @@ export default function UserPicker({
             }}
             sx={{ mb: 1 }}
           />
+          {error && (
+            <Typography variant="caption" color="error" sx={{ display: 'block', mb: 1 }}>
+              {error}
+            </Typography>
+          )}
           <Box sx={{ maxHeight: 320, overflowY: 'auto' }}>
             {users === null ? (
               <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
@@ -180,6 +226,11 @@ export default function UserPicker({
               </List>
             )}
           </Box>
+          {hasMore && users !== null && (
+            <Button size="small" fullWidth disabled={loading} onClick={() => setPage(page + 1)}>
+              {loading ? t('common.loading') : t('userPicker.loadMore')}
+            </Button>
+          )}
         </DialogContent>
       </Dialog>
     </Stack>

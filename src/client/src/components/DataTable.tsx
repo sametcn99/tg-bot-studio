@@ -51,7 +51,7 @@ export default function DataTable<T extends Record<string, any>>({
   rowsPerPageOptions = [10, 25, 50],
   defaultRowsPerPage = 10,
   emptyMessage,
-  ariaLabel = 'Data table',
+  ariaLabel,
 }: DataTableProps<T>): React.ReactElement {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
@@ -61,6 +61,7 @@ export default function DataTable<T extends Record<string, any>>({
   const [rowsPerPage, setRowsPerPage] = useState(defaultRowsPerPage);
   const resolvedSearchPlaceholder = searchPlaceholder ?? t('common.searchPlaceholder');
   const resolvedEmptyMessage = emptyMessage ?? t('common.noRecords');
+  const resolvedAriaLabel = ariaLabel ?? t('common.dataTable');
 
   const handleRequestSort = (property: string) => {
     const isAsc = orderBy === property && order === 'asc';
@@ -154,7 +155,7 @@ export default function DataTable<T extends Record<string, any>>({
         variant="outlined"
         sx={{ overflowX: 'auto', borderRadius: 2 }}
       >
-        <Table size="small" aria-label={ariaLabel}>
+        <Table size="small" aria-label={resolvedAriaLabel}>
           <TableHead>
             <TableRow>
               {columns.map((col) => (

@@ -4,6 +4,7 @@ import { BotsService } from './bots.service';
 import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './analytics.service';
 import { ChatSettingsController } from './chat-settings.controller';
+import { DiagnosticsService } from './diagnostics.service';
 import { AiAssistantModule } from '../modules/ai-assistant/ai-assistant.module';
 
 /**
@@ -12,7 +13,7 @@ import { AiAssistantModule } from '../modules/ai-assistant/ai-assistant.module';
 @Module({
   imports: [AiAssistantModule],
   controllers: [BotsController, AnalyticsController, ChatSettingsController],
-  providers: [BotsService, AnalyticsService],
+  providers: [BotsService, AnalyticsService, DiagnosticsService],
   exports: [BotsService],
 })
 export class BotsModule {}

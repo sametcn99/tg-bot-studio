@@ -7,6 +7,7 @@ import { BotModel } from '../../bots/bot.model';
 import { AutoresponderModel } from '../autoresponder/autoresponder.model';
 import { SupportModel } from '../support/support.model';
 import { SystemSettingsService } from '../../database/system-settings.service';
+import { escapeHtml } from '../../common/utils/telegram-text.util';
 
 /**
  * Runtime for the AI Knowledge Assistant module.
@@ -77,7 +78,11 @@ export class AiAssistantRuntime extends BotModuleHandler {
         );
 
         if (transcribed && transcribed.trim()) {
-          this.logger.log(`Transcribed voice from user ${update.from.id}: "${transcribed.trim()}"`);
+          // Log metadata only — the transcript is user speech (PII) and must
+          // not land in server logs.
+          this.logger.log(
+            `Transcribed voice from user ${update.from.id} (${transcribed.trim().length} chars)`,
+          );
           await this.handleUserTurn(ctx, update, transcribed.trim());
         }
       } catch (err) {
@@ -207,10 +212,12 @@ export class AiAssistantRuntime extends BotModuleHandler {
       });
 
       if (adminChatId) {
+        // User-controlled name and inquiry text are HTML-escaped: they travel
+        // inside a parse_mode=HTML admin notification.
         void ctx.bot.api
           .sendMessage(
             adminChatId,
-            `🚨 <b>[AI Escalation to Human Agent]</b>\nUser: <b>${senderName}</b> (ID: <code>${telegramId}</code>)\nReason: <i>${classification}</i>\nInquiry: "${text}"`,
+            `🚨 <b>[AI Escalation to Human Agent]</b>\nUser: <b>${escapeHtml(senderName)}</b> (ID: <code>${telegramId}</code>)\nReason: <i>${escapeHtml(classification)}</i>\nInquiry: "${escapeHtml(text)}"`,
             { parse_mode: 'HTML' },
           )
           .catch(() => undefined);

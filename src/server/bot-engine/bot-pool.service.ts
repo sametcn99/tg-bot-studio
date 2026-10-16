@@ -2,6 +2,8 @@ import { Injectable, Logger, OnApplicationBootstrap, OnApplicationShutdown } fro
 import { Bot } from 'grammy';
 import { autoRetry } from '@grammyjs/auto-retry';
 import { PrismaService } from '../database/prisma.service';
+import { withDbRetry } from '../database/db-retry';
+import { safeJsonObjectParse } from '../common/utils/json.util';
 import { ChatConnectionModel } from '../modules/connections/chat-connection.model';
 import { EngineHelpersService } from './engine-helpers.service';
 import { ModuleHandlerRegistry } from './module-handler-registry';
@@ -73,6 +75,7 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
   private readonly volume = new Map<number, number>();
   private readonly discoveredChats = new Set<string>();
   private readonly volumeFlushTimer: ReturnType<typeof setInterval>;
+  private flushingVolume = false;
 
   /**
    * @param {PrismaService} prisma - Prisma ORM access service.
@@ -88,6 +91,8 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
     private readonly paymentEvents: PaymentEventsService,
   ) {
     // Persist in-memory message volume counters to bot_settings every 30s.
+    // flushVolume traps its own errors: an unhandled rejection here used to
+    // silently drop the counters (or kill the process under Node).
     this.volumeFlushTimer = setInterval(() => void this.flushVolume(), 30_000);
   }
 
@@ -145,12 +150,17 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
   /**
    * Builds and launches a bot instance with engine + module middleware.
    * @param {BotRow} row - Database row of the bot.
-   * @param {number} attempt - Current restart attempt (0 = initial).
    * @returns {Promise<void>} Resolves once the poller launched (not stopped).
    */
-  private async startBot(row: BotRow, attempt = 0): Promise<void> {
+  private async startBot(row: BotRow): Promise<void> {
     try {
-      this.stopExisting(row.id);
+      // Preserve the retry chain across restarts; a successful onStart resets
+      // it to 0 (so an old failure does not inflate the next backoff).
+      const prior = this.runtimes.get(row.id);
+      // Await the old poller's stop (bounded) so Telegram never sees two
+      // concurrent getUpdates for the same token — that race used to burn a
+      // retry attempt on an avoidable 409 Conflict.
+      await this.stopExisting(row.id);
       const bot = new Bot(row.token);
       bot.api.config.use(autoRetry());
       bot.catch((error) => {
@@ -164,7 +174,7 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
       this.runtimes.set(row.id, {
         bot,
         status: 'starting',
-        retryCount: attempt,
+        retryCount: prior?.retryCount ?? 0,
       });
 
       // Register the group command menu (reference parity) for bots running any
@@ -186,26 +196,29 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
           },
         })
         .catch((error: Error) => {
-          this.handleBotCrash(row, error, attempt);
+          this.handleBotCrash(row, error);
         });
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
-      this.handleBotCrash(row, err, attempt);
+      this.handleBotCrash(row, err);
     }
   }
 
   /**
-   * Supervised error recovery with exponential backoff and 401/409 diagnostic classification.
+   * Supervised error recovery with exponential backoff and 401/409 diagnostic
+   * classification. Network/conflict failures retry indefinitely with a 5
+   * minute cap so a long outage or datacenter blip self-heals instead of
+   * permanently disabling the bot; revoked tokens park as `failed` on purpose.
    */
-  private handleBotCrash(row: BotRow, error: Error, attempt: number): void {
+  private handleBotCrash(row: BotRow, error: Error): void {
     const reason = this.parseErrorReason(error.message);
-    const retries = attempt + 1;
     const runtime = this.runtimes.get(row.id) ?? {
       bot: new Bot(row.token),
-      status: 'failed',
-      retryCount: retries,
+      status: 'failed' as const,
+      retryCount: 0,
     };
 
+    const retries = runtime.retryCount + 1;
     runtime.lastError = error.message;
     runtime.errorReason = reason;
     runtime.retryCount = retries;
@@ -220,52 +233,60 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
       return;
     }
 
-    // Recoverable errors (network, 409 conflict, transient): retry up to 3 times
-    if (retries <= 3) {
-      runtime.status = 'retrying';
-      const delayMs = Math.pow(2, retries) * 1500; // 3s, 6s, 12s
-      this.logger.log(
-        `Bot ${row.id} will attempt auto-restart in ${delayMs / 1000}s (retry ${retries}/3)`,
+    runtime.status = 'retrying';
+    const delayMs = Math.min(1500 * 2 ** Math.min(retries - 1, 8), 5 * 60 * 1000);
+    this.logger.log(
+      `Bot ${row.id} will auto-restart in ${Math.round(delayMs / 1000)}s (retry ${retries})`,
+    );
+    if (reason === 'conflict' && retries >= 6) {
+      this.logger.warn(
+        `Bot ${row.id} keeps hitting 409 Conflict — another process is probably long-polling ` +
+          'the same token. This compose stack must run as a SINGLE instance; stop the duplicate ' +
+          'or revoke/reissue the token via BotFather.',
       );
+    }
 
-      setTimeout(async () => {
-        const current = this.runtimes.get(row.id);
-        if (current && current.status === 'stopped') return;
+    setTimeout(() => {
+      const current = this.runtimes.get(row.id);
+      if (current && current.status === 'stopped') return;
 
-        const freshBot = await this.prisma.bot.findUnique({ where: { id: row.id } });
-        if (freshBot && freshBot.isActive === 1) {
-          await this.startBot(
-            {
+      void this.prisma.bot
+        .findUnique({ where: { id: row.id } })
+        .then((freshBot) => {
+          if (freshBot && freshBot.isActive === 1) {
+            return this.startBot({
               id: freshBot.id,
               name: freshBot.name,
               token: freshBot.token,
               username: freshBot.username,
               first_name: freshBot.firstName,
               is_active: freshBot.isActive,
-            },
-            retries,
+            });
+          }
+        })
+        .catch((restartError: unknown) => {
+          this.handleBotCrash(
+            row,
+            restartError instanceof Error ? restartError : new Error(String(restartError)),
           );
-        }
-      }, delayMs);
-    } else {
-      runtime.status = 'failed';
-      this.logger.error(
-        `Bot ${row.id} reached maximum auto-restart attempts (3). Marked as failed.`,
-      );
-    }
+        });
+    }, delayMs);
   }
 
   /**
-   * Stops a running bot instance if present.
+   * Stops a running bot instance if present, bounded so a wedged `stop()`
+   * cannot block a restart forever.
    * @param {number} botId - Studio bot identifier.
-   * @returns {void}
+   * @returns {Promise<void>} Resolves once polling stopped or timed out.
    */
-  private stopExisting(botId: number): void {
+  private async stopExisting(botId: number): Promise<void> {
     const existing = this.runtimes.get(botId);
-    if (existing) {
-      void existing.bot.stop();
-      this.runtimes.delete(botId);
-    }
+    if (!existing) return;
+    this.runtimes.delete(botId);
+    await Promise.race([
+      existing.bot.stop().catch(() => undefined),
+      new Promise((resolve) => setTimeout(resolve, 3_000)),
+    ]);
   }
 
   /**
@@ -278,7 +299,14 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
   private attachEngineMiddleware(bot: Bot, botId: number): void {
     bot.use(async (ctx, next) => {
       if (ctx.from) {
-        void this.helpers.upsertUser(botId, ctx.from);
+        // Fire-and-forget on purpose (must not delay the update), but never
+        // unhandled: a transient SQLite error must not become a process-level
+        // rejection or silently lose the audience row.
+        this.helpers.upsertUser(botId, ctx.from).catch((error: unknown) => {
+          this.logger.warn(
+            `upsertUser failed for bot ${botId}: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        });
       }
       if (ctx.msg) {
         this.volume.set(botId, (this.volume.get(botId) ?? 0) + 1);
@@ -292,13 +320,19 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
         const key = `${botId}:${chat.id}`;
         if (!this.discoveredChats.has(key)) {
           this.discoveredChats.add(key);
-          void this.chatConnectionModel.upsertGroup({
-            botId,
-            chatId: chat.id,
-            title: chat.title || String(chat.id),
-            type: chat.type,
-            isActive: 1,
-          });
+          this.chatConnectionModel
+            .upsertGroup({
+              botId,
+              chatId: chat.id,
+              title: chat.title || String(chat.id),
+              type: chat.type,
+              isActive: 1,
+            })
+            .catch((error: unknown) => {
+              this.logger.warn(
+                `upsertGroup failed for bot ${botId}: ${error instanceof Error ? error.message : String(error)}`,
+              );
+            });
         }
       }
       // Private chats from banned users are dropped entirely.
@@ -317,13 +351,19 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
       const active = ['member', 'administrator', 'creator'].includes(
         ctx.myChatMember.new_chat_member.status,
       );
-      void this.chatConnectionModel.upsertGroup({
-        botId,
-        chatId: chat.id,
-        title: chat.title ?? String(chat.id),
-        type: chat.type,
-        isActive: active ? 1 : 0,
-      });
+      void this.chatConnectionModel
+        .upsertGroup({
+          botId,
+          chatId: chat.id,
+          title: chat.title ?? String(chat.id),
+          type: chat.type,
+          isActive: active ? 1 : 0,
+        })
+        .catch((error: unknown) => {
+          this.logger.warn(
+            `upsertGroup (my_chat_member) failed for bot ${botId}: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        });
     });
   }
 
@@ -380,14 +420,21 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
    * @returns {Promise<void>} Resolves once all handlers registered.
    */
   private async attachModules(bot: Bot, botId: number): Promise<void> {
+    // Deterministic attach order: middleware sequencing must not depend on
+    // SQLite's storage order.
     const rows = await this.prisma.botModule.findMany({
       where: { botId, isEnabled: 1 },
+      orderBy: { moduleKey: 'asc' },
     });
     for (const row of rows) {
       const handler = this.handlerRegistry.get(row.moduleKey);
       const definition = findModule(row.moduleKey);
       if (!handler || !definition) continue;
-      const stored = row.configJson ? (JSON.parse(row.configJson) as Record<string, unknown>) : {};
+      const stored = safeJsonObjectParse(
+        row.configJson,
+        {},
+        `bot_modules:${botId}:${row.moduleKey}`,
+      );
       const config = { ...definition.defaultConfig, ...stored };
       try {
         await handler.register({ bot, botId, config });
@@ -550,26 +597,42 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
   }
 
   /**
-   * Flushes in-memory volume counters into `bot_settings`.
+   * Flushes in-memory volume counters into `bot_settings`. Self-guarding:
+   * overlapping invocations (interval vs shutdown) and transient SQLite busy
+   * errors are contained here instead of surfacing as unhandled rejections.
    * @returns {Promise<void>}
    */
   private async flushVolume(): Promise<void> {
-    if (this.volume.size === 0) return;
+    if (this.volume.size === 0 || this.flushingVolume) return;
+    this.flushingVolume = true;
     const key = `msg_volume_${new Date().toISOString().slice(0, 10)}`;
 
-    for (const [botId, pending] of this.volume) {
-      const existing = await this.prisma.botSetting.findUnique({
-        where: { botId_key: { botId, key } },
-      });
-      const current = existing ? Number(existing.value) || 0 : 0;
-      const total = current + pending;
+    try {
+      for (const [botId, pending] of this.volume) {
+        try {
+          await withDbRetry(async () => {
+            const existing = await this.prisma.botSetting.findUnique({
+              where: { botId_key: { botId, key } },
+            });
+            const current = existing ? Number(existing.value) || 0 : 0;
+            const total = current + pending;
 
-      await this.prisma.botSetting.upsert({
-        where: { botId_key: { botId, key } },
-        create: { botId, key, value: String(total) },
-        update: { value: String(total) },
-      });
+            await this.prisma.botSetting.upsert({
+              where: { botId_key: { botId, key } },
+              create: { botId, key, value: String(total) },
+              update: { value: String(total) },
+            });
+          }, 'flushVolume');
+          this.volume.delete(botId);
+        } catch (error) {
+          // Keep the pending counter for the next tick instead of dropping it.
+          this.logger.error(
+            `Volume flush failed for bot ${botId}: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
+      }
+    } finally {
+      this.flushingVolume = false;
     }
-    this.volume.clear();
   }
 }

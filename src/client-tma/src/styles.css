@@ -70,6 +70,50 @@ body {
   font-size: 14px;
 }
 
+/* Centered loading state with a minimal CSS spinner (no assets). */
+.loading-state {
+  min-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.spinner {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 3px solid var(--card-border);
+  border-top-color: var(--tg-button-color);
+  animation: tma-spin 0.8s linear infinite;
+}
+
+@keyframes tma-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Config fetch failure card with a retry action. */
+.error-card {
+  background: var(--tg-secondary-bg-color);
+  border: 1px solid rgba(220, 38, 38, 0.45);
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.error-card-message {
+  color: #dc2626;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 .card {
   background: var(--tg-secondary-bg-color);
   border: 1px solid var(--card-border);
@@ -89,6 +133,59 @@ body {
   object-fit: cover;
   border-radius: 8px;
   background: var(--tg-bg-color);
+}
+
+/* Tappable catalog card that opens the product detail view. */
+.product-card {
+  cursor: pointer;
+  transition:
+    transform 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.product-card:active {
+  transform: scale(0.98);
+}
+
+/* Product detail view (BackButton returns to the catalog). */
+.product-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Cart view rows with quantity steppers. */
+.cart-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cart-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--tg-secondary-bg-color);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+}
+
+.qty-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.qty-controls button {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 6px;
+  font-size: 16px;
+  line-height: 1;
 }
 
 .field {

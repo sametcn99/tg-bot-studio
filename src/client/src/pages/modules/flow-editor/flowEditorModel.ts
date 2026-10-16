@@ -80,6 +80,28 @@ export function newNodeId(): string {
   return `n${Math.random().toString(36).slice(2, 8)}`;
 }
 
+/** Module-scoped edit revision — bumped on every committed graph change. */
+let editRevision = 0;
+
+/**
+ * Bumps and returns the monotonically increasing edit revision. The editor
+ * shell calls this on every mutation instead of serializing the whole graph
+ * for dirty tracking; `dirty` is then `currentRevision() !== savedRevision`.
+ * @returns {number} The new revision.
+ */
+export function bumpRevision(): number {
+  editRevision += 1;
+  return editRevision;
+}
+
+/**
+ * Reads the current edit revision without bumping it.
+ * @returns {number} Current revision.
+ */
+export function currentRevision(): number {
+  return editRevision;
+}
+
 /**
  * Builds a blank node of the given type.
  * @param {FlowNode['type']} type - Node type to create.
@@ -173,11 +195,12 @@ export function setWireTarget(
  * @returns {FlowEdge[]} Edges keyed by source node + field.
  */
 export function collectEdges(graph: FlowGraph): FlowEdge[] {
+  const nodeIds = new Set(graph.nodes.map((node) => node.id));
   const edges: FlowEdge[] = [];
   for (const node of graph.nodes) {
     for (const port of outputPorts(node, () => '')) {
       const target = getWireTarget(node, port.field, port.buttonIndex);
-      if (target && graph.nodes.some((item) => item.id === target)) {
+      if (target && nodeIds.has(target)) {
         edges.push({
           id: `${node.id}:${port.field}:${port.buttonIndex ?? ''}`,
           from: node.id,

@@ -42,4 +42,28 @@ export class HealthModel {
       take: limit,
     });
   }
+
+  /**
+   * Lists undelivered alerts from the last day, oldest first, for the retry
+   * pass in the monitor sweep.
+   * @param {number} [limit] - Maximum rows per retry pass.
+   * @returns {Promise<HealthEvent[]>} Unnotified events, oldest first.
+   */
+  async listUndelivered(limit = 25): Promise<HealthEvent[]> {
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    return this.prisma.healthEvent.findMany({
+      where: { notified: 0, createdAt: { gte: cutoff }, level: { not: 'stopped' } },
+      orderBy: { id: 'asc' },
+      take: limit,
+    });
+  }
+
+  /**
+   * Marks an event as delivered after a successful retry.
+   * @param {number} id - Event id.
+   * @returns {Promise<void>} Resolves once updated.
+   */
+  async markNotified(id: number): Promise<void> {
+    await this.prisma.healthEvent.update({ where: { id }, data: { notified: 1 } });
+  }
 }

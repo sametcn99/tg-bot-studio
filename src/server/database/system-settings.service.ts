@@ -1,13 +1,21 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
+import { withDbRetry } from './db-retry';
 
 /**
  * Key-value persistence for global (studio-wide) and per-bot settings stored
  * in `system_settings` and `bot_settings` respectively.
  * Uses Prisma ORM with in-memory write-through cache for instant synchronous access.
+ *
+ * Writes update the cache immediately and persist through an awaitable,
+ * busy-retried database call. Persistence failures are logged loudly and the
+ * cache entry is evicted, so reads never serve phantom state that the
+ * database does not back. Write methods never reject — callers may `await`
+ * them for durability or fire-and-forget them safely.
  */
 @Injectable()
 export class SystemSettingsService implements OnModuleInit {
+  private readonly logger = new Logger(SystemSettingsService.name);
   private readonly systemCache = new Map<string, string>();
   private readonly botCache = new Map<string, string>();
 
@@ -41,17 +49,26 @@ export class SystemSettingsService implements OnModuleInit {
    * Writes (upserts) a global setting via Prisma and updates cache.
    * @param {string} key - Unique setting key.
    * @param {string} value - Serialized value to persist.
-   * @returns {void}
+   * @returns {Promise<void>} Resolves once persisted (or logged on failure).
    */
-  setSetting(key: string, value: string): void {
+  async setSetting(key: string, value: string): Promise<void> {
     this.systemCache.set(key, value);
-    void this.prisma.systemSetting
-      .upsert({
-        where: { key },
-        create: { key, value },
-        update: { value },
-      })
-      .catch(() => undefined);
+    try {
+      await withDbRetry(
+        () =>
+          this.prisma.systemSetting.upsert({
+            where: { key },
+            create: { key, value },
+            update: { value },
+          }),
+        `setSetting:${key}`,
+      );
+    } catch (error) {
+      this.systemCache.delete(key);
+      this.logger.error(
+        `Failed to persist system setting '${key}': ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 
   /**
@@ -63,18 +80,31 @@ export class SystemSettingsService implements OnModuleInit {
 
   /**
    * Writes a raw string per-bot setting via Prisma and updates cache.
+   * @param {number} botId - Owning bot identifier.
+   * @param {string} key - Setting key unique per bot.
+   * @param {string} value - Raw value to persist.
+   * @returns {Promise<void>} Resolves once persisted (or logged on failure).
    */
-  setBotSetting(botId: number, key: string, value: string): void {
+  async setBotSetting(botId: number, key: string, value: string): Promise<void> {
     this.botCache.set(`${botId}:${key}`, value);
-    void this.prisma.botSetting
-      .upsert({
-        where: {
-          botId_key: { botId, key },
-        },
-        create: { botId, key, value },
-        update: { value },
-      })
-      .catch(() => undefined);
+    try {
+      await withDbRetry(
+        () =>
+          this.prisma.botSetting.upsert({
+            where: {
+              botId_key: { botId, key },
+            },
+            create: { botId, key, value },
+            update: { value },
+          }),
+        `setBotSetting:${botId}:${key}`,
+      );
+    } catch (error) {
+      this.botCache.delete(`${botId}:${key}`);
+      this.logger.error(
+        `Failed to persist bot setting '${key}' for bot ${botId}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 
   /**
@@ -90,6 +120,7 @@ export class SystemSettingsService implements OnModuleInit {
     try {
       return JSON.parse(raw) as T;
     } catch {
+      this.logger.warn(`Malformed JSON in bot setting '${key}' for bot ${botId}`);
       return undefined;
     }
   }
@@ -99,33 +130,52 @@ export class SystemSettingsService implements OnModuleInit {
    * @param {number} botId - Owning bot identifier.
    * @param {string} key - Setting key unique per bot.
    * @param {unknown} value - Value to serialize and persist.
-   * @returns {void}
+   * @returns {Promise<void>} Resolves once persisted (or logged on failure).
    */
-  setBotJson(botId: number, key: string, value: unknown): void {
+  async setBotJson(botId: number, key: string, value: unknown): Promise<void> {
     const str = JSON.stringify(value);
     this.botCache.set(`${botId}:${key}`, str);
-    void this.prisma.botSetting
-      .upsert({
-        where: {
-          botId_key: { botId, key },
-        },
-        create: { botId, key, value: str },
-        update: { value: str },
-      })
-      .catch(() => undefined);
+    try {
+      await withDbRetry(
+        () =>
+          this.prisma.botSetting.upsert({
+            where: {
+              botId_key: { botId, key },
+            },
+            create: { botId, key, value: str },
+            update: { value: str },
+          }),
+        `setBotJson:${botId}:${key}`,
+      );
+    } catch (error) {
+      this.botCache.delete(`${botId}:${key}`);
+      this.logger.error(
+        `Failed to persist bot setting '${key}' for bot ${botId}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 
   /**
    * Deletes a per-bot setting (cache + database).
    * @param {number} botId - Owning bot identifier.
    * @param {string} key - Setting key to remove.
-   * @returns {void}
+   * @returns {Promise<void>} Resolves once deleted (or logged on failure).
    */
-  deleteBotSetting(botId: number, key: string): void {
+  async deleteBotSetting(botId: number, key: string): Promise<void> {
     this.botCache.delete(`${botId}:${key}`);
-    void this.prisma.botSetting
-      .delete({ where: { botId_key: { botId, key } } })
-      .catch(() => undefined);
+    try {
+      await withDbRetry(
+        () => this.prisma.botSetting.delete({ where: { botId_key: { botId, key } } }),
+        `deleteBotSetting:${botId}:${key}`,
+      );
+    } catch (error) {
+      // A missing row is fine (delete is idempotent for our purposes); real
+      // failures are logged so operators can see lost deletions.
+      const message = error instanceof Error ? error.message : String(error);
+      if (!message.includes('P2025')) {
+        this.logger.error(`Failed to delete bot setting '${key}' for bot ${botId}: ${message}`);
+      }
+    }
   }
 
   /**
@@ -145,5 +195,19 @@ export class SystemSettingsService implements OnModuleInit {
       }
     }
     return out;
+  }
+
+  /**
+   * Evicts all cached effective-config entries for a bot. Called after
+   * bot-level module/config writes so the per-chat override cache cannot
+   * serve a stale merge of the previous bot configuration.
+   * @param {number} botId - Bot whose entries should be invalidated.
+   * @returns {void}
+   */
+  invalidateBotCache(botId: number): void {
+    const prefix = `${botId}:`;
+    for (const composite of this.botCache.keys()) {
+      if (composite.startsWith(prefix)) this.botCache.delete(composite);
+    }
   }
 }

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { BlockedUser, BotUser } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
+import { withDbRetry } from '../../database/db-retry';
 import type { BotUserEntity } from './bot-user.entity';
 
 /**
@@ -49,7 +50,9 @@ export class BotUserModel {
   }
 
   /**
-   * Upserts a subscriber record when receiving messages.
+   * Upserts a subscriber record when receiving messages. Single-statement
+   * upsert (the old find-then-write doubled queries on the hottest path and
+   * raced under concurrent pollers) with busy retry.
    */
   async upsertUser(
     botId: number,
@@ -63,43 +66,35 @@ export class BotUserModel {
   ): Promise<BotUserEntity> {
     const telegramId = BigInt(data.telegramId);
     const now = new Date().toISOString();
-
-    const existing = await this.prisma.botUser.findUnique({
-      where: {
-        botId_telegramId: { botId, telegramId },
-      },
-    });
-
-    if (existing) {
-      const updated = await this.prisma.botUser.update({
-        where: {
-          botId_telegramId: { botId, telegramId },
-        },
-        data: {
-          username: data.username ?? existing.username,
-          firstName: data.firstName ?? existing.firstName,
-          lastName: data.lastName ?? existing.lastName,
-          languageCode: data.languageCode ?? existing.languageCode,
-          lastSeenAt: now,
-        },
-      });
-      return this.toEntity(updated);
-    }
-
-    const created = await this.prisma.botUser.create({
-      data: {
-        botId,
-        telegramId,
-        username: data.username ?? null,
-        firstName: data.firstName ?? null,
-        lastName: data.lastName ?? null,
-        languageCode: data.languageCode ?? 'en',
-        points: 0,
-        firstSeenAt: now,
-        lastSeenAt: now,
-      },
-    });
-    return this.toEntity(created);
+    // `undefined` fields keep the stored value; `null` clears it.
+    const record = await withDbRetry(
+      () =>
+        this.prisma.botUser.upsert({
+          where: {
+            botId_telegramId: { botId, telegramId },
+          },
+          create: {
+            botId,
+            telegramId,
+            username: data.username ?? null,
+            firstName: data.firstName ?? null,
+            lastName: data.lastName ?? null,
+            languageCode: data.languageCode ?? 'en',
+            points: 0,
+            firstSeenAt: now,
+            lastSeenAt: now,
+          },
+          update: {
+            username: data.username ?? undefined,
+            firstName: data.firstName ?? undefined,
+            lastName: data.lastName ?? undefined,
+            languageCode: data.languageCode ?? undefined,
+            lastSeenAt: now,
+          },
+        }),
+      'upsertUser',
+    );
+    return this.toEntity(record);
   }
 
   /**
@@ -118,25 +113,40 @@ export class BotUserModel {
   }
 
   /**
-   * Adjusts a user's point balance (minimum 0).
+   * Adjusts a user's point balance (minimum 0). Positive amounts increment
+   * atomically (no read-modify-write double-credit race); negative amounts
+   * clamp at zero.
    */
   async addPoints(botId: number, telegramId: number | bigint, amount: number): Promise<void> {
+    const where = {
+      botId_telegramId: {
+        botId,
+        telegramId: BigInt(telegramId),
+      },
+    };
+    if (amount >= 0) {
+      await withDbRetry(
+        () =>
+          this.prisma.botUser.update({
+            where,
+            data: { points: { increment: amount } },
+          }),
+        'addPoints',
+      );
+      return;
+    }
     const user = await this.getUser(botId, telegramId);
     if (!user) return;
-    const newPoints = Math.max(0, user.points + amount);
     await this.prisma.botUser.update({
-      where: {
-        botId_telegramId: {
-          botId,
-          telegramId: BigInt(telegramId),
-        },
-      },
-      data: { points: newPoints },
+      where,
+      data: { points: Math.max(0, user.points + amount) },
     });
   }
 
   /**
-   * Sets referrer for a user if not already set, awarding points to the referrer.
+   * Sets referrer for a user if not already set, awarding points to the
+   * referrer. Both writes run in one transaction so a crash cannot award
+   * points without recording (or vice versa).
    */
   async setReferrer(
     botId: number,
@@ -146,21 +156,18 @@ export class BotUserModel {
   ): Promise<boolean> {
     if (BigInt(telegramId) === BigInt(referrerId)) return false;
 
-    const user = await this.getUser(botId, telegramId);
-    if (user?.referrer_id) return false;
-
     const referrer = await this.getUser(botId, referrerId);
     if (!referrer) return false;
 
-    await this.prisma.botUser.update({
+    const claimed = await this.prisma.botUser.updateMany({
       where: {
-        botId_telegramId: {
-          botId,
-          telegramId: BigInt(telegramId),
-        },
+        botId,
+        telegramId: BigInt(telegramId),
+        referrerId: null,
       },
       data: { referrerId: BigInt(referrerId) },
     });
+    if (claimed.count === 0) return false;
 
     await this.addPoints(botId, referrerId, pointsPerReferral);
     return true;
@@ -247,6 +254,54 @@ export class BotUserModel {
       take: limit,
     });
     return rows.map((r) => this.toEntity(r));
+  }
+
+  /**
+   * Server-side paginated CRM listing: search (username/name) and tag filters
+   * run in SQL so clients no longer pull the whole subscriber table and
+   * filter in memory.
+   * @param {number} botId - Owning bot id.
+   * @param {object} query - Page/pageSize (max 200) plus optional search/tag.
+   * @returns {Promise<{items: BotUserEntity[]; total: number; page: number; pageSize: number}>} One page plus total count.
+   */
+  async listUsersPage(
+    botId: number,
+    query: { search?: string; tag?: string; page?: number; pageSize?: number },
+  ): Promise<{
+    items: BotUserEntity[];
+    total: number;
+    page: number;
+    pageSize: number;
+  }> {
+    const page = Math.max(1, Math.floor(Number(query.page ?? 1)) || 1);
+    const pageSize = Math.min(200, Math.max(1, Math.floor(Number(query.pageSize ?? 50)) || 50));
+    const where: Record<string, unknown> = { botId };
+
+    const search = String(query.search ?? '').trim();
+    if (search) {
+      where.OR = [
+        { username: { contains: search } },
+        { firstName: { contains: search } },
+        { lastName: { contains: search } },
+      ];
+    }
+    const tag = String(query.tag ?? '').trim();
+    if (tag) {
+      // Tags live in a JSON array column; a LIKE on the serialized form keeps
+      // the filter in SQL without normalizing the schema.
+      where.tagsJson = { contains: `"${tag.replace(/"/g, '')}"` };
+    }
+
+    const [rows, total] = await Promise.all([
+      this.prisma.botUser.findMany({
+        where: where as never,
+        orderBy: { lastSeenAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.botUser.count({ where: where as never }),
+    ]);
+    return { items: rows.map((r) => this.toEntity(r)), total, page, pageSize };
   }
 
   /**

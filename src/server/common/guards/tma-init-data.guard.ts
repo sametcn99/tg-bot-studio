@@ -50,7 +50,11 @@ export class TmaInitDataGuard implements CanActivate {
 
     const validation = validateInitData(initData, app.bot.token);
     if (!validation.valid || !validation.userId) {
-      throw new UnauthorizedException('Invalid initData signature');
+      throw new UnauthorizedException(
+        validation.reason === 'expired'
+          ? 'Telegram session expired — please reopen the Mini App'
+          : 'Invalid initData signature',
+      );
     }
 
     request.tmaUser = this.parseUser(initData);

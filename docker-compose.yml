@@ -10,10 +10,18 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - ADMIN_MASTER_KEY=${ADMIN_MASTER_KEY:-admin123}
-      - JWT_SECRET=${JWT_SECRET:-change_this_secret_in_production}
+      # No defaults: the server refuses to boot in production with the
+      # documented fallback credentials. Set real values before deploying.
+      - ADMIN_MASTER_KEY=${ADMIN_MASTER_KEY:?Set ADMIN_MASTER_KEY to a strong value}
+      - JWT_SECRET=${JWT_SECRET:?Set JWT_SECRET to a long random string}
       - DATA_DIR=/app/data
       - DB_PATH=/app/data/studio.sqlite
+    # Single instance only: SQLite (one writer) and per-token long polling
+    # (Telegram returns 409 for concurrent getUpdates) forbid replicas.
+    deploy:
+      resources:
+        limits:
+          memory: 1g
     volumes:
       - ./data:/app/data
     healthcheck:

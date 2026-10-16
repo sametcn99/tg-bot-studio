@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { tmaFetch } from './api';
-import { isInsideTelegram } from './sdk/telegram';
+import { applyTheme as applyTelegramTheme, isInsideTelegram, onThemeChanged } from './sdk/telegram';
+import { createT } from './i18n';
 import Ecommerce from './templates/Ecommerce';
 import Loyalty from './templates/Loyalty';
 import Forms from './templates/Forms';
@@ -40,10 +41,11 @@ function slugFromPath(): string {
 /**
  * Applies studio-defined theme overrides (themeJson) as CSS custom
  * properties so brand colors configured in the dashboard recolor the app.
+ * Must run after {@link applyTelegramTheme} so overrides win over defaults.
  * @param {Record<string, unknown>} theme - Theme overrides from the config.
  * @returns {void}
  */
-function applyTheme(theme: Record<string, unknown>): void {
+function applyStudioTheme(theme: Record<string, unknown>): void {
   const root = document.documentElement.style;
   const overrides: Record<string, string> = {
     primaryColor: '--tg-button-color',
@@ -68,27 +70,81 @@ function applyTheme(theme: Record<string, unknown>): void {
 export default function App(): React.ReactElement {
   const [config, setConfig] = useState<TmaAppConfig | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [reloadTick, setReloadTick] = useState(0);
   const slug = slugFromPath();
+
+  // Stable default translator: the fetch effect runs before any owner
+  // overrides exist, so English defaults are always the right choice there.
+  const defaultT = useMemo(() => createT(), []);
+  const t = useMemo(() => createT(config?.config), [config]);
 
   useEffect(() => {
     if (!slug) {
-      setError('No Mini App slug found in the URL.');
+      setError(defaultT('app.slugMissing', 'No Mini App slug found in the URL.'));
       return;
     }
+    let cancelled = false;
+    setError(null);
     tmaFetch<TmaAppConfig>(`/api/tma/${slug}`)
-      .then(setConfig)
-      .catch((err: Error) => setError(err.message));
-  }, [slug]);
+      .then((loaded) => {
+        if (!cancelled) setConfig(loaded);
+      })
+      .catch((err: Error) => {
+        if (!cancelled) {
+          setError(
+            err.message ||
+              defaultT('app.configLoadFailed', 'Failed to load the app configuration.'),
+          );
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [slug, reloadTick, defaultT]);
 
   useEffect(() => {
-    if (config?.theme) applyTheme(config.theme);
+    if (config?.theme) {
+      applyTelegramTheme();
+      applyStudioTheme(config.theme);
+    }
   }, [config]);
 
+  // Follow live Telegram dark/light switches: re-map theme params, then
+  // re-layer the studio brand overrides on top.
+  useEffect(() => {
+    return onThemeChanged(() => {
+      applyTelegramTheme();
+      if (config?.theme) applyStudioTheme(config.theme);
+    });
+  }, [config]);
+
+  /**
+   * Re-runs the configuration fetch after a failure.
+   * @returns {void}
+   */
+  const retry = useCallback(() => setReloadTick((tick) => tick + 1), []);
+
   if (error) {
-    return <div className="state-message">{error}</div>;
+    return (
+      <main className="app-shell">
+        <div className="error-card" role="alert">
+          <div className="error-card-message">{error}</div>
+          {slug ? (
+            <button className="primary" onClick={retry}>
+              {t('app.retry', 'Retry')}
+            </button>
+          ) : null}
+        </div>
+      </main>
+    );
   }
   if (!config) {
-    return <div className="state-message">Loading Mini App...</div>;
+    return (
+      <div className="loading-state" role="status" aria-live="polite">
+        <div className="spinner" />
+        <div className="muted">{t('app.loading', 'Loading Mini App...')}</div>
+      </div>
+    );
   }
 
   const insideTelegram = isInsideTelegram();
@@ -104,7 +160,10 @@ export default function App(): React.ReactElement {
       {!insideTelegram && (
         <div className="card">
           <span className="muted">
-            Open this app inside Telegram to enable personalized features and secure data access.
+            {t(
+              'app.openInTelegram',
+              'Open this app inside Telegram to enable personalized features and secure data access.',
+            )}
           </span>
         </div>
       )}
@@ -136,6 +195,10 @@ function TemplateRenderer({ config }: { config: TmaAppConfig }): React.ReactElem
     case 'support':
       return <Support config={config} />;
     default:
-      return <div className="state-message">Unknown template type.</div>;
+      return (
+        <div className="state-message">
+          {createT(config.config)('app.unknownTemplate', 'Unknown template type.')}
+        </div>
+      );
   }
 }

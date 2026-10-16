@@ -178,6 +178,9 @@ export class FlowsService {
           ? graph
           : JSON.stringify(graph);
     const parsed = this.flowModel.parseGraph(graphJson);
+    if (parsed.nodes.length > 100) {
+      throw new BadRequestException('graph exceeds the 100-node limit');
+    }
     if (parsed.nodes.length > 0 && !parsed.nodes.some((node) => node.id === parsed.start)) {
       throw new BadRequestException('graph.start must reference an existing node');
     }

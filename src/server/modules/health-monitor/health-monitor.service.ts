@@ -1,4 +1,11 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
+import { Bot } from 'grammy';
 import { BotPoolService } from '../../bot-engine/bot-pool.service';
 import { HealthModel } from './health.model';
 import { BotModel } from '../../bots/bot.model';
@@ -12,6 +19,12 @@ export interface HealthAlertSettings {
   alertChatId: string;
 }
 
+/** Studio-global fallback alert transport (settable in env or system settings). */
+export interface OperatorAlertSettings {
+  botToken: string;
+  chatId: string;
+}
+
 /** Runtime status remembered between sweeps. */
 type SweepStatus = 'active' | 'starting' | 'failed' | 'stopped' | 'inactive' | 'retrying';
 
@@ -20,12 +33,19 @@ type SweepStatus = 'active' | 'starting' | 'failed' | 'stopped' | 'inactive' | '
  * status, records state transitions as health events, and pushes Telegram
  * alerts to a configured chat when a bot fails, starts recovering, or
  * recovers.
+ *
+ * Delivery never depends solely on the sick bot: when the bot's own API
+ * cannot send (exactly the token_revoked case an operator must hear about),
+ * the alert falls back to the studio-wide operator bot
+ * (`HEALTH_ALERT_BOT_TOKEN` + `HEALTH_ALERT_CHAT_ID`, or system settings), and
+ * undelivered alerts retry on the next sweeps for 24 hours.
  */
 @Injectable()
 export class HealthMonitorService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(HealthMonitorService.name);
   private readonly lastStatus = new Map<number, SweepStatus>();
   private readonly sweepTimer: ReturnType<typeof setInterval>;
+  private operatorBot: { token: string; bot: Bot } | null = null;
 
   /**
    * @param {BotModel} botModel - Bot rows and existence checks.
@@ -97,12 +117,42 @@ export class HealthMonitorService implements OnModuleInit, OnModuleDestroy {
             'Bot recovered',
             'Polling is healthy again.',
           );
+        } else if (status === 'stopped' && ['active', 'retrying', 'starting'].includes(previous)) {
+          // Informational only — the operator paused it, no Telegram alert.
+          await this.healthModel.create({
+            botId: bot.id,
+            level: 'stopped',
+            reason: null,
+            message: 'Bot paused by operator.',
+            notified: 1,
+          });
+          this.live.emit('health', bot.id);
         }
       }
+      await this.retryUndelivered();
     } catch (error) {
       this.logger.warn(
         `Health sweep failed: ${error instanceof Error ? error.message : String(error)}`,
       );
+    }
+  }
+
+  /**
+   * Re-attempts delivery of alerts that failed on their first pass (the sick
+   * bot itself, transient network) while the condition persisted — deduped by
+   * the notified flag.
+   * @returns {Promise<void>} Resolves after the retry pass.
+   */
+  private async retryUndelivered(): Promise<void> {
+    const undelivered = await this.healthModel.listUndelivered();
+    for (const event of undelivered) {
+      const config = await this.getSettings(event.botId);
+      if (!config.enabled || !config.alertChatId) continue;
+      const bot = await this.botModel.findById(event.botId);
+      const text = `🔁 ${event.message} (${bot?.name ?? `bot ${event.botId}`})`;
+      if (await this.deliver(event.botId, config.alertChatId, text)) {
+        await this.healthModel.markNotified(event.id);
+      }
     }
   }
 
@@ -127,11 +177,46 @@ export class HealthMonitorService implements OnModuleInit, OnModuleDestroy {
   async updateSettings(botId: number, body: HealthAlertSettings): Promise<HealthAlertSettings> {
     const chatId = String(body.alertChatId ?? '').trim();
     if (chatId && !/^-?\d+$/.test(chatId)) {
-      throw new Error('alertChatId must be a numeric Telegram chat id');
+      throw new BadRequestException('alertChatId must be a numeric Telegram chat id');
     }
-    this.settings.setBotSetting(botId, 'healthAlertsEnabled', body.enabled ? '1' : '0');
-    this.settings.setBotSetting(botId, 'healthAlertChatId', chatId);
+    await this.settings.setBotSetting(botId, 'healthAlertsEnabled', body.enabled ? '1' : '0');
+    await this.settings.setBotSetting(botId, 'healthAlertChatId', chatId);
     return this.getSettings(botId);
+  }
+
+  /**
+   * Reads the studio-global operator alert transport. Environment wins over
+   * system settings so Docker deployments can configure it without a login.
+   * @returns {Promise<OperatorAlertSettings>} Operator bot token + chat id.
+   */
+  async getOperatorSettings(): Promise<OperatorAlertSettings> {
+    return {
+      botToken:
+        process.env.HEALTH_ALERT_BOT_TOKEN ||
+        this.settings.getSetting('health_operator_bot_token') ||
+        '',
+      chatId:
+        process.env.HEALTH_ALERT_CHAT_ID ||
+        this.settings.getSetting('health_operator_chat_id') ||
+        '',
+    };
+  }
+
+  /**
+   * Persists the studio-global operator alert transport (system settings).
+   * @param {OperatorAlertSettings} body - Operator bot token + chat id.
+   * @returns {Promise<OperatorAlertSettings>} Stored values.
+   */
+  async updateOperatorSettings(body: OperatorAlertSettings): Promise<OperatorAlertSettings> {
+    const chatId = String(body.chatId ?? '').trim();
+    const token = String(body.botToken ?? '').trim();
+    if (chatId && !/^-?\d+$/.test(chatId)) {
+      throw new BadRequestException('chatId must be a numeric Telegram chat id');
+    }
+    await this.settings.setSetting('health_operator_bot_token', token);
+    await this.settings.setSetting('health_operator_chat_id', chatId);
+    this.operatorBot = null;
+    return this.getOperatorSettings();
   }
 
   /**
@@ -208,18 +293,47 @@ export class HealthMonitorService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Sends one alert message using the bot's own API instance.
-   * @returns {Promise<boolean>} True when delivered.
+   * Sends one alert message, falling back to the studio-wide operator bot
+   * when the bot's own instance is missing or failing — a revoked token (the
+   * most urgent alert) can never deliver through itself.
+   * @returns {Promise<boolean>} True when delivered through any transport.
    */
   private async deliver(botId: number, chatId: string, text: string): Promise<boolean> {
     const bot = this.pool.getBot(botId);
-    if (!bot) return false;
+    if (bot) {
+      try {
+        await bot.api.sendMessage(chatId, text);
+        return true;
+      } catch (error) {
+        this.logger.warn(
+          `Alert delivery failed for bot ${botId}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
+    return this.deliverViaOperator(chatId, text);
+  }
+
+  /**
+   * Sends an alert through the operator bot (cached instance).
+   * @param {string} chatId - Target chat.
+   * @param {string} text - Alert text.
+   * @returns {Promise<boolean>} True when delivered.
+   */
+  private async deliverViaOperator(chatId: string, text: string): Promise<boolean> {
+    const { botToken, chatId: operatorChat } = await this.getOperatorSettings();
+    if (!botToken) return false;
+    const target = chatId || operatorChat;
+    if (!target) return false;
     try {
-      await bot.api.sendMessage(chatId, text);
+      if (!this.operatorBot || this.operatorBot.token !== botToken) {
+        this.operatorBot = { token: botToken, bot: new Bot(botToken) };
+        await this.operatorBot.bot.init();
+      }
+      await this.operatorBot.bot.api.sendMessage(target, text);
       return true;
     } catch (error) {
       this.logger.warn(
-        `Alert delivery failed for bot ${botId}: ${error instanceof Error ? error.message : String(error)}`,
+        `Operator-bot alert delivery failed: ${error instanceof Error ? error.message : String(error)}`,
       );
       return false;
     }

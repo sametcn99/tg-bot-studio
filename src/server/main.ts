@@ -2,9 +2,32 @@ import 'reflect-metadata';
 import helmet from 'helmet';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { MetricsInterceptor } from './common/interceptors/metrics.interceptor';
+import { isDefaultJwtSecretEnv, isDefaultMasterKeyEnv } from './auth/auth-defaults';
+
+/**
+ * Refuses to boot with the documented default credentials in production —
+ * a deployment that ships `admin123` or the fallback JWT secret is one port
+ * scan away from full takeover. Operators must set real values explicitly.
+ * @returns {void} Throws when running in production with default credentials.
+ */
+function assertProductionCredentials(): void {
+  if (process.env.NODE_ENV !== 'production') return;
+  const defaults: string[] = [];
+  if (isDefaultMasterKeyEnv()) defaults.push('ADMIN_MASTER_KEY');
+  if (isDefaultJwtSecretEnv()) defaults.push('JWT_SECRET');
+  if (defaults.length > 0) {
+    throw new Error(
+      `Refusing to start in production with default credentials: ${defaults.join(', ')}. ` +
+        'Set real values in the environment before deploying publicly.',
+    );
+  }
+}
 
 /**
  * Bootstraps the unified fullstack NestJS server:
@@ -13,11 +36,44 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
  * @returns {Promise<void>} Resolves once the HTTP listener is bound.
  */
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  assertProductionCredentials();
 
-  // Security headers; CSP disabled so the dashboard can embed Mini App
-  // previews and remote media without provider allowlists.
-  app.use(helmet({ contentSecurityPolicy: false }));
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    // Raw body is required to verify webhook HMAC signatures over the exact
+    // bytes the sender signed (JSON re-serialization is not byte-stable).
+    rawBody: true,
+  });
+
+  const expressApp = app.getHttpAdapter().getInstance();
+  // Trust exactly one reverse-proxy hop so `req.ip` reflects the real client
+  // address for rate limiting while spoofed `X-Forwarded-For` chains from
+  // direct connections are ignored. Increase when chaining proxies/CDNs.
+  expressApp.set('trust proxy', 1);
+
+  // Security headers. CSP allows: the app's own assets, inline styles (MUI
+  // emotion injection), Telegram's WebApp SDK for Mini App pages, and
+  // https media/frames so operator-configured remote content keeps working.
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        useDefaults: true,
+        directives: {
+          'default-src': ["'self'"],
+          'script-src': ["'self'", 'https://telegram.org'],
+          'style-src': ["'self'", "'unsafe-inline'"],
+          'img-src': ["'self'", 'data:', 'blob:', 'https:'],
+          'media-src': ["'self'", 'blob:', 'https:'],
+          'connect-src': ["'self'", 'https:'],
+          'font-src': ["'self'", 'data:'],
+          'frame-src': ["'self'", 'https:'],
+          'frame-ancestors': ["'self'", 'https://web.telegram.org', 'https://telegram.org'],
+          // Self-hosted deployments commonly run plain HTTP on a LAN; the
+          // upgrade directive would break subresource loading there.
+          'upgrade-insecure-requests': null,
+        },
+      },
+    }),
+  );
   // CORS is opt-in: the dashboard ships from the same origin in production.
   // Set CORS_ORIGINS="https://a.example,https://b.example" for split hosting.
   const corsOrigins = (process.env.CORS_ORIGINS ?? '')
@@ -39,7 +95,17 @@ async function bootstrap(): Promise<void> {
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.useGlobalFilters(new HttpExceptionFilter());
-  app.useGlobalInterceptors(new TransformInterceptor());
+  app.useGlobalInterceptors(new TransformInterceptor(), new MetricsInterceptor());
+
+  // Live API reference at /api/docs (route discovery only; every endpoint
+  // keeps its normal JWT guard).
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('Telegram Bot Studio API')
+    .setDescription('Self-hosted Telegram bot & Mini App management studio API')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+  SwaggerModule.setup('api/docs', app, SwaggerModule.createDocument(app, swaggerConfig));
 
   // Ensures SIGTERM/SIGINT propagate so grammY bots stop cleanly.
   app.enableShutdownHooks();
@@ -51,4 +117,21 @@ async function bootstrap(): Promise<void> {
   new Logger('Bootstrap').log(`Telegram Bot Studio listening on port ${port}`);
 }
 
-void bootstrap();
+// A single unhandled rejection must never silently drop writes (or, on Node,
+// kill the process). Log with full stack; `uncaughtException` exits so the
+// supervisor (Docker restart policy) gives the studio a clean process.
+process.on('unhandledRejection', (reason) => {
+  const logger = new Logger('Process');
+  logger.error(`Unhandled rejection: ${reason instanceof Error ? reason.stack : String(reason)}`);
+});
+process.on('uncaughtException', (error) => {
+  new Logger('Process').error(`Uncaught exception: ${error.stack ?? error.message}`);
+  process.exit(1);
+});
+
+bootstrap().catch((error: unknown) => {
+  new Logger('Bootstrap').error(
+    `Fatal bootstrap error: ${error instanceof Error ? error.stack : String(error)}`,
+  );
+  process.exit(1);
+});

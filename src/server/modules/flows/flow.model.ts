@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { Flow, FlowState } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
-import type { FlowGraph, FlowNode } from './flow.entity';
+import type { FlowGraph } from './flow.entity';
 
 /**
  * Model managing flow definitions and per-user flow sessions via Prisma.

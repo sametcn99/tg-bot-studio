@@ -1,36 +1,63 @@
-import React from 'react';
-import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom';
+import React, { Suspense, lazy } from 'react';
+import {
+  createBrowserRouter,
+  Navigate,
+  Route,
+  RouterProvider,
+  Routes,
+  useParams,
+} from 'react-router-dom';
+import { Box, CircularProgress } from '@mui/material';
 import { StudioThemeProvider } from './theme';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SnackbarProvider } from './context/SnackbarContext';
 import { BotProvider } from './context/BotContext';
 import { ConnectionsProvider } from './context/ConnectionsContext';
 import { ModuleDocsProvider } from './context/ModuleDocsContext';
-import Layout from './components/Layout';
-import LoginPage from './pages/LoginPage';
-import BotsOverviewPage from './pages/BotsOverviewPage';
-import BotDashboardPage from './pages/BotDashboardPage';
-import ModulesManagerPage from './pages/ModulesManagerPage';
-import MiniAppsPage from './pages/MiniAppsPage';
-import ConnectionSettingsPage from './pages/ConnectionSettingsPage';
-import SecurityPage from './pages/SecurityPage';
-import ModuleConfigPage from './pages/ModuleConfigPage';
-import ConnectionsPage from './pages/ConnectionsPage';
-import CrudPage from './components/CrudPage';
-import BroadcastPage from './pages/modules/BroadcastPage';
-import UsersCrmPage from './pages/modules/UsersCrmPage';
-import SupportPage from './pages/modules/SupportPage';
-import MonetizationPage from './pages/modules/MonetizationPage';
-import WebhooksPage from './pages/modules/WebhooksPage';
-import EngagementPage from './pages/modules/EngagementPage';
-import ReferralsPage from './pages/modules/ReferralsPage';
-import MessageScorePage from './pages/modules/MessageScorePage';
-import MediaLibraryPage from './pages/modules/MediaLibraryPage';
-import InlineModePage from './pages/modules/InlineModePage';
-import FlowBuilderPage from './pages/modules/FlowBuilderPage';
 import { useLocalizedModule } from './registry/localize';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import ScrollToTop from './components/ScrollToTop';
+
+// Route-level code splitting: every page is its own chunk, loaded on first
+// navigation instead of up front.
+const Layout = lazy(() => import('./components/Layout'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const BotsOverviewPage = lazy(() => import('./pages/BotsOverviewPage'));
+const BotDashboardPage = lazy(() => import('./pages/BotDashboardPage'));
+const ModulesManagerPage = lazy(() => import('./pages/ModulesManagerPage'));
+const MiniAppsPage = lazy(() => import('./pages/MiniAppsPage'));
+const ConnectionSettingsPage = lazy(() => import('./pages/ConnectionSettingsPage'));
+const SecurityPage = lazy(() => import('./pages/SecurityPage'));
+const ModuleConfigPage = lazy(() => import('./pages/ModuleConfigPage'));
+const ConnectionsPage = lazy(() => import('./pages/ConnectionsPage'));
+const CrudPage = lazy(() => import('./components/CrudPage'));
+const BroadcastPage = lazy(() => import('./pages/modules/BroadcastPage'));
+const UsersCrmPage = lazy(() => import('./pages/modules/UsersCrmPage'));
+const SupportPage = lazy(() => import('./pages/modules/SupportPage'));
+const MonetizationPage = lazy(() => import('./pages/modules/MonetizationPage'));
+const WebhooksPage = lazy(() => import('./pages/modules/WebhooksPage'));
+const EngagementPage = lazy(() => import('./pages/modules/EngagementPage'));
+const ReferralsPage = lazy(() => import('./pages/modules/ReferralsPage'));
+const MessageScorePage = lazy(() => import('./pages/modules/MessageScorePage'));
+const MediaLibraryPage = lazy(() => import('./pages/modules/MediaLibraryPage'));
+const InlineModePage = lazy(() => import('./pages/modules/InlineModePage'));
+const FlowBuilderPage = lazy(() => import('./pages/modules/FlowBuilderPage'));
+
+/**
+ * Centered spinner shown while a lazily loaded route chunk is downloading.
+ * @returns {React.ReactElement} The Suspense fallback.
+ */
+function RouteFallback(): React.ReactElement {
+  return (
+    <Box
+      role="status"
+      aria-live="polite"
+      sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', py: 10 }}
+    >
+      <CircularProgress size={32} />
+    </Box>
+  );
+}
 
 /**
  * Dispatches a module route to the matching dashboard page component based
@@ -93,7 +120,11 @@ function ModulePageDispatcher({
  * @returns {React.ReactElement} The route tree.
  */
 function AppRoutes(): React.ReactElement {
-  const { authenticated } = useAuth();
+  const { authenticated, checking } = useAuth();
+
+  if (checking) {
+    return <RouteFallback />;
+  }
 
   if (!authenticated) {
     return (
@@ -134,6 +165,23 @@ function ModuleRoute(): React.ReactElement | null {
 }
 
 /**
+ * Data router (required by `useBlocker` guards) — the whole route tree hangs
+ * off a single catch-all element so the declarative <Routes> markup and the
+ * auth gate keep working unchanged.
+ */
+const router = createBrowserRouter([
+  {
+    path: '*',
+    element: (
+      <Suspense fallback={<RouteFallback />}>
+        <ScrollToTop />
+        <AppRoutes />
+      </Suspense>
+    ),
+  },
+]);
+
+/**
  * Application root composing providers and routes.
  * @returns {React.ReactElement} The application.
  */
@@ -146,10 +194,7 @@ export default function App(): React.ReactElement {
             <SnackbarProvider>
               <BotProvider>
                 <ConnectionsProvider>
-                  <BrowserRouter>
-                    <ScrollToTop />
-                    <AppRoutes />
-                  </BrowserRouter>
+                  <RouterProvider router={router} />
                 </ConnectionsProvider>
               </BotProvider>
             </SnackbarProvider>

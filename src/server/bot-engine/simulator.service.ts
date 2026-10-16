@@ -4,6 +4,7 @@ import type { UserFromGetMe } from 'grammy/types';
 import { PrismaService } from '../database/prisma.service';
 import { ModuleHandlerRegistry } from './module-handler-registry';
 import { findModule } from './module-registry';
+import { safeJsonObjectParse } from '../common/utils/json.util';
 
 /** Reserved Telegram user id representing the sandbox tester (int32-safe). */
 export const SIMULATOR_TELEGRAM_ID = 2_000_000_000;
@@ -274,15 +275,19 @@ export class SimulatorService {
   private async attachEnabledModules(simBot: Bot, botId: number): Promise<void> {
     const rows = await this.prisma.botModule.findMany({
       where: { botId, isEnabled: 1 },
+      orderBy: { moduleKey: 'asc' },
     });
     for (const row of rows) {
       const handler = this.handlerRegistry.get(row.moduleKey);
       const definition = findModule(row.moduleKey);
       if (!handler || !definition) continue;
-      const stored = row.configJson ? (JSON.parse(row.configJson) as Record<string, unknown>) : {};
+      const stored = safeJsonObjectParse(row.configJson, {}, `simulator:${botId}:${row.moduleKey}`);
       const config = { ...definition.defaultConfig, ...stored };
       try {
-        await handler.register({ bot: simBot, botId, config });
+        // sandbox: true tells side-effectful runtimes (flows sweeper, timers)
+        // to skip background machinery — the fake API swallows sends, so a
+        // live sweeper would consume real users' pending sessions.
+        await handler.register({ bot: simBot, botId, config, sandbox: true });
       } catch (error) {
         this.logger.warn(
           `Simulator: module ${row.moduleKey} failed to attach: ${error instanceof Error ? error.message : String(error)}`,

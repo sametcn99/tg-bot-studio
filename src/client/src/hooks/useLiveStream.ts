@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { getToken } from '../services/api';
+import { apiFetch, getToken } from '../services/api';
 
 /**
  * Subscribes to a bot-scoped Server-Sent Events stream and invokes the
@@ -7,6 +7,11 @@ import { getToken } from '../services/api';
  * reconnection with backoff, pauses while the tab is hidden, and falls back
  * to reconnect attempts when the stream drops — the pages keep their own
  * slow polling as a backstop.
+ *
+ * Authentication: when an in-memory bearer token exists, a short-lived
+ * single-use ticket is minted via `POST /api/auth/sse-ticket` and appended
+ * as `?sse_ticket=` (EventSource cannot send headers). Otherwise the
+ * session cookie rides along with the EventSource request.
  * @param {'support' | 'broadcasts'} topic - Stream topic.
  * @param {number | string | undefined} botId - Active bot id.
  * @param {() => void} onData - Refetch callback.
@@ -26,6 +31,7 @@ export function useLiveStream(
     if (!botId) return;
     let source: EventSource | null = null;
     let reconnectTimer: number | null = null;
+    let disposed = false;
 
     const scheduleReconnect = (): void => {
       if (reconnectTimer !== null) return;
@@ -35,18 +41,34 @@ export function useLiveStream(
       }, 5000);
     };
 
-    const connect = (): void => {
-      if (document.visibilityState !== 'visible') return;
-      const token = getToken();
-      source = new EventSource(
-        `/api/bots/${botId}/${topic}/stream?access_token=${encodeURIComponent(token ?? '')}`,
-      );
+    const openSource = (url: string): void => {
+      if (disposed) return;
+      source = new EventSource(url, { withCredentials: true });
       source.onmessage = () => dataRef.current();
       source.onerror = () => {
         source?.close();
         source = null;
         scheduleReconnect();
       };
+    };
+
+    const connect = (): void => {
+      if (document.visibilityState !== 'visible') return;
+      const token = getToken();
+      const base = `/api/bots/${botId}/${topic}/stream`;
+      if (token) {
+        // Bearer session: mint a 30s single-use ticket for the EventSource
+        // URL since streams cannot carry an Authorization header.
+        void apiFetch<{ ticket: string }>('/api/auth/sse-ticket', { method: 'POST' })
+          .then((result) => {
+            openSource(`${base}?sse_ticket=${encodeURIComponent(result.ticket)}`);
+          })
+          .catch(() => scheduleReconnect());
+      } else {
+        // Cookie-authenticated: the HttpOnly session cookie is sent with the
+        // same-origin EventSource request automatically.
+        openSource(base);
+      }
     };
 
     const onVisibility = (): void => {
@@ -61,6 +83,7 @@ export function useLiveStream(
     connect();
     document.addEventListener('visibilitychange', onVisibility);
     return () => {
+      disposed = true;
       source?.close();
       if (reconnectTimer !== null) window.clearTimeout(reconnectTimer);
       document.removeEventListener('visibilitychange', onVisibility);

@@ -1,5 +1,6 @@
 import React from 'react';
 import { openLink } from '../sdk/telegram';
+import { createT } from '../i18n';
 import type { TmaAppConfig } from '../App';
 
 /**
@@ -11,10 +12,11 @@ import type { TmaAppConfig } from '../App';
  * @returns {React.ReactElement} The webview frame.
  */
 export default function Webview({ config }: { config: TmaAppConfig }): React.ReactElement {
+  const t = createT(config.config);
   const url = String(config.config.url ?? '');
 
   if (!url) {
-    return <div className="state-message">No external URL configured.</div>;
+    return <div className="state-message">{t('webview.noUrl', 'No external URL configured.')}</div>;
   }
 
   return (
@@ -27,7 +29,7 @@ export default function Webview({ config }: { config: TmaAppConfig }): React.Rea
         />
       </div>
       <button className="secondary" onClick={() => openLink(url)}>
-        Open in browser
+        {t('webview.openInBrowser', 'Open in browser')}
       </button>
     </>
   );

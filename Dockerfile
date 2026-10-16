@@ -4,8 +4,10 @@
 # Stage 1: Dependencies
 # Installs the full dependency tree (production + development) with optimal
 # layer caching based on the manifest and lockfile only.
+# Bun is pinned to the same version CI tests with (floating tags make builds
+# and test runs diverge silently).
 # ============================================================================
-FROM oven/bun:1-alpine AS deps
+FROM oven/bun:1.4.2-alpine AS deps
 WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
@@ -29,7 +31,7 @@ RUN bun run build
 # artifacts. Runs as the non-root `bun` user with a persistent data directory
 # and a native HEALTHCHECK against /api/health.
 # ============================================================================
-FROM oven/bun:1-alpine AS runner
+FROM oven/bun:1.4.2-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production \
     PORT=3000 \

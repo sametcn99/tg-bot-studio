@@ -1,8 +1,10 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { BotModel } from './bot.model';
+import { DiagnosticsService } from './diagnostics.service';
 import { BotPoolService } from '../bot-engine/bot-pool.service';
-import { MODULE_REGISTRY, findModule } from '../bot-engine/module-registry';
+import { ChatSettingsService } from '../bot-engine/chat-settings.service';
+import { findModule } from '../bot-engine/module-registry';
 import { callGetMe } from '../common/utils/telegram.util';
 import { AiAssistantService } from '../modules/ai-assistant/ai-assistant.service';
 import type { CreateBotDto, UpdateBotDto, UpdateModuleStateDto } from './dto/bots.dto';
@@ -11,6 +13,8 @@ import { SystemSettingsService } from '../database/system-settings.service';
 import { SimulatorService } from '../bot-engine/simulator.service';
 import { AuditService } from '../database/audit.service';
 import { isValidTimeZone, safeTimeZone } from '../common/utils/tz.util';
+import { safeJsonObjectParse } from '../common/utils/json.util';
+import { listModuleStates } from './module-states';
 
 /**
  * Bot row with runtime enrichment for the dashboard.
@@ -36,6 +40,29 @@ function maskToken(token: string): string {
   return `${token.slice(0, 4)}••••${token.slice(-4)}`;
 }
 
+/** Config keys whose values are credentials and must never echo to GETs. */
+const SECRET_KEY_PATTERN = /apikey|api_key|secret|token/i;
+
+/** Sentinel the client sends back for an untouched masked secret. */
+export const MASKED_SECRET = '__MASKED__';
+
+/**
+ * Replaces credential-shaped config values with the masked sentinel so API
+ * reads cannot leak secrets (bot tokens are masked the same way upstream).
+ * @param {Record<string, unknown>} config - Effective module config.
+ * @returns {Record<string, unknown>} Config with secret values masked.
+ */
+function maskSecrets(config: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(config)) {
+    out[key] =
+      SECRET_KEY_PATTERN.test(key) && typeof value === 'string' && value.length > 0
+        ? MASKED_SECRET
+        : value;
+  }
+  return out;
+}
+
 /**
  * Bot CRUD and per-bot module toggle management.
  */
@@ -49,6 +76,8 @@ export class BotsService {
    * @param {BotPoolService} pool - Multi-bot runtime pool.
    * @param {AiAssistantService} aiService - AI service gateway.
    * @param {SystemSettingsService} settings - Per-bot operational settings.
+   * @param {ChatSettingsService} chatSettings - Per-chat override layer (cache invalidation).
+   * @param {DiagnosticsService} diagnostics - Diagnostic health-check engine.
    */
   constructor(
     private readonly botModel: BotModel,
@@ -58,6 +87,8 @@ export class BotsService {
     private readonly settings: SystemSettingsService,
     private readonly simulator: SimulatorService,
     private readonly audit: AuditService,
+    private readonly chatSettings: ChatSettingsService,
+    private readonly diagnostics: DiagnosticsService,
   ) {}
 
   /**
@@ -92,35 +123,52 @@ export class BotsService {
 
   /**
    * Lists all bots enriched with runtime status and audience metrics.
+   * Counters are gathered with three groupBy queries total (not 3 per bot).
    * @returns {Promise<BotWithStatus[]>} All registered bots.
    */
   async findAll(): Promise<BotWithStatus[]> {
     const bots = await this.botModel.findAll();
+    const ids = bots.map((row) => row.id);
+    const [moduleCounts, appCounts, userCounts] =
+      ids.length > 0
+        ? await Promise.all([
+            this.prisma.botModule.groupBy({
+              by: ['botId'],
+              where: { botId: { in: ids }, isEnabled: 1 },
+              _count: { _all: true },
+            }),
+            this.prisma.miniApp.groupBy({
+              by: ['botId'],
+              where: { botId: { in: ids } },
+              _count: { _all: true },
+            }),
+            this.prisma.botUser.groupBy({
+              by: ['botId'],
+              where: { botId: { in: ids } },
+              _count: { _all: true },
+            }),
+          ])
+        : [[], [], []];
+    const toMap = (rows: Array<{ botId: number; _count: { _all: number } }>) =>
+      new Map(rows.map((r) => [r.botId, r._count._all]));
+    const modulesMap = toMap(moduleCounts);
+    const appsMap = toMap(appCounts);
+    const usersMap = toMap(userCounts);
 
-    return Promise.all(
-      bots.map(async (row) => {
-        const [activeModules, miniApps, subscribers] = await Promise.all([
-          this.botModel.countActiveModules(row.id),
-          this.botModel.countMiniApps(row.id),
-          this.botModel.countSubscribers(row.id),
-        ]);
-
-        return {
-          id: row.id,
-          name: row.name,
-          token: maskToken(row.token),
-          username: row.username,
-          first_name: row.firstName,
-          is_active: row.isActive,
-          created_at: row.createdAt,
-          status: this.pool.getStatus(row.id, row.isActive === 1),
-          activeModules,
-          miniApps,
-          subscribers,
-          dailyVolume: this.pool.getDailyVolume(row.id),
-        };
-      }),
-    );
+    return bots.map((row) => ({
+      id: row.id,
+      name: row.name,
+      token: maskToken(row.token),
+      username: row.username,
+      first_name: row.firstName,
+      is_active: row.isActive,
+      created_at: row.createdAt,
+      status: this.pool.getStatus(row.id, row.isActive === 1),
+      activeModules: modulesMap.get(row.id) ?? 0,
+      miniApps: appsMap.get(row.id) ?? 0,
+      subscribers: usersMap.get(row.id) ?? 0,
+      dailyVolume: this.pool.getDailyVolume(row.id),
+    }));
   }
 
   /**
@@ -231,25 +279,18 @@ export class BotsService {
    * @returns {Promise<Array<Record<string, unknown>>>} Registry entries merged with persisted state.
    */
   async listModules(botId: number): Promise<Array<Record<string, unknown>>> {
-    const rows = await this.botModel.listModules(botId);
-    const byKey = new Map(rows.map((row) => [row.moduleKey, row]));
-
-    return MODULE_REGISTRY.map((definition) => {
-      const row = byKey.get(definition.key);
-      const stored = row?.configJson ? (JSON.parse(row.configJson) as Record<string, unknown>) : {};
-      return {
-        key: definition.key,
-        name: definition.name,
-        category: definition.category,
-        description: definition.description,
-        isEnabled: Boolean(row?.isEnabled),
-        config: { ...definition.defaultConfig, ...stored },
-      };
-    });
+    const states = await listModuleStates(this.botModel, botId);
+    return states.map((state) => ({
+      ...state,
+      config: maskSecrets(state.config),
+    }));
   }
 
   /**
-   * Toggles or reconfigures a module and hot-reloads the bot runtime.
+   * Toggles or reconfigures a module and hot-reloads the bot runtime. Masked
+   * secret sentinels in the payload preserve the previously stored value, and
+   * the per-chat override cache is invalidated so effective configs merge the
+   * new bot-level state immediately.
    * @param {number} botId - Studio bot identifier.
    * @param {string} moduleKey - Module registry key.
    * @param {UpdateModuleStateDto} dto - Enabled flag and config payload.
@@ -268,12 +309,27 @@ export class BotsService {
     const definition = findModule(moduleKey);
     if (!definition) throw new NotFoundException(`Module ${moduleKey} not found`);
 
+    const existing = await this.prisma.botModule.findUnique({
+      where: { botId_moduleKey: { botId, moduleKey } },
+    });
+    const stored = safeJsonObjectParse(
+      existing?.configJson,
+      {},
+      `bot_modules:${botId}:${moduleKey}`,
+    );
+    const merged: Record<string, unknown> = { ...stored };
+    for (const [key, value] of Object.entries(dto.config ?? {})) {
+      if (value === MASKED_SECRET) continue;
+      merged[key] = value;
+    }
+
     await this.botModel.upsertModule(
       botId,
       moduleKey,
       dto.isEnabled ? 1 : 0,
-      JSON.stringify(dto.config ?? {}),
+      JSON.stringify(merged),
     );
+    this.chatSettings.invalidate(botId);
 
     await this.pool.restartBot(botId);
     this.audit.log('module.update', { botId, moduleKey, isEnabled: dto.isEnabled });
@@ -282,190 +338,13 @@ export class BotsService {
   }
 
   /**
-   * Runs diagnostic health checks on bot permissions and runtime status.
+   * Runs diagnostic health checks on bot permissions and runtime status
+   * (delegates to the dedicated DiagnosticsService).
    * @param {number} botId - Studio bot identifier.
    * @returns {Promise<Record<string, unknown>>} Diagnostic report with actionable recommendations.
    */
   async getDiagnostics(botId: number): Promise<Record<string, unknown>> {
-    const row = await this.botModel.findById(botId);
-    if (!row) throw new NotFoundException(`Bot ${botId} not found`);
-
-    const check = await callGetMe(row.token);
-    const runtimeStatus = this.pool.getStatus(botId, row.isActive === 1);
-    const groupCount = await this.prisma.chatConnection.count({
-      where: { botId, isActive: 1 },
-    });
-    const activeModules = (await this.listModules(botId)).filter((m) => m.isEnabled);
-
-    const checks: Array<{
-      key: string;
-      title: string;
-      status: 'pass' | 'warning' | 'error' | 'info';
-      details: string;
-    }> = [];
-    const recommendations: string[] = [];
-
-    // 1. Telegram API connectivity
-    if (check.ok && check.bot) {
-      checks.push({
-        key: 'token',
-        title: 'Telegram API Connectivity',
-        status: 'pass',
-        details: `@${check.bot.username} is responsive to Telegram API.`,
-      });
-    } else {
-      checks.push({
-        key: 'token',
-        title: 'Telegram API Connectivity',
-        status: 'error',
-        details: check.description || 'Bot token rejected or Telegram API unreachable.',
-      });
-      recommendations.push('Verify your BotFather token or generate a new one via @BotFather.');
-    }
-
-    // 2. Runtime engine status
-    const runtimeInfo = this.pool.getRuntimeInfo(botId);
-    if (runtimeStatus === 'active') {
-      checks.push({
-        key: 'runtime',
-        title: 'Studio Runtime Poller',
-        status: 'pass',
-        details: 'Long-polling engine is running and processing updates in real-time.',
-      });
-    } else if (runtimeInfo.errorReason === 'token_revoked') {
-      checks.push({
-        key: 'runtime',
-        title: 'Studio Runtime Poller',
-        status: 'error',
-        details: 'Bot token rejected or revoked (401 Unauthorized). Auto-restart was stopped.',
-      });
-      recommendations.push(
-        'Generate a new bot token via @BotFather and update the bot configuration.',
-      );
-    } else if (runtimeInfo.errorReason === 'conflict') {
-      checks.push({
-        key: 'runtime',
-        title: 'Studio Runtime Poller',
-        status: 'error',
-        details:
-          'Conflict detected (409 Conflict): Another bot instance or active webhook is using this token.',
-      });
-      recommendations.push(
-        'Ensure no other instances are polling this token and clear any webhook with deleteWebhook.',
-      );
-    } else if (runtimeInfo.status === 'retrying') {
-      checks.push({
-        key: 'runtime',
-        title: 'Studio Runtime Poller',
-        status: 'warning',
-        details: `Poller crashed and is automatically recovering (retry attempt ${runtimeInfo.retryCount}/3). Last error: ${runtimeInfo.lastError}`,
-      });
-    } else if (runtimeInfo.status === 'failed') {
-      checks.push({
-        key: 'runtime',
-        title: 'Studio Runtime Poller',
-        status: 'error',
-        details: `Poller failed after ${runtimeInfo.retryCount} restart attempt(s). Error: ${runtimeInfo.lastError || 'Unknown crash'}`,
-      });
-      recommendations.push('Check the server logs or restart the bot from the dashboard.');
-    } else {
-      checks.push({
-        key: 'runtime',
-        title: 'Studio Runtime Poller',
-        status: 'warning',
-        details: `Poller status is "${runtimeStatus}". Updates are currently paused.`,
-      });
-      recommendations.push('Toggle the bot status switch to Active in the overview.');
-    }
-
-    // 3. Group privacy mode
-    const canReadAll = Boolean(check.bot?.can_read_all_group_messages);
-    const needsAll = activeModules.some((m) =>
-      [
-        'message-score',
-        'moderation',
-        'welcome',
-        'locks',
-        'group-tools',
-        'cleaning',
-        'antiraid',
-        'autoresponder',
-      ].includes(String(m.key)),
-    );
-    if (canReadAll) {
-      checks.push({
-        key: 'privacy_mode',
-        title: 'Group Privacy Mode',
-        status: 'pass',
-        details: 'Privacy Mode is disabled. Bot sees all member messages in groups.',
-      });
-    } else {
-      checks.push({
-        key: 'privacy_mode',
-        title: 'Group Privacy Mode',
-        status: needsAll ? 'warning' : 'info',
-        details: 'Privacy Mode is enabled. Bot only sees messages mentioning it unless admin.',
-      });
-      if (needsAll) {
-        recommendations.push(
-          'For group moderation modules (locks, cleaning, message score, ...): open @BotFather -> /setprivacy -> Choose bot -> Disable, or make the bot a group administrator.',
-        );
-      }
-
-      // 3b. reference-parity group command modules need admin rights.
-      const groupCommandModules = activeModules.filter((m) =>
-        ['group-moderation', 'antiraid', 'admin-log', 'topics'].includes(String(m.key)),
-      );
-      if (groupCommandModules.length > 0) {
-        recommendations.push(
-          'Group command modules (Group Moderation, AntiRaid, Admin Log, Topics) act only where the bot is a group administrator with the matching Telegram rights (restrict, delete, pin, manage topics).',
-        );
-      }
-    }
-
-    // 4. Chat connections
-    if (groupCount > 0) {
-      checks.push({
-        key: 'connections',
-        title: 'Chat Connections Address Book',
-        status: 'pass',
-        details: `${groupCount} group(s)/channel(s) connected and available for targeting.`,
-      });
-    } else {
-      checks.push({
-        key: 'connections',
-        title: 'Chat Connections Address Book',
-        status: 'warning',
-        details: 'No channels or groups connected yet. Schedulers and Giveaways need target chats.',
-      });
-      recommendations.push('Add your channels or press "Sync from bot" in Chat Connections.');
-    }
-
-    // 5. Smart usage-based module recommendations
-    const hasSupport = activeModules.some((m) => String(m.key) === 'support');
-    const hasAi = activeModules.some((m) => String(m.key) === 'ai-assistant');
-    const hasBroadcast = activeModules.some((m) => String(m.key) === 'broadcast');
-
-    if (hasSupport && !hasAi) {
-      recommendations.push(
-        'Smart suggestion: Support module is active. Enable AI Assistant to auto-reply to FAQs and draft responses.',
-      );
-    }
-    if (groupCount > 0 && !hasBroadcast) {
-      recommendations.push(
-        'Smart suggestion: Connected channels found. Enable Broadcast module to send scheduled or immediate bulletins.',
-      );
-    }
-
-    return {
-      ok: true,
-      botId,
-      botInfo: check.bot,
-      runtimeStatus,
-      runtimeInfo,
-      checks,
-      recommendations,
-    };
+    return this.diagnostics.getDiagnostics(botId);
   }
 
   /**
@@ -492,15 +371,26 @@ export class BotsService {
       throw new StudioException('PRESET_UNKNOWN', `Unknown preset bundle: ${presetKey}`);
     }
 
-    for (const key of modulesToEnable) {
-      const definition = findModule(key);
-      await this.botModel.upsertModule(
-        botId,
-        key,
-        1,
-        JSON.stringify(definition?.defaultConfig ?? {}),
-      );
-    }
+    // One transaction: a crash mid-preset cannot leave a half-provisioned set.
+    await this.prisma.$transaction(
+      modulesToEnable.map((key) => {
+        const definition = findModule(key);
+        return this.prisma.botModule.upsert({
+          where: { botId_moduleKey: { botId, moduleKey: key } },
+          create: {
+            botId,
+            moduleKey: key,
+            isEnabled: 1,
+            configJson: JSON.stringify(definition?.defaultConfig ?? {}),
+          },
+          update: {
+            isEnabled: 1,
+            configJson: JSON.stringify(definition?.defaultConfig ?? {}),
+          },
+        });
+      }),
+    );
+    this.chatSettings.invalidate(botId);
 
     await this.pool.restartBot(botId);
     return {
@@ -576,87 +466,91 @@ export class BotsService {
       firstName: check.bot.first_name ?? null,
     });
 
-    // 1. Clone modules
-    const modules = await this.prisma.botModule.findMany({ where: { botId } });
-    for (const m of modules) {
-      await this.prisma.botModule.create({
-        data: {
-          botId: newBot.id,
-          moduleKey: m.moduleKey,
-          isEnabled: m.isEnabled,
-          configJson: m.configJson,
-        },
-      });
-    }
-
-    // 2. Clone autoresponders
-    const autoresponders = await this.prisma.autoresponder.findMany({ where: { botId } });
-    for (const a of autoresponders) {
-      await this.prisma.autoresponder.create({
-        data: {
-          botId: newBot.id,
-          command: a.command,
-          responseText: a.responseText,
-          mediaUrl: a.mediaUrl,
-          buttonsJson: a.buttonsJson,
-          isActive: a.isActive,
-        },
-      });
-    }
-
-    // 3. Clone drip campaigns
-    const drips = await this.prisma.dripCampaign.findMany({
-      where: { botId },
-    });
-    for (const drip of drips) {
-      await this.prisma.dripCampaign.create({
-        data: {
-          botId: newBot.id,
-          name: drip.name,
-          stepsJson: drip.stepsJson,
-          isActive: drip.isActive,
-        },
-      });
-    }
-
-    // 4. Clone mini apps
-    const miniApps = await this.prisma.miniApp.findMany({ where: { botId } });
-    for (const app of miniApps) {
-      const cloneSlug = `${app.slug}-${Date.now().toString(36)}`;
-      await this.prisma.miniApp.create({
-        data: {
-          botId: newBot.id,
-          name: `${app.name} (Clone)`,
-          slug: cloneSlug,
-          templateType: app.templateType,
-          title: app.title,
-          description: app.description,
-          iconUrl: app.iconUrl,
-          configJson: app.configJson,
-          themeJson: app.themeJson,
-          isActive: app.isActive,
-        },
-      });
-    }
-
-    // 5. Clone relevant bot settings
-    const settings = await this.prisma.botSetting.findMany({ where: { botId } });
-    for (const s of settings) {
-      if (
-        s.key.startsWith('spin_') ||
-        s.key.startsWith('forms_') ||
-        s.key.startsWith('giveaway_')
-      ) {
-        continue;
+    // Copy every bot-scoped artifact in one transaction: a crash mid-clone
+    // used to leave a half-cloned bot (modules without mini apps, etc.).
+    await this.prisma.$transaction(async (tx) => {
+      // 1. Clone modules
+      const modules = await tx.botModule.findMany({ where: { botId } });
+      for (const m of modules) {
+        await tx.botModule.create({
+          data: {
+            botId: newBot.id,
+            moduleKey: m.moduleKey,
+            isEnabled: m.isEnabled,
+            configJson: m.configJson,
+          },
+        });
       }
-      await this.prisma.botSetting.create({
-        data: {
-          botId: newBot.id,
-          key: s.key,
-          value: s.value,
-        },
+
+      // 2. Clone autoresponders
+      const autoresponders = await tx.autoresponder.findMany({ where: { botId } });
+      for (const a of autoresponders) {
+        await tx.autoresponder.create({
+          data: {
+            botId: newBot.id,
+            command: a.command,
+            responseText: a.responseText,
+            mediaUrl: a.mediaUrl,
+            buttonsJson: a.buttonsJson,
+            isActive: a.isActive,
+          },
+        });
+      }
+
+      // 3. Clone drip campaigns
+      const drips = await tx.dripCampaign.findMany({
+        where: { botId },
       });
-    }
+      for (const drip of drips) {
+        await tx.dripCampaign.create({
+          data: {
+            botId: newBot.id,
+            name: drip.name,
+            stepsJson: drip.stepsJson,
+            isActive: drip.isActive,
+          },
+        });
+      }
+
+      // 4. Clone mini apps (fresh slugs: slugs are globally unique)
+      const miniApps = await tx.miniApp.findMany({ where: { botId } });
+      for (const app of miniApps) {
+        const cloneSlug = `${app.slug}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+        await tx.miniApp.create({
+          data: {
+            botId: newBot.id,
+            name: `${app.name} (Clone)`,
+            slug: cloneSlug,
+            templateType: app.templateType,
+            title: app.title,
+            description: app.description,
+            iconUrl: app.iconUrl,
+            configJson: app.configJson,
+            themeJson: app.themeJson,
+            isActive: app.isActive,
+          },
+        });
+      }
+
+      // 5. Clone relevant bot settings
+      const settings = await tx.botSetting.findMany({ where: { botId } });
+      for (const s of settings) {
+        if (
+          s.key.startsWith('spin_') ||
+          s.key.startsWith('forms_') ||
+          s.key.startsWith('giveaway_')
+        ) {
+          continue;
+        }
+        await tx.botSetting.create({
+          data: {
+            botId: newBot.id,
+            key: s.key,
+            value: s.value,
+          },
+        });
+      }
+    });
 
     await this.pool.restartBot(newBot.id);
     this.logger.log(`Cloned bot ${botId} -> ${newBot.id} (@${check.bot.username})`);
@@ -683,14 +577,13 @@ export class BotsService {
       exportedAt: new Date().toISOString(),
       botName: bot.name,
       modules: modules.map((m) => {
-        let parsedConfig: Record<string, unknown> = {};
-        if (m.configJson) {
-          try {
-            parsedConfig = JSON.parse(m.configJson) as Record<string, unknown>;
-            if (m.moduleKey === 'ai-assistant') {
-              delete parsedConfig.apiKey;
-            }
-          } catch {}
+        const parsedConfig = safeJsonObjectParse(
+          m.configJson,
+          {},
+          `export:${botId}:${m.moduleKey}`,
+        );
+        if (m.moduleKey === 'ai-assistant') {
+          delete parsedConfig.apiKey;
         }
         return {
           moduleKey: m.moduleKey,
@@ -728,91 +621,184 @@ export class BotsService {
   }
 
   /**
-   * Imports a configuration bundle into an existing bot.
+   * Imports a configuration bundle into an existing bot. Idempotent: modules
+   * and chat overrides upsert by natural key, autoresponders/drips/mini apps
+   * match by command/name and update in place instead of duplicating. Mini
+   * Apps — historically dropped by the importer — are restored. The whole
+   * bundle applies in one transaction; a failure leaves the bot untouched.
    */
   async importConfig(
     botId: number,
     bundle: Record<string, unknown>,
-  ): Promise<{ success: boolean; importedModules: number }> {
+  ): Promise<{
+    success: boolean;
+    importedModules: number;
+    importedAutoresponders: number;
+    importedDrips: number;
+    importedMiniApps: number;
+  }> {
     const bot = await this.botModel.findById(botId);
     if (!bot) this.throwNotFound(botId);
 
-    let count = 0;
-    if (Array.isArray(bundle.modules)) {
-      for (const m of bundle.modules) {
-        if (!m || typeof m !== 'object' || !('moduleKey' in m)) continue;
-        const configJson = (m as any).config ? JSON.stringify((m as any).config) : null;
-        await this.prisma.botModule.upsert({
-          where: { botId_moduleKey: { botId, moduleKey: String((m as any).moduleKey) } },
-          create: {
-            botId,
-            moduleKey: String((m as any).moduleKey),
-            isEnabled: Number((m as any).isEnabled) || 0,
-            configJson,
-          },
-          update: {
-            isEnabled: Number((m as any).isEnabled) || 0,
-            configJson,
-          },
-        });
-        count++;
-      }
+    // Bundle contract: refuse unknown/absent versions instead of applying a
+    // shape the importer does not understand (a partial import is worse than
+    // a loud failure).
+    const version = String(bundle.version ?? '');
+    if (!['1.0', '1.1'].includes(version)) {
+      throw new StudioException(
+        'IMPORT_UNSUPPORTED_VERSION',
+        `Unsupported export bundle version: ${version || '(missing)'} — re-export the bot with the current studio version`,
+      );
     }
 
-    if (Array.isArray(bundle.autoresponders)) {
-      for (const a of bundle.autoresponders) {
-        if (!a || typeof a !== 'object' || !('command' in a)) continue;
-        await this.prisma.autoresponder.create({
-          data: {
-            botId,
-            command: String((a as any).command),
-            responseText: String((a as any).responseText ?? ''),
-            mediaUrl: (a as any).mediaUrl ? String((a as any).mediaUrl) : null,
-            buttonsJson: (a as any).buttonsJson ? String((a as any).buttonsJson) : null,
-            isActive: Number((a as any).isActive ?? 1),
-          },
-        });
-      }
-    }
+    let moduleCount = 0;
+    let autoresponderCount = 0;
+    let dripCount = 0;
+    let miniAppCount = 0;
 
-    if (Array.isArray(bundle.dripCampaigns)) {
-      for (const d of bundle.dripCampaigns) {
-        if (!d || typeof d !== 'object') continue;
-        await this.prisma.dripCampaign.create({
-          data: {
-            botId,
-            name: String((d as any).name ?? 'Imported Drip'),
-            stepsJson: String((d as any).stepsJson ?? '[]'),
-            isActive: Number((d as any).isActive ?? 1),
-          },
-        });
-      }
-    }
-
-    if (Array.isArray(bundle.chatModuleSettings)) {
-      for (const c of bundle.chatModuleSettings) {
-        if (!c || typeof c !== 'object' || !('chatId' in c)) continue;
-        await this.prisma.chatModuleSetting.upsert({
-          where: {
-            botId_chatId_moduleKey: {
+    await this.prisma.$transaction(async (tx) => {
+      if (Array.isArray(bundle.modules)) {
+        for (const m of bundle.modules) {
+          if (!m || typeof m !== 'object' || !('moduleKey' in m)) continue;
+          const moduleKey = String((m as Record<string, unknown>).moduleKey);
+          // Unknown keys would create dead rows the runtime can never attach.
+          if (!findModule(moduleKey)) continue;
+          const config = (m as Record<string, unknown>).config;
+          const configJson = config ? JSON.stringify(config) : null;
+          await tx.botModule.upsert({
+            where: { botId_moduleKey: { botId, moduleKey } },
+            create: {
               botId,
-              chatId: String((c as any).chatId),
-              moduleKey: String((c as any).moduleKey),
+              moduleKey,
+              isEnabled: Number((m as Record<string, unknown>).isEnabled) || 0,
+              configJson,
             },
-          },
-          create: {
-            botId,
-            chatId: String((c as any).chatId),
-            moduleKey: String((c as any).moduleKey),
-            configJson: String((c as any).configJson ?? '{}'),
-          },
-          update: { configJson: String((c as any).configJson ?? '{}') },
-        });
+            update: {
+              isEnabled: Number((m as Record<string, unknown>).isEnabled) || 0,
+              configJson,
+            },
+          });
+          moduleCount++;
+        }
       }
-    }
 
+      if (Array.isArray(bundle.autoresponders)) {
+        for (const a of bundle.autoresponders) {
+          if (!a || typeof a !== 'object' || !('command' in a)) continue;
+          const row = a as Record<string, unknown>;
+          const command = String(row.command);
+          const data = {
+            responseText: String(row.responseText ?? ''),
+            mediaUrl: row.mediaUrl ? String(row.mediaUrl) : null,
+            buttonsJson: row.buttonsJson ? String(row.buttonsJson) : null,
+            isActive: Number(row.isActive ?? 1),
+          };
+          const existing = await tx.autoresponder.findFirst({
+            where: { botId, command },
+            orderBy: { id: 'asc' },
+          });
+          if (existing) {
+            await tx.autoresponder.update({ where: { id: existing.id }, data });
+          } else {
+            await tx.autoresponder.create({ data: { botId, command, ...data } });
+          }
+          autoresponderCount++;
+        }
+      }
+
+      if (Array.isArray(bundle.dripCampaigns)) {
+        for (const d of bundle.dripCampaigns) {
+          if (!d || typeof d !== 'object') continue;
+          const row = d as Record<string, unknown>;
+          const name = String(row.name ?? 'Imported Drip');
+          const data = {
+            stepsJson: String(row.stepsJson ?? '[]'),
+            isActive: Number(row.isActive ?? 1),
+          };
+          const existing = await tx.dripCampaign.findFirst({
+            where: { botId, name },
+            orderBy: { id: 'asc' },
+          });
+          if (existing) {
+            await tx.dripCampaign.update({ where: { id: existing.id }, data });
+          } else {
+            await tx.dripCampaign.create({ data: { botId, name, ...data } });
+          }
+          dripCount++;
+        }
+      }
+
+      if (Array.isArray(bundle.miniApps)) {
+        for (const a of bundle.miniApps) {
+          if (!a || typeof a !== 'object' || !('name' in a)) continue;
+          const row = a as Record<string, unknown>;
+          const name = String(row.name);
+          const data = {
+            templateType: String(row.templateType ?? 'webview'),
+            title: String(row.title ?? name),
+            description: row.description ? String(row.description) : null,
+            configJson: row.configJson ? String(row.configJson) : null,
+            themeJson: row.themeJson ? String(row.themeJson) : null,
+            isActive: Number(row.isActive ?? 1),
+          };
+          const existing = await tx.miniApp.findFirst({
+            where: { botId, name },
+            orderBy: { id: 'asc' },
+          });
+          if (existing) {
+            await tx.miniApp.update({ where: { id: existing.id }, data });
+          } else {
+            // Slugs are globally unique — derive a fresh one per import.
+            const base =
+              name
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '')
+                .slice(0, 32) || 'app';
+            const slug = `bot${botId}-${base}-${Date.now().toString(36)}-${Math.random()
+              .toString(36)
+              .slice(2, 6)}`;
+            await tx.miniApp.create({ data: { botId, name, slug, ...data } });
+          }
+          miniAppCount++;
+        }
+      }
+
+      if (Array.isArray(bundle.chatModuleSettings)) {
+        for (const c of bundle.chatModuleSettings) {
+          if (!c || typeof c !== 'object' || !('chatId' in c)) continue;
+          const row = c as Record<string, unknown>;
+          const chatId = String(row.chatId);
+          const moduleKey = String(row.moduleKey ?? '');
+          if (!findModule(moduleKey)) continue;
+          await tx.chatModuleSetting.upsert({
+            where: {
+              botId_chatId_moduleKey: { botId, chatId, moduleKey },
+            },
+            create: {
+              botId,
+              chatId,
+              moduleKey,
+              configJson: String(row.configJson ?? '{}'),
+            },
+            update: { configJson: String(row.configJson ?? '{}') },
+          });
+        }
+      }
+    });
+
+    this.chatSettings.invalidate(botId);
     await this.pool.restartBot(botId);
-    this.logger.log(`Imported configuration bundle into bot ${botId}`);
-    return { success: true, importedModules: count };
+    this.logger.log(
+      `Imported configuration bundle into bot ${botId}: ${moduleCount} modules, ` +
+        `${autoresponderCount} autoresponders, ${dripCount} drips, ${miniAppCount} mini apps`,
+    );
+    return {
+      success: true,
+      importedModules: moduleCount,
+      importedAutoresponders: autoresponderCount,
+      importedDrips: dripCount,
+      importedMiniApps: miniAppCount,
+    };
   }
 }

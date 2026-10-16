@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { WebhooksService } from './webhooks.service';
+import { CreateWebhookEndpointDto } from './dto/webhooks.dto';
 import { Public } from '../../common/decorators/public.decorator';
 import { StudioException } from '../../common/errors/studio-error';
 
@@ -38,12 +39,12 @@ export class WebhooksController {
   /**
    * Creates an outgoing endpoint.
    * @param {number} botId - Owning bot id.
-   * @param {Record<string, unknown>} body - url, secret, events.
+   * @param {CreateWebhookEndpointDto} body - url, secret, events.
    * @returns {object} Created endpoint.
    */
   @Post('bots/:botId/webhooks/endpoints')
-  create(@Param('botId', ParseIntPipe) botId: number, @Body() body: Record<string, unknown>) {
-    return this.service.create(botId, body);
+  create(@Param('botId', ParseIntPipe) botId: number, @Body() body: CreateWebhookEndpointDto) {
+    return this.service.create(botId, body as unknown as Record<string, unknown>);
   }
 
   /**
@@ -105,13 +106,15 @@ export class WebhooksController {
   }
 
   /**
-   * Public inbound receiver. External automations POST JSON here; the
-   * matching action renders its template and sends the message.
+   * Public inbound receiver. External automations POST signed JSON here:
+   * `X-Webhook-Signature: hex(hmac_sha256(actionSecret, rawBody))`. The
+   * signature is mandatory (the secret is shown once when the hook is
+   * created), ids are high-entropy, and each hook is rate limited.
    * @param {number} botId - Owning bot id.
    * @param {string} hookId - Inbound hook identifier.
-   * @param {Request} req - Request carrying the JSON payload.
+   * @param {Request} req - Request carrying the JSON payload and signature.
    * @returns {Promise<{success: boolean}>} Whether an action matched.
-   * @throws {NotFoundException} When no action matches the hook id.
+   * @throws {StudioException} When the hook is unknown, throttled, or the signature is missing/invalid.
    */
   @Public()
   @Post('hooks/:botId/:hookId')
@@ -121,6 +124,25 @@ export class WebhooksController {
     @Param('hookId') hookId: string,
     @Req() req: Request,
   ) {
+    if (!this.service.inboundRateAllowed(hookId)) {
+      throw new StudioException('HOOK_THROTTLED', 'Too many requests for this hook');
+    }
+    const rawBody = (req as Request & { rawBody?: Buffer }).rawBody;
+    const verification = this.service.verifyInboundAction(
+      botId,
+      hookId,
+      rawBody,
+      req.headers['x-webhook-signature'] as string | undefined,
+    );
+    if (verification === 'unknown') {
+      throw new StudioException('HOOK_UNKNOWN', 'Unknown hook');
+    }
+    if (verification === 'invalid') {
+      throw new StudioException(
+        'HOOK_SIGNATURE_INVALID',
+        'Missing or invalid X-Webhook-Signature — sign the raw body with the hook secret',
+      );
+    }
     const handled = await this.service.handleInbound(
       botId,
       hookId,

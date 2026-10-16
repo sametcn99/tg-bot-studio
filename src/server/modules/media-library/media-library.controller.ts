@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
 import { MediaLibraryService } from './media-library.service';
+import { CreateMediaAssetDto } from './dto/media-asset.dto';
 
 /**
  * Shared media library endpoints for a bot.
@@ -24,12 +25,12 @@ export class MediaLibraryController {
   /**
    * Adds an asset.
    * @param {number} botId - Owning bot id.
-   * @param {Record<string, unknown>} body - name, source, value, kind, tags.
+   * @param {CreateMediaAssetDto} body - name, source, value, kind, tags.
    * @returns {Promise<object>} Created asset row.
    */
   @Post()
-  create(@Param('botId', ParseIntPipe) botId: number, @Body() body: Record<string, unknown>) {
-    return this.service.create(botId, body);
+  create(@Param('botId', ParseIntPipe) botId: number, @Body() body: CreateMediaAssetDto) {
+    return this.service.create(botId, body as unknown as Record<string, unknown>);
   }
 
   /**

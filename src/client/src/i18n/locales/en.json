@@ -261,7 +261,13 @@
     "off": "Off",
     "yes": "Yes",
     "no": "No",
-    "optional": "(optional)"
+    "optional": "(optional)",
+    "help": "Help",
+    "dataTable": "Data table",
+    "errorTitle": "Something went wrong",
+    "errorReturnDashboard": "Return to the dashboard",
+    "unsavedTitle": "Unsaved changes",
+    "datetimeTzHint": "Times are sent as UTC — entered as your local time ({{tz}})"
   },
   "security": {
     "sessions": "Active sessions",
@@ -316,7 +322,9 @@
     "templateLeaderboard": "Points Leaderboard",
     "templateSupport": "Support Desk",
     "deleteTitle": "Delete Mini App",
-    "deleteConfirm": "Delete the Mini App \"{{name}}\"? Its orders and form submissions will be removed as well. This action cannot be undone."
+    "deleteConfirm": "Delete the Mini App \"{{name}}\"? Its orders and form submissions will be removed as well. This action cannot be undone.",
+    "previewTitle": "Mini App preview",
+    "noPreviewUrl": "No preview URL"
   },
   "support": {
     "title": "Support Desk",
@@ -443,7 +451,9 @@
     "unknown": "Unknown",
     "subscriber": "Subscriber",
     "tagsLabel": "Tags (comma separated)",
-    "internalNotes": "Internal notes"
+    "internalNotes": "Internal notes",
+    "tagFilter": "Filter by tag",
+    "allTags": "All tags"
   },
   "referrals": {
     "leaderboard": "Leaderboard",
@@ -739,7 +749,8 @@
     "pick": "Pick…",
     "title": "Pick a subscriber",
     "searchPlaceholder": "Search by username, name, or id…",
-    "empty": "No matching subscribers yet."
+    "empty": "No matching subscribers yet.",
+    "loadMore": "Load more"
   },
   "aiGenerate": {
     "button": "✨ Create with AI",
@@ -913,6 +924,7 @@
     "emptyCanvasHint": "Drag a block from the left palette or double-click here.",
     "palette": "Building blocks",
     "paletteHint": "Click to add, or drag onto the canvas.",
+    "paletteTapHint": "Tap a block to add it to the canvas.",
     "flowSettings": "Flow settings",
     "triggerSettingsHint": "The trigger card is the flow entry point — wire it to the first node.",
     "inspector": "Properties",

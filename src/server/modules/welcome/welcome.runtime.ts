@@ -4,6 +4,7 @@ import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry'
 import { AdminGateService } from '../../bot-engine/admin-gate.service';
 import { ChatSettingsService } from '../../bot-engine/chat-settings.service';
 import { renderTemplate } from '../../common/utils/template.util';
+import { escapeHtml } from '../../common/utils/telegram-text.util';
 
 /** Parsed inline button rows config: `[{text, url}]`. */
 interface ButtonSpec {
@@ -56,19 +57,10 @@ export class WelcomeRuntime extends BotModuleHandler {
 
       for (const member of members) {
         if (member.is_bot) continue;
-        const text = renderTemplate(template, {
-          first_name: member.first_name,
-          last_name: member.last_name,
-          username: member.username,
-          user_id: member.id,
-          mention: member.username
-            ? `@${member.username}`
-            : `<a href="tg://user?id=${member.id}">${member.first_name}</a>`,
-          group_name: update.chat.title ?? 'the group',
-          bot_name: bot.botInfo?.first_name ?? '',
-          date: new Date().toISOString().slice(0, 10),
-          time: new Date().toISOString().slice(11, 16),
-        });
+        const text = renderTemplate(
+          template,
+          this.templateParams(member, update.chat.title, bot.botInfo?.first_name ?? ''),
+        );
 
         // Cleanwelcome: drop the previous greeting so only one stays visible.
         if (config.cleanWelcome === true) {
@@ -103,20 +95,10 @@ export class WelcomeRuntime extends BotModuleHandler {
 
       if (config.goodbyeEnabled === true && member && !member.is_bot) {
         const template = String(config.goodbyeText ?? 'Nice knowing you, {first_name}!');
-        const text = renderTemplate(template, {
-          first_name: member.first_name,
-          last_name: member.last_name,
-          fullname: [member.first_name, member.last_name].filter(Boolean).join(' '),
-          username: member.username,
-          user_id: member.id,
-          mention: member.username
-            ? `@${member.username}`
-            : `<a href="tg://user?id=${member.id}">${member.first_name}</a>`,
-          group_name: update.chat.title ?? 'the group',
-          bot_name: bot.botInfo?.first_name ?? '',
-          date: new Date().toISOString().slice(0, 10),
-          time: new Date().toISOString().slice(11, 16),
-        });
+        const text = renderTemplate(
+          template,
+          this.templateParams(member, update.chat.title, bot.botInfo?.first_name ?? ''),
+        );
         await this.sendGreeting(update, chatId, text, {
           ...config,
           mediaUrl: config.goodbyeMediaUrl,
@@ -135,6 +117,42 @@ export class WelcomeRuntime extends BotModuleHandler {
     bot.command('setgoodbye', (c) => this.handleSet(c, botId, 'goodbyeText'));
     bot.command('resetgoodbye', (c) => this.handleReset(c, botId, 'goodbyeText', 'goodbyeText'));
     bot.command('goodbye', (c) => this.handleView(c, botId, 'goodbyeText', 'goodbyeEnabled'));
+  }
+
+  /**
+   * Builds escaped template parameters for a member. Every user-controlled
+   * value is HTML-escaped: the rendered text is sent with parse_mode=HTML and
+   * a hostile display name must not inject markup into group messages.
+   *
+   * @param {object} member - Telegram member (first_name/last_name/username/id).
+   * @param {string | undefined} chatTitle - Group title.
+   * @param {string} botName - Bot display name.
+   * @returns {Record<string, string | number>} Placeholder values.
+   */
+  private templateParams(
+    member: {
+      first_name?: string;
+      last_name?: string;
+      username?: string;
+      id: number;
+    },
+    chatTitle: string | undefined,
+    botName: string,
+  ): Record<string, string | number> {
+    return {
+      first_name: escapeHtml(member.first_name ?? ''),
+      last_name: escapeHtml(member.last_name ?? ''),
+      fullname: escapeHtml([member.first_name, member.last_name].filter(Boolean).join(' ')),
+      username: escapeHtml(member.username ?? ''),
+      user_id: member.id,
+      mention: member.username
+        ? escapeHtml(`@${member.username}`)
+        : `<a href="tg://user?id=${member.id}">${escapeHtml(member.first_name ?? String(member.id))}</a>`,
+      group_name: escapeHtml(chatTitle ?? 'the group'),
+      bot_name: escapeHtml(botName),
+      date: new Date().toISOString().slice(0, 10),
+      time: new Date().toISOString().slice(11, 16),
+    };
   }
 
   /**

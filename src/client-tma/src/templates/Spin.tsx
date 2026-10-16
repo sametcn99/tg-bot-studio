@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { tmaFetch } from '../api';
 import { haptic, isInsideTelegram } from '../sdk/telegram';
+import { createT } from '../i18n';
 import type { TmaAppConfig } from '../App';
 
 /**
@@ -22,6 +23,7 @@ interface Prize {
  * @returns {React.ReactElement} The spin wheel view.
  */
 export default function Spin({ config }: { config: TmaAppConfig }): React.ReactElement {
+  const t = createT(config.config);
   const prizes = (config.config.prizes as Prize[]) ?? [];
   const colors = ['#2563eb', '#7c3aed', '#0891b2', '#16a34a', '#ca8a04', '#dc2626'];
   const [rotation, setRotation] = useState(0);
@@ -41,7 +43,8 @@ export default function Spin({ config }: { config: TmaAppConfig }): React.ReactE
 
   /**
    * Runs the daily spin: requests a server-drawn prize and animates the
-   * wheel to the winning segment.
+   * wheel to the winning segment. The prize selection is entirely
+   * server-side, so no candidate list is sent to the endpoint.
    * @returns {Promise<void>} Resolves after the animation completes.
    */
   async function spin(): Promise<void> {
@@ -49,11 +52,14 @@ export default function Spin({ config }: { config: TmaAppConfig }): React.ReactE
     setSpinning(true);
     setResult(null);
     try {
+      // Integrity: send no prizes payload — the server picks from its own
+      // configured prize list and the response is the single source of truth.
       const response = await tmaFetch<{ prize: Prize; points: number }>(
         `/api/tma/${config.slug}/spin`,
-        { method: 'POST', body: JSON.stringify({ prizes }) },
+        { method: 'POST' },
       );
-      const index = prizes.findIndex((prize) => prize.label === response.prize.label);
+      const found = prizes.findIndex((prize) => prize.label === response.prize.label);
+      const index = found >= 0 ? found : 0;
       const segment = 360 / prizes.length;
       const target = 360 * 5 + (360 - index * segment - segment / 2);
       setRotation((current) => current + target);
@@ -64,7 +70,7 @@ export default function Spin({ config }: { config: TmaAppConfig }): React.ReactE
         setSpinning(false);
       }, 4200);
     } catch (error) {
-      setResult(error instanceof Error ? error.message : 'Spin failed');
+      setResult(error instanceof Error ? error.message : t('spin.failed', 'Spin failed'));
       setSpinning(false);
     }
   }
@@ -82,27 +88,35 @@ export default function Spin({ config }: { config: TmaAppConfig }): React.ReactE
           onClick={() => void spin()}
           disabled={spinning || prizes.length === 0 || !isInsideTelegram()}
         >
-          {spinning ? 'Spinning...' : 'Spin the wheel'}
+          {spinning ? t('spin.spinning', 'Spinning...') : t('spin.button', 'Spin the wheel')}
         </button>
         {result && (
           <div className="card" style={{ textAlign: 'center' }} role="status" aria-live="polite">
             <div style={{ fontWeight: 700 }}>{result}</div>
-            {points !== null && <div className="muted">Current balance: {points} pts</div>}
+            {points !== null && (
+              <div className="muted">
+                {t('spin.currentBalance', 'Current balance: {points} pts', { points })}
+              </div>
+            )}
           </div>
         )}
       </div>
 
       <div className="prize-list">
         <div className="muted" style={{ marginBottom: 4 }}>
-          Prize inventory
+          {t('spin.prizeInventory', 'Prize inventory')}
         </div>
         {prizes.map((prize) => (
           <div key={prize.label} className="row">
             <span>{prize.label}</span>
-            <span className="muted">{prize.points} pts</span>
+            <span className="muted">
+              {prize.points} {t('common.pts', 'pts')}
+            </span>
           </div>
         ))}
-        {prizes.length === 0 && <div className="muted">No prizes configured yet.</div>}
+        {prizes.length === 0 && (
+          <div className="muted">{t('spin.noPrizes', 'No prizes configured yet.')}</div>
+        )}
       </div>
     </>
   );

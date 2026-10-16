@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { BotUserModel } from './bot-user.model';
 import type { BotUserRow } from '../../bot-engine/engine-helpers.service';
-
 /**
  * CRM profile shape returned to the dashboard (tags parsed from JSON).
  * @interface CrmUser
@@ -58,6 +57,23 @@ export class UsersCrmService {
       users = users.filter((user) => user.tags.includes(filters.tag!));
     }
     return users;
+  }
+
+  /**
+   * Lists subscribers with optional search and tag filters (server-evaluated,
+   * paginated). The dashboard CRM and the user picker consume this instead of
+   * hydrating the whole subscriber table.
+   * @param {number} botId - Owning bot id.
+   * @param {object} query - search/tag filters, page (1-based), pageSize (max 200).
+   * @returns {Promise<{items: CrmUser[]; total: number; page: number; pageSize: number}>} One page plus total.
+   */
+  async listPage(
+    botId: number,
+    query: { search?: string; tag?: string; page?: number; pageSize?: number },
+  ): Promise<{ items: CrmUser[]; total: number; page: number; pageSize: number }> {
+    const result = await this.userModel.listUsersPage(botId, query);
+    const items: CrmUser[] = result.items.map((row) => this.decode(row as unknown as BotUserRow));
+    return { items, total: result.total, page: result.page, pageSize: result.pageSize };
   }
 
   /**

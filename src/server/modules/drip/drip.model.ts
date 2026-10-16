@@ -17,6 +17,7 @@ export class DripModel {
       telegram_id: Number(r.telegramId),
       current_step: r.currentStep,
       next_run_at: r.nextRunAt,
+      attempts: r.attempts,
     };
   }
 
@@ -127,6 +128,7 @@ export class DripModel {
       update: {
         currentStep: 0,
         nextRunAt,
+        attempts: 0,
       },
     });
   }
@@ -173,7 +175,7 @@ export class DripModel {
   }
 
   /**
-   * Advances a subscriber to the next step.
+   * Advances a subscriber to the next step (resets the failure counter).
    */
   async advanceSubscriber(
     campaignId: number,
@@ -191,7 +193,32 @@ export class DripModel {
       data: {
         currentStep: nextIndex,
         nextRunAt,
+        attempts: 0,
       },
     });
+  }
+
+  /**
+   * Records a transient delivery failure: bumps the attempt counter and
+   * pushes the next attempt a few minutes out so a temporary outage does not
+   * hot-loop. The subscriber is NOT unsubscribed here.
+   * @param {number} campaignId - Campaign identifier.
+   * @param {number | bigint} telegramId - Subscriber id.
+   * @returns {Promise<number>} The new attempts count.
+   */
+  async recordTransientFailure(campaignId: number, telegramId: number | bigint): Promise<number> {
+    const updated = await this.prisma.dripSubscriber.update({
+      where: {
+        campaignId_telegramId: {
+          campaignId,
+          telegramId: BigInt(telegramId),
+        },
+      },
+      data: {
+        attempts: { increment: 1 },
+        nextRunAt: new Date(Date.now() + 5 * 60_000).toISOString(),
+      },
+    });
+    return updated.attempts;
   }
 }

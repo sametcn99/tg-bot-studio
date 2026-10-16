@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { BotModel } from './bot.model';
 
@@ -41,20 +42,18 @@ export class AnalyticsService {
     const window = days >= 30 ? 30 : 7;
     const since = new Date(Date.now() - (window - 1) * 86_400_000).toISOString().slice(0, 10);
 
-    const [subscribers, activeModules, miniApps, totalUsers, activeLast7d, grouped] =
+    const since7 = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10);
+    const [subscribers, activeModules, miniApps, totalUsers, activeLast7dRows, grouped] =
       await Promise.all([
         this.botModel.countSubscribers(botId),
         this.botModel.countActiveModules(botId),
         this.botModel.countMiniApps(botId),
         this.prisma.botUser.count({ where: { botId } }),
-        this.prisma.chatActivity.groupBy({
-          by: ['telegramId'],
-          where: {
-            botId,
-            day: { gte: new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10) },
-          },
-          _sum: { messageCount: true },
-        }),
+        // COUNT(DISTINCT) database-side: the old groupBy returned one row per
+        // active user just to count them.
+        this.prisma.$queryRaw<Array<{ c: bigint }>>(
+          Prisma.sql`SELECT COUNT(DISTINCT telegram_id) AS c FROM chat_activity WHERE bot_id = ${botId} AND day >= ${since7}`,
+        ),
         this.prisma.chatActivity.groupBy({
           by: ['day'],
           where: { botId, day: { gte: since } },
@@ -81,7 +80,7 @@ export class AnalyticsService {
       activeModules,
       miniApps,
       totalUsers,
-      activeLast7d: activeLast7d.length,
+      activeLast7d: Number(activeLast7dRows[0]?.c ?? 0),
       daily,
     };
   }

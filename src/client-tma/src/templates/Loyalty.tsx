@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { tmaFetch } from '../api';
 import { haptic, isInsideTelegram, webApp } from '../sdk/telegram';
+import { createT } from '../i18n';
 import type { TmaAppConfig } from '../App';
 
 /**
@@ -22,6 +23,7 @@ interface LoyaltyState {
  * @returns {React.ReactElement} The loyalty hub view.
  */
 export default function Loyalty({ config }: { config: TmaAppConfig }): React.ReactElement {
+  const t = createT(config.config);
   const [state, setState] = useState<LoyaltyState | null>(null);
   const [status, setStatus] = useState<string | null>(null);
 
@@ -50,16 +52,22 @@ export default function Loyalty({ config }: { config: TmaAppConfig }): React.Rea
       );
       haptic('medium');
       setState({ points: result.points, checkedInToday: true });
-      setStatus(`Check-in complete. +${result.awarded} points.`);
+      setStatus(
+        t('loyalty.checkInComplete', 'Check-in complete. +{points} points.', {
+          points: result.awarded,
+        }),
+      );
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Check-in failed');
+      setStatus(
+        error instanceof Error ? error.message : t('loyalty.checkInFailed', 'Check-in failed'),
+      );
     }
   }
 
   return (
     <>
       <div className="card">
-        <div className="muted">Points balance</div>
+        <div className="muted">{t('loyalty.pointsBalance', 'Points balance')}</div>
         <div style={{ fontSize: 34, fontWeight: 700, letterSpacing: '-0.02em' }}>
           {state?.points ?? 0}
         </div>
@@ -69,7 +77,9 @@ export default function Loyalty({ config }: { config: TmaAppConfig }): React.Rea
           onClick={() => void checkin()}
           disabled={state?.checkedInToday || !isInsideTelegram()}
         >
-          {state?.checkedInToday ? 'Checked in today' : 'Daily check-in'}
+          {state?.checkedInToday
+            ? t('loyalty.checkedInToday', 'Checked in today')
+            : t('loyalty.dailyCheckIn', 'Daily check-in')}
         </button>
       </div>
 
@@ -81,16 +91,23 @@ export default function Loyalty({ config }: { config: TmaAppConfig }): React.Rea
               className={`tier${state && state.points >= tier.minPoints ? ' active' : ''}`}
             >
               <span>{tier.name}</span>
-              <span className="muted">{tier.minPoints}+ pts</span>
+              <span className="muted">
+                {t('loyalty.tierPoints', '{points}+ pts', { points: tier.minPoints })}
+              </span>
             </div>
           ))}
         </div>
       )}
 
       <div className="card">
-        <div style={{ fontWeight: 600, marginBottom: 4 }}>Invite friends</div>
+        <div style={{ fontWeight: 600, marginBottom: 4 }}>
+          {t('loyalty.inviteFriends', 'Invite friends')}
+        </div>
         <div className="muted" style={{ marginBottom: 10 }}>
-          Share your referral link and earn bonus points for every friend who joins.
+          {t(
+            'loyalty.inviteHint',
+            'Share your referral link and earn bonus points for every friend who joins.',
+          )}
         </div>
         <button
           className="secondary"
@@ -100,7 +117,7 @@ export default function Loyalty({ config }: { config: TmaAppConfig }): React.Rea
             }
           }}
         >
-          Share referral link
+          {t('loyalty.share', 'Share referral link')}
         </button>
       </div>
 

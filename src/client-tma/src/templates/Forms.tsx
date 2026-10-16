@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { tmaFetch } from '../api';
 import { haptic, isInsideTelegram } from '../sdk/telegram';
+import { createT } from '../i18n';
 import type { TmaAppConfig } from '../App';
 
 /**
@@ -27,6 +28,7 @@ interface FormField {
  * @returns {React.ReactElement} The form view.
  */
 export default function Forms({ config }: { config: TmaAppConfig }): React.ReactElement {
+  const t = createT(config.config);
   const fields = (config.config.fields as FormField[]) ?? [];
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<string | null>(null);
@@ -39,7 +41,7 @@ export default function Forms({ config }: { config: TmaAppConfig }): React.React
   async function submit(): Promise<void> {
     for (const field of fields) {
       if (field.required && !answers[field.label]) {
-        setStatus(`"${field.label}" is required.`);
+        setStatus(t('forms.fieldRequired', '"{field}" is required.', { field: field.label }));
         return;
       }
     }
@@ -52,9 +54,9 @@ export default function Forms({ config }: { config: TmaAppConfig }): React.React
       });
       haptic('medium');
       setAnswers({});
-      setStatus('Submission received. Thank you.');
+      setStatus(t('forms.submitted', 'Submission received. Thank you.'));
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Submission failed');
+      setStatus(error instanceof Error ? error.message : t('forms.failed', 'Submission failed'));
     } finally {
       setBusy(false);
     }
@@ -76,7 +78,7 @@ export default function Forms({ config }: { config: TmaAppConfig }): React.React
                   setAnswers((current) => ({ ...current, [field.label]: event.target.value }))
                 }
               >
-                <option value="">Select an option</option>
+                <option value="">{t('forms.selectOption', 'Select an option')}</option>
                 {(field.options ?? []).map((option) => (
                   <option key={option} value={option}>
                     {option}
@@ -86,7 +88,11 @@ export default function Forms({ config }: { config: TmaAppConfig }): React.React
             ) : (
               <input
                 type={field.type === 'phone' ? 'tel' : 'text'}
-                placeholder={field.type === 'file' ? 'Paste a file link (https://...)' : undefined}
+                placeholder={
+                  field.type === 'file'
+                    ? t('forms.filePlaceholder', 'Paste a file link (https://...)')
+                    : undefined
+                }
                 value={answers[field.label] ?? ''}
                 onChange={(event) =>
                   setAnswers((current) => ({ ...current, [field.label]: event.target.value }))
@@ -95,14 +101,16 @@ export default function Forms({ config }: { config: TmaAppConfig }): React.React
             )}
           </div>
         ))}
-        {fields.length === 0 && <div className="muted">No fields configured yet.</div>}
+        {fields.length === 0 && (
+          <div className="muted">{t('forms.noFields', 'No fields configured yet.')}</div>
+        )}
       </div>
       <button
         className="primary"
         onClick={() => void submit()}
         disabled={busy || fields.length === 0 || !isInsideTelegram()}
       >
-        {busy ? 'Submitting...' : 'Submit'}
+        {busy ? t('common.submitting', 'Submitting...') : t('forms.submit', 'Submit')}
       </button>
       {status && (
         <div className="success-text" role="status" aria-live="polite">

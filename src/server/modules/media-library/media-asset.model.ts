@@ -1,28 +1,21 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import type { MediaAsset } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
+import { BotScopedCrudModel } from '../../database/crud.model';
 
 /**
- * Model managing the shared per-bot media library via Prisma.
+ * Model managing the shared per-bot media library via Prisma. Retrieval and
+ * deletion live in the shared {@link BotScopedCrudModel} skeleton; creation
+ * stays here because its field set is library-specific.
  */
 @Injectable()
-export class MediaAssetModel {
-  /**
-   * @param {PrismaService} prisma - Prisma ORM access service.
-   */
-  constructor(private readonly prisma: PrismaService) {}
-
-  /**
-   * Lists every asset of a bot, newest first.
-   * @param {number} botId - Owning bot id.
-   * @returns {Promise<MediaAsset[]>} Asset rows.
-   */
-  async list(botId: number): Promise<MediaAsset[]> {
-    return this.prisma.mediaAsset.findMany({
-      where: { botId },
-      orderBy: { id: 'desc' },
-    });
+export class MediaAssetModel extends BotScopedCrudModel<MediaAsset> {
+  /** @param {PrismaService} prisma - Prisma ORM access service. */
+  constructor(prisma: PrismaService) {
+    super(prisma);
   }
+
+  protected override readonly delegate = this.prisma.mediaAsset;
 
   /**
    * Creates an asset.
@@ -59,11 +52,8 @@ export class MediaAssetModel {
    * @param {number} botId - Owning bot id.
    * @param {number} id - Asset id.
    * @returns {Promise<void>} Resolves once removed.
-   * @throws {NotFoundException} When the asset does not exist for the bot.
    */
   async remove(botId: number, id: number): Promise<void> {
-    const existing = await this.prisma.mediaAsset.findFirst({ where: { id, botId } });
-    if (!existing) throw new NotFoundException(`Media asset ${id} not found`);
-    await this.prisma.mediaAsset.delete({ where: { id } });
+    await this.delete(botId, id, 'Media asset');
   }
 }

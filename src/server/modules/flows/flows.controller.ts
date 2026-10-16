@@ -12,6 +12,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { FlowsService } from './flows.service';
+import { SaveFlowDto } from './dto/flow.dto';
 
 /**
  * Visual flow builder CRUD endpoints.
@@ -55,8 +56,8 @@ export class FlowsController {
    * Creates a flow.
    */
   @Post()
-  create(@Param('botId', ParseIntPipe) botId: number, @Body() body: Record<string, unknown>) {
-    return this.service.create(botId, body);
+  create(@Param('botId', ParseIntPipe) botId: number, @Body() body: SaveFlowDto) {
+    return this.service.create(botId, body as unknown as Record<string, unknown>);
   }
 
   /**
@@ -66,9 +67,9 @@ export class FlowsController {
   update(
     @Param('botId', ParseIntPipe) botId: number,
     @Param('id', ParseIntPipe) id: number,
-    @Body() body: Record<string, unknown>,
+    @Body() body: SaveFlowDto,
   ) {
-    return this.service.update(botId, id, body);
+    return this.service.update(botId, id, body as unknown as Record<string, unknown>);
   }
 
   /**

@@ -261,7 +261,13 @@
     "off": "Kapalı",
     "yes": "Evet",
     "no": "Hayır",
-    "optional": "(isteğe bağlı)"
+    "optional": "(isteğe bağlı)",
+    "help": "Yardım",
+    "dataTable": "Veri tablosu",
+    "errorTitle": "Bir şeyler ters gitti",
+    "errorReturnDashboard": "Panele geri dön",
+    "unsavedTitle": "Kaydedilmemiş değişiklikler",
+    "datetimeTzHint": "Saatler UTC olarak gönderilir — yerel saatinize göre girilir ({{tz}})"
   },
   "security": {
     "sessions": "Aktif Oturumlar",
@@ -316,7 +322,9 @@
     "templateLeaderboard": "Puan Liderlik Tablosu",
     "templateSupport": "Destek Masası",
     "deleteTitle": "Mini App'i Sil",
-    "deleteConfirm": "\"{{name}}\" Mini App'i silinsin mi? Siparişleri ve form kayıtları da silinir. Bu işlem geri alınamaz."
+    "deleteConfirm": "\"{{name}}\" Mini App'i silinsin mi? Siparişleri ve form kayıtları da silinir. Bu işlem geri alınamaz.",
+    "previewTitle": "Mini App önizlemesi",
+    "noPreviewUrl": "Önizleme URL’si yok"
   },
   "support": {
     "title": "Destek Masası",
@@ -443,7 +451,9 @@
     "unknown": "Bilinmiyor",
     "subscriber": "Abone",
     "tagsLabel": "Etiketler (virgülle ayırın)",
-    "internalNotes": "Dahili notlar"
+    "internalNotes": "Dahili notlar",
+    "tagFilter": "Etikete göre filtrele",
+    "allTags": "Tüm etiketler"
   },
   "referrals": {
     "leaderboard": "Liderlik Tablosu",
@@ -739,7 +749,8 @@
     "pick": "Seç…",
     "title": "Abone seçin",
     "searchPlaceholder": "Kullanıcı adı, isim veya kimlik ile ara…",
-    "empty": "Eşleşen abone yok."
+    "empty": "Eşleşen abone yok.",
+    "loadMore": "Daha fazla yükle"
   },
   "aiGenerate": {
     "button": "✨ AI ile Oluştur",
@@ -913,6 +924,7 @@
     "emptyCanvasHint": "Soldaki paletten bir blok sürükleyin veya buraya çift tıklayın.",
     "palette": "Yapı taşları",
     "paletteHint": "Eklemek için tıklayın ya da tuvale sürükleyin.",
+    "paletteTapHint": "Tuvale eklemek için bir bloğa dokunun.",
     "flowSettings": "Akış ayarları",
     "triggerSettingsHint": "Tetikleyici kartı akışın giriş noktasıdır — ilk düğüme bağlayın.",
     "inspector": "Özellikler",

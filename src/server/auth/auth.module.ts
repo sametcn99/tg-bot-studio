@@ -4,6 +4,8 @@ import { PassportModule } from '@nestjs/passport';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
+import { SseTicketService } from './sse-ticket.service';
+import { resolveJwtSecret } from './auth-defaults';
 
 /**
  * Authentication feature module wiring JWT signing, the passport strategy,
@@ -13,12 +15,12 @@ import { JwtStrategy } from './jwt.strategy';
   imports: [
     PassportModule,
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'change_this_secret_in_production',
+      secret: resolveJwtSecret(),
       signOptions: { expiresIn: '7d' },
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, SseTicketService],
   exports: [AuthService],
 })
 export class AuthModule {}

@@ -107,13 +107,17 @@ function isPoolEmpty(
 /**
  * Optional help tooltip rendered as an end adornment.
  * @param {string | undefined} helperText - Tooltip content.
+ * @param {string} ariaLabel - Localized accessible label for the help button.
  * @returns {React.ReactElement | undefined} The adornment.
  */
-function helpAdornmentFor(helperText: string | undefined): React.ReactElement | undefined {
+function helpAdornmentFor(
+  helperText: string | undefined,
+  ariaLabel: string,
+): React.ReactElement | undefined {
   return helperText ? (
     <InputAdornment position="end">
       <Tooltip title={helperText}>
-        <IconButton size="small" aria-label="Help" edge="end">
+        <IconButton size="small" aria-label={ariaLabel} edge="end">
           <InfoOutlinedIcon fontSize="small" />
         </IconButton>
       </Tooltip>
@@ -159,7 +163,7 @@ export function ConnectionSelect({
     [connections, types, currentValue],
   );
   const poolEmpty = isPoolEmpty(loading, connections, types);
-  const adornment = helpAdornmentFor(helperText);
+  const adornment = helpAdornmentFor(helperText, t('common.help'));
 
   if (poolEmpty || manual) {
     return (

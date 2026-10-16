@@ -1,6 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import type { Link } from '@prisma/client';
 import { StartMenuModel } from './start-menu.model';
+import { BroadcastModel } from '../broadcast/broadcast.model';
+import { isHttpUrl } from '../../common/utils/url.util';
 
 /**
  * Menu item row in the `links` table backing the Start Menu module.
@@ -24,10 +26,16 @@ export interface MenuItemRow {
  */
 @Injectable()
 export class StartMenuService {
+  private readonly logger = new Logger(StartMenuService.name);
+
   /**
    * @param {StartMenuModel} menuModel - Domain model for start menu items.
+   * @param {BroadcastModel} broadcastModel - Credits clicks to broadcast CTR counters.
    */
-  constructor(private readonly menuModel: StartMenuModel) {}
+  constructor(
+    private readonly menuModel: StartMenuModel,
+    private readonly broadcastModel: BroadcastModel,
+  ) {}
 
   private toRow(r: Link): MenuItemRow {
     return {
@@ -93,10 +101,26 @@ export class StartMenuService {
   }
 
   /**
-   * Registers a click and returns the redirect target.
+   * Registers a click and returns the redirect target. Broadcast-tracking
+   * links additionally credit the owning broadcast's CTR counter at write
+   * time, so dashboard lists need no read-side reconciliation.
+   * @param {number} id - Clicked link id.
+   * @returns {Promise<string | null>} Redirect URL, or null when unknown.
    */
   async trackClick(id: number): Promise<string | null> {
-    return this.menuModel.trackClick(id);
+    const url = await this.menuModel.trackClick(id);
+    if (!url) return null;
+    // Public redirect: only well-formed http(s) targets leave the studio.
+    if (!isHttpUrl(url)) {
+      this.logger.warn(`Blocked non-http redirect target on link ${id}`);
+      return null;
+    }
+    this.broadcastModel.creditTrackingClick(id).catch((error: unknown) => {
+      this.logger.warn(
+        `Broadcast click credit failed for link ${id}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    });
+    return url;
   }
 
   /**
