@@ -779,16 +779,26 @@
     "window": "Zeitfenster"
   },
   "connectionSettings": {
-    "title": "Gruppeneinstellungen — {{title}}",
-    "subtitle": "Gruppenspezifische Modul-Overrides für Chat {{chatId}}; sie werden innerhalb von Sekunden live wirksam.",
-    "loading": "Gruppeneinstellungen werden geladen…",
+    "title": "Chat-Einstellungen — {{title}}",
+    "subtitle": "Modul-Overrides für Chat {{chatId}}; sie werden innerhalb von Sekunden live wirksam.",
+    "loading": "Chat-Einstellungen werden geladen…",
     "connectionNotFound": "Verbindung nicht gefunden.",
-    "overridden": "Gruppen-Override",
-    "botDefault": "Bot-Standard",
-    "save": "Override speichern",
+    "numericOnly": "Chat-spezifische Einstellungen erfordern eine numerische Chat-ID. Synchronisieren Sie den Bot."
+  },
+  "chatOverrides": {
+    "title": "Chat-spezifische Einstellungen",
+    "hint": "Definieren Sie dieses Modul für jede Gruppe und jeden Kanal separat. Hier geänderte Werte überschreiben die bot-weiten Standards oben; unangetastete Felder erben sie weiter.",
+    "selectChat": "Gruppe oder Kanal auswählen",
+    "groups": "Gruppen",
+    "channels": "Kanäle",
+    "noneYet": "Noch keine Overrides — wählen Sie einen Chat, um eigene Werte festzulegen.",
+    "overriddenFields": "{{count}} Feld(er) überschrieben",
+    "botDefault": "Bot-Standards werden geerbt",
+    "inherit": "Bot-Standard erben",
+    "save": "Für diesen Chat speichern",
     "saved": "Gespeichert",
     "reset": "Auf Bot-Standard zurücksetzen",
-    "placeholder": "Text eingeben…"
+    "noFields": "Dieses Modul hat keine konfigurierbaren Felder."
   },
   "federation": {
     "managerTitle": "Föderationsverwaltung",

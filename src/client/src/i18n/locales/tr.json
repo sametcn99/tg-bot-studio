@@ -779,16 +779,26 @@
     "window": "Zaman aralığı"
   },
   "connectionSettings": {
-    "title": "Grup ayarları — {{title}}",
-    "subtitle": "{{chatId}} sohbeti için grup bazlı modül geçersiz kılmaları; birkaç saniye içinde canlıya uygulanır.",
-    "loading": "Grup ayarları yükleniyor…",
+    "title": "Sohbet ayarları — {{title}}",
+    "subtitle": "{{chatId}} sohbeti için modül geçersiz kılmaları; birkaç saniye içinde canlıya uygulanır.",
+    "loading": "Sohbet ayarları yükleniyor…",
     "connectionNotFound": "Bağlantı bulunamadı.",
-    "overridden": "Grup geçersiz kılma",
-    "botDefault": "Bot varsayılanı",
-    "save": "Geçersiz kılmayı kaydet",
+    "numericOnly": "Sohbet bazlı ayarlar için sayısal sohbet kimliği gerekir. Botu senkronize edin."
+  },
+  "chatOverrides": {
+    "title": "Sohbet bazlı ayarlar",
+    "hint": "Bu modülü her grup ve kanal için ayrı ayrı tanımlayın. Burada değiştirdiğiniz değerler yukarıdaki bot geneli varsayılanlarını geçersiz kılar; dokunulmayan alanlar onları devralmaya devam eder.",
+    "selectChat": "Grup veya kanal seçin",
+    "groups": "Gruplar",
+    "channels": "Kanallar",
+    "noneYet": "Henüz geçersiz kılma yok — kendi değerlerini tanımlamak için bir sohbet seçin.",
+    "overriddenFields": "{{count}} alan geçersiz kılındı",
+    "botDefault": "Bot varsayılanları devralınıyor",
+    "inherit": "Bot varsayılanını devral",
+    "save": "Bu sohbet için kaydet",
     "saved": "Kaydedildi",
     "reset": "Bot varsayılanına dön",
-    "placeholder": "Metin girin…"
+    "noFields": "Bu modülün yapılandırılabilir alanı yok."
   },
   "federation": {
     "managerTitle": "Federasyon yöneticisi",

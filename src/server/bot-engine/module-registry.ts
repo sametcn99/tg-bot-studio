@@ -12,6 +12,9 @@
  * @property {string} category - Presentation grouping (e.g. Communication & CRM).
  * @property {string} description - Short business description.
  * @property {Record<string, unknown>} defaultConfig - Defaults merged on read.
+ * @property {boolean} [chatScoped] - True when the runtime reads its config
+ * through ChatSettingsService per chat, so groups and channels can define
+ * their own values on top of the bot-level defaults.
  */
 export interface ModuleDefinition {
   key: string;
@@ -19,6 +22,7 @@ export interface ModuleDefinition {
   category: string;
   description: string;
   defaultConfig: Record<string, unknown>;
+  chatScoped?: boolean;
 }
 
 /**
@@ -153,6 +157,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
       deleteServiceMessages: true,
       deleteLeaveMessages: false,
     },
+    chatScoped: true,
   },
   {
     key: 'captcha',
@@ -168,6 +173,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
       buttonText: 'Verify',
       joinRequestIntegration: false,
     },
+    chatScoped: true,
   },
   {
     key: 'moderation',
@@ -182,6 +188,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
       floodWindowSeconds: 10,
       autoBanAfterStrikes: 3,
     },
+    chatScoped: true,
   },
   {
     key: 'group-moderation',
@@ -197,6 +204,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
       silentActions: false,
       adminError: true,
     },
+    chatScoped: true,
   },
   {
     key: 'group-tools',
@@ -209,6 +217,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
       antichannelPins: false,
       cleanLinked: false,
     },
+    chatScoped: true,
   },
   {
     key: 'locks',
@@ -221,6 +230,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
       lockWarns: false,
       allowlist: [],
     },
+    chatScoped: true,
   },
   {
     key: 'antiraid',
@@ -233,6 +243,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
       raidActionTimeSeconds: 3_600,
       autoRaidJoinThreshold: 0,
     },
+    chatScoped: true,
   },
   {
     key: 'rules',
@@ -245,6 +256,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
       privateRules: true,
       rulesButton: 'Rules',
     },
+    chatScoped: true,
   },
   {
     key: 'admin-log',
@@ -256,6 +268,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
       logChatId: 0,
       categories: ['settings', 'admin', 'user', 'automated', 'reports', 'other'],
     },
+    chatScoped: true,
   },
   {
     key: 'cleaning',
@@ -268,6 +281,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
       cleanServiceTypes: [],
       cleanBotMessages: 'off',
     },
+    chatScoped: true,
   },
   {
     key: 'topics',
@@ -278,6 +292,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     defaultConfig: {
       actionTopicId: 0,
     },
+    chatScoped: true,
   },
   {
     key: 'federation',
@@ -300,6 +315,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     defaultConfig: {
       language: 'en',
     },
+    chatScoped: true,
   },
   {
     key: 'bot2bot',
@@ -311,6 +327,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
       mode: 'off',
       skipReview: false,
     },
+    chatScoped: true,
   },
   {
     key: 'giveaways',
@@ -339,6 +356,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     category: 'Community & Moderation',
     description: 'Tracks emoji reactions on channel posts and rewards active members with points.',
     defaultConfig: { pointsPerReaction: 1 },
+    chatScoped: true,
   },
   {
     key: 'message-score',
@@ -347,6 +365,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     description:
       'Scores group member activity (messages, replies, media), publishes rich leaderboards to one or many chats, fully schedulable.',
     defaultConfig: { messageWeight: 1, replyWeight: 1, mediaWeight: 2 },
+    chatScoped: true,
   },
   {
     key: 'ai-assistant',

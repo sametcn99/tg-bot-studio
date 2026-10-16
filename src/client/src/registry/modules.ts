@@ -117,6 +117,8 @@ export type ModulePageType =
  * @property {string} category - Sidebar grouping.
  * @property {string} description - Short business description.
  * @property {ModulePageType} pageType - Dashboard page dispatcher.
+ * @property {boolean} [chatScoped] - True when every group and channel can
+ * define its own values on top of the bot-level defaults (per-chat editor).
  * @property {ConfigField[]} [configFields] - Fields for `config` pages.
  * @property {CrudResource} [crud] - Resource descriptor for `crud` pages.
  * @property {{overview: string[]; setup: string[]; troubleshooting: string[]}} docs - Help dialog content.
@@ -127,6 +129,7 @@ export interface ModuleEntry {
   category: string;
   description: string;
   pageType: ModulePageType;
+  chatScoped?: boolean;
   configFields?: ConfigField[];
   crud?: CrudResource;
   docs: {
@@ -517,6 +520,7 @@ export const MODULES: ModuleEntry[] = [
     category: 'Community & Moderation',
     description: 'Media greetings with buttons, goodbyes, clean-welcome, and service cleanup.',
     pageType: 'config',
+    chatScoped: true,
     configFields: [
       { key: 'welcomeEnabled', label: 'Welcome messages enabled', type: 'switch' },
       { key: 'template', label: 'Welcome template', type: 'textarea' },
@@ -566,6 +570,7 @@ export const MODULES: ModuleEntry[] = [
     category: 'Community & Moderation',
     description: 'Button, math or PM verification with kick timers and join requests.',
     pageType: 'config',
+    chatScoped: true,
     configFields: [
       {
         key: 'mode',
@@ -609,6 +614,7 @@ export const MODULES: ModuleEntry[] = [
     category: 'Community & Moderation',
     description: 'Blacklisted words, link blocking, flood control, strike escalation.',
     pageType: 'config',
+    chatScoped: true,
     configFields: [
       { key: 'blockedWords', label: 'Blocked words (one per line or /regex/)', type: 'stringList' },
       { key: 'blockLinks', label: 'Block links', type: 'switch' },
@@ -765,6 +771,7 @@ export const MODULES: ModuleEntry[] = [
     category: 'Community & Moderation',
     description: 'Tracks channel post reactions and rewards points.',
     pageType: 'engagement',
+    chatScoped: true,
     configFields: [{ key: 'pointsPerReaction', label: 'Points per reaction', type: 'number' }],
     docs: {
       overview: [
@@ -791,6 +798,7 @@ export const MODULES: ModuleEntry[] = [
     description:
       'Scores member activity in groups (messages, replies, media), lists the most active members, and posts rich leaderboards to one or many chats on a schedule.',
     pageType: 'message-score',
+    chatScoped: true,
     configFields: [
       {
         key: 'messageWeight',
@@ -1054,6 +1062,7 @@ export const MODULES: ModuleEntry[] = [
     description:
       'In-group admin commands: ban, mute, kick, warnings, purges, approvals, silent actions.',
     pageType: 'config',
+    chatScoped: true,
     configFields: [
       {
         key: 'warnLimit',
@@ -1110,6 +1119,7 @@ export const MODULES: ModuleEntry[] = [
     description:
       'Pins, user reports, admin list, /id and /info lookups, echo, and command disabling.',
     pageType: 'config',
+    chatScoped: true,
     configFields: [
       {
         key: 'reportsEnabled',
@@ -1152,6 +1162,7 @@ export const MODULES: ModuleEntry[] = [
     description:
       'Fine-grained content locks: stickers, gifs, polls, forwards, links, scripts and more.',
     pageType: 'config',
+    chatScoped: true,
     configFields: [
       {
         key: 'lockedTypes',
@@ -1193,6 +1204,7 @@ export const MODULES: ModuleEntry[] = [
     category: 'Community & Moderation',
     description: 'Temporarily bans joiners during raid attacks, manually or automatically.',
     pageType: 'config',
+    chatScoped: true,
     configFields: [
       { key: 'raidTimeSeconds', label: 'Raid mode duration (seconds)', type: 'number' },
       { key: 'raidActionTimeSeconds', label: 'Per-joiner ban (seconds)', type: 'number' },
@@ -1227,6 +1239,7 @@ export const MODULES: ModuleEntry[] = [
     category: 'Community & Moderation',
     description: 'Per-group rules with /rules delivery and the {rules} placeholder button.',
     pageType: 'config',
+    chatScoped: true,
     configFields: [
       { key: 'rulesText', label: 'Rules text', type: 'textarea' },
       { key: 'privateRules', label: 'Deliver rules via PM button', type: 'switch' },
@@ -1257,6 +1270,7 @@ export const MODULES: ModuleEntry[] = [
     category: 'Community & Moderation',
     description: 'Forwards admin actions and automated punishments to a Telegram log channel.',
     pageType: 'config',
+    chatScoped: true,
     configFields: [
       {
         key: 'logChatId',
@@ -1296,6 +1310,7 @@ export const MODULES: ModuleEntry[] = [
     category: 'Community & Moderation',
     description: 'Auto-deletes used commands, service messages, and bot action messages.',
     pageType: 'config',
+    chatScoped: true,
     configFields: [
       {
         key: 'cleanCommand',
@@ -1341,6 +1356,7 @@ export const MODULES: ModuleEntry[] = [
     category: 'Community & Moderation',
     description: 'Create, rename, close and delete forum topics from chat commands.',
     pageType: 'config',
+    chatScoped: true,
     configFields: [
       {
         key: 'actionTopicId',
@@ -1405,6 +1421,7 @@ export const MODULES: ModuleEntry[] = [
     category: 'Community & Moderation',
     description: 'Per-group bot reply language (/setlang) for moderation and system messages.',
     pageType: 'config',
+    chatScoped: true,
     configFields: [
       { key: 'language', label: 'Default language', type: 'select', options: ['en', 'tr'] },
     ],
@@ -1433,6 +1450,7 @@ export const MODULES: ModuleEntry[] = [
     category: 'Automation & Monetization',
     description: "Let other bots use this bot's group commands with an admin review gate.",
     pageType: 'config',
+    chatScoped: true,
     configFields: [
       {
         key: 'mode',

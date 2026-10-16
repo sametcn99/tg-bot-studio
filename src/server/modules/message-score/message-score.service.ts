@@ -6,13 +6,13 @@ import {
   OnApplicationShutdown,
 } from '@nestjs/common';
 import { BotPoolService } from '../../bot-engine/bot-pool.service';
+import { ChatSettingsService } from '../../bot-engine/chat-settings.service';
 import { SystemSettingsService } from '../../database/system-settings.service';
 import { nextZonedOccurrence, safeTimeZone } from '../../common/utils/tz.util';
 import { renderTemplate } from '../../common/utils/template.util';
 import { MessageScoreModel } from './message-score.model';
 import { toScoreScheduleRow } from './message-score.mapper';
 import { type ScoreScheduleRow, type LeaderboardEntryEntity } from './message-score.entity';
-import { BotModel } from '../../bots/bot.model';
 import { ChatConnectionModel } from '../connections/chat-connection.model';
 import { StudioException } from '../../common/errors/studio-error';
 
@@ -106,10 +106,10 @@ export class MessageScoreService implements OnApplicationShutdown {
 
   constructor(
     private readonly scoreModel: MessageScoreModel,
-    private readonly botModel: BotModel,
     private readonly chatConnectionModel: ChatConnectionModel,
     private readonly pool: BotPoolService,
     private readonly settings: SystemSettingsService,
+    private readonly chatSettings: ChatSettingsService,
   ) {
     this.ticker = setInterval(() => {
       void this.dispatchDue().catch((error: Error) =>
@@ -161,7 +161,7 @@ export class MessageScoreService implements OnApplicationShutdown {
           : period === 'monthly'
             ? dayBucket(29)
             : '0000-01-01';
-    const effectiveWeights = weights ?? (await this.weightsFor(botId));
+    const effectiveWeights = weights ?? (await this.weightsFor(botId, chatId));
     return this.scoreModel.getLeaderboard(botId, chatId, sinceDay, limit, effectiveWeights);
   }
 
@@ -243,11 +243,12 @@ export class MessageScoreService implements OnApplicationShutdown {
   ): Promise<Array<{ chatId: string; title: string; text: string }>> {
     const config = this.formatFromPayload(data);
     const period = this.periodFromPayload(data);
-    const weights = await this.weightsFor(botId);
     const targets = this.targetChatIds(data);
     const results: Array<{ chatId: string; title: string; text: string }> = [];
     for (const chatId of targets) {
-      const entries = await this.leaderboard(botId, chatId, period, config.topLimit, weights);
+      // No shared weights: leaderboard resolves them per target chat so
+      // per-chat overrides apply.
+      const entries = await this.leaderboard(botId, chatId, period, config.topLimit);
       const title = await this.titleFor(botId, chatId);
       results.push({
         chatId,
@@ -270,10 +271,11 @@ export class MessageScoreService implements OnApplicationShutdown {
       );
     const config = this.formatFromPayload(data);
     const period = this.periodFromPayload(data);
-    const weights = await this.weightsFor(botId);
     const results: Array<{ chatId: string; ok: boolean; error?: string }> = [];
     for (const chatId of this.targetChatIds(data)) {
-      const entries = await this.leaderboard(botId, chatId, period, config.topLimit, weights);
+      // No shared weights: leaderboard resolves them per target chat so
+      // per-chat overrides apply.
+      const entries = await this.leaderboard(botId, chatId, period, config.topLimit);
       const title = await this.titleFor(botId, chatId);
       const text = this.renderLeaderboardMessage(
         config,
@@ -469,18 +471,13 @@ export class MessageScoreService implements OnApplicationShutdown {
       disableNotification: Boolean(schedule.disable_notification),
     });
     const period = this.periodFromPayload({ period: schedule.period });
-    const weights = await this.weightsFor(schedule.bot_id);
     const chatIds = this.parseChatIds(schedule.chat_ids_json);
     let sent = 0;
     let failure = '';
     for (const chatId of chatIds) {
-      const entries = await this.leaderboard(
-        schedule.bot_id,
-        chatId,
-        period,
-        config.topLimit,
-        weights,
-      );
+      // No shared weights: leaderboard resolves them per target chat so
+      // per-chat overrides apply.
+      const entries = await this.leaderboard(schedule.bot_id, chatId, period, config.topLimit);
       const title = await this.titleFor(schedule.bot_id, chatId);
       const text = this.renderLeaderboardMessage(
         config,
@@ -565,9 +562,12 @@ export class MessageScoreService implements OnApplicationShutdown {
 
   private async weightsFor(
     botId: number,
+    chatId?: string,
   ): Promise<{ message: number; reply: number; media: number }> {
-    const mod = await this.botModel.getModule(botId, 'message-score');
-    const config = mod?.configJson ? (JSON.parse(mod.configJson) as Record<string, unknown>) : {};
+    // Effective per-chat weights (chat override -> bot config -> defaults).
+    // Chat-wide leaderboards pass no chat id; chat id 0 never exists on
+    // Telegram, so the override lookup misses and bot-level values apply.
+    const config = await this.chatSettings.getEffectiveConfig(botId, chatId ?? 0, 'message-score');
     return {
       message: Math.max(0, Number(config.messageWeight ?? 1)),
       reply: Math.max(0, Number(config.replyWeight ?? 1)),

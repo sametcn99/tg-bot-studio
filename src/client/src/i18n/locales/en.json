@@ -779,16 +779,26 @@
     "window": "Time window"
   },
   "connectionSettings": {
-    "title": "Group settings — {{title}}",
-    "subtitle": "Per-group module overrides for chat {{chatId}}; they apply live within seconds.",
-    "loading": "Loading group settings…",
+    "title": "Per-chat settings — {{title}}",
+    "subtitle": "Module overrides for chat {{chatId}}; they apply live within seconds.",
+    "loading": "Loading chat settings…",
     "connectionNotFound": "Connection not found.",
-    "overridden": "Group override",
-    "botDefault": "Bot default",
-    "save": "Save override",
+    "numericOnly": "Per-chat settings need a numeric chat id. Sync the bot so this chat is stored with its id."
+  },
+  "chatOverrides": {
+    "title": "Per-chat settings",
+    "hint": "Define this module separately for each group and channel. Values you change here override the bot-level defaults above; untouched fields keep inheriting them.",
+    "selectChat": "Select a group or channel",
+    "groups": "Groups",
+    "channels": "Channels",
+    "noneYet": "No overrides yet — pick a chat to define its own values.",
+    "overriddenFields": "{{count}} field(s) overridden",
+    "botDefault": "Inheriting bot defaults",
+    "inherit": "Inherit the bot default",
+    "save": "Save for this chat",
     "saved": "Saved",
     "reset": "Reset to bot default",
-    "placeholder": "Enter text…"
+    "noFields": "This module has no configurable fields."
   },
   "federation": {
     "managerTitle": "Federation manager",

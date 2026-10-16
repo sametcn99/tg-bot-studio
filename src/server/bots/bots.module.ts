@@ -3,6 +3,7 @@ import { BotsController } from './bots.controller';
 import { BotsService } from './bots.service';
 import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './analytics.service';
+import { ChatSettingsController } from './chat-settings.controller';
 import { AiAssistantModule } from '../modules/ai-assistant/ai-assistant.module';
 
 /**
@@ -10,7 +11,7 @@ import { AiAssistantModule } from '../modules/ai-assistant/ai-assistant.module';
  */
 @Module({
   imports: [AiAssistantModule],
-  controllers: [BotsController, AnalyticsController],
+  controllers: [BotsController, AnalyticsController, ChatSettingsController],
   providers: [BotsService, AnalyticsService],
   exports: [BotsService],
 })

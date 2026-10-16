@@ -318,19 +318,15 @@ export default function ConnectionsPage({
                       />
                     </TableCell>
                     <TableCell align="right">
-                      {(row.type === 'group' || row.type === 'supergroup') && (
-                        <Tooltip title={t('connectionSettings.title', { title: row.title })}>
-                          <IconButton
-                            size="small"
-                            onClick={() =>
-                              navigate(`/bots/${botId}/connections/${row.id}/settings`)
-                            }
-                            aria-label={`${t('connectionSettings.title', { title: row.title })}`}
-                          >
-                            <SettingsIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
+                      <Tooltip title={t('connectionSettings.title', { title: row.title })}>
+                        <IconButton
+                          size="small"
+                          onClick={() => navigate(`/bots/${botId}/connections/${row.id}/settings`)}
+                          aria-label={`${t('connectionSettings.title', { title: row.title })}`}
+                        >
+                          <SettingsIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip title={t('actions.edit')}>
                         <IconButton
                           size="small"
