@@ -468,34 +468,58 @@ export default function CrudPage({
               </Stack>
             </Stack>
             <Stack spacing={2}>
-              {module.configFields.map((field) => (
-                <TextField
-                  key={field.key}
-                  label={field.label}
-                  size="small"
-                  fullWidth
-                  select={field.type === 'select'}
-                  multiline={field.type === 'textarea'}
-                  minRows={field.type === 'textarea' ? 2 : undefined}
-                  value={
-                    field.type === 'select'
-                      ? String(config[field.key] ?? field.options?.[0] ?? '')
-                      : String(config[field.key] ?? '')
-                  }
-                  onChange={(event) => {
-                    setConfig((current) => ({ ...current, [field.key]: event.target.value }));
-                    setConfigDirty(true);
-                  }}
-                  helperText={field.help}
-                >
-                  {field.type === 'select' &&
-                    (field.options ?? []).map((option) => (
-                      <MenuItem key={option} value={option}>
-                        {option}
-                      </MenuItem>
-                    ))}
-                </TextField>
-              ))}
+              {module.configFields.map((field) =>
+                field.type === 'switch' ? (
+                  <TextField
+                    key={field.key}
+                    label={field.label}
+                    size="small"
+                    fullWidth
+                    select
+                    value={
+                      config[field.key] === true || config[field.key] === 'true' ? 'true' : 'false'
+                    }
+                    onChange={(event) => {
+                      setConfig((current) => ({
+                        ...current,
+                        [field.key]: event.target.value === 'true',
+                      }));
+                      setConfigDirty(true);
+                    }}
+                    helperText={field.help}
+                  >
+                    <MenuItem value="true">{t('common.on')}</MenuItem>
+                    <MenuItem value="false">{t('common.off')}</MenuItem>
+                  </TextField>
+                ) : (
+                  <TextField
+                    key={field.key}
+                    label={field.label}
+                    size="small"
+                    fullWidth
+                    select={field.type === 'select'}
+                    multiline={field.type === 'textarea'}
+                    minRows={field.type === 'textarea' ? 2 : undefined}
+                    value={
+                      field.type === 'select'
+                        ? String(config[field.key] ?? field.options?.[0] ?? '')
+                        : String(config[field.key] ?? '')
+                    }
+                    onChange={(event) => {
+                      setConfig((current) => ({ ...current, [field.key]: event.target.value }));
+                      setConfigDirty(true);
+                    }}
+                    helperText={field.help}
+                  >
+                    {field.type === 'select' &&
+                      (field.options ?? []).map((option) => (
+                        <MenuItem key={option} value={option}>
+                          {option}
+                        </MenuItem>
+                      ))}
+                  </TextField>
+                ),
+              )}
             </Stack>
           </CardContent>
         </Card>
