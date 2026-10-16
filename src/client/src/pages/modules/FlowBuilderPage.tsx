@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Box,
   Button,
   Card,
+  CardActionArea,
   CardContent,
   Chip,
   Dialog,
@@ -11,16 +12,22 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
-  MenuItem,
+  InputAdornment,
   Stack,
   Switch,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
+  Tooltip,
   Typography,
+  useTheme,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import EditIcon from '@mui/icons-material/Edit';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import BoltRoundedIcon from '@mui/icons-material/BoltRounded';
+import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArrowRight';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../../services/api';
 import PageHeader from '../../components/PageHeader';
@@ -29,29 +36,18 @@ import ConfirmDialog from '../../components/ConfirmDialog';
 import { useSnackbar } from '../../context/SnackbarContext';
 import type { ModuleEntry } from '../../registry/modules';
 import { localizedErrorMessage } from '../../utils/errors';
-
-/** Flow graph node (mirrors the server contract). */
-interface FlowNode {
-  id: string;
-  type: 'message' | 'input' | 'condition' | 'delay' | 'settag' | 'end';
-  text?: string;
-  mediaUrl?: string;
-  buttons?: Array<{ text: string; url?: string; next?: string }>;
-  variable?: string;
-  op?: 'equals' | 'contains' | 'exists';
-  value?: string;
-  nextTrue?: string;
-  nextFalse?: string;
-  next?: string;
-  minutes?: number;
-  tag?: string;
-}
-
-/** Flow graph document. */
-interface FlowGraph {
-  start: string;
-  nodes: FlowNode[];
-}
+import { formatDate } from '../../utils/format';
+import FlowEditorDialog from './flow-editor/FlowEditorDialog';
+import {
+  NODE_COLORS,
+  TRIGGER_WIDTH,
+  autoLayout,
+  collectEdges,
+  graphBounds,
+  isFullyPositioned,
+  type FlowGraph,
+  type FlowNode,
+} from './flow-editor/flowEditorModel';
 
 /** Flow row from the API. */
 interface FlowRow {
@@ -64,20 +60,9 @@ interface FlowRow {
   updatedAt: string | null;
 }
 
-/** Blank node factory per type. */
-function blankNode(type: FlowNode['type'], index: number): FlowNode {
-  const id = `n${Date.now().toString(36)}${index}`;
-  const base: FlowNode = { id, type };
-  if (type === 'message' || type === 'input') return { ...base, text: '', buttons: [] };
-  if (type === 'condition') return { ...base, variable: '', op: 'equals', value: '' };
-  if (type === 'delay') return { ...base, minutes: 5 };
-  if (type === 'settag') return { ...base, tag: '' };
-  return base;
-}
-
 /**
- * Visual Flow Builder page: multi-step conversation trees with message,
- * input, condition, delay, and tag nodes — testable in the sandbox.
+ * Visual Flow Builder page: a gallery of flow cards with live graph
+ * thumbnails; each card opens the full-screen drag-and-drop canvas editor.
  * @param {object} props - Component props.
  * @param {number} props.botId - Active bot id.
  * @param {ModuleEntry} props.module - Flows catalog entry.
@@ -91,6 +76,7 @@ export default function FlowBuilderPage({
   module: ModuleEntry;
 }): React.ReactElement {
   const { t } = useTranslation();
+  const theme = useTheme();
   const { openDocs } = useModuleDocs();
   const { showSuccess, showError } = useSnackbar();
   const [flows, setFlows] = useState<FlowRow[] | null>(null);
@@ -118,13 +104,20 @@ export default function FlowBuilderPage({
   }
 
   /**
-   * Creates a flow with a two-node starter graph and opens the editor.
+   * Creates a flow with a starter message node and opens the editor.
    * @returns {void}
    */
   function createFlow(): void {
     const name = newName.trim();
     if (!name) return;
-    const start = blankNode('message', 0);
+    const start: FlowNode = {
+      id: `n${Math.random().toString(36).slice(2, 8)}`,
+      type: 'message',
+      text: '',
+      buttons: [],
+      x: 320,
+      y: 120,
+    };
     const graph: FlowGraph = { start: start.id, nodes: [start] };
     apiFetch<FlowRow>(`/api/bots/${botId}/flows`, {
       method: 'POST',
@@ -193,6 +186,16 @@ export default function FlowBuilderPage({
       .catch((err: Error) => showError(localizedErrorMessage(err)));
   }
 
+  /**
+   * Short trigger summary for chips.
+   */
+  function triggerSummary(flow: FlowRow): string {
+    if (flow.triggerType === 'start') return '/start';
+    if (!flow.triggerValue)
+      return t(`flows.trigger${flow.triggerType === 'command' ? 'Command' : 'Keyword'}`);
+    return flow.triggerType === 'command' ? flow.triggerValue : `“${flow.triggerValue}”`;
+  }
+
   return (
     <Box>
       <PageHeader
@@ -216,51 +219,77 @@ export default function FlowBuilderPage({
         </Alert>
       )}
 
-      <Card>
-        <CardContent>
-          <Stack spacing={1.5}>
-            {(flows ?? []).map((flow) => (
-              <Stack
-                key={flow.id}
-                direction="row"
-                alignItems="center"
-                justifyContent="space-between"
-                spacing={1}
-                sx={{
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  borderRadius: 1,
-                  px: 1.5,
-                  py: 1,
-                }}
-              >
-                <Box sx={{ minWidth: 0 }}>
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Typography variant="body2" fontWeight={600}>
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))',
+          gap: 2,
+        }}
+      >
+        {(flows ?? []).map((flow) => (
+          <Card
+            key={flow.id}
+            sx={{
+              transition: 'border-color .15s ease, box-shadow .15s ease',
+              '&:hover': {
+                borderColor: 'primary.main',
+                boxShadow: `0 6px 20px rgba(2,6,23,${theme.palette.mode === 'dark' ? 0.45 : 0.1})`,
+              },
+            }}
+          >
+            <CardActionArea onClick={() => setEditorFlow(flow)}>
+              <CardContent sx={{ pb: '12px !important' }}>
+                <Stack
+                  direction="row"
+                  alignItems="center"
+                  justifyContent="space-between"
+                  sx={{ mb: 1.25 }}
+                >
+                  <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+                    <Typography variant="subtitle2" noWrap>
                       {flow.name}
                     </Typography>
-                    <Chip
-                      size="small"
-                      label={
-                        flow.triggerType === 'start'
-                          ? '/start'
-                          : `${flow.triggerType}: ${flow.triggerValue}`
-                      }
-                    />
-                    <Chip
-                      size="small"
-                      variant="outlined"
-                      label={t('flows.nodeCount', { count: flow.graph.nodes.length })}
-                    />
+                    {!flow.isActive && (
+                      <Chip
+                        size="small"
+                        label={t('status.inactive')}
+                        sx={{ height: 20, fontSize: 10 }}
+                      />
+                    )}
                   </Stack>
-                </Box>
-                <Stack direction="row" spacing={0.5} alignItems="center">
-                  <Switch
-                    checked={flow.isActive}
-                    onChange={(event) => toggleFlow(flow, event.target.checked)}
+                  <Chip
                     size="small"
-                    inputProps={{ 'aria-label': flow.name }}
+                    variant="outlined"
+                    icon={<BoltRoundedIcon sx={{ fontSize: 13 }} />}
+                    label={triggerSummary(flow)}
+                    sx={{ height: 24, '& .MuiChip-iconSmall': { ml: 0.75 }, flexShrink: 0 }}
                   />
+                </Stack>
+                <FlowThumb graph={flow.graph} />
+              </CardContent>
+            </CardActionArea>
+            <Stack
+              direction="row"
+              alignItems="center"
+              justifyContent="space-between"
+              sx={{ px: 2, pb: 1.5 }}
+            >
+              <Stack direction="row" spacing={2}>
+                <Typography variant="caption" color="text.secondary">
+                  {t('flows.nodeCount', { count: flow.graph.nodes.length })}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {formatDate(flow.updatedAt)}
+                </Typography>
+              </Stack>
+              <Stack direction="row" spacing={0.25} alignItems="center">
+                <Switch
+                  checked={flow.isActive}
+                  onChange={(event) => toggleFlow(flow, event.target.checked)}
+                  size="small"
+                  inputProps={{ 'aria-label': flow.name }}
+                />
+                <Tooltip title={t('flows.test')}>
                   <IconButton
                     size="small"
                     onClick={() => testFlow(flow)}
@@ -268,13 +297,17 @@ export default function FlowBuilderPage({
                   >
                     <PlayArrowIcon fontSize="small" />
                   </IconButton>
+                </Tooltip>
+                <Tooltip title={t('actions.edit')}>
                   <IconButton
                     size="small"
                     onClick={() => setEditorFlow(flow)}
                     aria-label={t('actions.edit')}
                   >
-                    <EditIcon fontSize="small" />
+                    <EditOutlinedIcon fontSize="small" />
                   </IconButton>
+                </Tooltip>
+                <Tooltip title={t('actions.delete')}>
                   <IconButton
                     size="small"
                     color="error"
@@ -283,43 +316,55 @@ export default function FlowBuilderPage({
                   >
                     <DeleteOutlineIcon fontSize="small" />
                   </IconButton>
-                </Stack>
+                </Tooltip>
               </Stack>
-            ))}
-            {flows !== null && flows.length === 0 && (
-              <Typography variant="body2" color="text.secondary">
-                {t('flows.empty')}
-              </Typography>
-            )}
-          </Stack>
-        </CardContent>
-      </Card>
+            </Stack>
+          </Card>
+        ))}
+      </Box>
+      {flows !== null && flows.length === 0 && (
+        <Card>
+          <CardContent sx={{ textAlign: 'center', py: 6 }}>
+            <Typography variant="body2" color="text.secondary">
+              {t('flows.empty')}
+            </Typography>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Create dialog */}
       <Dialog open={creating} onClose={() => setCreating(false)} maxWidth="sm" fullWidth>
         <DialogTitle>{t('flows.newFlow')}</DialogTitle>
         <DialogContent>
-          <Stack spacing={2} sx={{ pt: 1 }}>
+          <Stack spacing={2.25} sx={{ pt: 1 }}>
             <TextField
               size="small"
               label={t('flows.flowName')}
               value={newName}
               onChange={(event) => setNewName(event.target.value)}
               fullWidth
+              autoFocus
             />
-            <TextField
-              select
-              size="small"
-              label={t('flows.triggerType')}
-              value={newTriggerType}
-              onChange={(event) =>
-                setNewTriggerType(event.target.value as 'command' | 'keyword' | 'start')
-              }
-            >
-              <MenuItem value="command">{t('flows.triggerCommand')}</MenuItem>
-              <MenuItem value="keyword">{t('flows.triggerKeyword')}</MenuItem>
-              <MenuItem value="start">{t('flows.triggerStart')}</MenuItem>
-            </TextField>
+            <Box>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ display: 'block', mb: 0.75 }}
+              >
+                {t('flows.triggerType')}
+              </Typography>
+              <ToggleButtonGroup
+                exclusive
+                size="small"
+                fullWidth
+                value={newTriggerType}
+                onChange={(_, value) => value && setNewTriggerType(value)}
+              >
+                <ToggleButton value="command">{t('flows.triggerCommand')}</ToggleButton>
+                <ToggleButton value="keyword">{t('flows.triggerKeyword')}</ToggleButton>
+                <ToggleButton value="start">{t('flows.triggerStart')}</ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
             {newTriggerType !== 'start' && (
               <TextField
                 size="small"
@@ -330,6 +375,13 @@ export default function FlowBuilderPage({
                 helperText={
                   newTriggerType === 'command' ? t('flows.triggerCommandHelp') : undefined
                 }
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <KeyboardDoubleArrowRightIcon fontSize="small" color="action" />
+                    </InputAdornment>
+                  ),
+                }}
               />
             )}
           </Stack>
@@ -348,10 +400,7 @@ export default function FlowBuilderPage({
           botId={botId}
           flow={editorFlow}
           onClose={() => setEditorFlow(null)}
-          onSaved={() => {
-            setEditorFlow(null);
-            reload();
-          }}
+          onSaved={reload}
         />
       )}
 
@@ -367,595 +416,131 @@ export default function FlowBuilderPage({
 }
 
 /**
- * Full-screen flow editor dialog: node cards, wiring selectors, and a compact
- * SVG minimap of the graph.
+ * Scaled-down graph thumbnail for flow cards: trigger square, colored node
+ * dots, and their connections, laid out with the tidy algorithm when the
+ * stored graph has no canvas positions yet.
+ * @param {object} props - Component props.
+ * @param {FlowGraph} props.graph - Flow graph to preview.
+ * @returns {React.ReactElement} Inline SVG thumbnail.
  */
-function FlowEditorDialog({
-  botId,
-  flow,
-  onClose,
-  onSaved,
-}: {
-  botId: number;
-  flow: FlowRow;
-  onClose: () => void;
-  onSaved: () => void;
-}): React.ReactElement {
+function FlowThumb({ graph }: { graph: FlowGraph }): React.ReactElement {
   const { t } = useTranslation();
-  const { showSuccess, showError } = useSnackbar();
-  const [name, setName] = useState(flow.name);
-  const [triggerType, setTriggerType] = useState(flow.triggerType);
-  const [triggerValue, setTriggerValue] = useState(flow.triggerValue);
-  const [isActive, setIsActive] = useState(flow.isActive);
-  const [graph, setGraph] = useState<FlowGraph>(
-    JSON.parse(JSON.stringify(flow.graph)) as FlowGraph,
-  );
-
-  /** Node id options for wiring selects. */
-  const nodeOptions = useMemo(
-    () => graph.nodes.map((node) => ({ id: node.id, label: nodeLabel(node) })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [graph, t],
-  );
-
-  /**
-   * Human label for a node (used in minimap and selects).
-   */
-  function nodeLabel(node: FlowNode): string {
-    const typeLabel = t(`flows.nodeTypes.${node.type}`);
-    const detail =
-      node.type === 'message' || node.type === 'input'
-        ? (node.text ?? '').slice(0, 24)
-        : node.type === 'condition'
-          ? (node.variable ?? '')
-          : node.type === 'delay'
-            ? `${node.minutes ?? 0}m`
-            : node.type === 'settag'
-              ? (node.tag ?? '')
-              : '';
-    return detail ? `${typeLabel}: ${detail}` : typeLabel;
-  }
-
-  /**
-   * Patches one node.
-   */
-  function patchNode(id: string, patch: Partial<FlowNode>): void {
-    setGraph((current) => ({
-      ...current,
-      nodes: current.nodes.map((node) => (node.id === id ? { ...node, ...patch } : node)),
-    }));
-  }
-
-  /**
-   * Adds a node of the given type and optionally wires it from `fromId`.
-   */
-  function addNode(
-    type: FlowNode['type'],
-    fromId?: string,
-    field?: 'next' | 'nextTrue' | 'nextFalse',
-  ): void {
-    setGraph((current) => {
-      const node = blankNode(type, current.nodes.length);
-      const nodes = [...current.nodes, node];
-      if (!fromId || !field) return { ...current, nodes };
-      return {
-        ...current,
-        nodes: nodes.map((item) => (item.id === fromId ? { ...item, [field]: node.id } : item)),
-      };
-    });
-  }
-
-  /**
-   * Adds a message node wired as the target of one flow-navigation button.
-   */
-  function addNodeForButton(nodeId: string, buttonIndex: number): void {
-    setGraph((current) => {
-      const node = blankNode('message', current.nodes.length);
-      return {
-        ...current,
-        nodes: [
-          ...current.nodes.map((item) => {
-            if (item.id !== nodeId) return item;
-            const buttons = [...(item.buttons ?? [])];
-            buttons[buttonIndex] = { ...buttons[buttonIndex], next: node.id };
-            return { ...item, buttons };
-          }),
-          node,
-        ],
-      };
-    });
-  }
-
-  /**
-   * Removes a node and clears every reference to it.
-   */
-  function removeNode(id: string): void {
-    setGraph((current) => ({
-      ...current,
-      start:
-        current.start === id ? (current.nodes.find((n) => n.id !== id)?.id ?? '') : current.start,
-      nodes: current.nodes
-        .filter((node) => node.id !== id)
-        .map((node) => ({
-          ...node,
-          next: node.next === id ? undefined : node.next,
-          nextTrue: node.nextTrue === id ? undefined : node.nextTrue,
-          nextFalse: node.nextFalse === id ? undefined : node.nextFalse,
-          buttons: node.buttons?.map((button) =>
-            button.next === id ? { ...button, next: undefined } : button,
-          ),
-        })),
-    }));
-  }
-
-  /**
-   * Saves the flow definition.
-   * @returns {void}
-   */
-  function save(): void {
-    apiFetch(`/api/bots/${botId}/flows/${flow.id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ name, triggerType, triggerValue, graph, isActive }),
-    })
-      .then(() => {
-        showSuccess(t('flows.saved'));
-        onSaved();
-      })
-      .catch((err: Error) => showError(localizedErrorMessage(err)));
-  }
-
-  /**
-   * Renders the wiring select for a node field.
-   */
-  function nextSelect(
-    value: string | undefined,
-    onChange: (next: string) => void,
-    label: string,
-  ): React.ReactElement {
+  const theme = useTheme();
+  const width = 320;
+  const height = 96;
+  if (graph.nodes.length === 0) {
     return (
-      <TextField
-        select
-        size="small"
-        fullWidth
-        label={label}
-        value={value ?? ''}
-        onChange={(event) => onChange(event.target.value)}
+      <Box
+        sx={{
+          height,
+          borderRadius: 1.5,
+          border: `1px dashed ${theme.palette.divider}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
       >
-        <MenuItem value="">{t('flows.endOfFlow')}</MenuItem>
-        {nodeOptions.map((option) => (
-          <MenuItem key={option.id} value={option.id}>
-            {option.label}
-          </MenuItem>
-        ))}
-        <MenuItem value="__new__">+ {t('flows.newNode')}</MenuItem>
-      </TextField>
+        <Typography variant="caption" color="text.secondary">
+          {t('flows.noNodes')}
+        </Typography>
+      </Box>
     );
   }
-
-  /**
-   * Handles wiring selects, creating nodes on demand ("+ New node").
-   */
-  function handleNextChange(
-    node: FlowNode,
-    field: 'next' | 'nextTrue' | 'nextFalse',
-    value: string,
-  ): void {
-    if (value === '__new__') {
-      addNode('message', node.id, field);
-      return;
-    }
-    patchNode(node.id, { [field]: value || undefined } as Partial<FlowNode>);
-  }
-
+  const positioned = isFullyPositioned(graph)
+    ? graph
+    : autoLayout({ ...graph, nodes: graph.nodes.map((node) => ({ ...node })) });
+  const startNode = positioned.nodes.find((node) => node.id === positioned.start);
+  const triggerPos = { x: (startNode?.x ?? 0) - 240, y: startNode?.y ?? 60 };
+  const bounds = graphBounds(positioned, triggerPos);
+  if (!bounds) return <Box sx={{ height }} />;
+  const padding = 10;
+  const scale = Math.min(
+    (width - padding * 2) / Math.max(1, bounds.maxX - bounds.minX),
+    (height - padding * 2) / Math.max(1, bounds.maxY - bounds.minY),
+    1,
+  );
+  const offsetX =
+    padding - bounds.minX * scale + (width - padding * 2 - (bounds.maxX - bounds.minX) * scale) / 2;
+  const offsetY =
+    padding -
+    bounds.minY * scale +
+    (height - padding * 2 - (bounds.maxY - bounds.minY) * scale) / 2;
+  const px = (x: number): number => x * scale + offsetX;
+  const py = (y: number): number => y * scale + offsetY;
+  const edges = collectEdges(positioned);
+  const center = (node: FlowNode): { cx: number; cy: number } => ({
+    cx: px(node.x ?? 0) + 5,
+    cy: py(node.y ?? 0) + 7,
+  });
   return (
-    <Dialog open onClose={onClose} maxWidth="lg" fullWidth>
-      <DialogTitle>{t('flows.editTitle', { name: flow.name })}</DialogTitle>
-      <DialogContent dividers>
-        <Stack spacing={2}>
-          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-            <TextField
-              size="small"
-              label={t('flows.flowName')}
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              fullWidth
+    <Box
+      sx={{
+        height,
+        borderRadius: 1.5,
+        backgroundColor:
+          theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(15,23,42,0.025)',
+        border: `1px solid ${theme.palette.divider}`,
+        overflow: 'hidden',
+      }}
+    >
+      <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} aria-hidden>
+        {startNode && (
+          <line
+            x1={px(triggerPos.x) + TRIGGER_WIDTH * scale}
+            y1={py(triggerPos.y) + 10}
+            x2={center(startNode).cx}
+            y2={center(startNode).cy}
+            stroke="#eab308"
+            strokeOpacity={0.6}
+            strokeWidth={1.4}
+          />
+        )}
+        {edges.map((edge) => {
+          const from = positioned.nodes.find((node) => node.id === edge.from);
+          const to = positioned.nodes.find((node) => node.id === edge.to);
+          if (!from || !to) return null;
+          const a = center(from);
+          const b = center(to);
+          return (
+            <path
+              key={edge.id}
+              d={`M ${a.cx} ${a.cy} C ${a.cx + 18} ${a.cy}, ${b.cx - 18} ${b.cy}, ${b.cx} ${b.cy}`}
+              fill="none"
+              stroke={NODE_COLORS[from.type]}
+              strokeOpacity={0.45}
+              strokeWidth={1.2}
             />
-            <TextField
-              select
-              size="small"
-              sx={{ minWidth: 150 }}
-              label={t('flows.triggerType')}
-              value={triggerType}
-              onChange={(event) =>
-                setTriggerType(event.target.value as 'command' | 'keyword' | 'start')
-              }
-            >
-              <MenuItem value="command">{t('flows.triggerCommand')}</MenuItem>
-              <MenuItem value="keyword">{t('flows.triggerKeyword')}</MenuItem>
-              <MenuItem value="start">{t('flows.triggerStart')}</MenuItem>
-            </TextField>
-            {triggerType !== 'start' && (
-              <TextField
-                size="small"
-                sx={{ minWidth: 160 }}
-                label={t('flows.triggerValue')}
-                value={triggerValue}
-                onChange={(event) => setTriggerValue(event.target.value)}
-              />
-            )}
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Typography variant="caption">{t('status.active')}</Typography>
-              <Switch
-                checked={isActive}
-                onChange={(event) => setIsActive(event.target.checked)}
-                inputProps={{ 'aria-label': t('status.active') }}
-              />
-            </Stack>
-          </Stack>
-
-          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-            {/* Node canvas */}
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Stack
-                direction="row"
-                justifyContent="space-between"
-                alignItems="center"
-                sx={{ mb: 1 }}
-              >
-                <TextField
-                  select
-                  size="small"
-                  sx={{ minWidth: 260 }}
-                  label={t('flows.startNode')}
-                  value={graph.start}
-                  onChange={(event) => setGraph((c) => ({ ...c, start: event.target.value }))}
-                >
-                  {nodeOptions.map((option) => (
-                    <MenuItem key={option.id} value={option.id}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
-                <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
-                  {(['message', 'input', 'condition', 'delay', 'settag'] as const).map((type) => (
-                    <Button
-                      key={type}
-                      size="small"
-                      variant="outlined"
-                      onClick={() => addNode(type)}
-                    >
-                      + {t(`flows.nodeTypes.${type}`)}
-                    </Button>
-                  ))}
-                </Stack>
-              </Stack>
-
-              <Stack spacing={1.5}>
-                {graph.nodes.map((node) => (
-                  <Card
-                    key={node.id}
-                    variant="outlined"
-                    sx={{
-                      borderLeft: 4,
-                      borderLeftColor: node.id === graph.start ? 'primary.main' : 'divider',
-                    }}
-                  >
-                    <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
-                      <Stack spacing={1.5}>
-                        <Stack direction="row" justifyContent="space-between" alignItems="center">
-                          <Stack direction="row" spacing={1} alignItems="center">
-                            {node.id === graph.start && (
-                              <Chip size="small" color="primary" label={t('flows.start')} />
-                            )}
-                            <TextField
-                              select
-                              size="small"
-                              sx={{ minWidth: 130 }}
-                              value={node.type}
-                              onChange={(event) =>
-                                patchNode(node.id, {
-                                  type: event.target.value as FlowNode['type'],
-                                })
-                              }
-                            >
-                              {(
-                                ['message', 'input', 'condition', 'delay', 'settag', 'end'] as const
-                              ).map((type) => (
-                                <MenuItem key={type} value={type}>
-                                  {t(`flows.nodeTypes.${type}`)}
-                                </MenuItem>
-                              ))}
-                            </TextField>
-                          </Stack>
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => removeNode(node.id)}
-                          >
-                            <DeleteOutlineIcon fontSize="small" />
-                          </IconButton>
-                        </Stack>
-
-                        {(node.type === 'message' || node.type === 'input') && (
-                          <>
-                            <TextField
-                              size="small"
-                              fullWidth
-                              multiline
-                              minRows={2}
-                              label={
-                                node.type === 'input'
-                                  ? t('flows.promptText')
-                                  : t('flows.messageText')
-                              }
-                              value={node.text ?? ''}
-                              onChange={(event) => patchNode(node.id, { text: event.target.value })}
-                              helperText={t('flows.placeholdersHelp')}
-                            />
-                            <TextField
-                              size="small"
-                              fullWidth
-                              label={t('flows.mediaUrl')}
-                              value={node.mediaUrl ?? ''}
-                              onChange={(event) =>
-                                patchNode(node.id, { mediaUrl: event.target.value })
-                              }
-                            />
-                            {(node.buttons ?? []).map((button, index) => (
-                              <Stack key={index} direction="row" spacing={1} alignItems="center">
-                                <TextField
-                                  size="small"
-                                  label={t('flows.buttonText')}
-                                  value={button.text}
-                                  sx={{ flex: 1 }}
-                                  onChange={(event) => {
-                                    const buttons = [...(node.buttons ?? [])];
-                                    buttons[index] = {
-                                      ...buttons[index],
-                                      text: event.target.value,
-                                    };
-                                    patchNode(node.id, { buttons });
-                                  }}
-                                />
-                                <TextField
-                                  size="small"
-                                  label={t('flows.buttonUrl')}
-                                  value={button.url ?? ''}
-                                  sx={{ flex: 1 }}
-                                  placeholder="https://"
-                                  onChange={(event) => {
-                                    const buttons = [...(node.buttons ?? [])];
-                                    buttons[index] = {
-                                      ...buttons[index],
-                                      url: event.target.value || undefined,
-                                    };
-                                    patchNode(node.id, { buttons });
-                                  }}
-                                />
-                                <TextField
-                                  select
-                                  size="small"
-                                  sx={{ minWidth: 170 }}
-                                  label={t('flows.buttonNext')}
-                                  value={button.next ?? ''}
-                                  onChange={(event) => {
-                                    const next = event.target.value;
-                                    if (next === '__new__') {
-                                      addNodeForButton(node.id, index);
-                                      return;
-                                    }
-                                    const buttons = [...(node.buttons ?? [])];
-                                    buttons[index] = {
-                                      ...buttons[index],
-                                      next: next || undefined,
-                                    };
-                                    patchNode(node.id, { buttons });
-                                  }}
-                                >
-                                  <MenuItem value="">{t('flows.buttonOpensUrl')}</MenuItem>
-                                  {nodeOptions
-                                    .filter((option) => option.id !== node.id)
-                                    .map((option) => (
-                                      <MenuItem key={option.id} value={option.id}>
-                                        {option.label}
-                                      </MenuItem>
-                                    ))}
-                                  <MenuItem value="__new__">+ {t('flows.newNode')}</MenuItem>
-                                </TextField>
-                                <IconButton
-                                  size="small"
-                                  color="error"
-                                  onClick={() =>
-                                    patchNode(node.id, {
-                                      buttons: (node.buttons ?? []).filter((_, i) => i !== index),
-                                    })
-                                  }
-                                >
-                                  <DeleteOutlineIcon fontSize="small" />
-                                </IconButton>
-                              </Stack>
-                            ))}
-                            <Button
-                              size="small"
-                              onClick={() =>
-                                patchNode(node.id, {
-                                  buttons: [...(node.buttons ?? []), { text: '' }],
-                                })
-                              }
-                            >
-                              + {t('flows.addButton')}
-                            </Button>
-                          </>
-                        )}
-
-                        {node.type === 'input' && (
-                          <TextField
-                            size="small"
-                            fullWidth
-                            label={t('flows.variableName')}
-                            value={node.variable ?? ''}
-                            onChange={(event) =>
-                              patchNode(node.id, { variable: event.target.value })
-                            }
-                            helperText={t('flows.variableHelp')}
-                          />
-                        )}
-
-                        {node.type === 'condition' && (
-                          <>
-                            <Stack direction="row" spacing={1}>
-                              <TextField
-                                size="small"
-                                label={t('flows.variableName')}
-                                value={node.variable ?? ''}
-                                onChange={(event) =>
-                                  patchNode(node.id, { variable: event.target.value })
-                                }
-                              />
-                              <TextField
-                                select
-                                size="small"
-                                sx={{ minWidth: 120 }}
-                                label="op"
-                                value={node.op ?? 'equals'}
-                                onChange={(event) =>
-                                  patchNode(node.id, { op: event.target.value as FlowNode['op'] })
-                                }
-                              >
-                                <MenuItem value="equals">equals</MenuItem>
-                                <MenuItem value="contains">contains</MenuItem>
-                                <MenuItem value="exists">exists</MenuItem>
-                              </TextField>
-                              {node.op !== 'exists' && (
-                                <TextField
-                                  size="small"
-                                  label={t('flows.compareValue')}
-                                  value={node.value ?? ''}
-                                  onChange={(event) =>
-                                    patchNode(node.id, { value: event.target.value })
-                                  }
-                                />
-                              )}
-                            </Stack>
-                            {nextSelect(
-                              node.nextTrue,
-                              (value) => handleNextChange(node, 'nextTrue', value),
-                              t('flows.ifTrue'),
-                            )}
-                            {nextSelect(
-                              node.nextFalse,
-                              (value) => handleNextChange(node, 'nextFalse', value),
-                              t('flows.ifFalse'),
-                            )}
-                          </>
-                        )}
-
-                        {node.type === 'delay' && (
-                          <TextField
-                            size="small"
-                            type="number"
-                            sx={{ maxWidth: 200 }}
-                            label={t('flows.delayMinutes')}
-                            value={node.minutes ?? 1}
-                            onChange={(event) =>
-                              patchNode(node.id, { minutes: Number(event.target.value) })
-                            }
-                          />
-                        )}
-
-                        {node.type === 'settag' && (
-                          <TextField
-                            size="small"
-                            label={t('flows.tagName')}
-                            value={node.tag ?? ''}
-                            onChange={(event) => patchNode(node.id, { tag: event.target.value })}
-                          />
-                        )}
-
-                        {(node.type === 'message' ||
-                          node.type === 'delay' ||
-                          node.type === 'settag') &&
-                          nextSelect(
-                            node.next,
-                            (value) => handleNextChange(node, 'next', value),
-                            t('flows.nextNode'),
-                          )}
-                      </Stack>
-                    </CardContent>
-                  </Card>
-                ))}
-                {graph.nodes.length === 0 && (
-                  <Typography variant="body2" color="text.secondary">
-                    {t('flows.noNodes')}
-                  </Typography>
-                )}
-              </Stack>
-            </Box>
-
-            {/* Minimap */}
-            <Box sx={{ width: { md: 280 }, flexShrink: 0 }}>
-              <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-                {t('flows.minimap')}
-              </Typography>
-              <svg
-                viewBox={`0 0 280 ${Math.max(160, graph.nodes.length * 44 + 20)}`}
-                style={{
-                  width: '100%',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  borderRadius: 8,
-                }}
-                aria-hidden
-              >
-                {graph.nodes.map((node, index) => {
-                  const y = index * 44 + 22;
-                  const targets: Array<string | undefined> = [
-                    node.next,
-                    node.nextTrue,
-                    node.nextFalse,
-                    ...(node.buttons ?? []).map((button) => button.next),
-                  ];
-                  return (
-                    <g key={node.id}>
-                      {targets.map((target, tIndex) => {
-                        const targetIndex = graph.nodes.findIndex((item) => item.id === target);
-                        if (targetIndex < 0) return null;
-                        const y2 = targetIndex * 44 + 22;
-                        return (
-                          <line
-                            key={tIndex}
-                            x1={60}
-                            y1={y}
-                            x2={200}
-                            y2={y2}
-                            stroke={node.id === graph.start ? '#1976d2' : '#9e9e9e'}
-                            strokeWidth={1}
-                          />
-                        );
-                      })}
-                      <circle
-                        cx={30}
-                        cy={y}
-                        r={9}
-                        fill={node.id === graph.start ? '#1976d2' : '#bdbdbd'}
-                      />
-                      <text x={48} y={y + 4} fontSize={9}>
-                        {nodeLabel(node).slice(0, 18)}
-                      </text>
-                    </g>
-                  );
-                })}
-              </svg>
-            </Box>
-          </Stack>
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>{t('actions.cancel')}</Button>
-        <Button variant="contained" onClick={save} disabled={!name.trim() || !graph.start}>
-          {t('actions.save')}
-        </Button>
-      </DialogActions>
-    </Dialog>
+          );
+        })}
+        {startNode && (
+          <rect
+            x={px(triggerPos.x)}
+            y={py(triggerPos.y)}
+            width={Math.max(14, TRIGGER_WIDTH * scale)}
+            height={Math.max(10, 34 * scale)}
+            rx={4}
+            fill="rgba(234,179,8,0.12)"
+            stroke="#eab308"
+            strokeDasharray="3 2"
+            strokeWidth={1}
+          />
+        )}
+        {positioned.nodes.map((node) => {
+          const dot = center(node);
+          return (
+            <circle
+              key={node.id}
+              cx={dot.cx}
+              cy={dot.cy}
+              r={5.5}
+              fill={NODE_COLORS[node.type]}
+              fillOpacity={0.85}
+              stroke={theme.palette.background.paper}
+              strokeWidth={1.5}
+            />
+          );
+        })}
+      </svg>
+    </Box>
   );
 }

@@ -21,6 +21,10 @@ export interface FlowNode {
   minutes?: number;
   /** Tag name written by a settag node. */
   tag?: string;
+  /** Canvas position persisted by the visual editor; ignored by the runtime. */
+  x?: number;
+  /** Canvas position persisted by the visual editor; ignored by the runtime. */
+  y?: number;
 }
 
 /** Parsed flow graph document. */
