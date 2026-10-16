@@ -39,6 +39,9 @@ ENV NODE_ENV=production \
     DB_PATH=/app/data/studio.sqlite
 
 COPY package.json bun.lock ./
+# Schema must exist before install: the package's own postinstall runs
+# `prisma generate`, which fails without it (CI's docker job caught this).
+COPY prisma ./prisma
 RUN bun install --production --frozen-lockfile
 
 COPY --from=builder /app/dist ./dist
