@@ -1,7 +1,8 @@
 version: 2
 updates:
-  # Server + dashboard dependencies (bun lockfile).
-  - package-ecosystem: npm
+  # Server + dashboard dependencies (bun lockfile). Requires the `bun`
+  # ecosystem — Dependabot's npm ecosystem cannot update bun.lock.
+  - package-ecosystem: bun
     directory: /
     schedule:
       interval: weekly
