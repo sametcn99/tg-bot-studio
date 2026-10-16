@@ -99,10 +99,20 @@ export default function BotPresetsDialog({
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
-        <Typography variant="h6" fontWeight={700}>
+        <Typography
+          variant="h6"
+          sx={{
+            fontWeight: 700,
+          }}
+        >
           {t('presets.title')}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: 'text.secondary',
+          }}
+        >
           {t('presets.subtitle')}
         </Typography>
       </DialogTitle>
@@ -134,24 +144,46 @@ export default function BotPresetsDialog({
                 }}
               >
                 <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                  <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1.5 }}>
+                  <Stack
+                    direction="row"
+                    spacing={1.5}
+                    sx={{
+                      alignItems: 'center',
+                      mb: 1.5,
+                    }}
+                  >
                     {preset.icon}
                     <Box>
-                      <Typography variant="subtitle1" fontWeight={700}>
+                      <Typography
+                        variant="subtitle1"
+                        sx={{
+                          fontWeight: 700,
+                        }}
+                      >
                         {preset.title}
                       </Typography>
                     </Box>
                   </Stack>
 
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2, flexGrow: 1 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'text.secondary',
+                      mb: 2,
+                      flexGrow: 1,
+                    }}
+                  >
                     {preset.desc}
                   </Typography>
 
                   <Typography
                     variant="caption"
-                    color="text.secondary"
-                    fontWeight={600}
-                    sx={{ mb: 0.75, display: 'block' }}
+                    sx={{
+                      color: 'text.secondary',
+                      fontWeight: 600,
+                      mb: 0.75,
+                      display: 'block',
+                    }}
                   >
                     {t('modules.includedModules')}
                   </Typography>

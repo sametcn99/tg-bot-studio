@@ -266,8 +266,11 @@ export default function WebhooksPage({
                 <Box>
                   <Typography
                     variant="caption"
-                    color="text.secondary"
-                    sx={{ mb: 0.5, display: 'block' }}
+                    sx={{
+                      color: 'text.secondary',
+                      mb: 0.5,
+                      display: 'block',
+                    }}
                   >
                     {t('webhooks.quickAddEvents')}
                   </Typography>
@@ -336,7 +339,13 @@ export default function WebhooksPage({
                   {endpoints.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={3}>
-                        <Typography color="text.secondary" align="center" sx={{ py: 2 }}>
+                        <Typography
+                          align="center"
+                          sx={{
+                            color: 'text.secondary',
+                            py: 2,
+                          }}
+                        >
                           {t('common.empty')}
                         </Typography>
                       </TableCell>
@@ -397,8 +406,20 @@ export default function WebhooksPage({
                   {inbound.map((hook) => (
                     <TableRow key={hook.hookId}>
                       <TableCell>
-                        <Stack direction="row" spacing={1} alignItems="center">
-                          <Typography variant="body2" fontFamily="monospace" noWrap>
+                        <Stack
+                          direction="row"
+                          spacing={1}
+                          sx={{
+                            alignItems: 'center',
+                          }}
+                        >
+                          <Typography
+                            variant="body2"
+                            noWrap
+                            sx={{
+                              fontFamily: 'monospace',
+                            }}
+                          >
                             /api/hooks/{botId}/{hook.hookId}
                           </Typography>
                           <IconButton
@@ -424,7 +445,13 @@ export default function WebhooksPage({
                   {inbound.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={3}>
-                        <Typography color="text.secondary" align="center" sx={{ py: 2 }}>
+                        <Typography
+                          align="center"
+                          sx={{
+                            color: 'text.secondary',
+                            py: 2,
+                          }}
+                        >
                           {t('common.empty')}
                         </Typography>
                       </TableCell>

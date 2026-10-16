@@ -15,7 +15,7 @@ import {
   Typography,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
 import ViewQuiltIcon from '@mui/icons-material/ViewQuilt';
 import CodeIcon from '@mui/icons-material/Code';
 import { useTranslation } from 'react-i18next';
@@ -132,8 +132,20 @@ export default function VisualMiniAppConfigBuilder({
         bgcolor: 'background.paper',
       }}
     >
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-        <Typography variant="subtitle2" fontWeight={600}>
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 2,
+        }}
+      >
+        <Typography
+          variant="subtitle2"
+          sx={{
+            fontWeight: 600,
+          }}
+        >
           {t('miniApps.config')} ({templateType})
         </Typography>
         <Tabs
@@ -163,7 +175,12 @@ export default function VisualMiniAppConfigBuilder({
         <Box>
           {templateType === 'ecommerce' && (
             <Stack spacing={2}>
-              <Typography variant="caption" color="text.secondary">
+              <Typography
+                variant="caption"
+                sx={{
+                  color: 'text.secondary',
+                }}
+              >
                 {t('visual.ecommerceHint')}
               </Typography>
               {products.map((prod, idx) => (
@@ -173,7 +190,13 @@ export default function VisualMiniAppConfigBuilder({
                   sx={{ p: 1.5, borderRadius: 2, bgcolor: 'background.default' }}
                 >
                   <Stack spacing={1.5}>
-                    <Stack direction="row" spacing={1} alignItems="center">
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      sx={{
+                        alignItems: 'center',
+                      }}
+                    >
                       <TextField
                         size="small"
                         label={t('visual.productTitle')}
@@ -229,7 +252,12 @@ export default function VisualMiniAppConfigBuilder({
 
           {templateType === 'forms' && (
             <Stack spacing={2}>
-              <Typography variant="caption" color="text.secondary">
+              <Typography
+                variant="caption"
+                sx={{
+                  color: 'text.secondary',
+                }}
+              >
                 {t('visual.formsHint')}
               </Typography>
               {fields.map((f, idx) => (
@@ -238,7 +266,13 @@ export default function VisualMiniAppConfigBuilder({
                   variant="outlined"
                   sx={{ p: 1.5, borderRadius: 2, bgcolor: 'background.default' }}
                 >
-                  <Stack direction="row" spacing={1.5} alignItems="center">
+                  <Stack
+                    direction="row"
+                    spacing={1.5}
+                    sx={{
+                      alignItems: 'center',
+                    }}
+                  >
                     <TextField
                       size="small"
                       label={t('visual.fieldLabel')}
@@ -291,7 +325,12 @@ export default function VisualMiniAppConfigBuilder({
 
           {templateType === 'spin' && (
             <Stack spacing={2}>
-              <Typography variant="caption" color="text.secondary">
+              <Typography
+                variant="caption"
+                sx={{
+                  color: 'text.secondary',
+                }}
+              >
                 {t('visual.spinHint')}
               </Typography>
               {prizes.map((prz, idx) => (
@@ -300,7 +339,13 @@ export default function VisualMiniAppConfigBuilder({
                   variant="outlined"
                   sx={{ p: 1.5, borderRadius: 2, bgcolor: 'background.default' }}
                 >
-                  <Stack direction="row" spacing={1.5} alignItems="center">
+                  <Stack
+                    direction="row"
+                    spacing={1.5}
+                    sx={{
+                      alignItems: 'center',
+                    }}
+                  >
                     <TextField
                       size="small"
                       label={t('visual.prizeLabel')}
@@ -348,7 +393,12 @@ export default function VisualMiniAppConfigBuilder({
 
           {templateType === 'loyalty' && (
             <Stack spacing={2}>
-              <Typography variant="caption" color="text.secondary">
+              <Typography
+                variant="caption"
+                sx={{
+                  color: 'text.secondary',
+                }}
+              >
                 {t('visual.loyaltyHint')}
               </Typography>
               {tiers.map((tr, idx) => (
@@ -357,7 +407,13 @@ export default function VisualMiniAppConfigBuilder({
                   variant="outlined"
                   sx={{ p: 1.5, borderRadius: 2, bgcolor: 'background.default' }}
                 >
-                  <Stack direction="row" spacing={1.5} alignItems="center">
+                  <Stack
+                    direction="row"
+                    spacing={1.5}
+                    sx={{
+                      alignItems: 'center',
+                    }}
+                  >
                     <TextField
                       size="small"
                       label={t('visual.tierName')}

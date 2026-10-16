@@ -242,7 +242,13 @@ export default function EngagementPage({
                   {quizzes.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={4}>
-                        <Typography color="text.secondary" align="center" sx={{ py: 2 }}>
+                        <Typography
+                          align="center"
+                          sx={{
+                            color: 'text.secondary',
+                            py: 2,
+                          }}
+                        >
                           {t('common.empty')}
                         </Typography>
                       </TableCell>
@@ -271,10 +277,20 @@ export default function EngagementPage({
               <Typography variant="subtitle2" sx={{ mb: 1 }} component="h3">
                 {t('engagement.reactionSummary')}
               </Typography>
-              <Typography variant="h5" fontWeight={700}>
+              <Typography
+                variant="h5"
+                sx={{
+                  fontWeight: 700,
+                }}
+              >
                 {totalReactions}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
+              <Typography
+                variant="caption"
+                sx={{
+                  color: 'text.secondary',
+                }}
+              >
                 {t('engagement.totalReactions')}
               </Typography>
               <Stack direction="row" spacing={1} sx={{ mt: 2, flexWrap: 'wrap', gap: 1 }}>
@@ -284,7 +300,12 @@ export default function EngagementPage({
                   </Typography>
                 ))}
                 {totalReactions === 0 && (
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'text.secondary',
+                    }}
+                  >
                     {t('common.empty')}
                   </Typography>
                 )}

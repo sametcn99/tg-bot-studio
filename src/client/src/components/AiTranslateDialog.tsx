@@ -110,7 +110,12 @@ export default function AiTranslateDialog({
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
           <Box>
-            <Typography variant="caption" color="text.secondary">
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               {t('translate.source')}
             </Typography>
             <Box
@@ -129,7 +134,14 @@ export default function AiTranslateDialog({
           </Box>
 
           <Box>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.secondary',
+                display: 'block',
+                mb: 0.5,
+              }}
+            >
               {t('translate.targetLanguages')}
             </Typography>
             <ToggleButtonGroup
@@ -151,9 +163,20 @@ export default function AiTranslateDialog({
           </Box>
 
           {busy && (
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: 'center',
+              }}
+            >
               <CircularProgress size={18} />
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'text.secondary',
+                }}
+              >
                 {t('translate.working')}
               </Typography>
             </Stack>
@@ -173,9 +196,11 @@ export default function AiTranslateDialog({
                 >
                   <Stack
                     direction="row"
-                    justifyContent="space-between"
-                    alignItems="center"
-                    sx={{ mb: 0.5 }}
+                    sx={{
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      mb: 0.5,
+                    }}
                   >
                     <Chip size="small" label={language.label} />
                     <Stack direction="row" spacing={0.5}>

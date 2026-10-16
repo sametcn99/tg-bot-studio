@@ -105,7 +105,13 @@ export default function ReferralsPage({
                   {leaders.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={3}>
-                        <Typography color="text.secondary" align="center" sx={{ py: 2 }}>
+                        <Typography
+                          align="center"
+                          sx={{
+                            color: 'text.secondary',
+                            py: 2,
+                          }}
+                        >
                           {t('common.empty')}
                         </Typography>
                       </TableCell>

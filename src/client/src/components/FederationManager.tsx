@@ -125,8 +125,20 @@ export default function FederationManager({ botId }: { botId: number }): React.R
   return (
     <Card variant="outlined" sx={{ mt: 3 }}>
       <CardContent>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-          <Typography variant="subtitle1" fontWeight={700}>
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: 2,
+          }}
+        >
+          <Typography
+            variant="subtitle1"
+            sx={{
+              fontWeight: 700,
+            }}
+          >
             {t('federation.managerTitle')}
           </Typography>
           <Chip size="small" label={`${feds.length}`} />
@@ -138,7 +150,12 @@ export default function FederationManager({ botId }: { botId: number }): React.R
           </Alert>
         )}
         {feds.length === 0 && (
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             {t('federation.managerEmpty')}
           </Typography>
         )}
@@ -148,24 +165,40 @@ export default function FederationManager({ botId }: { botId: number }): React.R
             <Box key={fed.id}>
               <Stack
                 direction={{ xs: 'column', sm: 'row' }}
-                justifyContent="space-between"
-                alignItems={{ xs: 'flex-start', sm: 'center' }}
                 spacing={1}
+                sx={{
+                  justifyContent: 'space-between',
+                  alignItems: { xs: 'flex-start', sm: 'center' },
+                }}
               >
                 <Box sx={{ minWidth: 0 }}>
-                  <Typography variant="subtitle2" fontWeight={700} noWrap>
+                  <Typography
+                    variant="subtitle2"
+                    noWrap
+                    sx={{
+                      fontWeight: 700,
+                    }}
+                  >
                     {fed.name}
                   </Typography>
                   <Typography
                     variant="caption"
-                    color="text.secondary"
-                    sx={{ fontFamily: 'monospace' }}
                     noWrap
+                    sx={{
+                      color: 'text.secondary',
+                      fontFamily: 'monospace',
+                    }}
                   >
                     {fed.id}
                   </Typography>
                 </Box>
-                <Stack direction="row" spacing={0.5} alignItems="center">
+                <Stack
+                  direction="row"
+                  spacing={0.5}
+                  sx={{
+                    alignItems: 'center',
+                  }}
+                >
                   <Chip size="small" label={t('federation.chipChats', { count: fed.chatCount })} />
                   <Chip size="small" label={t('federation.chipBans', { count: fed.banCount })} />
                   <Button size="small" startIcon={<AddIcon />} onClick={() => setBanDialogFed(fed)}>
@@ -258,7 +291,13 @@ export default function FederationManager({ botId }: { botId: number }): React.R
                 {bans.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={4}>
-                      <Typography variant="body2" color="text.secondary" align="center">
+                      <Typography
+                        variant="body2"
+                        align="center"
+                        sx={{
+                          color: 'text.secondary',
+                        }}
+                      >
                         {t('federation.noBans')}
                       </Typography>
                     </TableCell>

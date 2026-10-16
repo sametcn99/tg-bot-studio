@@ -257,12 +257,14 @@ export default function BotSimulatorDrawer(): React.ReactElement {
         anchor="right"
         open={open}
         onClose={() => setOpen(false)}
-        PaperProps={{
-          sx: {
-            width: { xs: '100%', sm: 400 },
-            display: 'flex',
-            flexDirection: 'column',
-            bgcolor: 'background.default',
+        slotProps={{
+          paper: {
+            sx: {
+              width: { xs: '100%', sm: 400 },
+              display: 'flex',
+              flexDirection: 'column',
+              bgcolor: 'background.default',
+            },
           },
         }}
       >
@@ -275,16 +277,39 @@ export default function BotSimulatorDrawer(): React.ReactElement {
             borderColor: 'divider',
           }}
         >
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Stack direction="row" spacing={1.5} alignItems="center">
+          <Stack
+            direction="row"
+            sx={{
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <Stack
+              direction="row"
+              spacing={1.5}
+              sx={{
+                alignItems: 'center',
+              }}
+            >
               <Avatar sx={{ bgcolor: 'primary.main', width: 36, height: 36 }}>
                 <SmartToyIcon fontSize="small" />
               </Avatar>
               <Box>
-                <Typography variant="subtitle2" fontWeight={700}>
+                <Typography
+                  variant="subtitle2"
+                  sx={{
+                    fontWeight: 700,
+                  }}
+                >
                   {activeBot.name}
                 </Typography>
-                <Typography variant="caption" color="success.main" fontWeight={600}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: 'success.main',
+                    fontWeight: 600,
+                  }}
+                >
                   ● {t('simulator.sandboxActive')}
                 </Typography>
               </Box>
@@ -426,7 +451,12 @@ export default function BotSimulatorDrawer(): React.ReactElement {
               sx={{ alignSelf: 'flex-start', p: 1.5, borderRadius: 2, bgcolor: 'background.paper' }}
             >
               <CircularProgress size={16} sx={{ mr: 1, verticalAlign: 'middle' }} />
-              <Typography variant="caption" color="text.secondary">
+              <Typography
+                variant="caption"
+                sx={{
+                  color: 'text.secondary',
+                }}
+              >
                 {t('simulator.typing')}
               </Typography>
             </Box>
@@ -460,19 +490,21 @@ export default function BotSimulatorDrawer(): React.ReactElement {
             onKeyDown={(e) => {
               if (e.key === 'Enter') void sendMessage();
             }}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton
-                    color="primary"
-                    disabled={!input.trim() || loading}
-                    onClick={() => void sendMessage()}
-                    aria-label={t('simulator.sendMessageAria')}
-                  >
-                    <SendIcon fontSize="small" />
-                  </IconButton>
-                </InputAdornment>
-              ),
+            slotProps={{
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      color="primary"
+                      disabled={!input.trim() || loading}
+                      onClick={() => void sendMessage()}
+                      aria-label={t('simulator.sendMessageAria')}
+                    >
+                      <SendIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              },
             }}
           />
         </Box>

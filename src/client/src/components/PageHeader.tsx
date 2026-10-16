@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Button, IconButton, Stack, Typography } from '@mui/material';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutlined';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 /**
@@ -34,10 +34,13 @@ export default function PageHeader({
   return (
     <Stack
       direction={{ xs: 'column', sm: 'row' }}
-      alignItems={{ xs: 'stretch', sm: 'flex-start' }}
-      justifyContent="space-between"
       spacing={1.5}
-      sx={{ mb: 3, gap: 2 }}
+      sx={{
+        alignItems: { xs: 'stretch', sm: 'flex-start' },
+        justifyContent: 'space-between',
+        mb: 3,
+        gap: 2,
+      }}
     >
       <Box sx={{ minWidth: 0, display: 'flex', alignItems: 'flex-start', gap: 0.5 }}>
         {onBack ? (
@@ -46,11 +49,24 @@ export default function PageHeader({
           </IconButton>
         ) : null}
         <Box sx={{ minWidth: 0 }}>
-          <Typography variant="h5" component="h1" fontWeight={700} letterSpacing="-0.01em">
+          <Typography
+            variant="h5"
+            component="h1"
+            sx={{
+              fontWeight: 700,
+              letterSpacing: '-0.01em',
+            }}
+          >
             {title}
           </Typography>
           {subtitle ? (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'text.secondary',
+                mt: 0.5,
+              }}
+            >
               {subtitle}
             </Typography>
           ) : null}
@@ -59,8 +75,12 @@ export default function PageHeader({
       <Stack
         direction={{ xs: 'row', sm: 'row' }}
         spacing={1}
-        alignItems="center"
-        sx={{ flexShrink: 0, flexWrap: 'wrap', gap: 1 }}
+        sx={{
+          alignItems: 'center',
+          flexShrink: 0,
+          flexWrap: 'wrap',
+          gap: 1,
+        }}
       >
         {actions}
         {onDocs ? (

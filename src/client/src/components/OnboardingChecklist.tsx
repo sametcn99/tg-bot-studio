@@ -160,9 +160,28 @@ export default function OnboardingChecklist(): React.ReactElement | null {
         bgcolor: 'background.paper',
       }}
     >
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-        <Stack direction="row" spacing={1.5} alignItems="center">
-          <Typography variant="subtitle2" fontWeight={700} component="h2">
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 1,
+        }}
+      >
+        <Stack
+          direction="row"
+          spacing={1.5}
+          sx={{
+            alignItems: 'center',
+          }}
+        >
+          <Typography
+            variant="subtitle2"
+            component="h2"
+            sx={{
+              fontWeight: 700,
+            }}
+          >
             {t('onboarding.title')}
           </Typography>
           <Chip size="small" label={`${doneCount}/${steps.length}`} />
@@ -204,11 +223,13 @@ export default function OnboardingChecklist(): React.ReactElement | null {
             </ListItemIcon>
             <ListItemText
               primary={step.label}
-              primaryTypographyProps={{
-                variant: 'body2',
-                sx: {
-                  color: step.done ? 'text.disabled' : 'text.primary',
-                  textDecoration: step.done ? 'line-through' : 'none',
+              slotProps={{
+                primary: {
+                  variant: 'body2',
+                  sx: {
+                    color: step.done ? 'text.disabled' : 'text.primary',
+                    textDecoration: step.done ? 'line-through' : 'none',
+                  },
                 },
               }}
             />

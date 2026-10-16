@@ -158,8 +158,10 @@ export default function ModuleHelpDialog({
               id={DIALOG_TITLE_ID}
               component="h2"
               variant="subtitle1"
-              fontWeight={700}
               noWrap
+              sx={{
+                fontWeight: 700,
+              }}
             >
               {module?.name}
             </Typography>
@@ -177,7 +179,14 @@ export default function ModuleHelpDialog({
               })}
             />
           </Box>
-          <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.25 }}>
+          <Typography
+            variant="body2"
+            noWrap
+            sx={{
+              color: 'text.secondary',
+              mt: 0.25,
+            }}
+          >
             {module?.description}
           </Typography>
         </Box>
@@ -336,7 +345,12 @@ export default function ModuleHelpDialog({
         >
           Esc
         </Box>
-        <Typography variant="caption" color="text.secondary">
+        <Typography
+          variant="caption"
+          sx={{
+            color: 'text.secondary',
+          }}
+        >
           {t('help.escHint')}
         </Typography>
       </Box>
@@ -441,7 +455,14 @@ function PlaceholdersSection(): React.ReactElement {
   const { t } = useTranslation();
   return (
     <Box aria-label={t('help.placeholders')}>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2.25, lineHeight: 1.65 }}>
+      <Typography
+        variant="body2"
+        sx={{
+          color: 'text.secondary',
+          mb: 2.25,
+          lineHeight: 1.65,
+        }}
+      >
         {t('help.placeholdersHint')}
       </Typography>
       <Box
@@ -547,7 +568,13 @@ function PlaceholderCard({
           <ContentCopyOutlinedIcon sx={{ fontSize: 15, color: 'text.disabled' }} />
         )}
       </Box>
-      <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.5 }}>
+      <Typography
+        variant="caption"
+        sx={{
+          color: 'text.secondary',
+          lineHeight: 1.5,
+        }}
+      >
         {description}
       </Typography>
     </Box>

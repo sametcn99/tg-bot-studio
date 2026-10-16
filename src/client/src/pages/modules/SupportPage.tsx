@@ -195,10 +195,24 @@ export default function SupportPage({
       {escalations.length > 0 && (
         <Card sx={{ mb: 3, borderColor: 'warning.main', borderWidth: 1, borderStyle: 'solid' }}>
           <CardContent>
-            <Typography variant="subtitle2" fontWeight={700} component="h3" sx={{ mb: 0.5 }}>
+            <Typography
+              variant="subtitle2"
+              component="h3"
+              sx={{
+                fontWeight: 700,
+                mb: 0.5,
+              }}
+            >
               🚨 {t('support.escalations')} ({escalations.length})
             </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.secondary',
+                display: 'block',
+                mb: 1.5,
+              }}
+            >
               {t('support.escalationsHint')}
             </Typography>
             <Stack spacing={1}>
@@ -207,24 +221,51 @@ export default function SupportPage({
                   key={escalation.telegramId}
                   direction={{ xs: 'column', sm: 'row' }}
                   spacing={1}
-                  alignItems={{ sm: 'center' }}
-                  justifyContent="space-between"
+                  sx={{
+                    alignItems: { sm: 'center' },
+                    justifyContent: 'space-between',
+                  }}
                 >
                   <Box sx={{ minWidth: 0 }}>
-                    <Typography variant="body2" fontWeight={600} noWrap>
+                    <Typography
+                      variant="body2"
+                      noWrap
+                      sx={{
+                        fontWeight: 600,
+                      }}
+                    >
                       {escalation.senderName ??
                         t('support.userFallback', { id: escalation.telegramId })}
-                      <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: 'text.secondary',
+                          ml: 1,
+                        }}
+                      >
                         {t('support.escalatedAt')}: {formatDateTime(escalation.escalatedAt)}
                       </Typography>
                     </Typography>
                     {escalation.lastMessage && (
-                      <Typography variant="caption" color="text.secondary" noWrap display="block">
+                      <Typography
+                        variant="caption"
+                        noWrap
+                        sx={{
+                          color: 'text.secondary',
+                          display: 'block',
+                        }}
+                      >
                         {escalation.lastMessage}
                       </Typography>
                     )}
                   </Box>
-                  <Stack direction="row" spacing={1} flexShrink={0}>
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{
+                      flexShrink: 0,
+                    }}
+                  >
                     <Button
                       size="small"
                       variant="outlined"
@@ -248,7 +289,13 @@ export default function SupportPage({
         </Card>
       )}
 
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="stretch">
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        spacing={2}
+        sx={{
+          alignItems: 'stretch',
+        }}
+      >
         {/* Threads list */}
         <Card sx={{ width: { xs: '100%', md: 320 }, flexShrink: 0 }}>
           <CardContent>
@@ -271,25 +318,43 @@ export default function SupportPage({
                     '&:hover': { bgcolor: 'action.hover' },
                   }}
                 >
-                  <Typography variant="body2" fontWeight={600} noWrap>
+                  <Typography
+                    variant="body2"
+                    noWrap
+                    sx={{
+                      fontWeight: 600,
+                    }}
+                  >
                     {thread.sender_name ?? t('support.userFallback', { id: thread.telegram_id })}
                   </Typography>
                   <Typography
                     variant="caption"
-                    color="text.secondary"
                     noWrap
-                    sx={{ display: 'block' }}
+                    sx={{
+                      color: 'text.secondary',
+                      display: 'block',
+                    }}
                   >
                     {thread.last_message ?? t('support.mediaPlaceholder')}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: 'text.secondary',
+                    }}
+                  >
                     {t('support.msgsCount', { count: thread.message_count })} •{' '}
                     {formatDateTime(thread.last_activity)}
                   </Typography>
                 </Box>
               ))}
               {threads.length === 0 && (
-                <Typography variant="body2" color="text.secondary">
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   {t('common.empty')}
                 </Typography>
               )}
@@ -302,9 +367,11 @@ export default function SupportPage({
           <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
             <Stack
               direction="row"
-              justifyContent="space-between"
-              alignItems="center"
-              sx={{ mb: 2 }}
+              sx={{
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                mb: 2,
+              }}
             >
               <Typography variant="subtitle2" component="h3">
                 {selectedUser
@@ -360,7 +427,14 @@ export default function SupportPage({
                 </Box>
               ))}
               {visible.length === 0 && (
-                <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 4 }}>
+                <Typography
+                  variant="body2"
+                  align="center"
+                  sx={{
+                    color: 'text.secondary',
+                    py: 4,
+                  }}
+                >
                   {selectedUser ? t('support.noMessages') : t('common.empty')}
                 </Typography>
               )}
@@ -373,8 +447,12 @@ export default function SupportPage({
                 <Stack
                   direction="row"
                   spacing={1}
-                  sx={{ mb: 1.5, flexWrap: 'wrap', gap: 0.5 }}
-                  alignItems="center"
+                  sx={{
+                    alignItems: 'center',
+                    mb: 1.5,
+                    flexWrap: 'wrap',
+                    gap: 0.5,
+                  }}
                 >
                   <Button
                     size="small"
@@ -421,28 +499,35 @@ export default function SupportPage({
                       void handleSendReply();
                     }
                   }}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          color="primary"
-                          onClick={() => void handleSendReply()}
-                          disabled={!replyText.trim() || sending}
-                          aria-label={t('support.sendReplyAria')}
-                        >
-                          {sending ? <CircularProgress size={20} /> : <SendIcon />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
                   helperText={t('support.replyHelper')}
+                  slotProps={{
+                    input: {
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            color="primary"
+                            onClick={() => void handleSendReply()}
+                            disabled={!replyText.trim() || sending}
+                            aria-label={t('support.sendReplyAria')}
+                          >
+                            {sending ? <CircularProgress size={20} /> : <SendIcon />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    },
+                  }}
                 />
               </Box>
             ) : (
               <Box
                 sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default', borderRadius: 2 }}
               >
-                <Typography variant="body2" color="text.secondary">
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   {t('support.selectConversationHint')}
                 </Typography>
               </Box>

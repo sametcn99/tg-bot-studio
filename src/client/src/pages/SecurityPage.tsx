@@ -154,7 +154,14 @@ export default function SecurityPage(): React.ReactElement {
 
       <Card sx={{ mb: 3 }}>
         <CardContent>
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+          <Stack
+            direction="row"
+            sx={{
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              mb: 1,
+            }}
+          >
             <Typography variant="subtitle2" component="h3">
               {t('security.sessions')}
             </Typography>

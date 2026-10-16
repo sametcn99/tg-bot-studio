@@ -25,7 +25,7 @@ import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import BookmarkAddIcon from '@mui/icons-material/BookmarkAdd';
 import DashboardCustomizeIcon from '@mui/icons-material/DashboardCustomize';
@@ -161,7 +161,13 @@ export default function BotDashboardPage(): React.ReactElement {
             {botsError}
           </Alert>
         ) : (
-          <Typography color="text.secondary">{t('common.empty')}</Typography>
+          <Typography
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
+            {t('common.empty')}
+          </Typography>
         )}
       </Box>
     );
@@ -305,7 +311,15 @@ export default function BotDashboardPage(): React.ReactElement {
         title={bot.name}
         subtitle={bot.username ? `@${bot.username}` : `ID ${bot.id}`}
         actions={
-          <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: 'wrap', gap: 1 }}>
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 1,
+            }}
+          >
             <Button
               variant="outlined"
               size="small"
@@ -406,14 +420,20 @@ export default function BotDashboardPage(): React.ReactElement {
             <Stack
               direction="row"
               spacing={1}
-              alignItems="center"
-              sx={{ pl: 1, borderLeft: '1px solid', borderColor: 'divider' }}
+              sx={{
+                alignItems: 'center',
+                pl: 1,
+                borderLeft: '1px solid',
+                borderColor: 'divider',
+              }}
             >
               <StatusDot status={bot.status} />
               <Switch
                 checked={bot.is_active === 1}
                 onChange={(event) => toggleActive(event.target.checked)}
-                inputProps={{ 'aria-label': `${t('status.active')} ${bot.name}` }}
+                slotProps={{
+                  input: { 'aria-label': `${t('status.active')} ${bot.name}` },
+                }}
               />
             </Stack>
           </Stack>
@@ -430,10 +450,20 @@ export default function BotDashboardPage(): React.ReactElement {
                 <Grid size={{ xs: 6, md: 3 }} key={stat.label}>
                   <Card>
                     <CardContent>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: 'text.secondary',
+                        }}
+                      >
                         {stat.label}
                       </Typography>
-                      <Typography variant="h5" fontWeight={700}>
+                      <Typography
+                        variant="h5"
+                        sx={{
+                          fontWeight: 700,
+                        }}
+                      >
                         {stat.value}
                       </Typography>
                     </CardContent>
@@ -445,13 +475,29 @@ export default function BotDashboardPage(): React.ReactElement {
             <Card>
               <CardContent>
                 <Stack spacing={2}>
-                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <Stack
+                    direction="row"
+                    sx={{
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
                     <Typography variant="subtitle2">{t('nav.modules')}</Typography>
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: 'text.secondary',
+                      }}
+                    >
                       {t('modules.enabled', { count: bot.activeModules, total: MODULES.length })}
                     </Typography>
                   </Stack>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'text.secondary',
+                    }}
+                  >
                     {t('bots.modulesHint')}
                   </Typography>
                   <Box>
@@ -459,8 +505,10 @@ export default function BotDashboardPage(): React.ReactElement {
                       component="button"
                       type="button"
                       variant="body2"
-                      fontWeight={600}
                       onClick={() => navigate(`/bots/${bot.id}/modules`)}
+                      sx={{
+                        fontWeight: 600,
+                      }}
                     >
                       {t('bots.openModules')}
                     </Link>
@@ -480,7 +528,12 @@ export default function BotDashboardPage(): React.ReactElement {
         <DialogTitle>{t('bots.cloneTitle', { name: currentBot.name })}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               {t('bots.cloneDesc')}
             </Typography>
             <TextField

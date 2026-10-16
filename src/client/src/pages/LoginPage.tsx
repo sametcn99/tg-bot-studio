@@ -49,12 +49,30 @@ export default function LoginPage(): React.ReactElement {
     >
       <Card sx={{ width: '100%', maxWidth: 400 }}>
         <CardContent sx={{ p: 4 }}>
-          <Stack spacing={1} alignItems="center" sx={{ mb: 3 }}>
+          <Stack
+            spacing={1}
+            sx={{
+              alignItems: 'center',
+              mb: 3,
+            }}
+          >
             <HubIcon color="primary" sx={{ fontSize: 40 }} aria-hidden="true" />
-            <Typography variant="h6" component="h1" fontWeight={700}>
+            <Typography
+              variant="h6"
+              component="h1"
+              sx={{
+                fontWeight: 700,
+              }}
+            >
               {t('login.title')}
             </Typography>
-            <Typography variant="caption" color="text.secondary" textAlign="center">
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.secondary',
+                textAlign: 'center',
+              }}
+            >
               {t('login.hint')}
             </Typography>
           </Stack>

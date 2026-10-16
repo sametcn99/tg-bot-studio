@@ -112,15 +112,24 @@ export function BotSwitcherCard({
           {!collapsed && (
             <>
               <Box sx={{ minWidth: 0, flex: 1 }}>
-                <Typography variant="body2" fontWeight={600} noWrap lineHeight={1.3}>
+                <Typography
+                  variant="body2"
+                  noWrap
+                  sx={{
+                    fontWeight: 600,
+                    lineHeight: 1.3,
+                  }}
+                >
                   {activeBot?.name ?? t('nav.noBotSelected')}
                 </Typography>
                 <Typography
                   variant="caption"
-                  color="text.secondary"
                   noWrap
-                  display="block"
-                  lineHeight={1.3}
+                  sx={{
+                    color: 'text.secondary',
+                    display: 'block',
+                    lineHeight: 1.3,
+                  }}
                 >
                   {subtitle}
                 </Typography>
@@ -195,7 +204,7 @@ export function BotSwitcherCard({
                 primary={bot.name}
                 secondary={bot.username ? `@${bot.username}` : `ID ${bot.id}`}
                 slotProps={{
-                  primary: { variant: 'body2', fontWeight: 600, noWrap: true },
+                  primary: { variant: 'body2', sx: { fontWeight: 600 }, noWrap: true },
                   secondary: { variant: 'caption', noWrap: true },
                 }}
               />

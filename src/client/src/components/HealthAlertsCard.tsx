@@ -101,8 +101,21 @@ export default function HealthAlertsCard({ botId }: { botId: number }): React.Re
   return (
     <Card>
       <CardContent>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
-          <Stack direction="row" spacing={1} alignItems="center">
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: 1.5,
+          }}
+        >
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              alignItems: 'center',
+            }}
+          >
             <NotificationsActiveIcon fontSize="small" />
             <Typography variant="subtitle2" component="h3">
               {t('health.title')}
@@ -117,15 +130,29 @@ export default function HealthAlertsCard({ botId }: { botId: number }): React.Re
 
         {settings && (
           <Stack spacing={1.5}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Stack
+              direction="row"
+              sx={{
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
               <Typography variant="body2">{t('health.enabled')}</Typography>
               <Switch
                 checked={settings.enabled}
                 onChange={(event) => save({ ...settings, enabled: event.target.checked })}
-                inputProps={{ 'aria-label': t('health.enabled') }}
+                slotProps={{
+                  input: { 'aria-label': t('health.enabled') },
+                }}
               />
             </Stack>
-            <Stack direction="row" spacing={1} alignItems="flex-start">
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: 'flex-start',
+              }}
+            >
               <TextField
                 size="small"
                 fullWidth
@@ -160,8 +187,12 @@ export default function HealthAlertsCard({ botId }: { botId: number }): React.Re
 
         <Typography
           variant="caption"
-          color="text.secondary"
-          sx={{ display: 'block', mt: 1.5, mb: 0.5 }}
+          sx={{
+            color: 'text.secondary',
+            display: 'block',
+            mt: 1.5,
+            mb: 0.5,
+          }}
         >
           {t('health.recentEvents')}
         </Typography>
@@ -170,11 +201,20 @@ export default function HealthAlertsCard({ botId }: { botId: number }): React.Re
             <Stack
               key={event.id}
               direction="row"
-              justifyContent="space-between"
-              alignItems="center"
               spacing={1}
+              sx={{
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
             >
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{
+                  alignItems: 'center',
+                  minWidth: 0,
+                }}
+              >
                 <Chip size="small" color={levelColor(event.level)} label={event.level} />
                 <Typography variant="caption" noWrap title={event.message}>
                   {event.message}
@@ -182,18 +222,33 @@ export default function HealthAlertsCard({ botId }: { botId: number }): React.Re
               </Stack>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
                 {!event.notified && (
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: 'text.secondary',
+                    }}
+                  >
                     {t('health.notNotified')}
                   </Typography>
                 )}
-                <Typography variant="caption" color="text.secondary">
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   {formatDateTime(event.createdAt)}
                 </Typography>
               </Box>
             </Stack>
           ))}
           {events.length === 0 && (
-            <Typography variant="caption" color="text.secondary">
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               {t('health.noEvents')}
             </Typography>
           )}

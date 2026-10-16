@@ -11,7 +11,7 @@ import {
   Typography,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../../services/api';
 import PageHeader from '../../components/PageHeader';
@@ -114,10 +114,10 @@ export default function MediaLibraryPage({
               <Stack
                 key={asset.id}
                 direction="row"
-                alignItems="center"
-                justifyContent="space-between"
                 spacing={1}
                 sx={{
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
                   border: '1px solid',
                   borderColor: 'divider',
                   borderRadius: 1,
@@ -126,8 +126,19 @@ export default function MediaLibraryPage({
                 }}
               >
                 <Box sx={{ minWidth: 0 }}>
-                  <Stack direction="row" spacing={0.5} alignItems="center">
-                    <Typography variant="body2" fontWeight={600}>
+                  <Stack
+                    direction="row"
+                    spacing={0.5}
+                    sx={{
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 600,
+                      }}
+                    >
                       {asset.name}
                     </Typography>
                     <Chip size="small" label={asset.kind} />
@@ -145,16 +156,29 @@ export default function MediaLibraryPage({
                   </Stack>
                   <Typography
                     variant="caption"
-                    color="text.secondary"
                     noWrap
-                    sx={{ display: 'block' }}
                     title={asset.value}
+                    sx={{
+                      color: 'text.secondary',
+                      display: 'block',
+                    }}
                   >
                     {asset.value}
                   </Typography>
                 </Box>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <Typography variant="caption" color="text.secondary">
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{
+                    alignItems: 'center',
+                  }}
+                >
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: 'text.secondary',
+                    }}
+                  >
                     {formatDateTime(asset.createdAt)}
                   </Typography>
                   <IconButton size="small" color="error" onClick={() => setDeleteId(asset.id)}>
@@ -164,7 +188,12 @@ export default function MediaLibraryPage({
               </Stack>
             ))}
             {assets !== null && assets.length === 0 && (
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'text.secondary',
+                }}
+              >
                 {t('mediaLibrary.empty')}
               </Typography>
             )}

@@ -51,7 +51,10 @@ COPY --from=builder /app/dist ./dist
 
 # Versioned migrations + the Prisma CLI (schema engine) so the container can
 # apply pending migrations on boot before the server starts.
+# prisma.config.ts is required at runtime: Prisma 7 moved the datasource url
+# out of schema.prisma, so `prisma migrate deploy` reads it from the config.
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 

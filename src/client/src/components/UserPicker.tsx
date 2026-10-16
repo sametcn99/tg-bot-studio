@@ -136,19 +136,21 @@ export default function UserPicker({
         fullWidth
         type="number"
         helperText={helperText}
-        InputProps={{
-          endAdornment: (
-            <InputAdornment position="end">
-              <Button
-                size="small"
-                startIcon={<PersonSearchIcon fontSize="small" />}
-                onClick={() => setOpen(true)}
-                sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
-              >
-                {t('userPicker.pick')}
-              </Button>
-            </InputAdornment>
-          ),
+        slotProps={{
+          input: {
+            endAdornment: (
+              <InputAdornment position="end">
+                <Button
+                  size="small"
+                  startIcon={<PersonSearchIcon fontSize="small" />}
+                  onClick={() => setOpen(true)}
+                  sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
+                >
+                  {t('userPicker.pick')}
+                </Button>
+              </InputAdornment>
+            ),
+          },
         }}
       />
       <Dialog
@@ -162,7 +164,12 @@ export default function UserPicker({
           id="user-picker-title"
           sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
         >
-          <Typography variant="subtitle1" fontWeight={700}>
+          <Typography
+            variant="subtitle1"
+            sx={{
+              fontWeight: 700,
+            }}
+          >
             {t('userPicker.title')}
           </Typography>
           <IconButton size="small" aria-label={t('actions.close')} onClick={() => setOpen(false)}>
@@ -194,11 +201,23 @@ export default function UserPicker({
           )}
           <Box sx={{ maxHeight: 320, overflowY: 'auto' }}>
             {users === null ? (
-              <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'text.secondary',
+                  p: 2,
+                }}
+              >
                 {t('common.loading')}
               </Typography>
             ) : users.length === 0 ? (
-              <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'text.secondary',
+                  p: 2,
+                }}
+              >
                 {t('userPicker.empty')}
               </Typography>
             ) : (
@@ -218,8 +237,10 @@ export default function UserPicker({
                           ? `${user.telegram_id} · ${t('crm.lastSeen')}: ${formatDateTime(user.last_seen_at)}`
                           : String(user.telegram_id)
                       }
-                      primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }}
-                      secondaryTypographyProps={{ variant: 'caption' }}
+                      slotProps={{
+                        primary: { variant: 'body2', sx: { fontWeight: 600 } },
+                        secondary: { variant: 'caption' },
+                      }}
                     />
                   </ListItemButton>
                 ))}

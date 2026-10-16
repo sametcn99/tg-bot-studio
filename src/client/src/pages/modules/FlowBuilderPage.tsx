@@ -23,7 +23,7 @@ import {
   useTheme,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import BoltRoundedIcon from '@mui/icons-material/BoltRounded';
@@ -241,11 +241,20 @@ export default function FlowBuilderPage({
               <CardContent sx={{ pb: '12px !important' }}>
                 <Stack
                   direction="row"
-                  alignItems="center"
-                  justifyContent="space-between"
-                  sx={{ mb: 1.25 }}
+                  sx={{
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    mb: 1.25,
+                  }}
                 >
-                  <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{
+                      alignItems: 'center',
+                      minWidth: 0,
+                    }}
+                  >
                     <Typography variant="subtitle2" noWrap>
                       {flow.name}
                     </Typography>
@@ -262,7 +271,11 @@ export default function FlowBuilderPage({
                     variant="outlined"
                     icon={<BoltRoundedIcon sx={{ fontSize: 13 }} />}
                     label={triggerSummary(flow)}
-                    sx={{ height: 24, '& .MuiChip-iconSmall': { ml: 0.75 }, flexShrink: 0 }}
+                    sx={{
+                      height: 24,
+                      '&.MuiChip-sizeSmall > .MuiChip-icon': { ml: 0.75 },
+                      flexShrink: 0,
+                    }}
                   />
                 </Stack>
                 <FlowThumb graph={flow.graph} />
@@ -270,24 +283,45 @@ export default function FlowBuilderPage({
             </CardActionArea>
             <Stack
               direction="row"
-              alignItems="center"
-              justifyContent="space-between"
-              sx={{ px: 2, pb: 1.5 }}
+              sx={{
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                px: 2,
+                pb: 1.5,
+              }}
             >
               <Stack direction="row" spacing={2}>
-                <Typography variant="caption" color="text.secondary">
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   {t('flows.nodeCount', { count: flow.graph.nodes.length })}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   {formatDate(flow.updatedAt)}
                 </Typography>
               </Stack>
-              <Stack direction="row" spacing={0.25} alignItems="center">
+              <Stack
+                direction="row"
+                spacing={0.25}
+                sx={{
+                  alignItems: 'center',
+                }}
+              >
                 <Switch
                   checked={flow.isActive}
                   onChange={(event) => toggleFlow(flow, event.target.checked)}
                   size="small"
-                  inputProps={{ 'aria-label': flow.name }}
+                  slotProps={{
+                    input: { 'aria-label': flow.name },
+                  }}
                 />
                 <Tooltip title={t('flows.test')}>
                   <IconButton
@@ -325,7 +359,12 @@ export default function FlowBuilderPage({
       {flows !== null && flows.length === 0 && (
         <Card>
           <CardContent sx={{ textAlign: 'center', py: 6 }}>
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               {t('flows.empty')}
             </Typography>
           </CardContent>
@@ -348,8 +387,11 @@ export default function FlowBuilderPage({
             <Box>
               <Typography
                 variant="caption"
-                color="text.secondary"
-                sx={{ display: 'block', mb: 0.75 }}
+                sx={{
+                  color: 'text.secondary',
+                  display: 'block',
+                  mb: 0.75,
+                }}
               >
                 {t('flows.triggerType')}
               </Typography>
@@ -375,12 +417,14 @@ export default function FlowBuilderPage({
                 helperText={
                   newTriggerType === 'command' ? t('flows.triggerCommandHelp') : undefined
                 }
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <KeyboardDoubleArrowRightIcon fontSize="small" color="action" />
-                    </InputAdornment>
-                  ),
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <KeyboardDoubleArrowRightIcon fontSize="small" color="action" />
+                      </InputAdornment>
+                    ),
+                  },
                 }}
               />
             )}
@@ -440,7 +484,12 @@ function FlowThumb({ graph }: { graph: FlowGraph }): React.ReactElement {
           justifyContent: 'center',
         }}
       >
-        <Typography variant="caption" color="text.secondary">
+        <Typography
+          variant="caption"
+          sx={{
+            color: 'text.secondary',
+          }}
+        >
           {t('flows.noNodes')}
         </Typography>
       </Box>

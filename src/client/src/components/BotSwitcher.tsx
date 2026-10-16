@@ -72,10 +72,19 @@ export default function BotSwitcher(): React.ReactElement {
         open={open}
         onClose={handleClose}
         aria-labelledby="bot-switcher-button"
-        MenuListProps={{ role: 'listbox', 'aria-label': 'Bots' }}
+        slotProps={{
+          list: { role: 'listbox', 'aria-label': 'Bots' },
+        }}
       >
         {bots.length === 0 && (
-          <Typography variant="body2" color="text.secondary" sx={{ px: 2, py: 1 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+              px: 2,
+              py: 1,
+            }}
+          >
             No bots registered
           </Typography>
         )}
@@ -104,7 +113,9 @@ export default function BotSwitcher(): React.ReactElement {
               <ListItemText
                 primary={bot.name}
                 secondary={bot.username ? `@${bot.username}` : `ID ${bot.id}`}
-                primaryTypographyProps={{ noWrap: true }}
+                slotProps={{
+                  primary: { noWrap: true },
+                }}
               />
               <StatusDot status={bot.status} />
             </Button>

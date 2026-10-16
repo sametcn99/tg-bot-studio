@@ -44,7 +44,13 @@ export default function StatusDot({ status }: { status: string }): React.ReactEl
           flexShrink: 0,
         }}
       />
-      <Typography component="span" variant="body2" color="text.secondary">
+      <Typography
+        component="span"
+        variant="body2"
+        sx={{
+          color: 'text.secondary',
+        }}
+      >
         {label}
       </Typography>
     </Box>

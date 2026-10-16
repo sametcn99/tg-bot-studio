@@ -15,7 +15,7 @@ import {
   Typography,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import CodeIcon from '@mui/icons-material/Code';
 import ViewModuleIcon from '@mui/icons-material/ViewModule';
@@ -408,8 +408,20 @@ export default function VisualButtonBuilder({
         bgcolor: 'background.paper',
       }}
     >
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
-        <Typography variant="subtitle2" fontWeight={600}>
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 1.5,
+        }}
+      >
+        <Typography
+          variant="subtitle2"
+          sx={{
+            fontWeight: 600,
+          }}
+        >
           {label ?? t('buttons.builderTitle')}
         </Typography>
         <Tabs
@@ -452,8 +464,11 @@ export default function VisualButtonBuilder({
           <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
             <Typography
               variant="caption"
-              color="text.secondary"
-              sx={{ alignSelf: 'center', mr: 0.5 }}
+              sx={{
+                color: 'text.secondary',
+                alignSelf: 'center',
+                mr: 0.5,
+              }}
             >
               {t('visual.presetsLabel')}
             </Typography>
@@ -490,8 +505,11 @@ export default function VisualButtonBuilder({
                 <Stack
                   direction="row"
                   spacing={1}
-                  alignItems="flex-start"
-                  sx={{ flexWrap: 'wrap', rowGap: 1 }}
+                  sx={{
+                    alignItems: 'flex-start',
+                    flexWrap: 'wrap',
+                    rowGap: 1,
+                  }}
                 >
                   <TextField
                     select
@@ -585,7 +603,13 @@ export default function VisualButtonBuilder({
             );
           })}
 
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Stack
+            direction="row"
+            sx={{
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
             <Button
               variant="outlined"
               size="small"
@@ -617,8 +641,12 @@ export default function VisualButtonBuilder({
             >
               <Typography
                 variant="caption"
-                color="text.secondary"
-                sx={{ display: 'block', mb: 1, fontWeight: 600 }}
+                sx={{
+                  color: 'text.secondary',
+                  display: 'block',
+                  mb: 1,
+                  fontWeight: 600,
+                }}
               >
                 {t('buttons.preview')}
               </Typography>

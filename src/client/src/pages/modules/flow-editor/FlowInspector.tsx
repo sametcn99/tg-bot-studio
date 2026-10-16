@@ -17,7 +17,7 @@ import {
   useTheme,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
 import ContentCopyRoundedIcon from '@mui/icons-material/ContentCopyRounded';
 import FlagRoundedIcon from '@mui/icons-material/FlagRounded';
 import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArrowRight';
@@ -154,7 +154,14 @@ export default function FlowInspector({
           onChange={(event) => onPatchSettings({ name: event.target.value })}
         />
         <Box>
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: 'text.secondary',
+              display: 'block',
+              mb: 0.75,
+            }}
+          >
             {t('flows.triggerType')}
           </Typography>
           <ToggleButtonGroup
@@ -180,26 +187,42 @@ export default function FlowInspector({
               settings.triggerType === 'command' ? t('flows.triggerCommandHelp') : undefined
             }
             onChange={(event) => onPatchSettings({ triggerValue: event.target.value })}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <KeyboardDoubleArrowRightIcon fontSize="small" color="action" />
-                </InputAdornment>
-              ),
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <KeyboardDoubleArrowRightIcon fontSize="small" color="action" />
+                  </InputAdornment>
+                ),
+              },
             }}
           />
         )}
-        <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
           <Typography variant="body2">{t('status.active')}</Typography>
           <Switch
             size="small"
             checked={settings.isActive}
             onChange={(event) => onPatchSettings({ isActive: event.target.checked })}
-            inputProps={{ 'aria-label': t('status.active') }}
+            slotProps={{
+              input: { 'aria-label': t('status.active') },
+            }}
           />
         </Stack>
         <Divider />
-        <Typography variant="caption" color="text.secondary">
+        <Typography
+          variant="caption"
+          sx={{
+            color: 'text.secondary',
+          }}
+        >
           {t('flows.triggerSettingsHint')}
         </Typography>
       </Stack>
@@ -221,21 +244,44 @@ export default function FlowInspector({
     return (
       <Stack spacing={1.5}>
         <Typography variant="subtitle2">{t('flows.inspector')}</Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: 'text.secondary',
+          }}
+        >
           {t('flows.inspectorEmpty')}
         </Typography>
         <Divider sx={{ my: 0.5 }} />
-        <Typography variant="caption" color="text.secondary" fontWeight={700}>
+        <Typography
+          variant="caption"
+          sx={{
+            color: 'text.secondary',
+            fontWeight: 700,
+          }}
+        >
           {t('flows.shortcuts')}
         </Typography>
         {shortcuts.map(([keys, hint]) => (
-          <Stack key={keys} direction="row" spacing={1} alignItems="center">
+          <Stack
+            key={keys}
+            direction="row"
+            spacing={1}
+            sx={{
+              alignItems: 'center',
+            }}
+          >
             <Chip
               size="small"
               label={keys}
               sx={{ height: 22, fontSize: 11, fontFamily: 'monospace', flexShrink: 0 }}
             />
-            <Typography variant="caption" color="text.secondary">
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               {hint}
             </Typography>
           </Stack>
@@ -251,7 +297,14 @@ export default function FlowInspector({
     const buttons = node.buttons ?? [];
     return (
       <Box>
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>
+        <Typography
+          variant="caption"
+          sx={{
+            color: 'text.secondary',
+            display: 'block',
+            mb: 0.75,
+          }}
+        >
           {t('flows.inlineButtons')}
         </Typography>
         <Stack spacing={1.25}>
@@ -271,7 +324,13 @@ export default function FlowInspector({
                       : 'rgba(15,23,42,0.02)',
                 }}
               >
-                <Stack direction="row" spacing={1} alignItems="center">
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{
+                    alignItems: 'center',
+                  }}
+                >
                   <TextField
                     size="small"
                     label={`${t('flows.buttonText')} ${index + 1}`}
@@ -362,13 +421,25 @@ export default function FlowInspector({
   function renderNodeEditor(node: FlowNode): React.ReactElement {
     return (
       <Stack spacing={2}>
-        <Stack direction="row" spacing={1.25} alignItems="center">
+        <Stack
+          direction="row"
+          spacing={1.25}
+          sx={{
+            alignItems: 'center',
+          }}
+        >
           <NodeTypeIconTile type={node.type} size={34} />
           <Box sx={{ minWidth: 0 }}>
             <Typography variant="subtitle2" sx={{ lineHeight: 1.2 }}>
               {t(`flows.nodeTypes.${node.type}`)}
             </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.secondary',
+                fontFamily: 'monospace',
+              }}
+            >
               {node.id}
             </Typography>
           </Box>
@@ -516,7 +587,12 @@ export default function FlowInspector({
     return (
       <Stack spacing={1.5}>
         <Typography variant="subtitle2">{t('flows.multiSelect', { count: ids.length })}</Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: 'text.secondary',
+          }}
+        >
           {t('flows.multiSelectHint')}
         </Typography>
         <Button

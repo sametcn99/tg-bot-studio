@@ -304,15 +304,21 @@ export function ConnectionMultiSelect({
       value={currentValue}
       onChange={(event) => onChange((event.target.value as unknown as string[]).map(String))}
       helperText={helperText}
-      SelectProps={{
-        multiple: true,
-        renderValue: (selected) => (
-          <Stack direction="row" spacing={0.5} useFlexGap sx={{ flexWrap: 'wrap' }}>
-            {(selected as string[]).map((chatId) => (
-              <Chip key={chatId} size="small" label={optionByValue.get(chatId)?.label ?? chatId} />
-            ))}
-          </Stack>
-        ),
+      slotProps={{
+        select: {
+          multiple: true,
+          renderValue: (selected) => (
+            <Stack direction="row" spacing={0.5} useFlexGap sx={{ flexWrap: 'wrap' }}>
+              {(selected as string[]).map((chatId) => (
+                <Chip
+                  key={chatId}
+                  size="small"
+                  label={optionByValue.get(chatId)?.label ?? chatId}
+                />
+              ))}
+            </Stack>
+          ),
+        },
       }}
     >
       {loading ? (

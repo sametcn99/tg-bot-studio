@@ -102,14 +102,38 @@ export default function BlockedUsersManager({ botId }: { botId: number }): React
   return (
     <Card variant="outlined" sx={{ mt: 3 }}>
       <CardContent>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-          <Stack direction="row" spacing={1} alignItems="center">
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: 2,
+          }}
+        >
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              alignItems: 'center',
+            }}
+          >
             <PersonOffIcon color="action" fontSize="small" />
-            <Typography variant="subtitle1" fontWeight={700}>
+            <Typography
+              variant="subtitle1"
+              sx={{
+                fontWeight: 700,
+              }}
+            >
               {t('moderation.blockedTitle')}
             </Typography>
           </Stack>
-          <Stack direction="row" spacing={1} alignItems="center">
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              alignItems: 'center',
+            }}
+          >
             <Chip size="small" label={rows.length} />
             <Button
               size="small"
@@ -129,7 +153,12 @@ export default function BlockedUsersManager({ botId }: { botId: number }): React
         )}
 
         {rows.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             {t('moderation.blockedEmpty')}
           </Typography>
         ) : (
@@ -188,7 +217,12 @@ export default function BlockedUsersManager({ botId }: { botId: number }): React
               onChange={(event) => setForm((prev) => ({ ...prev, reason: event.target.value }))}
               fullWidth
             />
-            <Typography variant="caption" color="text.secondary">
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               {t('moderation.blockHelp')}
             </Typography>
           </Stack>

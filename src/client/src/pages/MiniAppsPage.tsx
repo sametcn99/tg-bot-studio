@@ -205,10 +205,27 @@ export default function MiniAppsPage(): React.ReactElement {
                 <Card>
                   <CardContent>
                     <Stack spacing={2}>
-                      <Stack direction="row" justifyContent="space-between" alignItems="center">
+                      <Stack
+                        direction="row"
+                        sx={{
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                        }}
+                      >
                         <Typography variant="subtitle2">{selected.title}</Typography>
-                        <Stack direction="row" spacing={1} alignItems="center">
-                          <Typography variant="caption" color="text.secondary">
+                        <Stack
+                          direction="row"
+                          spacing={1}
+                          sx={{
+                            alignItems: 'center',
+                          }}
+                        >
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              color: 'text.secondary',
+                            }}
+                          >
                             /tma/{selected.slug}
                           </Typography>
                           <Switch
@@ -410,7 +427,13 @@ function AppDataViewer({ botId, app }: { botId: number; app: MiniApp }): React.R
         <Tab label={t('miniApps.forms')} />
       </Tabs>
       {rows.length === 0 ? (
-        <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: 'text.secondary',
+            py: 2,
+          }}
+        >
           {t('common.empty')}
         </Typography>
       ) : (

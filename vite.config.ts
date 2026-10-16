@@ -26,15 +26,19 @@ export default defineConfig({
       output: {
         // Route-level code splitting happens via React.lazy; these chunks
         // keep the heavyweight frameworks cacheable across lazy pages.
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-mui': [
-            '@mui/material',
-            '@mui/icons-material',
-            '@emotion/react',
-            '@emotion/styled',
-          ],
-          'vendor-i18n': ['i18next', 'react-i18next'],
+        // Function form is required by Vite 8 (rolldown); object form is rejected.
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+          if (
+            /[\\/]node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/.test(
+              id,
+            )
+          ) {
+            return 'vendor-react';
+          }
+          if (/[\\/]node_modules[\\/](@mui|@emotion)[\\/]/.test(id)) return 'vendor-mui';
+          if (/[\\/]node_modules[\\/](i18next|react-i18next)[\\/]/.test(id)) return 'vendor-i18n';
+          return undefined;
         },
       },
     },

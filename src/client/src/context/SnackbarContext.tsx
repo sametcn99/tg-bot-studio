@@ -50,7 +50,7 @@ export function SnackbarProvider({ children }: { children: ReactNode }): React.R
   const showError = useCallback((msg: string) => showSnackbar(msg, 'error'), [showSnackbar]);
   const showInfo = useCallback((msg: string) => showSnackbar(msg, 'info'), [showSnackbar]);
 
-  const handleClose = (_?: React.SyntheticEvent | Event, reason?: string) => {
+  const handleClose = (_: Event | React.SyntheticEvent | null, reason?: string) => {
     if (reason === 'clickaway') return;
     // Dequeue the current message; the next one (if any) takes its place.
     setQueue((current) => current.slice(1));

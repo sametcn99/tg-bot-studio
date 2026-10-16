@@ -109,7 +109,14 @@ export default function ModulesManagerPage(): React.ReactElement {
             component="section"
             aria-label={localizedCategory(t, category)}
           >
-            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }} component="h3">
+            <Typography
+              variant="subtitle2"
+              component="h3"
+              sx={{
+                color: 'text.secondary',
+                mb: 1,
+              }}
+            >
               {localizedCategory(t, category)}
             </Typography>
             <Grid container spacing={2}>
@@ -124,9 +131,11 @@ export default function ModulesManagerPage(): React.ReactElement {
                           <Stack spacing={1} sx={{ height: '100%' }}>
                             <Stack
                               direction="row"
-                              justifyContent="space-between"
-                              alignItems="flex-start"
                               spacing={1}
+                              sx={{
+                                justifyContent: 'space-between',
+                                alignItems: 'flex-start',
+                              }}
                             >
                               <Typography variant="subtitle2" component="h4">
                                 {entry?.name ?? state.name}
@@ -135,15 +144,19 @@ export default function ModulesManagerPage(): React.ReactElement {
                                 size="small"
                                 checked={state.isEnabled}
                                 onChange={(event) => toggle(state, event.target.checked)}
-                                inputProps={{
-                                  'aria-label': `${entry?.name ?? state.name} ${t('status.enabled')}`,
+                                slotProps={{
+                                  input: {
+                                    'aria-label': `${entry?.name ?? state.name} ${t('status.enabled')}`,
+                                  },
                                 }}
                               />
                             </Stack>
                             <Typography
                               variant="caption"
-                              color="text.secondary"
-                              sx={{ flexGrow: 1 }}
+                              sx={{
+                                color: 'text.secondary',
+                                flexGrow: 1,
+                              }}
                             >
                               {entry?.description ?? state.description}
                             </Typography>
@@ -152,9 +165,11 @@ export default function ModulesManagerPage(): React.ReactElement {
                                 component="button"
                                 type="button"
                                 variant="caption"
-                                fontWeight={600}
                                 onClick={() => {
                                   if (entry) openDocs(entry);
+                                }}
+                                sx={{
+                                  fontWeight: 600,
                                 }}
                               >
                                 {t('modules.docsLink')}
@@ -163,8 +178,10 @@ export default function ModulesManagerPage(): React.ReactElement {
                                 component="button"
                                 type="button"
                                 variant="caption"
-                                fontWeight={600}
                                 onClick={() => navigate(`/bots/${botId}/m/${state.key}`)}
+                                sx={{
+                                  fontWeight: 600,
+                                }}
                               >
                                 {t('modules.configureLink')}
                               </Link>

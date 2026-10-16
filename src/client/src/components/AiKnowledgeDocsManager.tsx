@@ -20,7 +20,7 @@ import {
   Typography,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
@@ -216,14 +216,36 @@ export default function AiKnowledgeDocsManager({ botId }: { botId: number }): Re
     <Card sx={{ mt: 3 }}>
       <CardContent>
         <Stack spacing={2.5}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Stack direction="row" spacing={1} alignItems="center">
+          <Stack
+            direction="row"
+            sx={{
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: 'center',
+              }}
+            >
               <MenuBookIcon color="primary" />
               <Box>
-                <Typography variant="subtitle1" fontWeight={700}>
+                <Typography
+                  variant="subtitle1"
+                  sx={{
+                    fontWeight: 700,
+                  }}
+                >
                   {t('aiDocs.title')}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   {t('aiDocs.subtitle')}
                 </Typography>
               </Box>
@@ -271,23 +293,31 @@ export default function AiKnowledgeDocsManager({ botId }: { botId: number }): Re
                 <Paper key={doc.id} variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
                   <Stack
                     direction="row"
-                    justifyContent="space-between"
-                    alignItems="flex-start"
                     spacing={1}
+                    sx={{
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                    }}
                   >
                     <Box sx={{ flex: 1, minWidth: 0 }}>
                       <Typography
                         variant="subtitle2"
-                        fontWeight={700}
-                        sx={{ cursor: 'pointer', '&:hover': { color: 'primary.main' } }}
                         onClick={() => setDocToView(doc)}
+                        sx={{
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          '&:hover': { color: 'primary.main' },
+                        }}
                       >
                         {doc.title}
                       </Typography>
                       <Typography
                         variant="body2"
-                        color="text.secondary"
-                        sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}
+                        sx={{
+                          color: 'text.secondary',
+                          mt: 0.5,
+                          whiteSpace: 'pre-wrap',
+                        }}
                       >
                         {doc.content.length > 200 ? `${doc.content.slice(0, 200)}...` : doc.content}
                       </Typography>
@@ -301,7 +331,13 @@ export default function AiKnowledgeDocsManager({ botId }: { botId: number }): Re
                         </Typography>
                       )}
                     </Box>
-                    <Stack direction="row" spacing={0.5} alignItems="center">
+                    <Stack
+                      direction="row"
+                      spacing={0.5}
+                      sx={{
+                        alignItems: 'center',
+                      }}
+                    >
                       <Tooltip title={t('aiDocs.viewFull')}>
                         <IconButton size="small" onClick={() => setDocToView(doc)}>
                           <VisibilityOutlinedIcon fontSize="small" />
@@ -324,7 +360,13 @@ export default function AiKnowledgeDocsManager({ botId }: { botId: number }): Re
 
               {docs.length === 0 && (
                 <Stack spacing={1.5} sx={{ py: 2, alignItems: 'center' }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'text.secondary',
+                      textAlign: 'center',
+                    }}
+                  >
                     {t('aiDocs.empty')}
                   </Typography>
                   <AiGenerateButton
@@ -354,13 +396,31 @@ export default function AiKnowledgeDocsManager({ botId }: { botId: number }): Re
 
           {/* Interactive RAG Tester */}
           <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: 2 }}>
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.5 }}>
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: 'center',
+                mb: 1.5,
+              }}
+            >
               <AutoAwesomeIcon color="secondary" fontSize="small" />
-              <Typography variant="subtitle2" fontWeight={600}>
+              <Typography
+                variant="subtitle2"
+                sx={{
+                  fontWeight: 600,
+                }}
+              >
                 {t('aiDocs.testerTitle')}
               </Typography>
             </Stack>
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: 'center',
+              }}
+            >
               <TextField
                 size="small"
                 fullWidth
@@ -408,7 +468,13 @@ export default function AiKnowledgeDocsManager({ botId }: { botId: number }): Re
                   borderColor: 'divider',
                 }}
               >
-                <Typography variant="caption" color="text.secondary" fontWeight={700}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: 'text.secondary',
+                    fontWeight: 700,
+                  }}
+                >
                   {t('aiDocs.testOutput')}
                 </Typography>
                 <Typography variant="body2" sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}>
@@ -416,7 +482,13 @@ export default function AiKnowledgeDocsManager({ botId }: { botId: number }): Re
                 </Typography>
                 {testSources.length > 0 && (
                   <Stack spacing={0.5} sx={{ mt: 1.5 }}>
-                    <Typography variant="caption" color="text.secondary" fontWeight={700}>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: 'text.secondary',
+                        fontWeight: 700,
+                      }}
+                    >
                       {t('aiDocs.sources')}
                     </Typography>
                     {testSources.map((source) => (
@@ -424,10 +496,17 @@ export default function AiKnowledgeDocsManager({ botId }: { botId: number }): Re
                         key={`${source.docId}-${source.score}`}
                         direction="row"
                         spacing={0.5}
-                        alignItems="center"
+                        sx={{
+                          alignItems: 'center',
+                        }}
                       >
                         <SourceIcon fontSize="small" color="primary" />
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: 'text.secondary',
+                          }}
+                        >
                           {source.docTitle}
                           {source.score > 0 ? ` · ${source.score}` : ''}
                         </Typography>
@@ -492,7 +571,13 @@ export default function AiKnowledgeDocsManager({ botId }: { botId: number }): Re
         <DialogContent dividers>
           <Stack spacing={2}>
             {docToView?.tags && (
-              <Typography variant="caption" color="primary" fontWeight={600}>
+              <Typography
+                variant="caption"
+                color="primary"
+                sx={{
+                  fontWeight: 600,
+                }}
+              >
                 {t('aiDocs.tags', { tags: docToView.tags })}
               </Typography>
             )}

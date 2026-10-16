@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import { PrismaLibSql } from '@prisma/adapter-libsql';
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
@@ -27,15 +28,10 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnAppli
   constructor() {
     const dbPath = process.env.DB_PATH || './data/studio.sqlite';
     mkdirSync(dirname(dbPath), { recursive: true });
-    const resolvedDbPath = resolve(process.cwd(), dbPath);
-    const databaseUrl = `file:${resolvedDbPath}`;
+    const databaseUrl = `file:${resolve(process.cwd(), dbPath).replace(/\\/g, '/')}`;
 
     super({
-      datasources: {
-        db: {
-          url: databaseUrl,
-        },
-      },
+      adapter: new PrismaLibSql({ url: databaseUrl }),
       log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
     });
   }

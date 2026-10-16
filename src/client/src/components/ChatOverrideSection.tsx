@@ -132,7 +132,12 @@ export function ChatOverrideSection({
     return (
       <Card variant="outlined" sx={{ mt: 2 }}>
         <CardContent>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             {t('common.loading')}
           </Typography>
         </CardContent>
@@ -146,10 +151,20 @@ export function ChatOverrideSection({
     <Stack spacing={2}>
       {!fixedChatId && (
         <Box>
-          <Typography variant="subtitle1" fontWeight={700}>
+          <Typography
+            variant="subtitle1"
+            sx={{
+              fontWeight: 700,
+            }}
+          >
             {t('chatOverrides.title')}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             {t('chatOverrides.hint')}
           </Typography>
         </Box>
@@ -193,7 +208,14 @@ export function ChatOverrideSection({
           </TextField>
 
           {Object.keys(overrides).length > 0 ? (
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            <Stack
+              direction="row"
+              spacing={1}
+              useFlexGap
+              sx={{
+                flexWrap: 'wrap',
+              }}
+            >
               {Object.entries(overrides).map(([chatId, override]) => (
                 <Chip
                   key={chatId}
@@ -212,7 +234,12 @@ export function ChatOverrideSection({
               ))}
             </Stack>
           ) : (
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               {t('chatOverrides.noneYet')}
             </Typography>
           )}
@@ -338,13 +365,20 @@ function ChatOverrideEditor({
     <Box sx={{ p: 1.5, border: 1, borderColor: 'divider', borderRadius: 2 }}>
       <Stack
         direction="row"
-        justifyContent="space-between"
-        alignItems="center"
-        flexWrap="wrap"
         spacing={1}
-        sx={{ mb: 1.5 }}
+        sx={{
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          mb: 1.5,
+        }}
       >
-        <Typography variant="subtitle2" fontWeight={700}>
+        <Typography
+          variant="subtitle2"
+          sx={{
+            fontWeight: 700,
+          }}
+        >
           {chatLabel} · {chatId}
         </Typography>
         <Chip
@@ -389,7 +423,12 @@ function ChatOverrideEditor({
           />
         ))}
         {(module.configFields ?? []).length === 0 && (
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             {t('chatOverrides.noFields')}
           </Typography>
         )}

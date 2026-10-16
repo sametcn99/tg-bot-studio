@@ -67,7 +67,13 @@ export function ConfigFieldInput({
 
   if (field.type === 'chatSelect') {
     return (
-      <Stack direction="row" spacing={1} alignItems="center">
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          alignItems: 'center',
+        }}
+      >
         <Box sx={{ flexGrow: 1 }}>
           <ConnectionSelect
             label={field.label}
@@ -84,7 +90,13 @@ export function ConfigFieldInput({
 
   if (field.type === 'mediaSelect') {
     return (
-      <Stack direction="row" spacing={1} alignItems="center">
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          alignItems: 'center',
+        }}
+      >
         <Box sx={{ flexGrow: 1 }}>
           <MediaSelectField
             botId={botId}
@@ -121,8 +133,21 @@ export function ConfigFieldInput({
   switch (field.type) {
     case 'switch':
       return (
-        <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
-          <Stack direction="row" spacing={0.5} alignItems="center">
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <Stack
+            direction="row"
+            spacing={0.5}
+            sx={{
+              alignItems: 'center',
+            }}
+          >
             <Typography variant="body2" id={`${field.key}-label`}>
               {field.label}
             </Typography>
@@ -134,11 +159,19 @@ export function ConfigFieldInput({
               </Tooltip>
             ) : null}
           </Stack>
-          <Stack direction="row" spacing={1} alignItems="center">
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              alignItems: 'center',
+            }}
+          >
             <Switch
               checked={Boolean(value)}
               onChange={(event) => onChange(event.target.checked)}
-              inputProps={{ 'aria-labelledby': `${field.key}-label` }}
+              slotProps={{
+                input: { 'aria-labelledby': `${field.key}-label` },
+              }}
             />
             {action}
           </Stack>
@@ -234,7 +267,13 @@ function MediaSelectField({
   const { t } = useTranslation();
   const [pickerOpen, setPickerOpen] = useState(false);
   return (
-    <Stack direction="row" spacing={1} alignItems="center">
+    <Stack
+      direction="row"
+      spacing={1}
+      sx={{
+        alignItems: 'center',
+      }}
+    >
       <TextField
         size="small"
         fullWidth
@@ -280,7 +319,13 @@ function TranslatableTextField({
   const multiline = field.type === 'textarea';
   return (
     <Box>
-      <Stack direction="row" spacing={1} alignItems="center">
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          alignItems: 'center',
+        }}
+      >
         <Box sx={{ flexGrow: 1 }}>
           <TextField
             size="small"
@@ -290,7 +335,9 @@ function TranslatableTextField({
             minRows={multiline ? 3 : undefined}
             value={value}
             onChange={(event) => onChange(event.target.value)}
-            InputProps={helpAdornment ? { endAdornment: helpAdornment } : undefined}
+            slotProps={{
+              input: helpAdornment ? { endAdornment: helpAdornment } : undefined,
+            }}
           />
         </Box>
         {action}

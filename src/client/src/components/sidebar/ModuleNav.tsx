@@ -64,7 +64,7 @@ export function NavItem({
         {!collapsed && (
           <ListItemText
             primary={label}
-            slotProps={{ primary: { variant: 'body2', noWrap: true, fontWeight: 500 } }}
+            slotProps={{ primary: { variant: 'body2', noWrap: true, sx: { fontWeight: 500 } } }}
           />
         )}
         {!collapsed && badge !== undefined && badge > 0 && (
@@ -115,9 +115,14 @@ export function SectionLabel({
   return (
     <Typography
       component="h2"
-      color="text.secondary"
       noWrap
-      sx={{ ...sectionLabelSx, px: 1.25, pt: 1.5, pb: 0.75 }}
+      sx={{
+        color: 'text.secondary',
+        ...sectionLabelSx,
+        px: 1.25,
+        pt: 1.5,
+        pb: 0.75,
+      }}
     >
       {label.toLocaleUpperCase(i18n.language)}
     </Typography>
@@ -215,7 +220,13 @@ export function ModuleNavSections({
     return (
       <Box sx={{ px: 1.25, py: 3, textAlign: 'center' }}>
         <SearchIcon sx={{ fontSize: 28, color: 'text.disabled', mb: 0.5 }} aria-hidden="true" />
-        <Typography variant="body2" color="text.secondary" role="status">
+        <Typography
+          variant="body2"
+          role="status"
+          sx={{
+            color: 'text.secondary',
+          }}
+        >
           {t('nav.noModuleResults')}
         </Typography>
       </Box>

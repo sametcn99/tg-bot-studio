@@ -122,8 +122,19 @@ export default function ModuleConfigPage({
           subtitle={module.description}
           onDocs={() => openDocs(module)}
           actions={
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Typography variant="caption" color="text.secondary">
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: 'center',
+              }}
+            >
+              <Typography
+                variant="caption"
+                sx={{
+                  color: 'text.secondary',
+                }}
+              >
                 {state.isEnabled ? t('status.enabled') : t('status.disabled')}
               </Typography>
               <Switch
@@ -133,7 +144,9 @@ export default function ModuleConfigPage({
                     current ? { ...current, isEnabled: event.target.checked } : current,
                   )
                 }
-                inputProps={{ 'aria-label': `${module.name} ${t('status.enabled')}` }}
+                slotProps={{
+                  input: { 'aria-label': `${module.name} ${t('status.enabled')}` },
+                }}
               />
             </Stack>
           }
@@ -142,11 +155,18 @@ export default function ModuleConfigPage({
         <Stack
           direction="row"
           spacing={1}
-          alignItems="center"
-          justifyContent="flex-end"
-          sx={{ mb: 1.5 }}
+          sx={{
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            mb: 1.5,
+          }}
         >
-          <Typography variant="caption" color="text.secondary">
+          <Typography
+            variant="caption"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             {state.isEnabled ? t('status.enabled') : t('status.disabled')}
           </Typography>
           <Switch
@@ -156,7 +176,9 @@ export default function ModuleConfigPage({
                 current ? { ...current, isEnabled: event.target.checked } : current,
               )
             }
-            inputProps={{ 'aria-label': `${module.name} ${t('status.enabled')}` }}
+            slotProps={{
+              input: { 'aria-label': `${module.name} ${t('status.enabled')}` },
+            }}
           />
         </Stack>
       )}
@@ -185,7 +207,12 @@ export default function ModuleConfigPage({
               />
             ))}
             {(module.configFields ?? []).length === 0 && (
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'text.secondary',
+                }}
+              >
                 {t('modules.noOptions')}
               </Typography>
             )}

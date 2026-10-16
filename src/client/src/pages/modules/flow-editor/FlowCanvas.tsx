@@ -717,17 +717,33 @@ function FlowCanvas(
               : {}),
           }}
         />
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.25 }}>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: 'center',
+            mb: 0.25,
+          }}
+        >
           <NodeTypeIconTile type={node.type} />
           <Box sx={{ minWidth: 0, flex: 1 }}>
-            <Typography variant="caption" fontWeight={700} sx={{ lineHeight: 1.2 }}>
+            <Typography
+              variant="caption"
+              sx={{
+                fontWeight: 700,
+                lineHeight: 1.2,
+              }}
+            >
               {t(`flows.nodeTypes.${node.type}`)}
             </Typography>
             <Typography
               variant="caption"
-              color="text.secondary"
               noWrap
-              sx={{ display: 'block', lineHeight: 1.2 }}
+              sx={{
+                color: 'text.secondary',
+                display: 'block',
+                lineHeight: 1.2,
+              }}
             >
               {nodeSummary(node)}
             </Typography>
@@ -743,7 +759,7 @@ function FlowCanvas(
                 fontSize: 10,
                 color: theme.palette.primary.main,
                 borderColor: theme.palette.primary.main,
-                '& .MuiChip-iconSmall': { ml: 0.3 },
+                '&.MuiChip-sizeSmall > .MuiChip-icon': { ml: 0.3 },
               }}
             />
           )}
@@ -773,8 +789,8 @@ function FlowCanvas(
               key={index}
               direction="row"
               spacing={0.75}
-              alignItems="center"
               sx={{
+                alignItems: 'center',
                 mt: 0.5,
                 py: 0.25,
                 px: 0.75,
@@ -806,14 +822,19 @@ function FlowCanvas(
               <Stack
                 key={`${port.field}:${port.buttonIndex ?? ''}`}
                 direction="row"
-                alignItems="center"
                 spacing={0.75}
-                sx={{ minHeight: 18 }}
+                sx={{
+                  alignItems: 'center',
+                  minHeight: 18,
+                }}
               >
                 <Typography
                   variant="caption"
-                  color="text.secondary"
-                  sx={{ fontSize: 10, lineHeight: 1 }}
+                  sx={{
+                    color: 'text.secondary',
+                    fontSize: 10,
+                    lineHeight: 1,
+                  }}
                 >
                   {port.label}
                 </Typography>
@@ -1121,13 +1142,22 @@ function FlowCanvas(
             '&:focus-visible': { outline: '2px solid #eab308', outlineOffset: 2 },
           }}
         >
-          <Stack direction="row" spacing={1} alignItems="center">
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              alignItems: 'center',
+            }}
+          >
             <NodeTypeIconTile type="trigger" />
             <Box sx={{ minWidth: 0 }}>
               <Typography
                 variant="caption"
-                fontWeight={700}
-                sx={{ lineHeight: 1.2, display: 'block' }}
+                sx={{
+                  fontWeight: 700,
+                  lineHeight: 1.2,
+                  display: 'block',
+                }}
               >
                 {t('flows.triggerLabel')}
               </Typography>
@@ -1142,11 +1172,20 @@ function FlowCanvas(
           </Stack>
           <Stack
             direction="row"
-            alignItems="center"
             spacing={0.75}
-            sx={{ mt: 0.75, minHeight: 18 }}
+            sx={{
+              alignItems: 'center',
+              mt: 0.75,
+              minHeight: 18,
+            }}
           >
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10 }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.secondary',
+                fontSize: 10,
+              }}
+            >
               {t('flows.start')}
             </Typography>
             <Box sx={{ flex: 1 }} />
@@ -1196,10 +1235,20 @@ function FlowCanvas(
               backgroundColor: dark ? 'rgba(17,23,38,0.6)' : 'rgba(255,255,255,0.6)',
             }}
           >
-            <Typography variant="body2" fontWeight={600}>
+            <Typography
+              variant="body2"
+              sx={{
+                fontWeight: 600,
+              }}
+            >
               {t('flows.emptyCanvas')}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               {t('flows.emptyCanvasHint')}
             </Typography>
           </Box>
@@ -1228,8 +1277,12 @@ function FlowCanvas(
         >
           <Typography
             variant="caption"
-            color="text.secondary"
-            sx={{ px: 1.25, py: 0.5, display: 'block' }}
+            sx={{
+              color: 'text.secondary',
+              px: 1.25,
+              py: 0.5,
+              display: 'block',
+            }}
           >
             {quickMenu.wire ? t('flows.connectNewNode') : t('flows.addNode')}
           </Typography>
@@ -1240,20 +1293,21 @@ function FlowCanvas(
                 key={type}
                 direction="row"
                 spacing={1}
-                alignItems="center"
-                sx={{
-                  px: 1.25,
-                  py: 0.6,
-                  borderRadius: 1.5,
-                  cursor: 'pointer',
-                  '&:hover': {
-                    backgroundColor: dark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.05)',
-                  },
-                }}
                 onPointerDown={(event) => {
                   event.stopPropagation();
                   onCreateNode(type, quickMenu.graph, quickMenu.wire);
                   setQuickMenu(null);
+                }}
+                sx={{
+                  alignItems: 'center',
+                  px: 1.25,
+                  py: 0.6,
+                  borderRadius: 1.5,
+                  cursor: 'pointer',
+
+                  '&:hover': {
+                    backgroundColor: dark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.05)',
+                  },
                 }}
               >
                 <NodeTypeIconTile type={type} size={22} />

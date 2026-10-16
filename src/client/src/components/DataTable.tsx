@@ -194,7 +194,12 @@ export default function DataTable<T extends Record<string, any>>({
             {paginatedRows.length === 0 && (
               <TableRow>
                 <TableCell colSpan={columns.length} align="center" sx={{ py: 3 }}>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'text.secondary',
+                    }}
+                  >
                     {resolvedEmptyMessage}
                   </Typography>
                 </TableCell>

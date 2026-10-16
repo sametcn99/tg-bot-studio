@@ -221,14 +221,16 @@ export default function UsersCrmPage({
                 placeholder={t('common.search')}
                 value={searchInput}
                 onChange={(event) => setSearchInput(event.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon fontSize="small" />
-                    </InputAdornment>
-                  ),
-                }}
                 sx={{ maxWidth: 360, flex: 1 }}
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon fontSize="small" />
+                      </InputAdornment>
+                    ),
+                  },
+                }}
               />
               <TextField
                 select
@@ -250,7 +252,13 @@ export default function UsersCrmPage({
                 ))}
               </TextField>
               <Box sx={{ flexGrow: 1 }} />
-              <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center' }}>
+              <Typography
+                variant="caption"
+                sx={{
+                  color: 'text.secondary',
+                  alignSelf: 'center',
+                }}
+              >
                 {t('crm.subscriberCount', { count: usersPage.total })}
               </Typography>
             </Stack>
@@ -306,10 +314,20 @@ export default function UsersCrmPage({
                   {sorted.map((user) => (
                     <TableRow key={user.telegram_id}>
                       <TableCell>
-                        <Typography variant="body2" fontWeight={600}>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontWeight: 600,
+                          }}
+                        >
                           {user.first_name ?? t('crm.unknown')} {user.last_name ?? ''}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: 'text.secondary',
+                          }}
+                        >
                           {user.username ? `@${user.username} ` : ''}
                           {user.telegram_id}
                         </Typography>
@@ -334,7 +352,13 @@ export default function UsersCrmPage({
                   {sorted.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={6}>
-                        <Typography color="text.secondary" align="center" sx={{ py: 3 }}>
+                        <Typography
+                          align="center"
+                          sx={{
+                            color: 'text.secondary',
+                            py: 3,
+                          }}
+                        >
                           {t('common.empty')}
                         </Typography>
                       </TableCell>

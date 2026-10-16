@@ -94,7 +94,13 @@ export default function ConnectionSettingsPage(): React.ReactElement {
           {overridable.map((entry) => (
             <Card key={entry.key} variant="outlined">
               <CardContent>
-                <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.5 }}>
+                <Typography
+                  variant="subtitle1"
+                  sx={{
+                    fontWeight: 700,
+                    mb: 1.5,
+                  }}
+                >
                   {entry.name}
                 </Typography>
                 <ChatOverrideSection

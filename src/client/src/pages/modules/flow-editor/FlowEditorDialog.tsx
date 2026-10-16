@@ -629,9 +629,9 @@ export default function FlowEditorDialog({
         {/* Toolbar */}
         <Stack
           direction="row"
-          alignItems="center"
           spacing={1}
           sx={{
+            alignItems: 'center',
             px: 1.5,
             py: 1,
             borderBottom: `1px solid ${theme.palette.divider}`,
@@ -665,7 +665,7 @@ export default function FlowEditorDialog({
             onClick={() => setSelectedIds([TRIGGER_NODE_ID])}
             sx={{
               height: 26,
-              '& .MuiChip-iconSmall': { ml: 0.75 },
+              '&.MuiChip-sizeSmall > .MuiChip-icon': { ml: 0.75 },
               borderColor: 'divider',
               cursor: 'pointer',
             }}
@@ -792,9 +792,13 @@ export default function FlowEditorDialog({
           >
             <Typography
               variant="caption"
-              color="text.secondary"
-              fontWeight={700}
-              sx={{ px: 0.75, display: 'block', mb: 1 }}
+              sx={{
+                color: 'text.secondary',
+                fontWeight: 700,
+                px: 0.75,
+                display: 'block',
+                mb: 1,
+              }}
             >
               {t('flows.palette')}
             </Typography>
@@ -805,21 +809,6 @@ export default function FlowEditorDialog({
                   data-testid={`palette-item-${type}`}
                   direction="row"
                   spacing={1}
-                  alignItems="center"
-                  sx={{
-                    p: 0.75,
-                    borderRadius: 1.5,
-                    cursor: 'grab',
-                    userSelect: 'none',
-                    border: '1px solid transparent',
-                    '&:hover': {
-                      backgroundColor:
-                        theme.palette.mode === 'dark'
-                          ? 'rgba(255,255,255,0.05)'
-                          : 'rgba(15,23,42,0.04)',
-                      borderColor: theme.palette.divider,
-                    },
-                  }}
                   onPointerDown={(event) => {
                     event.preventDefault();
                     setPaletteDrag({
@@ -831,6 +820,22 @@ export default function FlowEditorDialog({
                       moved: false,
                     });
                   }}
+                  sx={{
+                    alignItems: 'center',
+                    p: 0.75,
+                    borderRadius: 1.5,
+                    cursor: 'grab',
+                    userSelect: 'none',
+                    border: '1px solid transparent',
+
+                    '&:hover': {
+                      backgroundColor:
+                        theme.palette.mode === 'dark'
+                          ? 'rgba(255,255,255,0.05)'
+                          : 'rgba(15,23,42,0.04)',
+                      borderColor: theme.palette.divider,
+                    },
+                  }}
                 >
                   <NodeTypeIconTile type={type} size={24} />
                   <Typography variant="body2">{t(`flows.nodeTypes.${type}`)}</Typography>
@@ -839,8 +844,12 @@ export default function FlowEditorDialog({
             </Stack>
             <Typography
               variant="caption"
-              color="text.secondary"
-              sx={{ display: 'block', px: 0.75, mt: 2 }}
+              sx={{
+                color: 'text.secondary',
+                display: 'block',
+                px: 0.75,
+                mt: 2,
+              }}
             >
               {t('flows.paletteHint')}
             </Typography>
@@ -911,12 +920,21 @@ export default function FlowEditorDialog({
         anchor="bottom"
         open={paletteDrawerOpen}
         onClose={() => setPaletteDrawerOpen(false)}
-        PaperProps={{
-          sx: { maxHeight: '72vh', borderTopLeftRadius: 16, borderTopRightRadius: 16 },
+        slotProps={{
+          paper: {
+            sx: { maxHeight: '72vh', borderTopLeftRadius: 16, borderTopRightRadius: 16 },
+          },
         }}
       >
         <Box sx={{ p: 2 }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+          <Stack
+            direction="row"
+            sx={{
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              mb: 1,
+            }}
+          >
             <Typography variant="subtitle2">{t('flows.palette')}</Typography>
             <IconButton
               size="small"
@@ -934,15 +952,15 @@ export default function FlowEditorDialog({
                   key={type}
                   direction="row"
                   spacing={1}
-                  alignItems="center"
                   data-testid={`palette-drawer-item-${type}`}
+                  onClick={() => addNodeFromPalette(type)}
                   sx={{
+                    alignItems: 'center',
                     p: 1.25,
                     borderRadius: 1.5,
                     cursor: 'pointer',
                     '&:active': { backgroundColor: 'action.hover' },
                   }}
-                  onClick={() => addNodeFromPalette(type)}
                 >
                   <NodeTypeIconTile type={type} size={24} />
                   <Typography variant="body2">{t(`flows.nodeTypes.${type}`)}</Typography>
@@ -952,7 +970,14 @@ export default function FlowEditorDialog({
               );
             })}
           </Stack>
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5 }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: 'text.secondary',
+              display: 'block',
+              mt: 1.5,
+            }}
+          >
             {t('flows.paletteTapHint')}
           </Typography>
         </Box>
@@ -963,8 +988,10 @@ export default function FlowEditorDialog({
         anchor="bottom"
         open={inspectorDrawerOpen}
         onClose={() => setInspectorDrawerOpen(false)}
-        PaperProps={{
-          sx: { maxHeight: '85vh', borderTopLeftRadius: 16, borderTopRightRadius: 16 },
+        slotProps={{
+          paper: {
+            sx: { maxHeight: '85vh', borderTopLeftRadius: 16, borderTopRightRadius: 16 },
+          },
         }}
       >
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: 1.5, pt: 1 }}>
@@ -994,8 +1021,8 @@ export default function FlowEditorDialog({
           <Stack
             direction="row"
             spacing={1}
-            alignItems="center"
             sx={{
+              alignItems: 'center',
               px: 1.25,
               py: 0.75,
               borderRadius: 2,

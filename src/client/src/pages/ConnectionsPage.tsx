@@ -233,17 +233,36 @@ export default function ConnectionsPage({
         subtitle={module.description}
         onDocs={() => openDocs(module)}
         actions={
-          <Stack direction="row" spacing={1} alignItems="center">
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              alignItems: 'center',
+            }}
+          >
             <Tooltip title={t('connections.autoSyncTooltip')}>
-              <Stack direction="row" alignItems="center" spacing={0.5}>
-                <Typography variant="body2" color="text.secondary">
+              <Stack
+                direction="row"
+                spacing={0.5}
+                sx={{
+                  alignItems: 'center',
+                }}
+              >
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   {t('connections.autoSync')}
                 </Typography>
                 <Switch
                   size="small"
                   checked={autoSync}
                   onChange={(event) => toggleAutoSync(event.target.checked)}
-                  inputProps={{ 'aria-label': t('connections.autoSyncAria') }}
+                  slotProps={{
+                    input: { 'aria-label': t('connections.autoSyncAria') },
+                  }}
                 />
               </Stack>
             </Tooltip>
@@ -288,7 +307,14 @@ export default function ConnectionsPage({
                 {connections.map((row) => (
                   <TableRow key={row.id}>
                     <TableCell>
-                      <Typography variant="body2" fontWeight={600} noWrap sx={{ maxWidth: 260 }}>
+                      <Typography
+                        variant="body2"
+                        noWrap
+                        sx={{
+                          fontWeight: 600,
+                          maxWidth: 260,
+                        }}
+                      >
                         {row.title}
                       </Typography>
                     </TableCell>
@@ -300,7 +326,13 @@ export default function ConnectionsPage({
                       />
                     </TableCell>
                     <TableCell>
-                      <Typography variant="body2" fontFamily="monospace" noWrap>
+                      <Typography
+                        variant="body2"
+                        noWrap
+                        sx={{
+                          fontFamily: 'monospace',
+                        }}
+                      >
                         {row.chat_id}
                       </Typography>
                     </TableCell>
@@ -314,7 +346,9 @@ export default function ConnectionsPage({
                         size="small"
                         checked={Boolean(row.is_active)}
                         onChange={() => toggleActive(row)}
-                        inputProps={{ 'aria-label': `${row.title} ${t('status.active')}` }}
+                        slotProps={{
+                          input: { 'aria-label': `${row.title} ${t('status.active')}` },
+                        }}
                       />
                     </TableCell>
                     <TableCell align="right">
@@ -351,11 +385,28 @@ export default function ConnectionsPage({
                 {connections.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={6}>
-                      <Stack spacing={1} alignItems="center" sx={{ py: 3 }}>
-                        <Typography color="text.secondary" align="center">
+                      <Stack
+                        spacing={1}
+                        sx={{
+                          alignItems: 'center',
+                          py: 3,
+                        }}
+                      >
+                        <Typography
+                          align="center"
+                          sx={{
+                            color: 'text.secondary',
+                          }}
+                        >
                           {t('connections.empty')}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary" align="center">
+                        <Typography
+                          variant="caption"
+                          align="center"
+                          sx={{
+                            color: 'text.secondary',
+                          }}
+                        >
                           {t('connections.emptyHint')}
                         </Typography>
                       </Stack>

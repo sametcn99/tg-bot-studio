@@ -14,9 +14,9 @@ import {
   Typography,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import ApplyIcon from '@mui/icons-material/CheckCircleOutline';
+import ApplyIcon from '@mui/icons-material/CheckCircleOutlined';
 import DownloadIcon from '@mui/icons-material/FileDownload';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
 import { useTranslation } from 'react-i18next';
 import { apiFetch, apiDownload } from '../services/api';
 import { useSnackbar } from '../context/SnackbarContext';
@@ -139,18 +139,28 @@ export default function TemplateGalleryDialog({
             >
               <Stack
                 direction="row"
-                justifyContent="space-between"
-                alignItems="flex-start"
                 spacing={1}
+                sx={{
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                }}
               >
                 <Box sx={{ minWidth: 0 }}>
                   <Stack
                     direction="row"
                     spacing={1}
-                    alignItems="center"
-                    sx={{ flexWrap: 'wrap', gap: 0.5 }}
+                    sx={{
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: 0.5,
+                    }}
                   >
-                    <Typography variant="body2" fontWeight={600}>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 600,
+                      }}
+                    >
                       {row.name}
                     </Typography>
                     <Chip
@@ -168,16 +178,33 @@ export default function TemplateGalleryDialog({
                     )}
                   </Stack>
                   {row.description && (
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: 'text.secondary',
+                        display: 'block',
+                      }}
+                    >
                       {row.description}
                     </Typography>
                   )}
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: 'text.secondary',
+                    }}
+                  >
                     {row.sourceBotName ? `${row.sourceBotName} · ` : ''}
                     {formatDateTime(row.createdAt)}
                   </Typography>
                 </Box>
-                <Stack direction="row" spacing={0.5} alignItems="center">
+                <Stack
+                  direction="row"
+                  spacing={0.5}
+                  sx={{
+                    alignItems: 'center',
+                  }}
+                >
                   <IconButton
                     size="small"
                     onClick={() => download(row)}
@@ -201,7 +228,12 @@ export default function TemplateGalleryDialog({
             </Box>
           ))}
           {rows !== null && rows.length === 0 && (
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               {t('templates.empty')}
             </Typography>
           )}
@@ -287,7 +319,12 @@ export function SaveTemplateDialog({
       <DialogTitle>{t('templates.saveTitle')}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             {t('templates.saveHint')}
           </Typography>
           <TextField

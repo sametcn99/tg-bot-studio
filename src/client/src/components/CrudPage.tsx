@@ -333,8 +333,10 @@ export default function CrudPage({
           <Stack
             direction="row"
             spacing={0.25}
-            justifyContent="flex-end"
             onClick={(event) => event.stopPropagation()}
+            sx={{
+              justifyContent: 'flex-end',
+            }}
           >
             {orderField && (
               <>
@@ -436,16 +438,26 @@ export default function CrudPage({
           <CardContent>
             <Stack
               direction="row"
-              justifyContent="space-between"
-              alignItems="center"
-              sx={{ mb: 2 }}
+              sx={{
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                mb: 2,
+              }}
             >
               <Typography variant="subtitle2">{t('modules.settings')}</Typography>
-              <Stack direction="row" spacing={1} alignItems="center">
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{
+                  alignItems: 'center',
+                }}
+              >
                 <Typography
                   variant="caption"
-                  color="text.secondary"
                   id={`${module.key}-switch-label`}
+                  sx={{
+                    color: 'text.secondary',
+                  }}
                 >
                   {enabled ? t('status.enabled') : t('status.disabled')}
                 </Typography>
@@ -455,7 +467,9 @@ export default function CrudPage({
                     setEnabled(event.target.checked);
                     setConfigDirty(true);
                   }}
-                  inputProps={{ 'aria-label': `${module.name} ${t('status.enabled')}` }}
+                  slotProps={{
+                    input: { 'aria-label': `${module.name} ${t('status.enabled')}` },
+                  }}
                 />
                 <Button size="small" onClick={saveConfig} disabled={configBusy}>
                   {configBusy ? t('common.saving') : t('actions.save')}

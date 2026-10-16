@@ -13,7 +13,7 @@ import {
   Typography,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../../services/api';
@@ -134,8 +134,19 @@ export default function InlineModePage({
         subtitle={module.description}
         onDocs={() => openDocs(module)}
         actions={
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Typography variant="caption" color="text.secondary">
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              alignItems: 'center',
+            }}
+          >
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               {state.isEnabled ? t('status.enabled') : t('status.disabled')}
             </Typography>
             <Switch
@@ -145,7 +156,9 @@ export default function InlineModePage({
                   current ? { ...current, isEnabled: event.target.checked } : current,
                 )
               }
-              inputProps={{ 'aria-label': `${module.name} ${t('status.enabled')}` }}
+              slotProps={{
+                input: { 'aria-label': `${module.name} ${t('status.enabled')}` },
+              }}
             />
           </Stack>
         }
@@ -158,7 +171,13 @@ export default function InlineModePage({
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Stack spacing={2}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Stack
+              direction="row"
+              sx={{
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
               <Typography variant="subtitle2" component="h3">
                 {t('inlineMode.quickAnswers')}
               </Typography>
@@ -224,7 +243,12 @@ export default function InlineModePage({
               </Stack>
             ))}
             {suggestions.length === 0 && (
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'text.secondary',
+                }}
+              >
                 {t('inlineMode.noAnswers')}
               </Typography>
             )}
@@ -235,17 +259,30 @@ export default function InlineModePage({
       <Card>
         <CardContent>
           <Stack spacing={2}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Stack
+              direction="row"
+              sx={{
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
               <Box>
                 <Typography variant="body2">{t('inlineMode.enableAi')}</Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   {t('inlineMode.enableAiHelp')}
                 </Typography>
               </Box>
               <Switch
                 checked={enableAi}
                 onChange={(event) => setEnableAi(event.target.checked)}
-                inputProps={{ 'aria-label': t('inlineMode.enableAi') }}
+                slotProps={{
+                  input: { 'aria-label': t('inlineMode.enableAi') },
+                }}
               />
             </Stack>
             <TextField

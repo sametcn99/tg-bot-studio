@@ -13,7 +13,7 @@ import {
   Typography,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import CodeIcon from '@mui/icons-material/Code';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
@@ -132,8 +132,20 @@ export default function VisualDripStepsBuilder({
         bgcolor: 'background.paper',
       }}
     >
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
-        <Typography variant="subtitle2" fontWeight={600}>
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 1.5,
+        }}
+      >
+        <Typography
+          variant="subtitle2"
+          sx={{
+            fontWeight: 600,
+          }}
+        >
           {label ?? t('visual.dripBuilderTitle')}
         </Typography>
         <Tabs
@@ -164,7 +176,13 @@ export default function VisualDripStepsBuilder({
           {steps.map((step, idx) => (
             <React.Fragment key={idx}>
               {idx > 0 && (
-                <Stack alignItems="center" spacing={0.5} sx={{ my: -1 }}>
+                <Stack
+                  spacing={0.5}
+                  sx={{
+                    alignItems: 'center',
+                    my: -1,
+                  }}
+                >
                   <ArrowDownwardIcon sx={{ color: 'primary.main', fontSize: 18 }} />
                   <Chip
                     size="small"
@@ -189,11 +207,18 @@ export default function VisualDripStepsBuilder({
               >
                 <Stack
                   direction="row"
-                  justifyContent="space-between"
-                  alignItems="center"
-                  sx={{ mb: 1.5 }}
+                  sx={{
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    mb: 1.5,
+                  }}
                 >
-                  <Typography variant="subtitle2" fontWeight={700}>
+                  <Typography
+                    variant="subtitle2"
+                    sx={{
+                      fontWeight: 700,
+                    }}
+                  >
                     {t('visual.stepNumber', { n: idx + 1 })}
                   </Typography>
                   <Tooltip title={t('actions.delete')}>
@@ -209,7 +234,13 @@ export default function VisualDripStepsBuilder({
                 </Stack>
 
                 <Stack spacing={1.5}>
-                  <Stack direction="row" spacing={1} alignItems="center">
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{
+                      alignItems: 'center',
+                    }}
+                  >
                     <TextField
                       label={t('visual.delayLabel')}
                       type="number"

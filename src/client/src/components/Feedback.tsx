@@ -21,7 +21,12 @@ export function LoadingState({ label }: { label?: string }): React.ReactElement 
       sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, py: 8 }}
     >
       <CircularProgress size={32} aria-hidden="true" />
-      <Typography variant="body2" color="text.secondary">
+      <Typography
+        variant="body2"
+        sx={{
+          color: 'text.secondary',
+        }}
+      >
         {resolvedLabel}
       </Typography>
     </Box>
@@ -58,7 +63,13 @@ export function EmptyState({
         aria-hidden="true"
         sx={{ fontSize: 44, color: 'text.secondary', opacity: 0.6 }}
       />
-      <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 420 }}>
+      <Typography
+        variant="body2"
+        sx={{
+          color: 'text.secondary',
+          maxWidth: 420,
+        }}
+      >
         {message}
       </Typography>
       {action}

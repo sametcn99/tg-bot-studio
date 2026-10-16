@@ -137,7 +137,13 @@ export default function TemplatePicker({
             sx={{ mb: 1 }}
           />
           {templates.length === 0 ? (
-            <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'text.secondary',
+                py: 2,
+              }}
+            >
               {t('templates.empty')}
             </Typography>
           ) : (

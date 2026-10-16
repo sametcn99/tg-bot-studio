@@ -101,10 +101,20 @@ export default function BotsOverviewPage(): React.ReactElement {
                       onClick={() => navigate(`/bots/${bot.id}`)}
                     >
                       <TableCell>
-                        <Typography variant="body2" fontWeight={600}>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontWeight: 600,
+                          }}
+                        >
                           {bot.name}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: 'text.secondary',
+                          }}
+                        >
                           {bot.username ? `@${bot.username}` : `ID ${bot.id}`}
                         </Typography>
                       </TableCell>
@@ -141,7 +151,12 @@ export default function BotsOverviewPage(): React.ReactElement {
                     <Stack spacing={1}>
                       <Typography variant="subtitle2">{bot.name}</Typography>
                       <StatusDot status={bot.status} />
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: 'text.secondary',
+                        }}
+                      >
                         {t('bots.modulesSubscribers', {
                           modules: bot.activeModules,
                           subscribers: bot.subscribers,

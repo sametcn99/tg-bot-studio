@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Button, Typography } from '@mui/material';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlined';
 import { useTranslation } from 'react-i18next';
 
 /**
@@ -45,10 +45,21 @@ function ErrorFallback({ message }: { message: string }): React.ReactElement {
       }}
     >
       <ErrorOutlineIcon color="error" sx={{ fontSize: 48 }} aria-hidden="true" />
-      <Typography variant="h6" fontWeight={700}>
+      <Typography
+        variant="h6"
+        sx={{
+          fontWeight: 700,
+        }}
+      >
         {t('common.errorTitle')}
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 480 }}>
+      <Typography
+        variant="body2"
+        sx={{
+          color: 'text.secondary',
+          maxWidth: 480,
+        }}
+      >
         {message}
       </Typography>
       <Button variant="contained" onClick={() => window.location.assign('/')}>

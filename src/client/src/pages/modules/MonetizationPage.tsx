@@ -168,7 +168,12 @@ export default function MonetizationPage({
           <Card>
             <CardContent>
               <Stack spacing={2} sx={{ maxWidth: 520 }}>
-                <Typography variant="body2" color="text.secondary">
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   {module.description}
                 </Typography>
                 <ConnectionSelect

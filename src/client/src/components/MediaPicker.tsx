@@ -207,18 +207,32 @@ export default function MediaPicker({
               }}
             >
               <Box sx={{ minWidth: 0 }}>
-                <Stack direction="row" spacing={0.5} alignItems="center">
-                  <Typography variant="body2" fontWeight={600} noWrap>
+                <Stack
+                  direction="row"
+                  spacing={0.5}
+                  sx={{
+                    alignItems: 'center',
+                  }}
+                >
+                  <Typography
+                    variant="body2"
+                    noWrap
+                    sx={{
+                      fontWeight: 600,
+                    }}
+                  >
                     {asset.name}
                   </Typography>
                   <Chip size="small" label={asset.kind} />
                 </Stack>
                 <Typography
                   variant="caption"
-                  color="text.secondary"
                   noWrap
-                  sx={{ display: 'block' }}
                   title={asset.value}
+                  sx={{
+                    color: 'text.secondary',
+                    display: 'block',
+                  }}
                 >
                   {asset.value}
                 </Typography>
@@ -236,7 +250,12 @@ export default function MediaPicker({
             </Box>
           ))}
           {assets !== null && assets.length === 0 && !adding && (
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               {t('common.empty')}
             </Typography>
           )}

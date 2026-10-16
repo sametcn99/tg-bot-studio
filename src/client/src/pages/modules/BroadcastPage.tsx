@@ -225,12 +225,22 @@ export default function BroadcastPage({
       <Card key={label ?? row.id} variant="outlined">
         <CardContent sx={{ py: 2 }}>
           <Stack spacing={1}>
-            <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
               <Stack
                 direction="row"
                 spacing={1}
-                alignItems="center"
-                sx={{ flexWrap: 'wrap', gap: 0.5 }}
+                sx={{
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: 0.5,
+                }}
               >
                 {label && <Chip size="small" color="info" label={label} />}
                 <Chip size="small" label={row.target_type} />
@@ -248,11 +258,22 @@ export default function BroadcastPage({
                   }
                   label={row.status}
                 />
-                <Typography variant="caption" color="text.secondary">
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   {formatDateTime(row.created_at)}
                 </Typography>
               </Stack>
-              <Stack direction="row" spacing={1} alignItems="center">
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{
+                  alignItems: 'center',
+                }}
+              >
                 <Typography variant="caption">
                   {t('broadcast.counters', {
                     sent: row.success_count,
@@ -299,9 +320,12 @@ export default function BroadcastPage({
           <Stack spacing={2}>
             <Stack
               direction="row"
-              justifyContent="space-between"
-              alignItems="center"
-              sx={{ flexWrap: 'wrap', gap: 1 }}
+              sx={{
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: 1,
+              }}
             >
               <TextField
                 select
@@ -315,13 +339,21 @@ export default function BroadcastPage({
                 <MenuItem value="language">{t('broadcast.audienceLanguage')}</MenuItem>
                 <MenuItem value="recent">{t('broadcast.audienceRecent')}</MenuItem>
               </TextField>
-              <Stack direction="row" spacing={1} alignItems="center">
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{
+                  alignItems: 'center',
+                }}
+              >
                 <ScienceIcon fontSize="small" color={abMode ? 'primary' : 'disabled'} />
                 <Typography variant="body2">{t('broadcast.abMode')}</Typography>
                 <Switch
                   checked={abMode}
                   onChange={(event) => setAbMode(event.target.checked)}
-                  inputProps={{ 'aria-label': t('broadcast.abMode') }}
+                  slotProps={{
+                    input: { 'aria-label': t('broadcast.abMode') },
+                  }}
                 />
               </Stack>
             </Stack>
@@ -370,7 +402,13 @@ export default function BroadcastPage({
                     spacing={1}
                     sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5 }}
                   >
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Stack
+                      direction="row"
+                      sx={{
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
                       <Chip size="small" color="info" label={String.fromCharCode(65 + index)} />
                       <Stack direction="row" spacing={0.5}>
                         <Button
@@ -434,7 +472,13 @@ export default function BroadcastPage({
               </>
             ) : (
               <>
-                <Stack direction="row" spacing={1} alignItems="flex-start">
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{
+                    alignItems: 'flex-start',
+                  }}
+                >
                   <TextField
                     label={t('broadcast.messageText')}
                     multiline
@@ -453,7 +497,13 @@ export default function BroadcastPage({
                     {t('translate.openButton')}
                   </Button>
                 </Stack>
-                <Stack direction="row" spacing={1} alignItems="center">
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{
+                    alignItems: 'center',
+                  }}
+                >
                   <TextField
                     label={t('broadcast.photoUrl')}
                     value={mediaUrl}
@@ -547,7 +597,13 @@ export default function BroadcastPage({
                   );
                 })}
                 {rows !== null && rows.length === 0 && (
-                  <Typography color="text.secondary">{t('common.empty')}</Typography>
+                  <Typography
+                    sx={{
+                      color: 'text.secondary',
+                    }}
+                  >
+                    {t('common.empty')}
+                  </Typography>
                 )}
               </>
             )}

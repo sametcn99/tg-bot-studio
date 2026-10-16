@@ -14,9 +14,9 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutlined';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
@@ -100,7 +100,12 @@ export default function BotDiagnosticsDialog({
         {loading && (
           <Box sx={{ py: 4, textAlign: 'center' }}>
             <CircularProgress size={36} sx={{ mb: 2 }} />
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               {t('diagnostics.checking')}
             </Typography>
           </Box>
@@ -116,12 +121,28 @@ export default function BotDiagnosticsDialog({
           <Stack spacing={2.5}>
             {/* Summary card */}
             <Paper variant="outlined" sx={{ p: 2, bgcolor: 'background.default', borderRadius: 2 }}>
-              <Stack direction="row" justifyContent="space-between" alignItems="center">
+              <Stack
+                direction="row"
+                sx={{
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
                 <Box>
-                  <Typography variant="subtitle1" fontWeight={700}>
+                  <Typography
+                    variant="subtitle1"
+                    sx={{
+                      fontWeight: 700,
+                    }}
+                  >
                     {report.botInfo?.first_name ?? t('diagnostics.botFallback', { id: botId })}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: 'text.secondary',
+                    }}
+                  >
                     @{report.botInfo?.username ?? 'bot'} • {t('diagnostics.runtime')}:{' '}
                     {report.runtimeStatus}
                   </Typography>
@@ -140,21 +161,40 @@ export default function BotDiagnosticsDialog({
 
             {/* Checklist */}
             <Stack spacing={1.5}>
-              <Typography variant="subtitle2" fontWeight={600}>
+              <Typography
+                variant="subtitle2"
+                sx={{
+                  fontWeight: 600,
+                }}
+              >
                 {t('diagnostics.inspections')}
               </Typography>
               {report.checks.map((chk) => (
                 <Paper key={chk.key} variant="outlined" sx={{ p: 1.5, borderRadius: 1.5 }}>
-                  <Stack direction="row" spacing={1.5} alignItems="flex-start">
+                  <Stack
+                    direction="row"
+                    spacing={1.5}
+                    sx={{
+                      alignItems: 'flex-start',
+                    }}
+                  >
                     <Box sx={{ mt: 0.25 }}>{renderStatusIcon(chk.status)}</Box>
                     <Box sx={{ flex: 1 }}>
-                      <Typography variant="body2" fontWeight={600}>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontWeight: 600,
+                        }}
+                      >
                         {chk.title}
                       </Typography>
                       <Typography
                         variant="caption"
-                        color="text.secondary"
-                        sx={{ display: 'block', mt: 0.25 }}
+                        sx={{
+                          color: 'text.secondary',
+                          display: 'block',
+                          mt: 0.25,
+                        }}
                       >
                         {chk.details}
                       </Typography>
@@ -170,9 +210,11 @@ export default function BotDiagnosticsDialog({
                 <Divider sx={{ my: 1.5 }} />
                 <Typography
                   variant="subtitle2"
-                  color="warning.main"
-                  fontWeight={600}
-                  sx={{ mb: 1 }}
+                  sx={{
+                    color: 'warning.main',
+                    fontWeight: 600,
+                    mb: 1,
+                  }}
                 >
                   {t('diagnostics.advice')}
                 </Typography>

@@ -213,10 +213,12 @@ export default function Sidebar({
             </Typography>
             <Typography
               variant="caption"
-              color="text.secondary"
               noWrap
-              display="block"
-              lineHeight={1.3}
+              sx={{
+                color: 'text.secondary',
+                display: 'block',
+                lineHeight: 1.3,
+              }}
             >
               {t('app.subtitle')}
             </Typography>
@@ -408,7 +410,12 @@ export default function Sidebar({
         <Divider sx={{ my: 1 }} />
 
         {collapsed ? (
-          <Stack spacing={0.75} alignItems="center">
+          <Stack
+            spacing={0.75}
+            sx={{
+              alignItems: 'center',
+            }}
+          >
             <RailTooltip collapsed={true} title={t('nav.expandSidebar')}>
               <IconButton
                 size="small"
@@ -500,7 +507,13 @@ export default function Sidebar({
               gap: 0.75,
             }}
           >
-            <Stack direction="row" spacing={0.75} alignItems="center">
+            <Stack
+              direction="row"
+              spacing={0.75}
+              sx={{
+                alignItems: 'center',
+              }}
+            >
               {/* Language select */}
               <Tooltip title={t('nav.language')} arrow open={languageTipHover && !languageMenuOpen}>
                 <span

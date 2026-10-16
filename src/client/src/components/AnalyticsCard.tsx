@@ -71,14 +71,24 @@ export default function AnalyticsCard({ botId }: { botId: number }): React.React
       <CardContent>
         <Stack
           direction="row"
-          justifyContent="space-between"
-          alignItems="center"
-          sx={{ mb: 1.5, flexWrap: 'wrap', gap: 1 }}
+          sx={{
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: 1.5,
+            flexWrap: 'wrap',
+            gap: 1,
+          }}
         >
           <Typography variant="subtitle2" component="h3">
             {t('analytics.title')}
           </Typography>
-          <Stack direction="row" spacing={1} alignItems="center">
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              alignItems: 'center',
+            }}
+          >
             <Chip
               size="small"
               label={t('analytics.totalUsers', { count: data?.totalUsers ?? 0 })}
@@ -119,7 +129,12 @@ export default function AnalyticsCard({ botId }: { botId: number }): React.React
         ) : loading && !data ? (
           <LoadingState label={t('common.loading')} />
         ) : !chart ? (
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             {t('common.empty')}
           </Typography>
         ) : (

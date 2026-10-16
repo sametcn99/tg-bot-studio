@@ -515,7 +515,12 @@ export default function MessageScorePage({
                       <TableCell align="right">{leader.replies}</TableCell>
                       <TableCell align="right">{leader.media}</TableCell>
                       <TableCell align="right">
-                        <Typography variant="body2" fontWeight={700}>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontWeight: 700,
+                          }}
+                        >
                           {leader.score}
                         </Typography>
                       </TableCell>
@@ -524,7 +529,13 @@ export default function MessageScorePage({
                   {leaders.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={6}>
-                        <Typography color="text.secondary" align="center" sx={{ py: 2 }}>
+                        <Typography
+                          align="center"
+                          sx={{
+                            color: 'text.secondary',
+                            py: 2,
+                          }}
+                        >
                           {t('messageScore.noActivity')}
                         </Typography>
                       </TableCell>
@@ -603,16 +614,30 @@ export default function MessageScorePage({
                 </Grid>
                 <Grid size={{ xs: 6, md: 3 }}>
                   <Stack spacing={0.5}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Stack
+                      direction="row"
+                      sx={{
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
                       <Typography variant="body2">{t('messageScore.medalEmojis')}</Typography>
                       <Switch
                         size="small"
                         checked={composer.medals}
                         onChange={(event) => setComposerField('medals', event.target.checked)}
-                        inputProps={{ 'aria-label': t('messageScore.medalEmojis') }}
+                        slotProps={{
+                          input: { 'aria-label': t('messageScore.medalEmojis') },
+                        }}
                       />
                     </Stack>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Stack
+                      direction="row"
+                      sx={{
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
                       <Typography variant="body2">{t('messageScore.sendSilently')}</Typography>
                       <Switch
                         size="small"
@@ -620,7 +645,9 @@ export default function MessageScorePage({
                         onChange={(event) =>
                           setComposerField('disableNotification', event.target.checked)
                         }
-                        inputProps={{ 'aria-label': t('messageScore.sendSilently') }}
+                        slotProps={{
+                          input: { 'aria-label': t('messageScore.sendSilently') },
+                        }}
                       />
                     </Stack>
                   </Stack>
@@ -664,7 +691,12 @@ export default function MessageScorePage({
               <Divider />
               {previewError && <Alert severity="warning">{previewError}</Alert>}
               {composer.chatIds.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   {t('messageScore.previewHint')}
                 </Typography>
               ) : (
@@ -672,8 +704,11 @@ export default function MessageScorePage({
                   <Box key={preview.chatId}>
                     <Typography
                       variant="caption"
-                      color="text.secondary"
-                      sx={{ mb: 0.5, display: 'block' }}
+                      sx={{
+                        color: 'text.secondary',
+                        mb: 0.5,
+                        display: 'block',
+                      }}
                     >
                       {preview.title} · {preview.chatId}
                     </Typography>
@@ -720,9 +755,11 @@ export default function MessageScorePage({
           <CardContent>
             <Stack
               direction="row"
-              justifyContent="space-between"
-              alignItems="center"
-              sx={{ mb: 2 }}
+              sx={{
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                mb: 2,
+              }}
             >
               <Typography variant="subtitle2" component="h3">
                 {t('messageScore.schedules')}
@@ -753,8 +790,19 @@ export default function MessageScorePage({
                       return (
                         <TableRow key={row.id}>
                           <TableCell>
-                            <Stack direction="row" spacing={1} alignItems="center">
-                              <Typography variant="body2" fontWeight={600}>
+                            <Stack
+                              direction="row"
+                              spacing={1}
+                              sx={{
+                                alignItems: 'center',
+                              }}
+                            >
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  fontWeight: 600,
+                                }}
+                              >
                                 {row.name}
                               </Typography>
                               <Chip
@@ -783,9 +831,12 @@ export default function MessageScorePage({
                           <TableCell>
                             <Typography
                               variant="caption"
-                              color="text.secondary"
                               noWrap
-                              sx={{ maxWidth: 220, display: 'block' }}
+                              sx={{
+                                color: 'text.secondary',
+                                maxWidth: 220,
+                                display: 'block',
+                              }}
                             >
                               {row.last_result ?? t('messageScore.notRunYet')}
                             </Typography>
@@ -825,7 +876,13 @@ export default function MessageScorePage({
                     {schedules.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={7}>
-                          <Typography color="text.secondary" align="center" sx={{ py: 2 }}>
+                          <Typography
+                            align="center"
+                            sx={{
+                              color: 'text.secondary',
+                              py: 2,
+                            }}
+                          >
                             {t('messageScore.noSchedules')}
                           </Typography>
                         </TableCell>
@@ -937,7 +994,12 @@ export default function MessageScorePage({
                 ))}
               </TextField>
             )}
-            <Typography variant="caption" color="text.secondary">
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               {t('messageScore.targetsFromComposer', { count: composer.chatIds.length })}
             </Typography>
           </Stack>
