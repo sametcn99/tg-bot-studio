@@ -10,6 +10,9 @@
 FROM oven/bun:1.4.2-alpine AS deps
 WORKDIR /app
 COPY package.json bun.lock ./
+# Both install stages run the package's postinstall (`prisma generate`),
+# so the schema must be present in each of them.
+COPY prisma ./prisma
 RUN bun install --frozen-lockfile
 
 # ============================================================================
