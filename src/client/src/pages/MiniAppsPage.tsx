@@ -28,11 +28,13 @@ import {
   useTheme,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
 import PublishIcon from '@mui/icons-material/Publish';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../services/api';
 import PageHeader from '../components/PageHeader';
 import PhonePreview from '../components/PhonePreview';
+import ConfirmDialog from '../components/ConfirmDialog';
 import VisualMiniAppConfigBuilder from '../components/VisualMiniAppConfigBuilder';
 import { EmptyState } from '../components/Feedback';
 import { useMiniAppsDocsEntry } from '../registry/localize';
@@ -86,6 +88,7 @@ export default function MiniAppsPage(): React.ReactElement {
   const [apps, setApps] = useState<MiniApp[]>([]);
   const [selected, setSelected] = useState<MiniApp | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [previewNonce, setPreviewNonce] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [publicBaseUrl, setPublicBaseUrl] = useState(
@@ -136,6 +139,24 @@ export default function MiniAppsPage(): React.ReactElement {
     })
       .then(() => setError(null))
       .catch((err: Error) => setError(localizedErrorMessage(err)));
+  }
+
+  /**
+   * Deletes the selected app after confirmation.
+   * @returns {void}
+   */
+  function remove(): void {
+    if (!selected) return;
+    apiFetch(`/api/bots/${botId}/mini-apps/${selected.id}`, { method: 'DELETE' })
+      .then(() => {
+        setDeleteOpen(false);
+        setError(null);
+        reload();
+      })
+      .catch((err: Error) => {
+        setDeleteOpen(false);
+        setError(localizedErrorMessage(err));
+      });
   }
 
   return (
@@ -227,6 +248,13 @@ export default function MiniAppsPage(): React.ReactElement {
                         <Button variant="contained" startIcon={<PublishIcon />} onClick={publish}>
                           {t('actions.publish')}
                         </Button>
+                        <Button
+                          color="error"
+                          startIcon={<DeleteIcon />}
+                          onClick={() => setDeleteOpen(true)}
+                        >
+                          {t('actions.delete')}
+                        </Button>
                       </Stack>
 
                       <AppDataViewer botId={Number(botId)} app={selected} />
@@ -258,6 +286,14 @@ export default function MiniAppsPage(): React.ReactElement {
         botId={Number(botId)}
         onClose={() => setCreateOpen(false)}
         onCreated={reload}
+      />
+
+      <ConfirmDialog
+        open={deleteOpen}
+        title={t('miniApps.deleteTitle')}
+        message={t('miniApps.deleteConfirm', { name: selected?.name ?? '' })}
+        onConfirm={remove}
+        onCancel={() => setDeleteOpen(false)}
       />
     </Box>
   );

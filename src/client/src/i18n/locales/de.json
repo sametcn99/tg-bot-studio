@@ -313,7 +313,9 @@
     "themeLogo": "Logo-URL (Kopfzeile)",
     "themeHelp": "Wird live in der App und in der Vorschau über CSS-Variablen angewendet.",
     "templateLeaderboard": "Punkt-Bestenliste",
-    "templateSupport": "Support-Schalter"
+    "templateSupport": "Support-Schalter",
+    "deleteTitle": "Mini App löschen",
+    "deleteConfirm": "Mini App \"{{name}}\" wirklich löschen? Zugehörige Bestellungen und Formularübermittlungen werden ebenfalls entfernt. Diese Aktion kann nicht rückgängig gemacht werden."
   },
   "support": {
     "title": "Support-Desk",

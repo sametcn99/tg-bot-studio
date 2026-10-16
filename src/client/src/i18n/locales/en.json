@@ -313,7 +313,9 @@
     "themeLogo": "Logo URL (header)",
     "themeHelp": "Applied live in the app and preview via CSS variables.",
     "templateLeaderboard": "Points Leaderboard",
-    "templateSupport": "Support Desk"
+    "templateSupport": "Support Desk",
+    "deleteTitle": "Delete Mini App",
+    "deleteConfirm": "Delete the Mini App \"{{name}}\"? Its orders and form submissions will be removed as well. This action cannot be undone."
   },
   "support": {
     "title": "Support Desk",

@@ -313,7 +313,9 @@
     "themeLogo": "Logo URL'si (başlık)",
     "themeHelp": "Uygulamada ve önizlemede CSS değişkenleriyle canlı uygulanır.",
     "templateLeaderboard": "Puan Liderlik Tablosu",
-    "templateSupport": "Destek Masası"
+    "templateSupport": "Destek Masası",
+    "deleteTitle": "Mini App'i Sil",
+    "deleteConfirm": "\"{{name}}\" Mini App'i silinsin mi? Siparişleri ve form kayıtları da silinir. Bu işlem geri alınamaz."
   },
   "support": {
     "title": "Destek Masası",
