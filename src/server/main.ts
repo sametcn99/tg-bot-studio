@@ -55,19 +55,19 @@ async function bootstrap(): Promise<void> {
   expressApp.set('trust proxy', trustProxy);
 
   // Security headers. CSP allows: the app's own assets, inline styles (MUI
-  // emotion injection), Telegram's WebApp SDK for Mini App pages, and
-  // https media/frames so operator-configured remote content keeps working.
+  // emotion injection), Telegram's WebApp SDK for Mini App pages, Cloudflare Web
+  // Analytics beacons, and https media/frames for operator remote content.
   app.use(
     helmet({
       contentSecurityPolicy: {
         useDefaults: true,
         directives: {
           'default-src': ["'self'"],
-          'script-src': ["'self'", 'https://telegram.org'],
+          'script-src': ["'self'", 'https://telegram.org', 'https://static.cloudflareinsights.com'],
           'style-src': ["'self'", "'unsafe-inline'"],
           'img-src': ["'self'", 'data:', 'blob:', 'https:'],
           'media-src': ["'self'", 'blob:', 'https:'],
-          'connect-src': ["'self'", 'https:'],
+          'connect-src': ["'self'", 'https:', 'https://cloudflareinsights.com'],
           'font-src': ["'self'", 'data:'],
           'frame-src': ["'self'", 'https:'],
           'frame-ancestors': ["'self'", 'https://web.telegram.org', 'https://telegram.org'],
@@ -78,31 +78,38 @@ async function bootstrap(): Promise<void> {
       },
     }),
   );
-  // CORS is opt-in: the dashboard ships from the same origin in production.
-  // Set CORS_ORIGINS="https://a.example,https://b.example" for split hosting.
-  // Automatically incorporates configured Coolify / public app URLs if present.
-  const configuredOrigins = (process.env.CORS_ORIGINS ?? '')
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean);
-  const publicAppUrl = (
-    process.env.APP_URL ||
-    process.env.COOLIFY_URL ||
-    process.env.SERVICE_FQDN_STUDIO ||
-    ''
-  ).trim();
-  const corsOrigins = Array.from(
-    new Set([...configuredOrigins, ...(publicAppUrl ? [publicAppUrl.replace(/\/+$/, '')] : [])]),
-  );
-  if (corsOrigins.length > 0) {
+
+  // CORS configuration:
+  // Allows dashboard assets (<script type="module" crossorigin>), TMA webviews,
+  // and same-origin / proxy requests to load without restriction.
+  // Set CORS_ORIGINS="https://a.example.com,https://b.example.com" or "*" for external clients.
+  const rawCorsOrigins = (process.env.CORS_ORIGINS ?? '').trim();
+  if (rawCorsOrigins === '*' || !rawCorsOrigins) {
+    app.enableCors({
+      origin: true,
+      credentials: true,
+    });
+  } else {
+    const allowed = new Set(
+      rawCorsOrigins
+        .split(',')
+        .map((origin) => origin.trim().replace(/\/+$/, ''))
+        .filter(Boolean),
+    );
     app.enableCors({
       origin: (
         origin: string | undefined,
         callback: (err: Error | null, allow?: boolean) => void,
       ) => {
-        if (!origin || corsOrigins.includes(origin)) callback(null, true);
-        else callback(new Error('Origin not allowed by CORS'));
+        // Allow requests with no origin (curl, same-origin direct, mobile) or in allowed list
+        if (!origin || allowed.has(origin)) {
+          callback(null, true);
+        } else {
+          // Gracefully omit CORS headers without throwing an uncaught 500 error
+          callback(null, false);
+        }
       },
+      credentials: true,
     });
   }
 
