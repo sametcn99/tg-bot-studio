@@ -7,7 +7,7 @@
     "title": "Im Studio anmelden",
     "masterKey": "Master-Schlüssel",
     "submit": "Anmelden",
-    "hint": "Verwende den für diese Bereitstellung konfigurierten ADMIN_MASTER_KEY (Standard: admin123).",
+    "hint": "Verwende den für diese Bereitstellung konfigurierten ADMIN_MASTER_KEY.",
     "invalid": "Ungültiger Master-Schlüssel"
   },
   "nav": {

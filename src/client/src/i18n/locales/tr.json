@@ -7,7 +7,7 @@
     "title": "Stüdyo Girişi",
     "masterKey": "Ana Yönetici Anahtarı (Master Key)",
     "submit": "Giriş Yap",
-    "hint": "Bu kurulum için yapılandırılmış ADMIN_MASTER_KEY anahtarını kullanın (varsayılan: admin123).",
+    "hint": "Bu kurulum için yapılandırılmış ADMIN_MASTER_KEY anahtarını kullanın.",
     "invalid": "Geçersiz anahtar"
   },
   "nav": {

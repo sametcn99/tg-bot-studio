@@ -66,15 +66,6 @@ export default function LoginPage(): React.ReactElement {
             >
               {t('login.title')}
             </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                color: 'text.secondary',
-                textAlign: 'center',
-              }}
-            >
-              {t('login.hint')}
-            </Typography>
           </Stack>
           <form onSubmit={(event) => void submit(event)}>
             <Stack spacing={2}>

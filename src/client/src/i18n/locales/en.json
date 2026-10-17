@@ -7,7 +7,7 @@
     "title": "Sign in to the Studio",
     "masterKey": "Master key",
     "submit": "Sign in",
-    "hint": "Use the ADMIN_MASTER_KEY configured for this deployment (default: admin123).",
+    "hint": "Use the ADMIN_MASTER_KEY configured for this deployment.",
     "invalid": "Invalid master key"
   },
   "nav": {
