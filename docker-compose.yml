@@ -8,10 +8,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: telegram_studio
     restart: unless-stopped
-    ports:
-      - '${PORT:-3000}:3000'
+    expose:
+      - 3000
+    # In Coolify, public web traffic routes to port 3000 via the reverse proxy (Traefik/Caddy).
+    # Direct host port binding is avoided to prevent 'port is already allocated' conflicts on the host.
+    # If running locally without a reverse proxy, you can map host ports:
+    # ports:
+    #   - "${PORT:-3000}:3000"
     environment:
       # =========================================================================
       # Coolify Domain / FQDN auto-configuration
