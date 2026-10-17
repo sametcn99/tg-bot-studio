@@ -81,13 +81,24 @@ Backups are atomic (`VACUUM INTO`) and run **automatically once per UTC day** (d
 - **AI translation**: translate any studio text (welcome templates, rules, broadcasts) into a subset of the 14 supported bot languages in one provider call, then apply the result to the field.
 - **Mini App templates**: seven ready templates — e-commerce (Stars checkout), loyalty hub, forms, reward wheel, webview, points leaderboard, and a support desk that relays requests to the support module's admin chat.
 
-## Docker Deployment
+## Docker & Coolify Deployment
+
+### Standard Docker Compose
 
 ```bash
 docker compose up -d --build
 ```
 
-The container exposes port `3000`, persists SQLite data in the `./data` volume, and reports health via `GET /api/health`. `docker-compose.yml` intentionally ships **no credential defaults**: set a strong `ADMIN_MASTER_KEY` and `JWT_SECRET` in the environment (or `.env`) before deploying publicly — with `NODE_ENV=production` the server refuses to boot on the documented defaults. Run exactly **one instance** (SQLite single-writer + per-token long polling).
+The container exposes port `3000`, persists SQLite data in the named volume `tg_bot_studio_data`, and reports health via `GET /api/health`. `docker-compose.yml` supports environment variables from `.env` or your orchestrator: set strong values for `ADMIN_MASTER_KEY` and `JWT_SECRET` before deploying publicly — in `production` the server refuses to boot on fallback defaults. Run exactly **one instance** (SQLite single-writer + per-token long polling).
+
+### Deploying to Coolify
+
+This project is pre-configured for **Coolify (v4+)**:
+- **Automatic Domain & SSL**: `SERVICE_FQDN_STUDIO_3000` automatically exposes the domain input field in Coolify and generates Let's Encrypt certificates through Traefik/Caddy.
+- **Environment Management**: Environment variables can be configured directly inside the Coolify UI.
+- **Database Persistence**: SQLite data is stored in the Docker named volume `tg_bot_studio_data` to survive rebuilds and redeployments.
+
+For step-by-step instructions, see the **[Coolify Deployment Guide](COOLIFY.md)**.
 
 ## Project Structure
 

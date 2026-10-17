@@ -45,10 +45,14 @@ async function bootstrap(): Promise<void> {
   });
 
   const expressApp = app.getHttpAdapter().getInstance();
-  // Trust exactly one reverse-proxy hop so `req.ip` reflects the real client
-  // address for rate limiting while spoofed `X-Forwarded-For` chains from
-  // direct connections are ignored. Increase when chaining proxies/CDNs.
-  expressApp.set('trust proxy', 1);
+  // Trust reverse-proxy hop (default 1 for Coolify / Traefik / Nginx; set TRUST_PROXY=2 if behind Cloudflare).
+  const trustProxyEnv = process.env.TRUST_PROXY;
+  const trustProxy = trustProxyEnv
+    ? Number.isNaN(Number(trustProxyEnv))
+      ? trustProxyEnv
+      : Number(trustProxyEnv)
+    : 1;
+  expressApp.set('trust proxy', trustProxy);
 
   // Security headers. CSP allows: the app's own assets, inline styles (MUI
   // emotion injection), Telegram's WebApp SDK for Mini App pages, and
@@ -76,10 +80,20 @@ async function bootstrap(): Promise<void> {
   );
   // CORS is opt-in: the dashboard ships from the same origin in production.
   // Set CORS_ORIGINS="https://a.example,https://b.example" for split hosting.
-  const corsOrigins = (process.env.CORS_ORIGINS ?? '')
+  // Automatically incorporates configured Coolify / public app URLs if present.
+  const configuredOrigins = (process.env.CORS_ORIGINS ?? '')
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
+  const publicAppUrl = (
+    process.env.APP_URL ||
+    process.env.COOLIFY_URL ||
+    process.env.SERVICE_FQDN_STUDIO ||
+    ''
+  ).trim();
+  const corsOrigins = Array.from(
+    new Set([...configuredOrigins, ...(publicAppUrl ? [publicAppUrl.replace(/\/+$/, '')] : [])]),
+  );
   if (corsOrigins.length > 0) {
     app.enableCors({
       origin: (

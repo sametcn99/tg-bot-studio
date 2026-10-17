@@ -148,7 +148,18 @@ export class MiniAppsService {
     if (!app) throw new NotFoundException(`Mini app ${id} not found`);
     const bot = this.pool.getBot(botId);
     if (!bot) throw new StudioException('BOT_NOT_RUNNING', 'Bot is not running');
-    const base = publicBaseUrl.replace(/\/+$/, '');
+    const rawBase =
+      publicBaseUrl ||
+      process.env.APP_URL ||
+      process.env.COOLIFY_URL ||
+      process.env.SERVICE_FQDN_STUDIO ||
+      '';
+    const base = rawBase.replace(/\/+$/, '');
+    if (!base) {
+      throw new BadRequestException(
+        'Public base URL is required to publish Mini App. Provide publicBaseUrl or set APP_URL / COOLIFY_URL in environment.',
+      );
+    }
     const menuUrl = `${base}/tma/${app.slug}`;
     try {
       await bot.api.setChatMenuButton({

@@ -1,3 +1,8 @@
+# documentation: https://github.com/sametcn99/tg-bot-studio
+# slogan: Self-hosted Telegram bot & Mini App management studio
+# category: telegram, automation
+# port: 3000
+
 services:
   studio:
     build:
@@ -8,14 +13,46 @@ services:
     ports:
       - '${PORT:-3000}:3000'
     environment:
+      # =========================================================================
+      # Coolify Domain / FQDN auto-configuration
+      # Coolify detects SERVICE_FQDN_STUDIO_3000 and exposes a domain setting in
+      # the UI, routing Traefik/Caddy directly to port 3000 with automatic SSL.
+      # =========================================================================
+      - SERVICE_FQDN_STUDIO_3000
+      - SERVICE_FQDN_STUDIO
+      - APP_URL=${APP_URL:-${SERVICE_FQDN_STUDIO:-}}
       - NODE_ENV=production
       - PORT=3000
-      # No defaults: the server refuses to boot in production with the
-      # documented fallback credentials. Set real values before deploying.
-      - ADMIN_MASTER_KEY=${ADMIN_MASTER_KEY:?Set ADMIN_MASTER_KEY to a strong value}
-      - JWT_SECRET=${JWT_SECRET:?Set JWT_SECRET to a long random string}
+
+      # Master admin credentials (manageable via Coolify Environment Variables or .env)
+      - ADMIN_MASTER_KEY=${ADMIN_MASTER_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+
+      # SQLite persistent storage path inside container
       - DATA_DIR=/app/data
       - DB_PATH=/app/data/studio.sqlite
+
+      # Network, Reverse Proxy & Security settings
+      - TRUST_PROXY=${TRUST_PROXY:-1}
+      - CORS_ORIGINS=${CORS_ORIGINS:-}
+      - METRICS_BEARER_TOKEN=${METRICS_BEARER_TOKEN:-}
+      - HEALTH_ALERT_BOT_TOKEN=${HEALTH_ALERT_BOT_TOKEN:-}
+      - HEALTH_ALERT_CHAT_ID=${HEALTH_ALERT_CHAT_ID:-}
+      - WEBHOOKS_ALLOW_PRIVATE=${WEBHOOKS_ALLOW_PRIVATE:-0}
+      - DISABLE_NIGHTLY_BACKUP=${DISABLE_NIGHTLY_BACKUP:-0}
+
+      # Optional data retention policies (in days)
+      - RETENTION_AI_CHAT_DAYS=${RETENTION_AI_CHAT_DAYS:-90}
+      - RETENTION_SUPPORT_DAYS=${RETENTION_SUPPORT_DAYS:-180}
+      - RETENTION_SECURITY_LOGS_DAYS=${RETENTION_SECURITY_LOGS_DAYS:-180}
+      - RETENTION_ORDERS_DAYS=${RETENTION_ORDERS_DAYS:-365}
+      - RETENTION_LINKS_DAYS=${RETENTION_LINKS_DAYS:-90}
+      - RETENTION_HEALTH_DAYS=${RETENTION_HEALTH_DAYS:-30}
+      - RETENTION_BROADCASTS_DAYS=${RETENTION_BROADCASTS_DAYS:-180}
+      - RETENTION_SESSIONS_DAYS=${RETENTION_SESSIONS_DAYS:-30}
+      - RETENTION_FLOW_STATE_ORPHAN_DAYS=${RETENTION_FLOW_STATE_ORPHAN_DAYS:-30}
+      - RETENTION_VOLUME_KEYS_DAYS=${RETENTION_VOLUME_KEYS_DAYS:-7}
+
     # Single instance only: SQLite (one writer) and per-token long polling
     # (Telegram returns 409 for concurrent getUpdates) forbid replicas.
     deploy:
@@ -23,7 +60,8 @@ services:
         limits:
           memory: 1g
     volumes:
-      - ./data:/app/data
+      # Named volume ensures persistence across Coolify rebuilds & fixes Linux/UID permission issues
+      - studio_data:/app/data
     healthcheck:
       test:
         ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://127.0.0.1:3000/api/health']
@@ -31,3 +69,7 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+
+volumes:
+  studio_data:
+    name: tg_bot_studio_data
