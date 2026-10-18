@@ -13,7 +13,7 @@ import {
 } from '@mui/material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { useTranslation } from 'react-i18next';
-import { ConnectionSelect } from './ConnectionSelect';
+import { ConnectionSelect, ConnectionMultiSelect } from './ConnectionSelect';
 import MediaPicker from './MediaPicker';
 import AiTranslateDialog from './AiTranslateDialog';
 import type { ConfigField } from '../registry/modules';
@@ -21,9 +21,9 @@ import type { ConfigField } from '../registry/modules';
 /**
  * Renders a single registry-declared configuration field widget (text,
  * number, switch, select, textarea, string list, password, chat picker,
- * media picker) with an optional help tooltip. Shared by the bot-level
- * module config page and the per-chat override editors so both surfaces
- * always stay in sync.
+ * multi chat picker, media picker) with an optional help tooltip. Shared by
+ * the bot-level module config page and the per-chat override editors so both
+ * surfaces always stay in sync.
  * @param {object} props - Component props.
  * @param {number} props.botId - Active bot id (media picker, AI translate).
  * @param {ConfigField} props.field - Field definition.
@@ -79,6 +79,29 @@ export function ConfigFieldInput({
             label={field.label}
             value={value === undefined || value === null ? '' : String(value)}
             onChange={onChatChange}
+            types={field.connectionTypes}
+            helperText={field.help}
+          />
+        </Box>
+        {action}
+      </Stack>
+    );
+  }
+
+  if (field.type === 'chatMultiSelect') {
+    return (
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          alignItems: 'center',
+        }}
+      >
+        <Box sx={{ flexGrow: 1 }}>
+          <ConnectionMultiSelect
+            label={field.label}
+            value={Array.isArray(value) ? value.map(String) : []}
+            onChange={(next) => onChange(next)}
             types={field.connectionTypes}
             helperText={field.help}
           />

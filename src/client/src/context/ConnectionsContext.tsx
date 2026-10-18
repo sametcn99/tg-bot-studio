@@ -18,12 +18,16 @@ import { useBots } from './BotContext';
 export interface ChatConnection {
   id: number;
   bot_id: number;
+  botId?: number;
   chat_id: string;
+  chatId?: string;
   title: string;
   type: string;
   username: string | null;
   is_active: number;
+  isActive?: number;
   created_at: string | null;
+  createdAt?: string | null;
 }
 
 /**

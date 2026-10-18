@@ -106,11 +106,12 @@
       "overview": [
         "Queue posts to channels with precise dispatch times, rich media, and inline buttons.",
         "A branded watermark line is appended to captions for consistent channel identity.",
-        "Targets come from Chat Connections; the timezone offset feeds the {date} and {time} placeholders."
+        "Targets come from Chat Connections and are multi-selectable: every selected chat gets its own post.",
+        "The timezone offset feeds the {date} and {time} placeholders; the watermark can be overridden per chat."
       ],
       "setup": [
         "Add the bot as an administrator in the target channel with permission to post.",
-        "Copy the channel id (@username or numeric) into the post form.",
+        "Pick one or many connected chats in the post form — a separate post is scheduled per chat.",
         "Schedule posts; the dispatcher checks every 30 seconds.",
         "Use Broadcast for immediate announcements and the Scheduler for planned slots — the two never conflict."
       ],
@@ -123,15 +124,15 @@
     "fields": {
       "watermarkText": {
         "label": "Watermark text",
-        "help": "Appended to every scheduled caption"
+        "help": "Appended to every scheduled caption; overridable per chat below"
       },
       "timezoneOffsetMinutes": {
         "label": "Timezone offset (minutes, e.g. 180 for UTC+3)",
         "help": "Local time offset for {date} and {time} placeholders and scheduling"
       },
       "targetChatId": {
-        "label": "Target chat",
-        "help": "Pick a connected channel or group; manage the list in Chat Connections"
+        "label": "Target chats (one or many)",
+        "help": "Every selected chat receives its own scheduled post; manage the list in Chat Connections"
       },
       "messageText": {
         "label": "Message text"
@@ -743,11 +744,22 @@
       },
       "buttons": {
         "label": "Buttons (JSON array)"
+      },
+      "scope": {
+        "label": "Scope"
+      },
+      "chatId": {
+        "label": "Target chat (optional)"
+      },
+      "matchMode": {
+        "label": "Match mode"
       }
     },
     "columns": {
       "command": "Trigger",
       "response_text": "Response",
+      "scope": "Scope",
+      "chat_id": "Chat",
       "is_active": "Active"
     }
   },
@@ -1057,8 +1069,8 @@
     "description": "Forwards admin actions and automated punishments to a Telegram log channel.",
     "fields": {
       "logChatId": {
-        "label": "Log channel id",
-        "help": "Numeric channel id the bot posts logs to"
+        "label": "Log channel",
+        "help": "Channel the bot posts logs to; manage the list in Chat Connections"
       },
       "categories": {
         "label": "Categories (one per line)",

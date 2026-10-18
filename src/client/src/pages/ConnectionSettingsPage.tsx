@@ -59,20 +59,23 @@ export default function ConnectionSettingsPage(): React.ReactElement {
     return <Alert severity="error">{t('connectionSettings.connectionNotFound')}</Alert>;
   }
 
+  const activeChatId = connection.chat_id ?? connection.chatId ?? '';
+  const isActive = Boolean(connection.is_active ?? connection.isActive);
+
   // Telegram update events address chats by numeric id only; username-based
   // connections cannot carry per-chat settings.
-  const numericChatId = /^-?\d+$/.test(connection.chat_id);
+  const numericChatId = /^-?\d+$/.test(activeChatId);
 
   return (
     <Box>
       <PageHeader
         title={t('connectionSettings.title', { title: connection.title })}
-        subtitle={t('connectionSettings.subtitle', { chatId: connection.chat_id })}
+        subtitle={t('connectionSettings.subtitle', { chatId: activeChatId })}
         onBack={() => navigate(`/bots/${numericBotId}/m/connections`)}
         actions={
           <Chip
             size="small"
-            color={connection.is_active ? 'success' : 'default'}
+            color={isActive ? 'success' : 'default'}
             label={connection.type}
           />
         }
@@ -107,7 +110,7 @@ export default function ConnectionSettingsPage(): React.ReactElement {
                   botId={numericBotId}
                   module={entry}
                   botConfig={botConfigs[entry.key] ?? {}}
-                  fixedChatId={connection.chat_id}
+                  fixedChatId={activeChatId}
                 />
               </CardContent>
             </Card>

@@ -106,11 +106,12 @@
       "overview": [
         "Beiträge mit präzisen Sendezeiten, reichen Medien und Inline-Buttons in Kanäle einreihen.",
         "Eine Marken-Wasserzeichenzeile wird an Beschriftungen angehängt für eine konsistente Kanalidentität.",
-        "Ziele stammen aus Chat-Verbindungen; der Zeitzonen-Offset speist die Platzhalter {date} und {time}."
+        "Ziele stammen aus Chat-Verbindungen und sind mehrfach wählbar: jeder gewählte Chat erhält seinen eigenen Beitrag.",
+        "Der Zeitzonen-Offset speist die Platzhalter {date} und {time}; das Wasserzeichen ist pro Chat überschreibbar."
       ],
       "setup": [
         "Füge den Bot als Administrator im Zielkanal mit Veröffentlichungsrecht hinzu.",
-        "Kopiere die Kanal-ID (@Benutzername oder numerisch) in das Beitragsformular.",
+        "Wähle im Beitragsformular einen oder mehrere verbundene Chats — pro Chat wird ein eigener Beitrag geplant.",
         "Plane Beiträge; der Dispatcher prüft alle 30 Sekunden.",
         "Nutze Broadcast für sofortige Ankündigungen und den Scheduler für geplante Slots — beide kollidieren nie."
       ],
@@ -123,15 +124,15 @@
     "fields": {
       "watermarkText": {
         "label": "Wasserzeichentext",
-        "help": "Wird an jede geplante Beschriftung angehängt"
+        "help": "Wird an jede geplante Beschriftung angehängt; unten pro Chat überschreibbar"
       },
       "timezoneOffsetMinutes": {
         "label": "Zeitzonen-Offset (Minuten, z. B. 180 für UTC+3)",
         "help": "Lokaler Zeitversatz für {date}- und {time}-Platzhalter und Planung"
       },
       "targetChatId": {
-        "label": "Ziel-Chat",
-        "help": "Wähle einen verbundenen Kanal oder eine Gruppe; liste in Chat-Verbindungen verwalten"
+        "label": "Ziel-Chats (einer oder viele)",
+        "help": "Jeder gewählte Chat erhält seinen eigenen geplanten Beitrag; Liste in Chat-Verbindungen verwalten"
       },
       "messageText": {
         "label": "Nachrichtentext"
@@ -743,11 +744,22 @@
       },
       "buttons": {
         "label": "Buttons (JSON-Array)"
+      },
+      "scope": {
+        "label": "Bereich"
+      },
+      "chatId": {
+        "label": "Ziel-Chat (optional)"
+      },
+      "matchMode": {
+        "label": "Übereinstimmungsmodus"
       }
     },
     "columns": {
       "command": "Auslöser",
       "response_text": "Antwort",
+      "scope": "Bereich",
+      "chat_id": "Chat",
       "is_active": "Aktiv"
     }
   },
@@ -1057,8 +1069,8 @@
     "description": "Leitet Admin-Aktionen und automatische Strafen an einen Telegram-Log-Kanal weiter.",
     "fields": {
       "logChatId": {
-        "label": "Log-Kanal-ID",
-        "help": "Numerische Kanal-ID, in die der Bot Logs postet"
+        "label": "Log-Kanal",
+        "help": "Kanal, in den der Bot Logs postet; Liste in Chat-Verbindungen verwalten"
       },
       "categories": {
         "label": "Kategorien (eins pro Zeile)",

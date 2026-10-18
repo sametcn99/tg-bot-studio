@@ -148,9 +148,9 @@ export default function ConnectionsPage({
   function openEdit(row: ChatConnection): void {
     setEditingId(row.id);
     setForm({
-      title: row.title,
-      type: row.type,
-      chatId: row.chat_id,
+      title: row.title ?? '',
+      type: row.type ?? 'channel',
+      chatId: row.chat_id ?? row.chatId ?? '',
       username: row.username ?? '',
     });
   }
@@ -218,9 +218,10 @@ export default function ConnectionsPage({
    * @returns {void}
    */
   function toggleActive(row: ChatConnection): void {
+    const currentActive = row.is_active ?? row.isActive ?? 0;
     apiFetch(`/api/bots/${botId}/connections/${row.id}`, {
       method: 'PATCH',
-      body: JSON.stringify({ isActive: !row.is_active }),
+      body: JSON.stringify({ isActive: !currentActive }),
     })
       .then(refresh)
       .catch((err: Error) => setError(localizedErrorMessage(err)));
@@ -333,7 +334,7 @@ export default function ConnectionsPage({
                           fontFamily: 'monospace',
                         }}
                       >
-                        {row.chat_id}
+                        {row.chat_id ?? row.chatId}
                       </Typography>
                     </TableCell>
                     <TableCell>
@@ -344,7 +345,7 @@ export default function ConnectionsPage({
                     <TableCell>
                       <Switch
                         size="small"
-                        checked={Boolean(row.is_active)}
+                        checked={Boolean(row.is_active ?? row.isActive)}
                         onChange={() => toggleActive(row)}
                         slotProps={{
                           input: { 'aria-label': `${row.title} ${t('status.active')}` },
@@ -488,7 +489,7 @@ export default function ConnectionsPage({
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setForm(null)}>{t('actions.cancel')}</Button>
-          <Button variant="contained" onClick={submit} disabled={!form?.chatId.trim()}>
+          <Button variant="contained" onClick={submit} disabled={!form?.chatId?.trim()}>
             {t('actions.save')}
           </Button>
         </DialogActions>

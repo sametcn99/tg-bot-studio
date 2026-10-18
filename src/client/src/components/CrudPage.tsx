@@ -172,12 +172,21 @@ export default function CrudPage({
           seeded[field.key] = JSON.stringify(row[serverKey], null, 2);
         } else if (field.type === 'chatMultiSelect') {
           const raw = row[serverKey];
-          const list =
-            typeof raw === 'string'
-              ? (JSON.parse(raw) as unknown[])
-              : Array.isArray(raw)
-                ? raw
-                : [];
+          let list: unknown[] = [];
+          if (Array.isArray(raw)) {
+            list = raw;
+          } else if (typeof raw === 'string') {
+            // JSON-encoded lists (giveaways) parse; bare scalars
+            // (@username, numeric id) wrap into a single-entry list.
+            try {
+              const parsed = JSON.parse(raw) as unknown;
+              list = Array.isArray(parsed) ? parsed : [raw];
+            } catch {
+              list = [raw];
+            }
+          } else if (raw !== null && raw !== undefined) {
+            list = [raw];
+          }
           seeded[field.key] = list.map((entry) => String(entry));
         } else {
           seeded[field.key] = row[serverKey];
@@ -198,6 +207,10 @@ export default function CrudPage({
       mediaUrl: 'media_url',
       messageText: 'message_text',
       targetChatId: 'target_chat_id',
+      chatId: 'chat_id',
+      matchMode: 'match_mode',
+      adminOnly: 'admin_only',
+      repeatSeconds: 'repeat_seconds',
       scheduledAt: 'scheduled_at',
       winnersCount: 'winners_count',
       prizeDetails: 'prize_details',
@@ -232,6 +245,12 @@ export default function CrudPage({
       if (field.type === 'chatSelect' && typeof payload[field.key] === 'string') {
         const text = String(payload[field.key]).trim();
         payload[field.key] = /^-?\d+$/.test(text) ? Number(text) : text || undefined;
+      }
+      if (field.type === 'chatMultiSelect') {
+        const list = Array.isArray(payload[field.key]) ? payload[field.key] : [];
+        payload[field.key] = (list as unknown[])
+          .map((entry) => String(entry).trim())
+          .filter(Boolean);
       }
     }
     const url = editingId ? `/api${endpoint}/${editingId}` : `/api${endpoint}`;

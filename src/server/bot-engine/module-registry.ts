@@ -60,6 +60,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     description:
       'Schedules future channel posts with inline buttons and branded caption watermarking.',
     defaultConfig: { watermarkText: '', timezoneOffsetMinutes: 0 },
+    chatScoped: true,
   },
   {
     key: 'support',

@@ -105,15 +105,15 @@
     "fields": {
       "watermarkText": {
         "label": "Filigran metni",
-        "help": "Zamanlanmış her açıklamaya eklenir"
+        "help": "Zamanlanmış her açıklamaya eklenir; aşağıdan sohbet bazında geçersiz kılınabilir"
       },
       "timezoneOffsetMinutes": {
         "label": "Saat dilimi farkı (dakika, örn. UTC+3 için 180)",
         "help": "{date} ve {time} yer tutucuları ve zamanlama için yerel saat farkı"
       },
       "targetChatId": {
-        "label": "Hedef sohbet",
-        "help": "Bağlı bir kanal veya grup seçin; listeyi Sohbet Bağlantıları'nda yönetin"
+        "label": "Hedef sohbetler (bir veya birden fazla)",
+        "help": "Seçilen her sohbet kendi zamanlanmış gönderisini alır; listeyi Sohbet Bağlantıları'nda yönetin"
       },
       "messageText": {
         "label": "Mesaj metni"
@@ -139,11 +139,12 @@
       "overview": [
         "Kanallara tam gönderim zamanları, zengin medya ve inline butonlarla gönderi kuyruğa alın.",
         "Tutarlı kanal kimliği için açıklamalara marka filigranı satırı eklenir.",
-        "Hedefler Chat Connections'tan gelir; saat dilimi kayması {date} ve {time} yer tutucularını besler."
+        "Hedefler Sohbet Bağlantıları'ndan gelir ve çoklu seçilebilir: seçilen her sohbet kendi gönderisini alır.",
+        "Saat dilimi kayması {date} ve {time} yer tutucularını besler; filigran sohbet bazında geçersiz kılınabilir."
       ],
       "setup": [
         "Botu hedef kanala gönderim yetkisi olan bir yönetici olarak ekleyin.",
-        "Kanal kimliğini (@kullanıcı adı veya sayısal) gönderi formuna yapıştırın.",
+        "Gönderi formunda bağlı sohbetlerden bir veya birkaçını seçin — her sohbet için ayrı bir gönderi zamanlanır.",
         "Gönderileri zamanlayın; dağıtıcı 30 saniyede bir kontrol eder.",
         "Anlık duyurular için Broadcast, planlı aralıklar için Scheduler kullanın — ikisi çatışmaz."
       ],
@@ -726,11 +727,22 @@
       },
       "buttons": {
         "label": "Butonlar (JSON dizisi)"
+      },
+      "scope": {
+        "label": "Kapsam"
+      },
+      "chatId": {
+        "label": "Hedef sohbet (isteğe bağlı)"
+      },
+      "matchMode": {
+        "label": "Eşleşme modu"
       }
     },
     "columns": {
       "command": "Tetikleyici",
       "response_text": "Yanıt",
+      "scope": "Kapsam",
+      "chat_id": "Sohbet",
       "is_active": "Aktif"
     },
     "docs": {
@@ -1057,8 +1069,8 @@
     "description": "Admin aksiyonlarını ve otomatik cezaları Telegram günlük kanalına iletir.",
     "fields": {
       "logChatId": {
-        "label": "Günlük kanalı id",
-        "help": "Botun günlükleri gönderdiği sayısal kanal id"
+        "label": "Günlük kanalı",
+        "help": "Botun günlükleri gönderdiği kanal; listeyi Sohbet Bağlantıları'nda yönetin"
       },
       "categories": {
         "label": "Kategoriler (satır başına bir)",

@@ -24,6 +24,7 @@ export class AutoresponderService {
    * Creates a rule.
    */
   async create(botId: number, data: Record<string, unknown>): Promise<AutoresponderRow> {
+    const rawChatId = data.chatId !== undefined ? data.chatId : data.chat_id;
     const item = await this.autoresponderModel.create({
       botId,
       command: String(data.command ?? ''),
@@ -33,6 +34,14 @@ export class AutoresponderService {
         ? JSON.stringify(data.buttons)
         : ((data.buttonsJson as string) ?? (data.buttons_json as string) ?? null),
       isActive: data.isActive === false || data.is_active === 0 ? 0 : 1,
+      chatId:
+        rawChatId !== undefined && rawChatId !== null && String(rawChatId).trim() !== ''
+          ? String(rawChatId).trim()
+          : null,
+      scope: String(data.scope ?? 'all'),
+      matchMode: String(data.matchMode ?? data.match_mode ?? 'keyword'),
+      adminOnly: data.adminOnly === true || data.adminOnly === 1 || data.admin_only === 1 ? 1 : 0,
+      repeatSeconds: Number(data.repeatSeconds ?? data.repeat_seconds ?? 0),
     });
     return toAutoresponderRow(item);
   }
@@ -46,6 +55,7 @@ export class AutoresponderService {
     data: Record<string, unknown>,
   ): Promise<AutoresponderRow> {
     const existing = await this.findOne(botId, id);
+    const rawChatId = data.chatId !== undefined ? data.chatId : data.chat_id;
     const updated = await this.autoresponderModel.update(id, {
       command: data.command !== undefined ? String(data.command) : existing.command,
       responseText:
@@ -78,6 +88,35 @@ export class AutoresponderService {
               ? 1
               : 0
             : existing.is_active,
+      chatId:
+        rawChatId !== undefined
+          ? rawChatId !== null && String(rawChatId).trim() !== ''
+            ? String(rawChatId).trim()
+            : null
+          : existing.chat_id,
+      scope: data.scope !== undefined ? String(data.scope) : existing.scope,
+      matchMode:
+        data.matchMode !== undefined
+          ? String(data.matchMode)
+          : data.match_mode !== undefined
+            ? String(data.match_mode)
+            : existing.match_mode,
+      adminOnly:
+        data.adminOnly !== undefined
+          ? data.adminOnly === true || data.adminOnly === 1
+            ? 1
+            : 0
+          : data.admin_only !== undefined
+            ? data.admin_only === 1
+              ? 1
+              : 0
+            : existing.admin_only,
+      repeatSeconds:
+        data.repeatSeconds !== undefined
+          ? Number(data.repeatSeconds)
+          : data.repeat_seconds !== undefined
+            ? Number(data.repeat_seconds)
+            : existing.repeat_seconds,
     });
     return toAutoresponderRow(updated);
   }

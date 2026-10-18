@@ -40,7 +40,7 @@ interface ChatSettingsSnapshot {
 
 /** Display title for a chat id, falling back to the raw id. */
 function chatLabelFor(connections: ChatConnection[], chatId: string): string {
-  const conn = connections.find((row) => row.chat_id === chatId);
+  const conn = connections.find((row) => (row.chat_id ?? row.chatId) === chatId);
   return conn ? `${conn.title}` : chatId;
 }
 
@@ -103,12 +103,12 @@ export function ChatOverrideSection({
   const groups = useMemo(
     () =>
       connections.filter(
-        (row) => /^-?\d+$/.test(row.chat_id) && (row.type === 'group' || row.type === 'supergroup'),
+        (row) => /^-?\d+$/.test(row.chat_id ?? row.chatId ?? '') && (row.type === 'group' || row.type === 'supergroup'),
       ),
     [connections],
   );
   const channels = useMemo(
-    () => connections.filter((row) => /^-?\d+$/.test(row.chat_id) && row.type === 'channel'),
+    () => connections.filter((row) => /^-?\d+$/.test(row.chat_id ?? row.chatId ?? '') && row.type === 'channel'),
     [connections],
   );
 
@@ -190,21 +190,27 @@ export function ChatOverrideSection({
                 {t('chatOverrides.groups')}
               </MenuItem>
             )}
-            {groups.map((row) => (
-              <MenuItem key={row.chat_id} value={row.chat_id}>
-                {row.title} · {row.chat_id}
-              </MenuItem>
-            ))}
+            {groups.map((row) => {
+              const id = row.chat_id ?? row.chatId ?? '';
+              return (
+                <MenuItem key={id} value={id}>
+                  {row.title} · {id}
+                </MenuItem>
+              );
+            })}
             {channels.length > 0 && (
               <MenuItem disabled dense>
                 {t('chatOverrides.channels')}
               </MenuItem>
             )}
-            {channels.map((row) => (
-              <MenuItem key={row.chat_id} value={row.chat_id}>
-                {row.title} · {row.chat_id}
-              </MenuItem>
-            ))}
+            {channels.map((row) => {
+              const id = row.chat_id ?? row.chatId ?? '';
+              return (
+                <MenuItem key={id} value={id}>
+                  {row.title} · {id}
+                </MenuItem>
+              );
+            })}
           </TextField>
 
           {Object.keys(overrides).length > 0 ? (

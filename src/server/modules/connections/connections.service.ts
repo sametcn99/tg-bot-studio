@@ -13,9 +13,40 @@ import { BotPoolService } from '../../bot-engine/bot-pool.service';
 import { StudioException } from '../../common/errors/studio-error';
 
 /**
- * Connection row shape.
+ * Connection row shape exposing both camelCase and snake_case properties
+ * for seamless compatibility across client components.
  */
-export type ChatConnectionRow = ChatConnection;
+export interface ChatConnectionRow {
+  id: number;
+  botId: number;
+  bot_id: number;
+  chatId: string;
+  chat_id: string;
+  title: string;
+  type: string;
+  username: string | null;
+  isActive: number;
+  is_active: number;
+  createdAt: string | null;
+  created_at: string | null;
+}
+
+export function toChatConnectionRow(item: ChatConnection): ChatConnectionRow {
+  return {
+    id: item.id,
+    botId: item.botId,
+    bot_id: item.botId,
+    chatId: item.chatId,
+    chat_id: item.chatId,
+    title: item.title,
+    type: item.type,
+    username: item.username,
+    isActive: item.isActive,
+    is_active: item.isActive,
+    createdAt: item.createdAt,
+    created_at: item.createdAt,
+  };
+}
 
 /** Allowed connection type values. */
 const CHAT_TYPES: readonly string[] = ['channel', 'group', 'supergroup'];
@@ -94,14 +125,16 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
    * Lists every connection of a bot.
    */
   async list(botId: number): Promise<ChatConnectionRow[]> {
-    return this.connectionModel.listConnections(botId);
+    const list = await this.connectionModel.listConnections(botId);
+    return list.map(toChatConnectionRow);
   }
 
   /**
    * Creates a connection.
    */
   async create(botId: number, data: Record<string, unknown>): Promise<ChatConnectionRow> {
-    const chatId = normalizeChatId(data.chatId);
+    const rawChatId = data.chatId !== undefined ? data.chatId : data.chat_id;
+    const chatId = normalizeChatId(rawChatId);
     const type = normalizeType(data.type);
     const title = String(data.title ?? '').trim() || chatId;
 
@@ -110,7 +143,14 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
       throw new StudioException('CHAT_ALREADY_CONNECTED', `${chatId} is already connected`);
     }
 
-    return this.connectionModel.createConnection({
+    const isActive =
+      data.isActive !== undefined
+        ? data.isActive === false || data.isActive === 0 ? 0 : 1
+        : data.is_active !== undefined
+          ? data.is_active === false || data.is_active === 0 ? 0 : 1
+          : 1;
+
+    const row = await this.connectionModel.createConnection({
       botId,
       chatId,
       title,
@@ -120,8 +160,9 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
         : chatId.startsWith('@')
           ? chatId.slice(1)
           : null,
-      isActive: data.isActive === false ? 0 : 1,
+      isActive,
     });
+    return toChatConnectionRow(row);
   }
 
   /**
@@ -133,7 +174,8 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
     data: Record<string, unknown>,
   ): Promise<ChatConnectionRow> {
     const existing = await this.getOrFail(botId, id);
-    const chatId = data.chatId === undefined ? existing.chatId : normalizeChatId(data.chatId);
+    const rawChatId = data.chatId !== undefined ? data.chatId : data.chat_id;
+    const chatId = rawChatId === undefined ? existing.chatId : normalizeChatId(rawChatId);
 
     if (chatId !== existing.chatId) {
       const duplicate = await this.connectionModel.findConnectionByChatId(botId, chatId);
@@ -149,13 +191,21 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
           : null
         : existing.username;
 
-    return this.connectionModel.updateConnection(id, {
+    const isActive =
+      data.isActive !== undefined
+        ? data.isActive ? 1 : 0
+        : data.is_active !== undefined
+          ? data.is_active ? 1 : 0
+          : existing.isActive;
+
+    const row = await this.connectionModel.updateConnection(id, {
       chatId,
       title: data.title === undefined ? existing.title : String(data.title).trim() || chatId,
       type: data.type === undefined ? existing.type : normalizeType(data.type),
       username,
-      isActive: data.isActive === undefined ? existing.isActive : data.isActive ? 1 : 0,
+      isActive,
     });
+    return toChatConnectionRow(row);
   }
 
   /**
@@ -256,6 +306,6 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
   private async getOrFail(botId: number, id: number): Promise<ChatConnectionRow> {
     const row = await this.connectionModel.findConnectionById(botId, id);
     if (!row) throw new NotFoundException(`Connection ${id} not found`);
-    return row;
+    return toChatConnectionRow(row);
   }
 }

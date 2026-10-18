@@ -10,10 +10,10 @@
  * @interface ConfigField
  * @property {string} key - Config object key.
  * @property {string} label - Display label.
- * @property {'text'|'number'|'switch'|'select'|'textarea'|'stringList'|'password'|'chatSelect'|'mediaSelect'} type - Widget type.
+ * @property {'text'|'number'|'switch'|'select'|'textarea'|'stringList'|'password'|'chatSelect'|'chatMultiSelect'|'mediaSelect'} type - Widget type.
  * @property {string[]} [options] - Choices for select fields.
  * @property {string} [help] - Tooltip text.
- * @property {string[]} [connectionTypes] - Connection type filter for chatSelect fields.
+ * @property {string[]} [connectionTypes] - Connection type filter for chatSelect/chatMultiSelect fields.
  */
 export interface ConfigField {
   key: string;
@@ -27,6 +27,7 @@ export interface ConfigField {
     | 'stringList'
     | 'password'
     | 'chatSelect'
+    | 'chatMultiSelect'
     | 'mediaSelect';
   options?: string[];
   help?: string;
@@ -281,12 +282,13 @@ export const MODULES: ModuleEntry[] = [
     category: 'Directory & Content',
     description: 'Timed channel posts with inline buttons and caption watermark.',
     pageType: 'crud',
+    chatScoped: true,
     configFields: [
       {
         key: 'watermarkText',
         label: 'Watermark text',
         type: 'text',
-        help: 'Appended to every scheduled caption',
+        help: 'Appended to every scheduled caption; overridable per chat below',
       },
       {
         key: 'timezoneOffsetMinutes',
@@ -306,9 +308,9 @@ export const MODULES: ModuleEntry[] = [
       formFields: [
         {
           key: 'targetChatId',
-          label: 'Target chat',
-          type: 'chatSelect',
-          help: 'Pick a connected channel or group; manage the list in Chat Connections',
+          label: 'Target chats (one or many)',
+          type: 'chatMultiSelect',
+          help: 'Every selected chat receives its own scheduled post; manage the list in Chat Connections',
         },
         { key: 'messageText', label: 'Message text', type: 'textarea' },
         { key: 'mediaUrl', label: 'Media URL (photo/video)', type: 'text' },
@@ -321,7 +323,7 @@ export const MODULES: ModuleEntry[] = [
         { key: 'scheduledAt', label: 'Dispatch at (UTC ISO)', type: 'datetime' },
       ],
       initialForm: {
-        targetChatId: '',
+        targetChatId: [],
         messageText: '',
         mediaUrl: '',
         buttons: '',
@@ -332,11 +334,12 @@ export const MODULES: ModuleEntry[] = [
       overview: [
         'Queue posts to channels with precise dispatch times, rich media, and inline buttons.',
         'A branded watermark line is appended to captions for consistent channel identity.',
-        'Targets come from Chat Connections; the timezone offset feeds the {date} and {time} placeholders.',
+        'Targets come from Chat Connections and are multi-selectable: every selected chat gets its own post.',
+        'The timezone offset feeds the {date} and {time} placeholders; the watermark can be overridden per chat.',
       ],
       setup: [
-        'Add the bot as an administrator in the target channel with permission to post.',
-        'Copy the channel id (@username or numeric) into the post form.',
+        'Add the bot as an administrator in the target channels with permission to post.',
+        'Pick one or many connected chats in the post form — a separate post is scheduled per chat.',
         'Schedule posts; the dispatcher checks every 30 seconds.',
         'Use Broadcast for immediate announcements and the Scheduler for planned slots — the two never conflict.',
       ],
@@ -938,15 +941,42 @@ export const MODULES: ModuleEntry[] = [
       columns: [
         { key: 'command', label: 'Trigger' },
         { key: 'response_text', label: 'Response' },
+        { key: 'scope', label: 'Scope' },
+        { key: 'chat_id', label: 'Chat' },
         { key: 'is_active', label: 'Active', type: 'bool' },
       ],
       formFields: [
         { key: 'command', label: 'Command (/price) or keyword', type: 'text' },
         { key: 'responseText', label: 'Response text', type: 'textarea' },
+        {
+          key: 'scope',
+          label: 'Scope',
+          type: 'select',
+          options: ['all', 'private', 'group', 'channel'],
+        },
+        {
+          key: 'chatId',
+          label: 'Target chat (optional)',
+          type: 'chatSelect',
+        },
+        {
+          key: 'matchMode',
+          label: 'Match mode',
+          type: 'select',
+          options: ['keyword', 'exact', 'prefix', 'hashtag'],
+        },
         { key: 'mediaUrl', label: 'Photo URL', type: 'text' },
         { key: 'buttons', label: 'Buttons (JSON array)', type: 'json' },
       ],
-      initialForm: { command: '', responseText: '', mediaUrl: '', buttons: '' },
+      initialForm: {
+        command: '',
+        responseText: '',
+        scope: 'all',
+        chatId: '',
+        matchMode: 'keyword',
+        mediaUrl: '',
+        buttons: '',
+      },
     },
     docs: {
       overview: [
@@ -1274,9 +1304,10 @@ export const MODULES: ModuleEntry[] = [
     configFields: [
       {
         key: 'logChatId',
-        label: 'Log channel id',
-        type: 'number',
-        help: 'Numeric channel id the bot posts logs to',
+        label: 'Log channel',
+        type: 'chatSelect',
+        connectionTypes: ['channel'],
+        help: 'Channel the bot posts logs to; manage the list in Chat Connections',
       },
       {
         key: 'categories',

@@ -18,7 +18,11 @@ import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../../services/api';
 import PageHeader from '../../components/PageHeader';
 import { useModuleDocs } from '../../context/ModuleDocsContext';
-import { ConnectionSelect, NoConnectionsNotice } from '../../components/ConnectionSelect';
+import {
+  ConnectionSelect,
+  ConnectionMultiSelect,
+  NoConnectionsNotice,
+} from '../../components/ConnectionSelect';
 import UserPicker from '../../components/UserPicker';
 import DataTable, { type Column } from '../../components/DataTable';
 import { useConnections } from '../../context/ConnectionsContext';
@@ -63,11 +67,12 @@ export default function MonetizationPage({
   const [tab, setTab] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [sendingPaid, setSendingPaid] = useState(false);
   const { openDocs } = useModuleDocs();
   const [vip, setVip] = useState<VipRow[]>([]);
 
   const [mediaForm, setMediaForm] = useState({
-    chatId: '',
+    chatIds: [] as string[],
     mediaType: 'photo',
     mediaUrl: '',
     caption: '',
@@ -87,24 +92,41 @@ export default function MonetizationPage({
   }, [botId]);
 
   /**
-   * Sends a Stars-locked paid media message.
+   * Sends a Stars-locked paid media message to every selected chat.
    * @returns {void}
    */
   function sendPaidMedia(): void {
     setError(null);
     setStatus(null);
-    apiFetch(`/api/bots/${botId}/monetization/paid-media/send`, {
-      method: 'POST',
-      body: JSON.stringify({
-        chatId: mediaForm.chatId,
-        mediaType: mediaForm.mediaType,
-        mediaUrl: mediaForm.mediaUrl,
-        caption: mediaForm.caption,
-        starCount: Number(mediaForm.starCount),
-      }),
-    })
-      .then(() => setStatus(t('monetization.paidMediaSent')))
-      .catch((err: Error) => setError(localizedErrorMessage(err)));
+    if (mediaForm.chatIds.length === 0) {
+      setError(t('monetization.pickTargetChat'));
+      return;
+    }
+    const chatIds = [...mediaForm.chatIds];
+    setSendingPaid(true);
+    const sendNext = (index: number): void => {
+      if (index >= chatIds.length) {
+        setSendingPaid(false);
+        setStatus(t('monetization.paidMediaSent'));
+        return;
+      }
+      apiFetch(`/api/bots/${botId}/monetization/paid-media/send`, {
+        method: 'POST',
+        body: JSON.stringify({
+          chatId: chatIds[index],
+          mediaType: mediaForm.mediaType,
+          mediaUrl: mediaForm.mediaUrl,
+          caption: mediaForm.caption,
+          starCount: Number(mediaForm.starCount),
+        }),
+      })
+        .then(() => sendNext(index + 1))
+        .catch((err: Error) => {
+          setSendingPaid(false);
+          setError(`${chatIds[index]}: ${localizedErrorMessage(err)}`);
+        });
+    };
+    sendNext(0);
   }
 
   /**
@@ -176,10 +198,10 @@ export default function MonetizationPage({
                 >
                   {module.description}
                 </Typography>
-                <ConnectionSelect
+                <ConnectionMultiSelect
                   label={t('monetization.targetChat')}
-                  value={mediaForm.chatId}
-                  onChange={(value) => setMediaForm({ ...mediaForm, chatId: value })}
+                  value={mediaForm.chatIds}
+                  onChange={(chatIds) => setMediaForm({ ...mediaForm, chatIds })}
                   helperText={t('monetization.targetChatHelp')}
                 />
                 <TextField
@@ -218,8 +240,13 @@ export default function MonetizationPage({
                   }
                 />
                 <Box>
-                  <Button variant="contained" startIcon={<PaidIcon />} onClick={sendPaidMedia}>
-                    {t('monetization.sendPaidMedia')}
+                  <Button
+                    variant="contained"
+                    startIcon={<PaidIcon />}
+                    onClick={sendPaidMedia}
+                    disabled={sendingPaid || mediaForm.chatIds.length === 0}
+                  >
+                    {sendingPaid ? t('common.saving') : t('monetization.sendPaidMedia')}
                   </Button>
                 </Box>
               </Stack>

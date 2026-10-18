@@ -68,15 +68,18 @@ export function NoConnectionsNotice({
  * @returns {Array<{value: string; label: string}>} Menu options.
  */
 function buildOptions(
-  connections: Array<{ chat_id: string; title: string; type: string }>,
+  connections: Array<{ chat_id?: string; chatId?: string; title: string; type: string }>,
   types: string[] | undefined,
   currentValues: string[],
 ): Array<{ value: string; label: string }> {
   const pool = types?.length ? connections.filter((row) => types.includes(row.type)) : connections;
-  const options = pool.map((row) => ({
-    value: String(row.chat_id),
-    label: `${row.title} · ${row.chat_id}`,
-  }));
+  const options = pool.map((row) => {
+    const id = String(row.chat_id ?? row.chatId ?? '');
+    return {
+      value: id,
+      label: `${row.title} · ${id}`,
+    };
+  });
   for (const value of currentValues) {
     if (value && !options.some((option) => option.value === value)) {
       options.unshift({ value, label: `${value} (manual)` });

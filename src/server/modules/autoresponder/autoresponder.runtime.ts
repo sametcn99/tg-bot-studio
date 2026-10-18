@@ -57,25 +57,30 @@ export class AutoresponderRuntime extends BotModuleHandler {
   register(ctx: ModuleRuntimeContext): void {
     const { bot } = ctx;
 
-    bot.on('message:text', async (update) => {
-      const isPrivate = update.chat?.type === 'private';
-      const isGroup = update.chat?.type === 'supergroup' || update.chat?.type === 'group';
-      if (!isPrivate && !isGroup) return;
-      const text = update.msg.text.trim();
+    bot.on(['message:text', 'channel_post:text'], async (update) => {
+      const chatType = update.chat?.type;
+      const isPrivate = chatType === 'private';
+      const isGroup = chatType === 'supergroup' || chatType === 'group';
+      const isChannel = chatType === 'channel';
+      if (!isPrivate && !isGroup && !isChannel) return;
+      const text = (update.msg?.text ?? '').trim();
+      if (!text) return;
       const from = update.from;
-      if (!from || from.id === bot.botInfo?.id) return;
-      if (from.is_bot && isGroup) return;
+      if (from && from.id === bot.botInfo?.id) return;
+      if (from && from.is_bot && isGroup) return;
 
       const chatId = String(update.chat!.id);
       const templateCtx: TemplateContext = {
-        first_name: from.first_name,
-        last_name: from.last_name,
-        username: from.username,
-        user_id: from.id,
-        mention: from.username
+        first_name: from?.first_name ?? update.chat?.title ?? '',
+        last_name: from?.last_name ?? '',
+        username: from?.username ?? update.chat?.username ?? '',
+        user_id: from?.id ?? 0,
+        mention: from?.username
           ? `@${from.username}`
-          : `<a href="tg://user?id=${from.id}">${from.first_name}</a>`,
-        group_name: update.chat.title,
+          : from
+            ? `<a href="tg://user?id=${from.id}">${from.first_name}</a>`
+            : update.chat?.title ?? '',
+        group_name: update.chat?.title,
         bot_name: bot.botInfo?.first_name ?? '',
         date: new Date().toISOString().slice(0, 10),
         time: new Date().toISOString().slice(11, 16),
@@ -93,11 +98,20 @@ export class AutoresponderRuntime extends BotModuleHandler {
       }
 
       const rules = (await this.service.list(ctx.botId)).filter((rule) => rule.is_active);
-      const matched = await this.findMatch(update, rules, text, chatId, isPrivate, ctx.botId);
+      const matched = await this.findMatch(
+        update,
+        rules,
+        text,
+        chatId,
+        isPrivate,
+        isGroup,
+        isChannel,
+        ctx.botId,
+      );
       if (!matched) return;
 
-      // {admin} fillings: admin-only rules stay silent for regular users.
-      if (matched.admin_only === 1 && isGroup) {
+      // {admin} fillings: admin-only rules stay silent for regular users in groups.
+      if (matched.admin_only === 1 && isGroup && from) {
         const isAdmin = await this.adminGate.isAdmin(update.api, Number(chatId), from.id);
         if (!isAdmin) return;
       }
@@ -114,6 +128,8 @@ export class AutoresponderRuntime extends BotModuleHandler {
    * @param {string} text - Raw message text.
    * @param {string} chatId - Chat scope id.
    * @param {boolean} isPrivate - Whether the chat is private.
+   * @param {boolean} isGroup - Whether the chat is a group/supergroup.
+   * @param {boolean} isChannel - Whether the chat is a channel.
    * @param {number} botId - Studio bot id.
    * @returns {Promise<AutoresponderRow | undefined>} Matched rule.
    */
@@ -123,23 +139,30 @@ export class AutoresponderRuntime extends BotModuleHandler {
     text: string,
     chatId: string,
     isPrivate: boolean,
+    isGroup: boolean,
+    isChannel: boolean,
     botId: number,
   ): Promise<AutoresponderRow | undefined> {
-    void update;
     void botId;
-    const scoped = rules.filter((rule) => this.inScope(rule, chatId, isPrivate));
+    const scoped = rules.filter((rule) => this.inScope(rule, chatId, isPrivate, isGroup, isChannel));
     const lower = text.toLowerCase();
     const normalized = normalizeText(text);
-    const commandText = lower.split(/[\s@]/)[0];
+
+    const firstWord = lower.split(/\s+/)[0];
+    const [rawCmd, targetBot] = firstWord.split('@');
+    const botUsername = update.me?.username?.toLowerCase();
+    const isTargetedAtUs = !targetBot || !botUsername || targetBot === botUsername;
 
     return (
       // 1. Exact /command rules.
-      scoped.find(
-        (rule) =>
-          rule.command.startsWith('/') &&
-          !rule.command.includes(' ') &&
-          rule.command.toLowerCase() === commandText,
-      ) ??
+      (isTargetedAtUs
+        ? scoped.find(
+            (rule) =>
+              rule.command.startsWith('/') &&
+              !rule.command.includes(' ') &&
+              rule.command.toLowerCase() === rawCmd,
+          )
+        : undefined) ??
       // 2. Hashtag notes: "#trigger" anywhere in the text.
       scoped.find((rule) => {
         const mode = rule.match_mode ?? 'keyword';
@@ -172,13 +195,26 @@ export class AutoresponderRuntime extends BotModuleHandler {
   }
 
   /**
-   * Checks a rule's chat scope: private, group, or both; global (chatId
-   * null) or pinned to a single chat.
+   * Checks a rule's chat scope: all, private, group, or channel; global (chatId
+   * null or empty) or pinned to a single chat.
    */
-  private inScope(rule: AutoresponderRow, chatId: string, isPrivate: boolean): boolean {
-    if (rule.chat_id && rule.chat_id !== chatId) return false;
-    const scope = rule.scope ?? 'private';
-    return scope === 'both' || (isPrivate ? scope === 'private' : scope === 'group');
+  private inScope(
+    rule: AutoresponderRow,
+    chatId: string,
+    isPrivate: boolean,
+    isGroup: boolean,
+    isChannel: boolean,
+  ): boolean {
+    const ruleChatId = rule.chat_id ?? (rule as unknown as { chatId?: string }).chatId;
+    if (ruleChatId && String(ruleChatId).trim() && String(ruleChatId).trim() !== 'all') {
+      if (String(ruleChatId).trim() !== chatId) return false;
+    }
+    const scope = (rule.scope ?? 'all').toLowerCase();
+    if (scope === 'all' || scope === 'both') return true;
+    if (isPrivate && scope === 'private') return true;
+    if (isGroup && (scope === 'group' || scope === 'groups')) return true;
+    if (isChannel && (scope === 'channel' || scope === 'channels')) return true;
+    return false;
   }
 
   /**

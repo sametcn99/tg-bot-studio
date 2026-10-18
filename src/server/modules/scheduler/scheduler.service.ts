@@ -1,9 +1,17 @@
-import { Injectable, Logger, NotFoundException, OnApplicationShutdown } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  OnApplicationShutdown,
+} from '@nestjs/common';
 import { InlineKeyboard } from 'grammy';
 import { BotPoolService } from '../../bot-engine/bot-pool.service';
+import { ChatSettingsService } from '../../bot-engine/chat-settings.service';
 import { renderTemplate } from '../../common/utils/template.util';
 import { safeTimeZone, wallTimeToUtc } from '../../common/utils/tz.util';
 import { safeJsonObjectParse } from '../../common/utils/json.util';
+import { normalizeChatTargets } from '../../common/utils/chat-targets.util';
 import { SystemSettingsService } from '../../database/system-settings.service';
 import { SchedulerModel } from './scheduler.model';
 import { toScheduledPostRow } from './scheduler.mapper';
@@ -30,6 +38,7 @@ export class SchedulerService implements OnApplicationShutdown {
     private readonly botModel: BotModel,
     private readonly pool: BotPoolService,
     private readonly settings: SystemSettingsService,
+    private readonly chatSettings: ChatSettingsService,
   ) {
     this.ticker = setInterval(() => {
       void this.dispatchDue().catch((error: Error) =>
@@ -98,30 +107,43 @@ export class SchedulerService implements OnApplicationShutdown {
   }
 
   /**
-   * Creates a scheduled post.
+   * Creates scheduled posts. The multi-select target picker submits one or
+   * many chat ids (`targetChatId` array or the legacy single value); one
+   * ScheduledPost row is created per target so each chat dispatches,
+   * retries, and reports independently.
    */
-  async create(botId: number, data: Record<string, unknown>): Promise<ScheduledPostRow> {
+  async create(botId: number, data: Record<string, unknown>): Promise<ScheduledPostRow[]> {
     const scheduledAt = await this.toUtcInstant(
       botId,
       String(data.scheduledAt ?? new Date().toISOString()),
     );
 
-    const target = data.targetChatId;
-    const targetChatId =
-      typeof target === 'string' && target.startsWith('@') ? target : String(target ?? 0);
-    const created = await this.schedulerModel.create({
-      botId,
-      targetChatId,
-      messageText: String(data.messageText ?? ''),
-      mediaUrl: (data.mediaUrl as string) || null,
-      buttonsJson: data.buttons ? JSON.stringify(data.buttons) : null,
-      scheduledAt,
-    });
-    return toScheduledPostRow(created);
+    const targets = normalizeChatTargets(data.targetChatId);
+    if (targets.length === 0) {
+      throw new BadRequestException('At least one target chat is required');
+    }
+    const created: ScheduledPostRow[] = [];
+    for (const targetChatId of targets) {
+      created.push(
+        toScheduledPostRow(
+          await this.schedulerModel.create({
+            botId,
+            targetChatId,
+            messageText: String(data.messageText ?? ''),
+            mediaUrl: (data.mediaUrl as string) || null,
+            buttonsJson: data.buttons ? JSON.stringify(data.buttons) : null,
+            scheduledAt,
+          }),
+        ),
+      );
+    }
+    return created;
   }
 
   /**
-   * Updates a scheduled post (only while pending).
+   * Updates a pending post (only while pending). Retargeting to multiple
+   * chats keeps this row for the first target and clones pending posts for
+   * every additional target.
    */
   async update(
     botId: number,
@@ -134,11 +156,12 @@ export class SchedulerService implements OnApplicationShutdown {
         ? await this.toUtcInstant(botId, String(data.scheduledAt))
         : existing.scheduled_at;
 
-    const target = data.targetChatId !== undefined ? data.targetChatId : existing.target_chat_id;
-    const targetChatId =
-      typeof target === 'string' && target.startsWith('@') ? target : String(target ?? 0);
+    const targets = normalizeChatTargets(
+      data.targetChatId !== undefined ? data.targetChatId : existing.target_chat_id,
+    );
+    const primary = targets[0] ?? String(existing.target_chat_id ?? 0);
     const updated = await this.schedulerModel.update(id, {
-      targetChatId,
+      targetChatId: primary,
       messageText:
         data.messageText !== undefined ? String(data.messageText) : existing.message_text,
       mediaUrl:
@@ -146,6 +169,18 @@ export class SchedulerService implements OnApplicationShutdown {
       buttonsJson: data.buttons ? JSON.stringify(data.buttons) : existing.buttons_json,
       scheduledAt,
     });
+
+    // Fan out additional targets as clones of the updated post.
+    for (const extra of targets.slice(1)) {
+      await this.schedulerModel.create({
+        botId,
+        targetChatId: extra,
+        messageText: updated.messageText,
+        mediaUrl: updated.mediaUrl,
+        buttonsJson: updated.buttonsJson,
+        scheduledAt: updated.scheduledAt,
+      });
+    }
     return toScheduledPostRow(updated);
   }
 
@@ -186,7 +221,15 @@ export class SchedulerService implements OnApplicationShutdown {
           date: localNow.toISOString().slice(0, 10),
           time: localNow.toISOString().slice(11, 16),
         });
-        const text = config.watermarkText ? `${body}\n\n${config.watermarkText}` : body;
+        // Watermark is chat-scoped: a per-chat override (Chat Connections ->
+        // per-chat settings) beats the bot-level default for this target.
+        const perChat = await this.chatSettings.getEffectiveConfig(
+          post.botId,
+          post.targetChatId,
+          'scheduler',
+        );
+        const watermarkText = String(perChat.watermarkText ?? '');
+        const text = watermarkText ? `${body}\n\n${watermarkText}` : body;
         const buttons = post.buttonsJson
           ? (JSON.parse(post.buttonsJson) as Array<{ text: string; url: string }>)
           : [];

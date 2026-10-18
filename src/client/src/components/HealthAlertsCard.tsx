@@ -8,7 +8,6 @@ import {
   IconButton,
   Stack,
   Switch,
-  TextField,
   Tooltip,
   Typography,
 } from '@mui/material';
@@ -17,6 +16,7 @@ import SendIcon from '@mui/icons-material/Send';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../services/api';
+import { ConnectionSelect } from './ConnectionSelect';
 import { useSnackbar } from '../context/SnackbarContext';
 import { localizedErrorMessage } from '../utils/errors';
 import { formatDateTime } from '../utils/format';
@@ -153,16 +153,11 @@ export default function HealthAlertsCard({ botId }: { botId: number }): React.Re
                 alignItems: 'flex-start',
               }}
             >
-              <TextField
-                size="small"
-                fullWidth
+              <ConnectionSelect
                 label={t('health.alertChatId')}
                 value={settings.alertChatId}
-                placeholder="-1001234567890"
-                onChange={(event) =>
-                  setSettings((current) =>
-                    current ? { ...current, alertChatId: event.target.value } : current,
-                  )
+                onChange={(value) =>
+                  setSettings((current) => (current ? { ...current, alertChatId: value } : current))
                 }
                 helperText={t('health.alertChatIdHelp')}
               />

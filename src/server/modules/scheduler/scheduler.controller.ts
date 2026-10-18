@@ -22,10 +22,11 @@ export class SchedulerController {
   }
 
   /**
-   * Schedules a post.
+   * Schedules posts. `targetChatId` accepts one chat id or an array of them
+   * (multi-select picker); one post row is created per target chat.
    * @param {number} botId - Owning bot id.
-   * @param {Record<string, unknown>} body - targetChatId, messageText, mediaUrl, buttons, scheduledAt.
-   * @returns {object} Created post row.
+   * @param {Record<string, unknown>} body - targetChatId (id or ids), messageText, mediaUrl, buttons, scheduledAt.
+   * @returns {object[]} Created post rows.
    */
   @Post()
   create(@Param('botId', ParseIntPipe) botId: number, @Body() body: Record<string, unknown>) {
