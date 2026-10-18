@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bot-module-handler';
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
 import { ChatSettingsService } from '../../bot-engine/chat-settings.service';
+import { isChatTargeted } from '../../common/utils/chat-targets.util';
 
 /** Commands this bot classifies as admin-level for cleancommand. */
 const ADMIN_COMMANDS = new Set([
@@ -147,6 +148,7 @@ export class CleaningRuntime extends BotModuleHandler {
         update.chat.id,
         this.moduleKey,
       );
+      if (!isChatTargeted(config.targetChats, update.chat.id)) return;
       const setting = String(config.cleanCommand ?? 'off');
       if (setting === 'off') return;
 
@@ -182,6 +184,7 @@ export class CleaningRuntime extends BotModuleHandler {
         update.chat.id,
         this.moduleKey,
       );
+      if (!isChatTargeted(config.targetChats, update.chat.id)) return;
       const types = Array.isArray(config.cleanServiceTypes)
         ? (config.cleanServiceTypes as string[])
         : [];
@@ -205,7 +208,11 @@ export class CleaningRuntime extends BotModuleHandler {
         const config = await this.chatSettings
           .getEffectiveConfig(botId, chatId, this.moduleKey)
           .catch(() => null);
-        if (config && config.cleanBotMessages === true) {
+        if (
+          config &&
+          isChatTargeted(config.targetChats, chatId) &&
+          config.cleanBotMessages === true
+        ) {
           setTimeout(() => {
             void bot.api.deleteMessage(chatId, messageId).catch(() => undefined);
           }, BOT_MESSAGE_TTL_MS);

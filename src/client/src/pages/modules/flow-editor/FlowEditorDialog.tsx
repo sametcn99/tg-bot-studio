@@ -57,7 +57,7 @@ import { NODE_ICONS, PALETTE_TYPES, NodeTypeIconTile } from './nodeVisuals';
 
 /** Flow row shape needed by the editor. */
 export interface EditorFlow {
-  id: number;
+  id: string;
   name: string;
   triggerType: 'command' | 'keyword' | 'start';
   triggerValue: string;
@@ -98,7 +98,7 @@ export default function FlowEditorDialog({
   onClose,
   onSaved,
 }: {
-  botId: number;
+  botId: string;
   flow: EditorFlow;
   onClose: () => void;
   onSaved: () => void;

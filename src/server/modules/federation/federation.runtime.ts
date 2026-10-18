@@ -139,7 +139,7 @@ export class FederationRuntime extends BotModuleHandler {
   /**
    * Resolves the fed owned by the command sender (PM context).
    */
-  private async ownedFed(botId: number, telegramId: number): Promise<Fed | null> {
+  private async ownedFed(botId: string, telegramId: number): Promise<Fed | null> {
     return this.prisma.fed.findFirst({ where: { ownerTelegramId: BigInt(telegramId) } });
   }
 
@@ -149,7 +149,7 @@ export class FederationRuntime extends BotModuleHandler {
    */
   private async scopedFed(
     c: Context,
-    botId: number,
+    botId: string,
   ): Promise<{ fed: Fed; chatFed: boolean } | null> {
     if (c.chat?.type === 'supergroup' || c.chat?.type === 'group') {
       const membership = await this.prisma.fedChat.findFirst({
@@ -180,7 +180,7 @@ export class FederationRuntime extends BotModuleHandler {
   /**
    * Handles /newfed <name> (PM, one fed per owner).
    */
-  private async handleNewFed(c: Context, botId: number): Promise<void> {
+  private async handleNewFed(c: Context, botId: string): Promise<void> {
     if (c.chat?.type !== 'private' || !c.from) return;
     const lang = await this.i18n.getChatLanguage(botId, c.from.id);
     const name = String(typeof c.match === 'string' ? c.match : '').trim();
@@ -216,7 +216,7 @@ export class FederationRuntime extends BotModuleHandler {
   /**
    * Handles /renamefed <name> (owner, PM).
    */
-  private async handleRenameFed(c: Context, botId: number): Promise<void> {
+  private async handleRenameFed(c: Context, botId: string): Promise<void> {
     if (c.chat?.type !== 'private' || !c.from) return;
     const lang = await this.i18n.getChatLanguage(botId, c.from.id);
     const fed = await this.ownedFed(botId, c.from.id);
@@ -235,7 +235,7 @@ export class FederationRuntime extends BotModuleHandler {
   /**
    * Handles /delfed (owner, PM).
    */
-  private async handleDelFed(c: Context, botId: number): Promise<void> {
+  private async handleDelFed(c: Context, botId: string): Promise<void> {
     if (c.chat?.type !== 'private' || !c.from) return;
     const lang = await this.i18n.getChatLanguage(botId, c.from.id);
     const fed = await this.ownedFed(botId, c.from.id);
@@ -250,7 +250,7 @@ export class FederationRuntime extends BotModuleHandler {
   /**
    * Handles /joinfed <fedId> (group owner only).
    */
-  private async handleJoinFed(c: Context, botId: number): Promise<void> {
+  private async handleJoinFed(c: Context, botId: string): Promise<void> {
     if (c.chat?.type !== 'supergroup' && c.chat?.type !== 'group') return;
     if (!c.from) return;
     const chatId = c.chat.id;
@@ -280,7 +280,7 @@ export class FederationRuntime extends BotModuleHandler {
   /**
    * Handles /leavefed (group owner only).
    */
-  private async handleLeaveFed(c: Context, botId: number): Promise<void> {
+  private async handleLeaveFed(c: Context, botId: string): Promise<void> {
     if (c.chat?.type !== 'supergroup' && c.chat?.type !== 'group') return;
     if (!c.from) return;
     const chatId = c.chat.id;
@@ -303,7 +303,7 @@ export class FederationRuntime extends BotModuleHandler {
   /**
    * Handles /quietfed on|off.
    */
-  private async handleQuietFed(c: Context, botId: number): Promise<void> {
+  private async handleQuietFed(c: Context, botId: string): Promise<void> {
     if (c.chat?.type !== 'supergroup' && c.chat?.type !== 'group') return;
     if (!c.from) return;
     const chatId = c.chat.id;
@@ -326,7 +326,7 @@ export class FederationRuntime extends BotModuleHandler {
   /**
    * Handles /fban and /unfban (fed admins; group or PM).
    */
-  private async handleFban(c: Context, botId: number, ban: boolean): Promise<void> {
+  private async handleFban(c: Context, botId: string, ban: boolean): Promise<void> {
     const isGroup = c.chat?.type === 'supergroup' || c.chat?.type === 'group';
     if (!isGroup && c.chat?.type !== 'private') return;
     if (!c.from) return;
@@ -393,7 +393,7 @@ export class FederationRuntime extends BotModuleHandler {
   /**
    * Handles /fbanlist [csv|json] (rate limited, sends a document).
    */
-  private async handleFbanList(c: Context, botId: number): Promise<void> {
+  private async handleFbanList(c: Context, botId: string): Promise<void> {
     if (!c.from) return;
     const scope = await this.scopedFed(c, botId);
     const lang = await this.i18n.getChatLanguage(botId, c.from.id);
@@ -441,7 +441,7 @@ export class FederationRuntime extends BotModuleHandler {
   /**
    * Handles /importfbans (reply to a CSV/JSON file).
    */
-  private async handleImportBans(c: Context, botId: number): Promise<void> {
+  private async handleImportBans(c: Context, botId: string): Promise<void> {
     if (!c.from) return;
     const lang = await this.i18n.getChatLanguage(botId, c.from.id);
     void botId;
@@ -464,7 +464,7 @@ export class FederationRuntime extends BotModuleHandler {
   /**
    * Handles /fedpromote and /feddemote (owner only).
    */
-  private async handleFedAdmin(c: Context, botId: number, promote: boolean): Promise<void> {
+  private async handleFedAdmin(c: Context, botId: string, promote: boolean): Promise<void> {
     if (!c.from) return;
     const lang = await this.i18n.getChatLanguage(botId, c.from.id);
     const scope = await this.scopedFed(c, botId);
@@ -509,7 +509,7 @@ export class FederationRuntime extends BotModuleHandler {
   /**
    * Handles /feddemoteme <fedId> (self-demotion).
    */
-  private async handleFedAdminSelf(c: Context, botId: number): Promise<void> {
+  private async handleFedAdminSelf(c: Context, botId: string): Promise<void> {
     void botId;
     if (c.chat?.type !== 'private' || !c.from) return;
     const fedId = String(typeof c.match === 'string' ? c.match : '').trim();
@@ -523,7 +523,7 @@ export class FederationRuntime extends BotModuleHandler {
   /**
    * Handles /fedinfo.
    */
-  private async handleFedInfo(c: Context, botId: number): Promise<void> {
+  private async handleFedInfo(c: Context, botId: string): Promise<void> {
     if (!c.from) return;
     const lang = await this.i18n.getChatLanguage(botId, c.from.id);
     const scope = await this.scopedFed(c, botId);
@@ -553,7 +553,7 @@ export class FederationRuntime extends BotModuleHandler {
   /**
    * Handles /fedadmins.
    */
-  private async handleFedAdmins(c: Context, botId: number): Promise<void> {
+  private async handleFedAdmins(c: Context, botId: string): Promise<void> {
     if (!c.from) return;
     const scope = await this.scopedFed(c, botId);
     if (!scope) return;
@@ -568,7 +568,7 @@ export class FederationRuntime extends BotModuleHandler {
   /**
    * Handles /fedreason on|off (owner).
    */
-  private async handleFedReason(c: Context, botId: number): Promise<void> {
+  private async handleFedReason(c: Context, botId: string): Promise<void> {
     if (!c.from) return;
     const scope = await this.scopedFed(c, botId);
     if (!scope || scope.fed.ownerTelegramId !== BigInt(c.from.id)) return;
@@ -587,7 +587,7 @@ export class FederationRuntime extends BotModuleHandler {
   /**
    * Handles /fednotif on|off (owner).
    */
-  private async handleFedNotif(c: Context, botId: number): Promise<void> {
+  private async handleFedNotif(c: Context, botId: string): Promise<void> {
     if (!c.from) return;
     const scope = await this.scopedFed(c, botId);
     if (!scope || scope.fed.ownerTelegramId !== BigInt(c.from.id)) return;
@@ -603,7 +603,7 @@ export class FederationRuntime extends BotModuleHandler {
   /**
    * Handles /subfed and /unsubfed (owner, max 5).
    */
-  private async handleSubFed(c: Context, botId: number, subscribe: boolean): Promise<void> {
+  private async handleSubFed(c: Context, botId: string, subscribe: boolean): Promise<void> {
     if (!c.from) return;
     const lang = await this.i18n.getChatLanguage(botId, c.from.id);
     const scope = await this.scopedFed(c, botId);
@@ -638,7 +638,7 @@ export class FederationRuntime extends BotModuleHandler {
   /**
    * Handles /fedsubs (owner).
    */
-  private async handleFedSubs(c: Context, botId: number): Promise<void> {
+  private async handleFedSubs(c: Context, botId: string): Promise<void> {
     if (!c.from) return;
     const scope = await this.scopedFed(c, botId);
     if (!scope) return;
@@ -649,7 +649,7 @@ export class FederationRuntime extends BotModuleHandler {
   /**
    * Handles /fedstat [target] — which feds banned a user.
    */
-  private async handleFedStat(c: Context, botId: number): Promise<void> {
+  private async handleFedStat(c: Context, botId: string): Promise<void> {
     if (!c.from) return;
     const lang = await this.i18n.getChatLanguage(botId, c.from.id);
     const replyUser = c.msg?.reply_to_message?.from;
@@ -694,7 +694,7 @@ export class FederationRuntime extends BotModuleHandler {
   /**
    * Handles /fbanstat <fedId> — why a user is banned in a specific fed.
    */
-  private async handleFbanStat(c: Context, botId: number): Promise<void> {
+  private async handleFbanStat(c: Context, botId: string): Promise<void> {
     if (!c.from) return;
     const lang = await this.i18n.getChatLanguage(botId, c.from.id);
     const fedId = String(typeof c.match === 'string' ? c.match : '').trim();

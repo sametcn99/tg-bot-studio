@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
 import { MonetizationService } from './monetization.service';
 
 /**
@@ -18,10 +18,7 @@ export class MonetizationController {
    * @returns {Promise<{messageId: number}>} Sent message identifier.
    */
   @Post('paid-media/send')
-  sendPaidMedia(
-    @Param('botId', ParseIntPipe) botId: number,
-    @Body() body: Record<string, unknown>,
-  ) {
+  sendPaidMedia(@Param('botId') botId: string, @Body() body: Record<string, unknown>) {
     return this.service.sendPaidMedia(botId, body);
   }
 
@@ -32,7 +29,7 @@ export class MonetizationController {
    * @returns {Promise<{inviteLink: string; expiresAt: string}>} Link and expiry.
    */
   @Post('vip/grant')
-  grantVip(@Param('botId', ParseIntPipe) botId: number, @Body() body: Record<string, unknown>) {
+  grantVip(@Param('botId') botId: string, @Body() body: Record<string, unknown>) {
     return this.service.grantVip(botId, body);
   }
 
@@ -42,7 +39,7 @@ export class MonetizationController {
    * @returns {object[]} Subscription rows.
    */
   @Get('vip')
-  listVip(@Param('botId', ParseIntPipe) botId: number) {
+  listVip(@Param('botId') botId: string) {
     return this.service.listVip(botId);
   }
 
@@ -53,10 +50,7 @@ export class MonetizationController {
    * @returns {Promise<{success: boolean}>} Confirmation payload.
    */
   @Delete('vip/:id')
-  async revokeVip(
-    @Param('botId', ParseIntPipe) botId: number,
-    @Param('id', ParseIntPipe) id: number,
-  ) {
+  async revokeVip(@Param('botId') botId: string, @Param('id') id: string) {
     await this.service.revokeVip(botId, id);
     return { success: true };
   }

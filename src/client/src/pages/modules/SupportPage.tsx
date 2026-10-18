@@ -52,7 +52,7 @@ interface Escalation {
  * Support message row.
  */
 interface SupportMessage {
-  id: number;
+  id: string;
   telegram_id: number;
   direction: string;
   sender_name: string | null;
@@ -70,7 +70,7 @@ export default function SupportPage({
   botId,
   module,
 }: {
-  botId: number;
+  botId: string;
   module: ModuleEntry;
 }): React.ReactElement {
   const { t } = useTranslation();

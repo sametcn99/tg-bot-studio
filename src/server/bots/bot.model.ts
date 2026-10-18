@@ -31,7 +31,7 @@ export class BotModel {
   /**
    * Finds a bot by primary key id.
    */
-  async findById(id: number): Promise<Bot | null> {
+  async findById(id: string): Promise<Bot | null> {
     return this.prisma.bot.findUnique({
       where: { id },
     });
@@ -49,7 +49,7 @@ export class BotModel {
   /**
    * Counts enabled modules for a bot.
    */
-  async countActiveModules(botId: number): Promise<number> {
+  async countActiveModules(botId: string): Promise<number> {
     return this.prisma.botModule.count({
       where: { botId, isEnabled: 1 },
     });
@@ -58,7 +58,7 @@ export class BotModel {
   /**
    * Counts hosted mini apps for a bot.
    */
-  async countMiniApps(botId: number): Promise<number> {
+  async countMiniApps(botId: string): Promise<number> {
     return this.prisma.miniApp.count({
       where: { botId },
     });
@@ -67,7 +67,7 @@ export class BotModel {
   /**
    * Counts subscribers in bot_users for a bot.
    */
-  async countSubscribers(botId: number): Promise<number> {
+  async countSubscribers(botId: string): Promise<number> {
     return this.prisma.botUser.count({
       where: { botId },
     });
@@ -99,7 +99,7 @@ export class BotModel {
   /**
    * Updates an existing bot.
    */
-  async update(id: number, data: { name?: string; isActive?: number }): Promise<Bot> {
+  async update(id: string, data: { name?: string; isActive?: number }): Promise<Bot> {
     return this.prisma.bot.update({
       where: { id },
       data: {
@@ -113,7 +113,7 @@ export class BotModel {
   /**
    * Deletes a bot. Cascade delete on foreign keys will remove all associated bot rows.
    */
-  async delete(id: number): Promise<void> {
+  async delete(id: string): Promise<void> {
     await this.prisma.bot.delete({
       where: { id },
     });
@@ -122,7 +122,7 @@ export class BotModel {
   /**
    * Lists module records for a bot.
    */
-  async listModules(botId: number): Promise<BotModule[]> {
+  async listModules(botId: string): Promise<BotModule[]> {
     return this.prisma.botModule.findMany({
       where: { botId },
     });
@@ -131,7 +131,7 @@ export class BotModel {
   /**
    * Finds a specific module record for a bot.
    */
-  async getModule(botId: number, moduleKey: string): Promise<BotModule | null> {
+  async getModule(botId: string, moduleKey: string): Promise<BotModule | null> {
     return this.prisma.botModule.findUnique({
       where: {
         botId_moduleKey: { botId, moduleKey },
@@ -142,7 +142,7 @@ export class BotModel {
   /**
    * Checks whether a specific module is enabled for a bot.
    */
-  async isModuleEnabled(botId: number, moduleKey: string): Promise<boolean> {
+  async isModuleEnabled(botId: string, moduleKey: string): Promise<boolean> {
     const mod = await this.getModule(botId, moduleKey);
     return Boolean(mod?.isEnabled);
   }
@@ -151,7 +151,7 @@ export class BotModel {
    * Upserts module configuration and enabled state for a bot.
    */
   async upsertModule(
-    botId: number,
+    botId: string,
     moduleKey: string,
     isEnabled: number,
     configJson?: string | null,

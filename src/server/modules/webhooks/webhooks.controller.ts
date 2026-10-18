@@ -32,7 +32,7 @@ export class WebhooksController {
    * @returns {object[]} Endpoint definitions.
    */
   @Get('bots/:botId/webhooks/endpoints')
-  list(@Param('botId', ParseIntPipe) botId: number) {
+  list(@Param('botId') botId: string) {
     return this.service.list(botId);
   }
 
@@ -43,7 +43,7 @@ export class WebhooksController {
    * @returns {object} Created endpoint.
    */
   @Post('bots/:botId/webhooks/endpoints')
-  create(@Param('botId', ParseIntPipe) botId: number, @Body() body: CreateWebhookEndpointDto) {
+  create(@Param('botId') botId: string, @Body() body: CreateWebhookEndpointDto) {
     return this.service.create(botId, body as unknown as Record<string, unknown>);
   }
 
@@ -54,7 +54,7 @@ export class WebhooksController {
    * @returns {{success: boolean}} Confirmation payload.
    */
   @Delete('bots/:botId/webhooks/endpoints/:id')
-  remove(@Param('botId', ParseIntPipe) botId: number, @Param('id') id: string) {
+  remove(@Param('botId') botId: string, @Param('id') id: string) {
     this.service.remove(botId, id);
     return { success: true };
   }
@@ -65,7 +65,7 @@ export class WebhooksController {
    * @returns {object[]} Delivery entries.
    */
   @Get('bots/:botId/webhooks/log')
-  log(@Param('botId', ParseIntPipe) botId: number) {
+  log(@Param('botId') botId: string) {
     return this.service.deliveryLog(botId);
   }
 
@@ -75,7 +75,7 @@ export class WebhooksController {
    * @returns {object[]} Inbound actions.
    */
   @Get('bots/:botId/webhooks/inbound')
-  listInbound(@Param('botId', ParseIntPipe) botId: number) {
+  listInbound(@Param('botId') botId: string) {
     return this.service.listInbound(botId);
   }
 
@@ -86,10 +86,7 @@ export class WebhooksController {
    * @returns {object} Created action with its receiver URL.
    */
   @Post('bots/:botId/webhooks/inbound')
-  createInbound(
-    @Param('botId', ParseIntPipe) botId: number,
-    @Body() body: Record<string, unknown>,
-  ) {
+  createInbound(@Param('botId') botId: string, @Body() body: Record<string, unknown>) {
     return this.service.createInbound(botId, body);
   }
 
@@ -100,7 +97,7 @@ export class WebhooksController {
    * @returns {{success: boolean}} Confirmation payload.
    */
   @Delete('bots/:botId/webhooks/inbound/:hookId')
-  removeInbound(@Param('botId', ParseIntPipe) botId: number, @Param('hookId') hookId: string) {
+  removeInbound(@Param('botId') botId: string, @Param('hookId') hookId: string) {
     this.service.removeInbound(botId, hookId);
     return { success: true };
   }
@@ -120,7 +117,7 @@ export class WebhooksController {
   @Post('hooks/:botId/:hookId')
   @HttpCode(200)
   async inbound(
-    @Param('botId', ParseIntPipe) botId: number,
+    @Param('botId') botId: string,
     @Param('hookId') hookId: string,
     @Req() req: Request,
   ) {

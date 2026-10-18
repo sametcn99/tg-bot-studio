@@ -51,7 +51,7 @@ interface ExperimentMeta {
   experimentId: string;
   testSplitPercent: number;
   phase: 'test' | 'final';
-  winnerBroadcastId?: number;
+  winnerBroadcastId?: string;
 }
 
 /** Persisted per-broadcast target filters (language/recent) for resume. */
@@ -79,7 +79,7 @@ const BOT_REFETCH_EVERY = 50;
 @Injectable()
 export class BroadcastService implements OnModuleInit {
   private readonly logger = new Logger(BroadcastService.name);
-  private readonly cancelledBroadcasts = new Set<number>();
+  private readonly cancelledBroadcasts = new Set<string>();
 
   constructor(
     private readonly broadcastModel: BroadcastModel,
@@ -103,7 +103,7 @@ export class BroadcastService implements OnModuleInit {
    * Lists broadcast history for a bot. Click counts are maintained at the
    * redirect endpoint (counter-on-write), so no read-side reconciliation.
    */
-  async list(botId: number): Promise<BroadcastRow[]> {
+  async list(botId: string): Promise<BroadcastRow[]> {
     const broadcasts = await this.broadcastModel.list(botId);
     return broadcasts.map(toBroadcastRow);
   }
@@ -113,7 +113,7 @@ export class BroadcastService implements OnModuleInit {
    * and starts the background queue.
    */
   async create(
-    botId: number,
+    botId: string,
     data: Record<string, unknown>,
   ): Promise<BroadcastRow | BroadcastRow[]> {
     const variants = this.parseVariants(data);
@@ -144,7 +144,7 @@ export class BroadcastService implements OnModuleInit {
    * immediately.
    */
   private async createExperiment(
-    botId: number,
+    botId: string,
     data: Record<string, unknown>,
     variants: BroadcastVariant[],
     targetFilterJson: string | null,
@@ -183,7 +183,7 @@ export class BroadcastService implements OnModuleInit {
    * no full-table hydration.
    */
   private async runExperimentTestPhase(
-    botId: number,
+    botId: string,
     experimentId: string,
     data: Record<string, unknown>,
     variants: BroadcastVariant[],
@@ -219,7 +219,7 @@ export class BroadcastService implements OnModuleInit {
   /**
    * Lists every broadcast row of an experiment, in variant order.
    */
-  private async findExperimentRows(botId: number, experimentId: string): Promise<BroadcastRow[]> {
+  private async findExperimentRows(botId: string, experimentId: string): Promise<BroadcastRow[]> {
     const rows = await this.broadcastModel.listByExperiment(botId, experimentId);
     return rows.map(toBroadcastRow);
   }
@@ -234,9 +234,9 @@ export class BroadcastService implements OnModuleInit {
    * @returns {Promise<object>} Winner row plus rollout broadcast row.
    */
   async chooseWinner(
-    botId: number,
+    botId: string,
     experimentId: string,
-    variantBroadcastId?: number,
+    variantBroadcastId?: string,
   ): Promise<{ winner: BroadcastRow; rollout: BroadcastRow | null }> {
     const rows = await this.findExperimentRows(botId, experimentId);
     const testRows = rows.filter((row) => row.phase === 'test');
@@ -313,7 +313,7 @@ export class BroadcastService implements OnModuleInit {
   /**
    * Fetches one broadcast.
    */
-  async findOne(botId: number, id: number): Promise<BroadcastRow> {
+  async findOne(botId: string, id: string): Promise<BroadcastRow> {
     const item = await this.broadcastModel.findById(botId, id);
     if (!item) throw new NotFoundException(`Broadcast ${id} not found`);
     return toBroadcastRow(item);
@@ -322,7 +322,7 @@ export class BroadcastService implements OnModuleInit {
   /**
    * Cancels a running or queued broadcast.
    */
-  async cancel(botId: number, id: number): Promise<BroadcastRow> {
+  async cancel(botId: string, id: string): Promise<BroadcastRow> {
     const broadcast = await this.findOne(botId, id);
     if (broadcast.status !== 'running' && broadcast.status !== 'queued') {
       return broadcast;
@@ -343,7 +343,7 @@ export class BroadcastService implements OnModuleInit {
    * @param {number} id - Interrupted broadcast identifier.
    * @returns {Promise<BroadcastRow>} The row now re-queued for delivery.
    */
-  async resume(botId: number, id: number): Promise<BroadcastRow> {
+  async resume(botId: string, id: string): Promise<BroadcastRow> {
     const item = await this.broadcastModel.findById(botId, id);
     if (!item) throw new NotFoundException(`Broadcast ${id} not found`);
     if (item.status !== 'interrupted') {
@@ -409,8 +409,8 @@ export class BroadcastService implements OnModuleInit {
    * @param {object} options - Optional overrides used by experiment phases and resume.
    */
   private async runQueue(
-    botId: number,
-    broadcastId: number,
+    botId: string,
+    broadcastId: string,
     data: Record<string, unknown>,
     options: {
       audienceFilter?: (user: AudienceUser) => boolean;
@@ -599,8 +599,8 @@ export class BroadcastService implements OnModuleInit {
    * stable link per broadcast button for CTR measurement.
    */
   private async wrapButtonsForTracking(
-    botId: number,
-    broadcastId: number,
+    botId: string,
+    broadcastId: string,
     buttons: BroadcastButton[],
     config: Record<string, unknown>,
   ): Promise<BroadcastButton[]> {
@@ -625,7 +625,7 @@ export class BroadcastService implements OnModuleInit {
    * Persists experiment metadata in bot_settings (awaited so a failed write
    * surfaces before the experiment continues).
    */
-  private async saveExperimentMeta(botId: number, meta: ExperimentMeta): Promise<void> {
+  private async saveExperimentMeta(botId: string, meta: ExperimentMeta): Promise<void> {
     await this.settings.setBotSetting(
       botId,
       `ab_experiment_${meta.experimentId}`,
@@ -637,7 +637,7 @@ export class BroadcastService implements OnModuleInit {
    * Loads experiment metadata from bot_settings.
    */
   private async loadExperimentMeta(
-    botId: number,
+    botId: string,
     experimentId: string,
   ): Promise<ExperimentMeta | null> {
     const raw = this.settings.getBotSetting(botId, `ab_experiment_${experimentId}`);

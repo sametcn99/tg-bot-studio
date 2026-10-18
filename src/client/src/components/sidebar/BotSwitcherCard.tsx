@@ -49,7 +49,7 @@ export function BotSwitcherCard({
    * @param {number} botId - Selected bot id.
    * @returns {void}
    */
-  function select(botId: number): void {
+  function select(botId: string): void {
     setActiveBotId(botId);
     setAnchor(null);
     navigate(`/bots/${botId}`);

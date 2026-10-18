@@ -71,7 +71,7 @@ function ModulePageDispatcher({
   botId,
   moduleKey,
 }: {
-  botId: number;
+  botId: string;
   moduleKey: string;
 }): React.ReactElement | null {
   const module = useLocalizedModule(moduleKey);
@@ -161,7 +161,8 @@ function AppRoutes(): React.ReactElement {
  */
 function ModuleRoute(): React.ReactElement | null {
   const { botId, moduleKey } = useParams<{ botId: string; moduleKey: string }>();
-  return <ModulePageDispatcher botId={Number(botId)} moduleKey={moduleKey ?? ''} />;
+  if (!botId) return null;
+  return <ModulePageDispatcher botId={botId} moduleKey={moduleKey ?? ''} />;
 }
 
 /**

@@ -10,8 +10,8 @@ export interface AiChatHistoryMessage {
  * Domain shape for AI knowledge doc.
  */
 export interface AiKnowledgeDocEntity {
-  id: number;
-  bot_id: number;
+  id: string;
+  bot_id: string;
   title: string;
   content: string;
   tags: string | null;

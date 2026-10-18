@@ -74,7 +74,7 @@ export class SystemSettingsService implements OnModuleInit {
   /**
    * Reads a raw string per-bot setting from cache.
    */
-  getBotSetting(botId: number, key: string): string | undefined {
+  getBotSetting(botId: string, key: string): string | undefined {
     return this.botCache.get(`${botId}:${key}`);
   }
 
@@ -85,7 +85,7 @@ export class SystemSettingsService implements OnModuleInit {
    * @param {string} value - Raw value to persist.
    * @returns {Promise<void>} Resolves once persisted (or logged on failure).
    */
-  async setBotSetting(botId: number, key: string, value: string): Promise<void> {
+  async setBotSetting(botId: string, key: string, value: string): Promise<void> {
     this.botCache.set(`${botId}:${key}`, value);
     try {
       await withDbRetry(
@@ -114,7 +114,7 @@ export class SystemSettingsService implements OnModuleInit {
    * @param {string} key - Setting key unique per bot.
    * @returns {T | undefined} Decoded value, or undefined when unset/invalid.
    */
-  getBotJson<T>(botId: number, key: string): T | undefined {
+  getBotJson<T>(botId: string, key: string): T | undefined {
     const raw = this.botCache.get(`${botId}:${key}`);
     if (!raw) return undefined;
     try {
@@ -132,7 +132,7 @@ export class SystemSettingsService implements OnModuleInit {
    * @param {unknown} value - Value to serialize and persist.
    * @returns {Promise<void>} Resolves once persisted (or logged on failure).
    */
-  async setBotJson(botId: number, key: string, value: unknown): Promise<void> {
+  async setBotJson(botId: string, key: string, value: unknown): Promise<void> {
     const str = JSON.stringify(value);
     this.botCache.set(`${botId}:${key}`, str);
     try {
@@ -161,7 +161,7 @@ export class SystemSettingsService implements OnModuleInit {
    * @param {string} key - Setting key to remove.
    * @returns {Promise<void>} Resolves once deleted (or logged on failure).
    */
-  async deleteBotSetting(botId: number, key: string): Promise<void> {
+  async deleteBotSetting(botId: string, key: string): Promise<void> {
     this.botCache.delete(`${botId}:${key}`);
     try {
       await withDbRetry(
@@ -186,11 +186,11 @@ export class SystemSettingsService implements OnModuleInit {
    * @param {string} prefix - Key prefix filter.
    * @returns {Array<{key: string, value: string}>} Matching settings.
    */
-  listBotSettingsByPrefix(botId: number, prefix: string): Array<{ key: string; value: string }> {
+  listBotSettingsByPrefix(botId: string, prefix: string): Array<{ key: string; value: string }> {
     const out: Array<{ key: string; value: string }> = [];
     for (const [composite, value] of this.botCache) {
       const [owner, ...rest] = composite.split(':');
-      if (Number(owner) === botId && rest.join(':').startsWith(prefix)) {
+      if (owner === botId && rest.join(':').startsWith(prefix)) {
         out.push({ key: rest.join(':'), value });
       }
     }
@@ -204,7 +204,7 @@ export class SystemSettingsService implements OnModuleInit {
    * @param {number} botId - Bot whose entries should be invalidated.
    * @returns {void}
    */
-  invalidateBotCache(botId: number): void {
+  invalidateBotCache(botId: string): void {
     const prefix = `${botId}:`;
     for (const composite of this.botCache.keys()) {
       if (composite.startsWith(prefix)) this.botCache.delete(composite);

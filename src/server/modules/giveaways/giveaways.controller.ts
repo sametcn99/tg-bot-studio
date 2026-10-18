@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { GiveawaysService } from './giveaways.service';
 
 /**
@@ -17,7 +17,7 @@ export class GiveawaysController {
    * @returns {object[]} Giveaway rows.
    */
   @Get()
-  list(@Param('botId', ParseIntPipe) botId: number) {
+  list(@Param('botId') botId: string) {
     return this.service.list(botId);
   }
 
@@ -28,7 +28,7 @@ export class GiveawaysController {
    * @returns {object} Created giveaway.
    */
   @Post()
-  create(@Param('botId', ParseIntPipe) botId: number, @Body() body: Record<string, unknown>) {
+  create(@Param('botId') botId: string, @Body() body: Record<string, unknown>) {
     return this.service.create(botId, body);
   }
 
@@ -41,8 +41,8 @@ export class GiveawaysController {
    */
   @Patch(':id')
   update(
-    @Param('botId', ParseIntPipe) botId: number,
-    @Param('id', ParseIntPipe) id: number,
+    @Param('botId') botId: string,
+    @Param('id') id: string,
     @Body() body: Record<string, unknown>,
   ) {
     return this.service.update(botId, id, body);
@@ -55,7 +55,7 @@ export class GiveawaysController {
    * @returns {{success: boolean}} Confirmation payload.
    */
   @Delete(':id')
-  remove(@Param('botId', ParseIntPipe) botId: number, @Param('id', ParseIntPipe) id: number) {
+  remove(@Param('botId') botId: string, @Param('id') id: string) {
     this.service.remove(botId, id);
     return { success: true };
   }
@@ -67,7 +67,7 @@ export class GiveawaysController {
    * @returns {number[]} Participant Telegram ids.
    */
   @Get(':id/participants')
-  participants(@Param('botId', ParseIntPipe) botId: number, @Param('id', ParseIntPipe) id: number) {
+  participants(@Param('botId') botId: string, @Param('id') id: string) {
     return this.service.participants(botId, id);
   }
 }

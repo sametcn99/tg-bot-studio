@@ -282,7 +282,6 @@ export const MODULES: ModuleEntry[] = [
     category: 'Directory & Content',
     description: 'Timed channel posts with inline buttons and caption watermark.',
     pageType: 'crud',
-    chatScoped: true,
     configFields: [
       {
         key: 'watermarkText',
@@ -749,7 +748,8 @@ export const MODULES: ModuleEntry[] = [
     category: 'Community & Moderation',
     description: 'Timed trivia with persistent scoreboards.',
     pageType: 'engagement',
-    configFields: [{ key: 'defaultCommand', label: 'Trigger command', type: 'text' }],
+    chatScoped: true,
+    configFields: [],
     docs: {
       overview: [
         'sendPoll-powered quizzes with correct answers scored automatically.',

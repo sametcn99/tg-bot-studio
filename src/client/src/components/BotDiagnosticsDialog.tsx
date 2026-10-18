@@ -33,7 +33,7 @@ interface DiagnosticCheck {
 
 interface DiagnosticReport {
   ok: boolean;
-  botId: number;
+  botId: string;
   botInfo?: {
     username?: string;
     first_name?: string;
@@ -46,7 +46,7 @@ interface DiagnosticReport {
 }
 
 interface BotDiagnosticsDialogProps {
-  botId: number;
+  botId: string;
   open: boolean;
   onClose: () => void;
 }

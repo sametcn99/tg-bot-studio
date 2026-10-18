@@ -45,7 +45,7 @@ export default function ReferralsPage({
   botId,
   module,
 }: {
-  botId: number;
+  botId: string;
   module: ModuleEntry;
 }): React.ReactElement {
   const { t } = useTranslation();

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { FederationService } from './federation.service';
 
@@ -23,7 +23,7 @@ export class FederationController {
    * @returns {Promise<object[]>} Federation summaries.
    */
   @Get()
-  async list(@Param('botId', ParseIntPipe) botId: number) {
+  async list(@Param('botId') botId: string) {
     const feds = await this.prisma.fed.findMany({ orderBy: { createdAt: 'asc' } });
     return Promise.all(
       feds.map(async (fed) => ({
@@ -46,7 +46,7 @@ export class FederationController {
    * @returns {Promise<object[]>} Ban rows.
    */
   @Get(':fedId/bans')
-  async bans(@Param('botId', ParseIntPipe) botId: number, @Param('fedId') fedId: string) {
+  async bans(@Param('botId') botId: string, @Param('fedId') fedId: string) {
     void botId;
     const rows = await this.prisma.fedBan.findMany({
       where: { fedId },
@@ -69,7 +69,7 @@ export class FederationController {
    * @returns {Promise<object[]>} Membership rows.
    */
   @Get(':fedId/chats')
-  async chats(@Param('botId', ParseIntPipe) botId: number, @Param('fedId') fedId: string) {
+  async chats(@Param('botId') botId: string, @Param('fedId') fedId: string) {
     const rows = await this.prisma.fedChat.findMany({ where: { fedId, botId } });
     return rows.map((row) => ({
       chatId: row.chatId,
@@ -87,7 +87,7 @@ export class FederationController {
    */
   @Post(':fedId/bans')
   async addBan(
-    @Param('botId', ParseIntPipe) botId: number,
+    @Param('botId') botId: string,
     @Param('fedId') fedId: string,
     @Body() body: Record<string, unknown>,
   ) {
@@ -108,7 +108,7 @@ export class FederationController {
    */
   @Post(':fedId/import')
   async importList(
-    @Param('botId', ParseIntPipe) botId: number,
+    @Param('botId') botId: string,
     @Param('fedId') fedId: string,
     @Body() body: Record<string, unknown>,
   ) {

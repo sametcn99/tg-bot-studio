@@ -10,6 +10,7 @@ import { BotI18nService, type BotLanguage } from '../../bot-engine/bot-i18n.serv
 import { ChatSettingsService } from '../../bot-engine/chat-settings.service';
 import { RestrictionsService } from '../../bot-engine/restrictions.service';
 import { PrismaService } from '../../database/prisma.service';
+import { isChatTargeted } from '../../common/utils/chat-targets.util';
 import { splitDurationArg } from '../../common/utils/duration.util';
 import { userMentionHtml } from '../../common/utils/telegram-text.util';
 import { matchBlocklist } from './blocklist-matcher';
@@ -97,6 +98,7 @@ export class ModerationRuntime extends BotModuleHandler {
       this.lastSeen.set(key, Date.now());
 
       const config = await this.chatSettings.getEffectiveConfig(botId, chatId, this.moduleKey);
+      if (!isChatTargeted(config.targetChats, chatId)) return;
 
       // Admins and approved users are immune to automated moderation.
       if (await this.isImmune(botId, update, chatId, from)) return;
@@ -156,7 +158,7 @@ export class ModerationRuntime extends BotModuleHandler {
   /**
    * Registers the reference-style antiflood and blocklist commands.
    */
-  private registerCommands(bot: import('grammy').Bot, botId: number): void {
+  private registerCommands(bot: import('grammy').Bot, botId: string): void {
     bot.command('setflood', (c) => this.handleSetFlood(c, botId, 'floodMessageLimit'));
     bot.command('setfloodtimer', (c) => this.handleSetFloodTimer(c, botId));
     bot.command('setfloodmode', (c) => this.handleSetFloodMode(c, botId));
@@ -175,7 +177,7 @@ export class ModerationRuntime extends BotModuleHandler {
    * Checks whether a sender is exempt from automated moderation.
    */
   private async isImmune(
-    botId: number,
+    botId: string,
     update: Context,
     chatId: number,
     from: User,
@@ -315,7 +317,7 @@ export class ModerationRuntime extends BotModuleHandler {
    */
   private async applyFloodPunishment(
     update: Context,
-    botId: number,
+    botId: string,
     chatId: number,
     from: User,
     config: Record<string, unknown>,
@@ -337,11 +339,11 @@ export class ModerationRuntime extends BotModuleHandler {
   }
 
   /**
-   * Guard for settings commands: group + change_info.
+   * Guard for settings commands: group + change_info + explicit target chat.
    */
   private async guard(
     c: Context,
-    botId: number,
+    botId: string,
   ): Promise<{ chatId: number; lang: BotLanguage; config: Record<string, unknown> } | null> {
     if (c.chat?.type !== 'supergroup' && c.chat?.type !== 'group') return null;
     if (!c.from) return null;
@@ -351,13 +353,14 @@ export class ModerationRuntime extends BotModuleHandler {
     }
     const lang = await this.i18n.getChatLanguage(botId, chatId);
     const config = await this.chatSettings.getEffectiveConfig(botId, chatId, this.moduleKey);
+    if (!isChatTargeted(config.targetChats, chatId)) return null;
     return { chatId, lang, config };
   }
 
   /**
    * Handles /setflood <n> (consecutive limit).
    */
-  private async handleSetFlood(c: Context, botId: number, field: string): Promise<void> {
+  private async handleSetFlood(c: Context, botId: string, field: string): Promise<void> {
     const group = await this.guard(c, botId);
     if (!group) return;
     const value = Number(String(typeof c.match === 'string' ? c.match : '').trim());
@@ -377,7 +380,7 @@ export class ModerationRuntime extends BotModuleHandler {
   /**
    * Handles /setfloodtimer <n> <window> (messages within a duration).
    */
-  private async handleSetFloodTimer(c: Context, botId: number): Promise<void> {
+  private async handleSetFloodTimer(c: Context, botId: string): Promise<void> {
     const group = await this.guard(c, botId);
     if (!group) return;
     const args = String(typeof c.match === 'string' ? c.match : '').trim();
@@ -401,7 +404,7 @@ export class ModerationRuntime extends BotModuleHandler {
   /**
    * Handles /setfloodmode <action>.
    */
-  private async handleSetFloodMode(c: Context, botId: number): Promise<void> {
+  private async handleSetFloodMode(c: Context, botId: string): Promise<void> {
     const group = await this.guard(c, botId);
     if (!group) return;
     const args = String(typeof c.match === 'string' ? c.match : '').trim();
@@ -428,7 +431,7 @@ export class ModerationRuntime extends BotModuleHandler {
   /**
    * Handles /clearflood on|off.
    */
-  private async handleClearFlood(c: Context, botId: number): Promise<void> {
+  private async handleClearFlood(c: Context, botId: string): Promise<void> {
     const group = await this.guard(c, botId);
     if (!group) return;
     const enable = ['on', 'yes', 'true'].includes(
@@ -448,7 +451,7 @@ export class ModerationRuntime extends BotModuleHandler {
   /**
    * Handles /flood — shows the current antiflood configuration.
    */
-  private async handleFloodStatus(c: Context, botId: number): Promise<void> {
+  private async handleFloodStatus(c: Context, botId: string): Promise<void> {
     const group = await this.guard(c, botId);
     if (!group) return;
     const { floodMessageLimit, floodWindowSeconds, floodMode } = group.config;
@@ -462,7 +465,7 @@ export class ModerationRuntime extends BotModuleHandler {
   /**
    * Handles /addblocklist and /rmblocklist (single, phrase, or (a, b, c)).
    */
-  private async handleBlocklist(c: Context, botId: number, mode: 'add' | 'remove'): Promise<void> {
+  private async handleBlocklist(c: Context, botId: string, mode: 'add' | 'remove'): Promise<void> {
     const group = await this.guard(c, botId);
     if (!group) return;
     const { chatId, lang } = group;
@@ -515,7 +518,7 @@ export class ModerationRuntime extends BotModuleHandler {
   /**
    * Handles /rmblocklistall (owner only).
    */
-  private async handleBlocklistAll(c: Context, botId: number): Promise<void> {
+  private async handleBlocklistAll(c: Context, botId: string): Promise<void> {
     const group = await this.guard(c, botId);
     if (!group) return;
     const { chatId, lang } = group;
@@ -534,7 +537,7 @@ export class ModerationRuntime extends BotModuleHandler {
   /**
    * Handles /blocklist — lists triggers.
    */
-  private async handleBlocklistList(c: Context, botId: number): Promise<void> {
+  private async handleBlocklistList(c: Context, botId: string): Promise<void> {
     const group = await this.guard(c, botId);
     if (!group) return;
     const words = Array.isArray(group.config.blockedWords)
@@ -556,7 +559,7 @@ export class ModerationRuntime extends BotModuleHandler {
   /**
    * Handles /blocklistmode <nothing|warn|kick|ban|tban T|mute|tmute T>.
    */
-  private async handleBlocklistMode(c: Context, botId: number): Promise<void> {
+  private async handleBlocklistMode(c: Context, botId: string): Promise<void> {
     const group = await this.guard(c, botId);
     if (!group) return;
     const { chatId, lang } = group;
@@ -583,7 +586,7 @@ export class ModerationRuntime extends BotModuleHandler {
   /**
    * Handles /blocklistdelete on|off.
    */
-  private async handleBlocklistDelete(c: Context, botId: number): Promise<void> {
+  private async handleBlocklistDelete(c: Context, botId: string): Promise<void> {
     const group = await this.guard(c, botId);
     if (!group) return;
     const enable = ['on', 'yes', 'true'].includes(
@@ -603,7 +606,7 @@ export class ModerationRuntime extends BotModuleHandler {
   /**
    * Handles /setblocklistreason <text>.
    */
-  private async handleBlocklistReason(c: Context, botId: number): Promise<void> {
+  private async handleBlocklistReason(c: Context, botId: string): Promise<void> {
     const group = await this.guard(c, botId);
     if (!group) return;
     const reason = String(typeof c.match === 'string' ? c.match : '').trim();

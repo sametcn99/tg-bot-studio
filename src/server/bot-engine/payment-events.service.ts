@@ -3,7 +3,7 @@ import { EventEmitter } from 'node:events';
 
 /** Payload emitted for every successful Telegram Stars payment. */
 export interface StarsPaymentEvent {
-  botId: number;
+  botId: string;
   telegramId: number;
   /** Invoice payload string (`order:<id>` or `vip:<...>`). */
   invoicePayload: string;

@@ -1,57 +1,38 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Alert, Box, Card, CardContent, Chip, Stack, Typography } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { apiFetch } from '../services/api';
 import PageHeader from '../components/PageHeader';
 import { LoadingState } from '../components/Feedback';
-import { ChatOverrideSection } from '../components/ChatOverrideSection';
+import { ChatModuleConfigsSection } from '../components/ChatModuleConfigsSection';
 import { useConnections } from '../context/ConnectionsContext';
 import { useLocalizedModules } from '../registry/localize';
 
 /**
  * Per-connection (per-group / per-channel) module settings editor: every
- * chat-scoped module renders as a card with the shared per-chat override
- * editor pinned to this connection's chat; overrides merge on top of the
- * bot-level defaults and apply to the live chat within seconds.
+ * chat-scoped module renders as a card with the shared per-chat
+ * configuration editor pinned to this connection's chat. Each entry is the
+ * chat's complete module configuration — adding it activates the module
+ * there, removing it deactivates the module for that chat.
  */
 export default function ConnectionSettingsPage(): React.ReactElement {
   const { botId, connectionId } = useParams<{ botId: string; connectionId: string }>();
-  const numericBotId = Number(botId);
-  const numericConnectionId = Number(connectionId);
+  const activeBotIdStr = botId ?? '';
+  const connectionIdStr = connectionId ?? '';
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { connections, loading: connectionsLoading } = useConnections();
   const modules = useLocalizedModules();
 
-  const [botConfigs, setBotConfigs] = useState<Record<string, Record<string, unknown>> | null>(
-    null,
-  );
-  const [configError, setConfigError] = useState<string | null>(null);
-
   const connection = useMemo(
-    () => connections.find((row) => row.id === numericConnectionId),
-    [connections, numericConnectionId],
+    () => connections.find((row) => row.id === connectionIdStr),
+    [connections, connectionIdStr],
   );
 
-  useEffect(() => {
-    if (Number.isFinite(numericBotId)) {
-      apiFetch<Array<{ key: string; config: Record<string, unknown> }>>(
-        `/api/bots/${numericBotId}/modules`,
-      )
-        .then((rows) => {
-          const map: Record<string, Record<string, unknown>> = {};
-          for (const row of rows) map[row.key] = row.config ?? {};
-          setBotConfigs(map);
-        })
-        .catch((err: Error) => setConfigError(err.message));
-    }
-  }, [numericBotId]);
+  /** Modules configured per chat (groups and channels). */
+  const chatConfigured = useMemo(() => modules.filter((entry) => entry.chatScoped), [modules]);
 
-  /** Modules that support per-chat overrides (groups and channels). */
-  const overridable = useMemo(() => modules.filter((entry) => entry.chatScoped), [modules]);
-
-  if (connectionsLoading || !botConfigs) {
+  if (connectionsLoading) {
     return <LoadingState label={t('connectionSettings.loading')} />;
   }
 
@@ -71,21 +52,12 @@ export default function ConnectionSettingsPage(): React.ReactElement {
       <PageHeader
         title={t('connectionSettings.title', { title: connection.title })}
         subtitle={t('connectionSettings.subtitle', { chatId: activeChatId })}
-        onBack={() => navigate(`/bots/${numericBotId}/m/connections`)}
+        onBack={() => navigate(`/bots/${activeBotIdStr}/m/connections`)}
         actions={
-          <Chip
-            size="small"
-            color={isActive ? 'success' : 'default'}
-            label={connection.type}
-          />
+          <Chip size="small" color={isActive ? 'success' : 'default'} label={connection.type} />
         }
       />
 
-      {configError && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {configError}
-        </Alert>
-      )}
       {!numericChatId && (
         <Alert severity="info" sx={{ mb: 2 }}>
           {t('connectionSettings.numericOnly')}
@@ -94,7 +66,7 @@ export default function ConnectionSettingsPage(): React.ReactElement {
 
       {numericChatId && (
         <Stack spacing={2}>
-          {overridable.map((entry) => (
+          {chatConfigured.map((entry) => (
             <Card key={entry.key} variant="outlined">
               <CardContent>
                 <Typography
@@ -106,10 +78,9 @@ export default function ConnectionSettingsPage(): React.ReactElement {
                 >
                   {entry.name}
                 </Typography>
-                <ChatOverrideSection
-                  botId={numericBotId}
+                <ChatModuleConfigsSection
+                  botId={activeBotIdStr}
                   module={entry}
-                  botConfig={botConfigs[entry.key] ?? {}}
                   fixedChatId={activeChatId}
                 />
               </CardContent>

@@ -31,7 +31,7 @@ export class SupportController {
    * inbox refetches instantly instead of polling on a fixed timer.
    */
   @Sse('stream')
-  stream(@Param('botId', ParseIntPipe) botId: number): import('rxjs').Observable<MessageEvent> {
+  stream(@Param('botId') botId: string): import('rxjs').Observable<MessageEvent> {
     return this.live.stream('support', botId);
   }
 
@@ -40,7 +40,7 @@ export class SupportController {
    * human operator) with the latest message preview per user.
    */
   @Get('escalations')
-  async escalations(@Param('botId', ParseIntPipe) botId: number) {
+  async escalations(@Param('botId') botId: string) {
     const open = this.settings
       .listBotSettingsByPrefix(botId, 'escalation_')
       .map(({ key, value }) => ({
@@ -67,7 +67,7 @@ export class SupportController {
    */
   @Post('escalations/:telegramId/resolve')
   async resolveEscalation(
-    @Param('botId', ParseIntPipe) botId: number,
+    @Param('botId') botId: string,
     @Param('telegramId', ParseIntPipe) telegramId: number,
   ) {
     this.settings.deleteBotSetting(botId, `escalation_${telegramId}`);
@@ -78,7 +78,7 @@ export class SupportController {
    * Lists recent support messages (both directions).
    */
   @Get('messages')
-  async messages(@Param('botId', ParseIntPipe) botId: number, @Query('limit') limit?: string) {
+  async messages(@Param('botId') botId: string, @Query('limit') limit?: string) {
     const max = Math.min(2000, Math.max(1, Number(limit ?? 500)));
     return this.supportModel.listMessages(botId, max);
   }
@@ -87,7 +87,7 @@ export class SupportController {
    * Lists conversation threads (one row per user with last activity).
    */
   @Get('threads')
-  async threads(@Param('botId', ParseIntPipe) botId: number) {
+  async threads(@Param('botId') botId: string) {
     return this.supportModel.listThreads(botId);
   }
 
@@ -95,10 +95,7 @@ export class SupportController {
    * Sends an admin reply to a user directly from the web dashboard.
    */
   @Post('reply')
-  async reply(
-    @Param('botId', ParseIntPipe) botId: number,
-    @Body() body: { telegramId: number; text: string },
-  ) {
+  async reply(@Param('botId') botId: string, @Body() body: { telegramId: number; text: string }) {
     const bot = this.pool.getBot(botId);
     if (!bot) {
       throw new StudioException(
@@ -146,10 +143,7 @@ export class SupportController {
    * Uses AI Copilot to generate a suggested support reply draft based on thread history.
    */
   @Post('copilot/draft')
-  async copilotDraft(
-    @Param('botId', ParseIntPipe) botId: number,
-    @Body() body: { telegramId: number },
-  ) {
+  async copilotDraft(@Param('botId') botId: string, @Body() body: { telegramId: number }) {
     const historyRows = await this.supportModel.getThreadHistory(botId, body.telegramId, 10);
 
     if (historyRows.length === 0) {

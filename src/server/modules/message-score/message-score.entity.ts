@@ -13,8 +13,8 @@ export interface LeaderboardEntryEntity {
 }
 
 export interface ScoreScheduleRow {
-  id: number;
-  bot_id: number;
+  id: string;
+  bot_id: string;
   name: string;
   chat_ids_json: string;
   period: string;
@@ -33,7 +33,7 @@ export interface ScoreScheduleRow {
   last_run_at: string | null;
   last_result: string | null;
   created_at: string | null;
-  botId: number;
+  botId: string;
   chatIdsJson: string;
   timeOfDay: string | null;
   dayOfWeek: number | null;

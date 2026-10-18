@@ -79,7 +79,7 @@ export class AutoresponderRuntime extends BotModuleHandler {
           ? `@${from.username}`
           : from
             ? `<a href="tg://user?id=${from.id}">${from.first_name}</a>`
-            : update.chat?.title ?? '',
+            : (update.chat?.title ?? ''),
         group_name: update.chat?.title,
         bot_name: bot.botInfo?.first_name ?? '',
         date: new Date().toISOString().slice(0, 10),
@@ -141,10 +141,12 @@ export class AutoresponderRuntime extends BotModuleHandler {
     isPrivate: boolean,
     isGroup: boolean,
     isChannel: boolean,
-    botId: number,
+    botId: string,
   ): Promise<AutoresponderRow | undefined> {
     void botId;
-    const scoped = rules.filter((rule) => this.inScope(rule, chatId, isPrivate, isGroup, isChannel));
+    const scoped = rules.filter((rule) =>
+      this.inScope(rule, chatId, isPrivate, isGroup, isChannel),
+    );
     const lower = text.toLowerCase();
     const normalized = normalizeText(text);
 
@@ -255,7 +257,7 @@ export class AutoresponderRuntime extends BotModuleHandler {
    * @param {number} botId - Owning bot id.
    * @returns {Promise<boolean>} True when the Start Menu module is active on the bot.
    */
-  private async startMenuOwnsStart(botId: number): Promise<boolean> {
+  private async startMenuOwnsStart(botId: string): Promise<boolean> {
     const row = await this.botModel.getModule(botId, 'start-menu');
     return Boolean(row?.isEnabled);
   }

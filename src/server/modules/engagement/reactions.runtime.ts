@@ -3,6 +3,7 @@ import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bo
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
 import { ChatSettingsService } from '../../bot-engine/chat-settings.service';
 import { EngineHelpersService } from '../../bot-engine/engine-helpers.service';
+import { isChatTargeted } from '../../common/utils/chat-targets.util';
 import { EngagementService } from './engagement.service';
 
 /**
@@ -46,8 +47,10 @@ export class ReactionsRuntime extends BotModuleHandler {
       const userId = (reaction as { user_id?: number }).user_id;
       if (!userId || !chatId) return;
 
-      // Effective per-chat weight (chat override -> bot config -> default).
+      // Effective per-chat weight (chat override -> bot config -> default),
+      // and the explicit-target gate: untargeted chats earn nothing.
       const config = await this.chatSettings.getEffectiveConfig(ctx.botId, chatId, this.moduleKey);
+      if (!isChatTargeted(config.targetChats, chatId)) return;
       const pointsPerReaction = Math.max(0, Number(config.pointsPerReaction ?? 1));
 
       for (const entry of reaction.new_reaction) {

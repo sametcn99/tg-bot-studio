@@ -17,26 +17,26 @@ export interface WarnHandlers {
   /** /warn, /dwarn, /swarn */
   handleWarn(
     c: Context,
-    botId: number,
+    botId: string,
     options: { delete?: boolean; silent?: boolean },
   ): Promise<void>;
   /** /rmwarn (latest) and /resetwarn (all) */
-  handleRemoveWarn(c: Context, botId: number, all: boolean): Promise<void>;
+  handleRemoveWarn(c: Context, botId: string, all: boolean): Promise<void>;
   /** "Remove warn" inline button on warning messages */
   handleRemoveWarnButton(
     c: Context,
-    botId: number,
+    botId: string,
     chatId: number,
     targetId: number,
   ): Promise<void>;
   /** /warns */
-  handleListWarns(c: Context, botId: number): Promise<void>;
+  handleListWarns(c: Context, botId: string): Promise<void>;
   /** /setwarnlimit <n> */
-  handleSetWarnLimit(c: Context, botId: number): Promise<void>;
+  handleSetWarnLimit(c: Context, botId: string): Promise<void>;
   /** /setwarnmode <mode [duration]> */
-  handleSetWarnMode(c: Context, botId: number): Promise<void>;
+  handleSetWarnMode(c: Context, botId: string): Promise<void>;
   /** /warntime <duration>|off */
-  handleWarnTime(c: Context, botId: number): Promise<void>;
+  handleWarnTime(c: Context, botId: string): Promise<void>;
 }
 
 /**
@@ -51,7 +51,7 @@ export function createWarnHandlers(deps: ModerationDeps): WarnHandlers {
    * Counts a user's unexpired warnings.
    */
   async function countWarns(
-    botId: number,
+    botId: string,
     chatId: number,
     telegramId: number,
     expirySeconds: number,
@@ -71,7 +71,7 @@ export function createWarnHandlers(deps: ModerationDeps): WarnHandlers {
   /**
    * Deletes every warning of a user in a chat.
    */
-  async function clearWarns(botId: number, chatId: number, telegramId: number): Promise<void> {
+  async function clearWarns(botId: string, chatId: number, telegramId: number): Promise<void> {
     await deps.prisma.chatWarn.deleteMany({
       where: { botId, chatId: String(chatId), telegramId: BigInt(telegramId) },
     });
@@ -82,7 +82,7 @@ export function createWarnHandlers(deps: ModerationDeps): WarnHandlers {
    */
   async function applyWarnMode(
     c: Context,
-    botId: number,
+    botId: string,
     chatId: number,
     targetId: number,
     warnMode: string,

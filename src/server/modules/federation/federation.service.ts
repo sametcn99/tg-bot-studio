@@ -57,7 +57,7 @@ export class FederationService {
   /**
    * Finds the fed a chat is joined to (this bot's membership).
    */
-  async fedForChat(botId: number, chatId: string | number): Promise<FedChatRow | null> {
+  async fedForChat(botId: string, chatId: string | number): Promise<FedChatRow | null> {
     return this.prisma.fedChat.findFirst({ where: { botId, chatId: String(chatId) } });
   }
 
@@ -66,7 +66,7 @@ export class FederationService {
    * subscription chains).
    */
   async checkBan(
-    botId: number,
+    botId: string,
     chatId: string | number,
     telegramId: number,
   ): Promise<FedEnforcement | null> {

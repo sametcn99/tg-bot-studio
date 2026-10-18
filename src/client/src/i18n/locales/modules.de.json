@@ -566,11 +566,7 @@
         "Quiz-Umfragen brauchen kein Zusatzrecht, nur die Fähigkeit, in der Gruppe Umfragen zu senden."
       ]
     },
-    "fields": {
-      "defaultCommand": {
-        "label": "Auslöser-Befehl"
-      }
-    }
+    "fields": {}
   },
   "reactions": {
     "name": "Reaktionsanalysen",

@@ -21,7 +21,7 @@ export interface ModuleState {
  * @param {number} botId - Owning bot id.
  * @returns {Promise<ModuleState[]>} Registry order, config unmasked.
  */
-export async function listModuleStates(botModel: BotModel, botId: number): Promise<ModuleState[]> {
+export async function listModuleStates(botModel: BotModel, botId: string): Promise<ModuleState[]> {
   const rows = await botModel.listModules(botId);
   const byKey = new Map(rows.map((row) => [row.moduleKey, row]));
 

@@ -37,7 +37,7 @@ export class EngagementService {
    * @param {number} botId - Owning bot id.
    * @returns {QuizDefinition[]} Stored quizzes.
    */
-  listQuizzes(botId: number): QuizDefinition[] {
+  listQuizzes(botId: string): QuizDefinition[] {
     return this.settings.getBotJson<QuizDefinition[]>(botId, 'quizzes') ?? [];
   }
 
@@ -47,7 +47,7 @@ export class EngagementService {
    * @param {Omit<QuizDefinition, 'id'>} data - Quiz payload without id.
    * @returns {QuizDefinition} Created quiz.
    */
-  createQuiz(botId: number, data: Omit<QuizDefinition, 'id'>): QuizDefinition {
+  createQuiz(botId: string, data: Omit<QuizDefinition, 'id'>): QuizDefinition {
     const quizzes = this.listQuizzes(botId);
     const quiz: QuizDefinition = {
       ...data,
@@ -65,7 +65,7 @@ export class EngagementService {
    * @returns {void}
    * @throws {NotFoundException} When the quiz does not exist.
    */
-  removeQuiz(botId: number, quizId: string): void {
+  removeQuiz(botId: string, quizId: string): void {
     const quizzes = this.listQuizzes(botId);
     if (!quizzes.some((quiz) => quiz.id === quizId)) {
       throw new NotFoundException(`Quiz ${quizId} not found`);
@@ -85,7 +85,7 @@ export class EngagementService {
    * @param {number} telegramId - Participant Telegram id.
    * @returns {void}
    */
-  recordCorrectAnswer(botId: number, quizId: string, telegramId: number): void {
+  recordCorrectAnswer(botId: string, quizId: string, telegramId: number): void {
     const scores = this.getScoreboard(botId, quizId);
     scores[String(telegramId)] = (scores[String(telegramId)] ?? 0) + 1;
     this.settings.setBotJson(botId, `quiz_scores_${quizId}`, scores);
@@ -97,7 +97,7 @@ export class EngagementService {
    * @param {string} quizId - Quiz identifier.
    * @returns {Record<string, number>} Correct-answer counts per Telegram id.
    */
-  getScoreboard(botId: number, quizId: string): Record<string, number> {
+  getScoreboard(botId: string, quizId: string): Record<string, number> {
     return this.settings.getBotJson<Record<string, number>>(botId, `quiz_scores_${quizId}`) ?? {};
   }
 
@@ -106,7 +106,7 @@ export class EngagementService {
    * @param {number} botId - Owning bot id.
    * @returns {Record<string, number>} Reaction emoji counts.
    */
-  getReactionSummary(botId: number): Record<string, number> {
+  getReactionSummary(botId: string): Record<string, number> {
     return this.settings.getBotJson<Record<string, number>>(botId, 'reaction_summary') ?? {};
   }
 
@@ -116,7 +116,7 @@ export class EngagementService {
    * @param {string} emoji - Reaction emoji.
    * @returns {void}
    */
-  recordReaction(botId: number, emoji: string): void {
+  recordReaction(botId: string, emoji: string): void {
     const summary = this.getReactionSummary(botId);
     summary[emoji] = (summary[emoji] ?? 0) + 1;
     this.settings.setBotJson(botId, 'reaction_summary', summary);

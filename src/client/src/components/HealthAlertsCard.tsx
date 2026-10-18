@@ -29,8 +29,8 @@ interface AlertSettings {
 
 /** Health event row. */
 interface HealthEventRow {
-  id: number;
-  botId: number;
+  id: string;
+  botId: string;
   level: 'failed' | 'recovering' | 'recovered';
   message: string;
   notified: boolean;
@@ -44,7 +44,7 @@ interface HealthEventRow {
  * @param {number} props.botId - Active bot id.
  * @returns {React.ReactElement} The card.
  */
-export default function HealthAlertsCard({ botId }: { botId: number }): React.ReactElement {
+export default function HealthAlertsCard({ botId }: { botId: string }): React.ReactElement {
   const { t } = useTranslation();
   const { showSuccess, showError } = useSnackbar();
   const [settings, setSettings] = useState<AlertSettings | null>(null);

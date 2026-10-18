@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { ConnectionsService } from './connections.service';
 
 /**
@@ -18,7 +18,7 @@ export class ConnectionsController {
    * @returns {object[]} Connection rows.
    */
   @Get()
-  list(@Param('botId', ParseIntPipe) botId: number) {
+  list(@Param('botId') botId: string) {
     return this.service.list(botId);
   }
 
@@ -29,7 +29,7 @@ export class ConnectionsController {
    * @returns {object} Created connection.
    */
   @Post()
-  create(@Param('botId', ParseIntPipe) botId: number, @Body() body: Record<string, unknown>) {
+  create(@Param('botId') botId: string, @Body() body: Record<string, unknown>) {
     return this.service.create(botId, body);
   }
 
@@ -39,7 +39,7 @@ export class ConnectionsController {
    * @returns {Promise<{synced: number}>} Number of chats processed.
    */
   @Post('sync')
-  sync(@Param('botId', ParseIntPipe) botId: number) {
+  sync(@Param('botId') botId: string) {
     return this.service.syncFromBot(botId, true);
   }
 
@@ -52,8 +52,8 @@ export class ConnectionsController {
    */
   @Patch(':id')
   update(
-    @Param('botId', ParseIntPipe) botId: number,
-    @Param('id', ParseIntPipe) id: number,
+    @Param('botId') botId: string,
+    @Param('id') id: string,
     @Body() body: Record<string, unknown>,
   ) {
     return this.service.update(botId, id, body);
@@ -66,7 +66,7 @@ export class ConnectionsController {
    * @returns {{success: boolean}} Confirmation payload.
    */
   @Delete(':id')
-  async remove(@Param('botId', ParseIntPipe) botId: number, @Param('id', ParseIntPipe) id: number) {
+  async remove(@Param('botId') botId: string, @Param('id') id: string) {
     await this.service.remove(botId, id);
     return { success: true };
   }

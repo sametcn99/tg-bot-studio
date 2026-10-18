@@ -8,7 +8,7 @@ import FederationManager from '../components/FederationManager';
 import BlockedUsersManager from '../components/BlockedUsersManager';
 import { LoadingState } from '../components/Feedback';
 import { ConfigFieldInput } from '../components/ConfigFieldInput';
-import { ChatOverrideSection } from '../components/ChatOverrideSection';
+import { ChatModuleConfigsSection } from '../components/ChatModuleConfigsSection';
 import { useSnackbar } from '../context/SnackbarContext';
 import { useModuleDocs } from '../context/ModuleDocsContext';
 import type { ModuleEntry } from '../registry/modules';
@@ -43,7 +43,7 @@ export default function ModuleConfigPage({
   module,
   embedded = false,
 }: {
-  botId: number;
+  botId: string;
   module: ModuleEntry;
   embedded?: boolean;
 }): React.ReactElement {
@@ -197,16 +197,17 @@ export default function ModuleConfigPage({
       <Card>
         <CardContent>
           <Stack spacing={2.5}>
-            {(module.configFields ?? []).map((field) => (
-              <ConfigFieldInput
-                key={field.key}
-                botId={botId}
-                field={field}
-                value={state.config[field.key]}
-                onChange={(value) => setConfig(field.key, value)}
-              />
-            ))}
-            {(module.configFields ?? []).length === 0 && (
+            {!module.chatScoped &&
+              (module.configFields ?? []).map((field) => (
+                <ConfigFieldInput
+                  key={field.key}
+                  botId={botId}
+                  field={field}
+                  value={state.config[field.key]}
+                  onChange={(value) => setConfig(field.key, value)}
+                />
+              ))}
+            {!module.chatScoped && (module.configFields ?? []).length === 0 && (
               <Typography
                 variant="body2"
                 sx={{
@@ -214,6 +215,16 @@ export default function ModuleConfigPage({
                 }}
               >
                 {t('modules.noOptions')}
+              </Typography>
+            )}
+            {module.chatScoped && (
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'text.secondary',
+                }}
+              >
+                {t('modules.chatScopedNote')}
               </Typography>
             )}
             <Box>
@@ -225,9 +236,7 @@ export default function ModuleConfigPage({
         </CardContent>
       </Card>
 
-      {module.chatScoped && (
-        <ChatOverrideSection botId={botId} module={module} botConfig={state.config} />
-      )}
+      {module.chatScoped && <ChatModuleConfigsSection botId={botId} module={module} />}
 
       {module.key === 'ai-assistant' && <AiKnowledgeDocsManager botId={botId} />}
       {module.key === 'federation' && <FederationManager botId={botId} />}

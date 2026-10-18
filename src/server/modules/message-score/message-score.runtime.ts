@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type { Message } from 'grammy/types';
 import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bot-module-handler';
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
+import { ChatSettingsService } from '../../bot-engine/chat-settings.service';
 import { MessageScoreService } from './message-score.service';
 
 /** Service-message keys that never count as member activity. */
@@ -46,10 +47,12 @@ export class MessageScoreRuntime extends BotModuleHandler {
 
   /**
    * @param {MessageScoreService} service - Score service.
+   * @param {ChatSettingsService} chatSettings - Per-chat config layer.
    * @param {ModuleHandlerRegistry} registry - Handler registry (self sign-up).
    */
   constructor(
     private readonly service: MessageScoreService,
+    private readonly chatSettings: ChatSettingsService,
     registry: ModuleHandlerRegistry,
   ) {
     super();
@@ -62,11 +65,13 @@ export class MessageScoreRuntime extends BotModuleHandler {
    * @returns {void}
    */
   register(ctx: ModuleRuntimeContext): void {
-    ctx.bot.on('message', (update) => {
+    ctx.bot.on('message', async (update) => {
       const chat = update.chat;
       if (chat.type !== 'group' && chat.type !== 'supergroup') return;
       const from = update.msg.from;
       if (!from || from.is_bot) return;
+      // Explicit-target gate: only configured chats accumulate activity.
+      if (!(await this.chatSettings.isTargeted(ctx.botId, chat.id, this.moduleKey))) return;
       const msg = update.msg;
       if (SERVICE_KEYS.some((key) => msg[key] !== undefined)) return;
 

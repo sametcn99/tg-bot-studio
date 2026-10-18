@@ -127,7 +127,7 @@ interface LeaderRow {
  * @interface ScheduleRow
  */
 interface ScheduleRow {
-  id: number;
+  id: string;
   name: string;
   chat_ids_json: string;
   period: string;
@@ -190,7 +190,7 @@ export default function MessageScorePage({
   botId,
   module,
 }: {
-  botId: number;
+  botId: string;
   module: ModuleEntry;
 }): React.ReactElement {
   const { t } = useTranslation();
@@ -205,7 +205,7 @@ export default function MessageScorePage({
   const [schedules, setSchedules] = useState<ScheduleRow[]>([]);
   const [schedulesLoading, setSchedulesLoading] = useState(true);
   const [draft, setDraft] = useState<ScheduleDraft | null>(null);
-  const [editingScheduleId, setEditingScheduleId] = useState<number | null>(null);
+  const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
   const [scheduleToDelete, setScheduleToDelete] = useState<ScheduleRow | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);

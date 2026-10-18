@@ -38,7 +38,7 @@ export class AnalyticsService {
    * @param {number} [days] - Trailing window (7 or 30).
    * @returns {Promise<BotAnalytics>} Aggregated overview.
    */
-  async overview(botId: number, days = 7): Promise<BotAnalytics> {
+  async overview(botId: string, days = 7): Promise<BotAnalytics> {
     const window = days >= 30 ? 30 : 7;
     const since = new Date(Date.now() - (window - 1) * 86_400_000).toISOString().slice(0, 10);
 

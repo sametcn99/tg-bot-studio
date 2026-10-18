@@ -17,7 +17,7 @@ describe('bot export/import round-trip', () => {
   let prisma: PrismaService;
   let bots: BotsService;
   let dbDir: string;
-  let sourceBotId: number;
+  let sourceBotId: string;
 
   const stubs = {
     pool: {

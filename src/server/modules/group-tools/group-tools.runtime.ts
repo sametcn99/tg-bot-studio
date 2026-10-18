@@ -7,6 +7,7 @@ import { AdminLogService } from '../../bot-engine/admin-log.service';
 import { BotI18nService, type BotLanguage } from '../../bot-engine/bot-i18n.service';
 import { ChatSettingsService } from '../../bot-engine/chat-settings.service';
 import { CommandAccessService } from '../../bot-engine/command-access.service';
+import { isChatTargeted } from '../../common/utils/chat-targets.util';
 import {
   displayName,
   escapeHtml,
@@ -119,12 +120,14 @@ export class GroupToolsRuntime extends BotModuleHandler {
    */
   private async guard(
     c: Context,
-    botId: number,
+    botId: string,
     command: string,
   ): Promise<{ chatId: number; lang: BotLanguage } | null> {
     if (c.chat?.type !== 'supergroup' && c.chat?.type !== 'group') return null;
     if (!c.from) return null;
     const chatId = c.chat.id;
+    // Explicit-target gate: the module only serves its configured chats.
+    if (!(await this.chatSettings.isTargeted(botId, chatId, this.moduleKey))) return null;
     // Bot-to-bot gate mirrors group-moderation.
     if (c.from.is_bot) {
       const b2b = await this.chatSettings.getEffectiveConfig(botId, chatId, 'bot2bot');
@@ -152,7 +155,7 @@ export class GroupToolsRuntime extends BotModuleHandler {
    */
   private async require(
     c: Context,
-    botId: number,
+    botId: string,
     chatId: number,
     lang: BotLanguage,
     capability: Parameters<AdminGateService['hasCapability']>[3],
@@ -172,7 +175,7 @@ export class GroupToolsRuntime extends BotModuleHandler {
   /**
    * Handles /pin [loud] — pins the replied message.
    */
-  private async handlePin(c: Context, botId: number): Promise<void> {
+  private async handlePin(c: Context, botId: string): Promise<void> {
     const group = await this.guard(c, botId, 'pin');
     if (!group) return;
     const { chatId, lang } = group;
@@ -199,7 +202,7 @@ export class GroupToolsRuntime extends BotModuleHandler {
   /**
    * Handles /permapin <text> — sends then pins a bot message.
    */
-  private async handlePermapin(c: Context, botId: number): Promise<void> {
+  private async handlePermapin(c: Context, botId: string): Promise<void> {
     const group = await this.guard(c, botId, 'permapin');
     if (!group) return;
     const { chatId, lang } = group;
@@ -220,7 +223,7 @@ export class GroupToolsRuntime extends BotModuleHandler {
   /**
    * Handles /unpin and /unpinall.
    */
-  private async handleUnpin(c: Context, botId: number, all: boolean): Promise<void> {
+  private async handleUnpin(c: Context, botId: string, all: boolean): Promise<void> {
     const group = await this.guard(c, botId, all ? 'unpinall' : 'unpin');
     if (!group) return;
     const { chatId, lang } = group;
@@ -238,7 +241,7 @@ export class GroupToolsRuntime extends BotModuleHandler {
   /**
    * Handles /antichannelpin and /cleanlinked (plus /anonadmin) toggles.
    */
-  private async handleToggleSetting(c: Context, botId: number, field: string): Promise<void> {
+  private async handleToggleSetting(c: Context, botId: string, field: string): Promise<void> {
     const group = await this.guard(c, botId, field);
     if (!group) return;
     const { chatId, lang } = group;
@@ -271,10 +274,11 @@ export class GroupToolsRuntime extends BotModuleHandler {
    * Middleware for linked-channel posts: unpins auto-pinned posts when
    * antichannelpin is on, deletes them entirely when cleanlinked is on.
    */
-  private async handleLinkedChannelPost(c: Context, botId: number): Promise<void> {
+  private async handleLinkedChannelPost(c: Context, botId: string): Promise<void> {
     if (!c.chat || (c.chat.type !== 'supergroup' && c.chat.type !== 'group')) return;
     if (!c.msg?.sender_chat || c.msg.sender_chat.id === c.chat.id) return; // anonymous admin
     const config = await this.chatSettings.getEffectiveConfig(botId, c.chat.id, this.moduleKey);
+    if (!isChatTargeted(config.targetChats, c.chat.id)) return;
     if (config.cleanLinked === true) {
       await c.deleteMessage().catch(() => undefined);
       return;
@@ -288,7 +292,7 @@ export class GroupToolsRuntime extends BotModuleHandler {
   /**
    * Handles /report — notifies all admins about the replied message.
    */
-  private async handleReport(c: Context, botId: number): Promise<void> {
+  private async handleReport(c: Context, botId: string): Promise<void> {
     const group = await this.guard(c, botId, 'report');
     if (!group) return;
     const { chatId, lang } = group;
@@ -303,7 +307,7 @@ export class GroupToolsRuntime extends BotModuleHandler {
    */
   private async notifyAdmins(
     c: Context,
-    botId: number,
+    botId: string,
     chatId: number,
     lang: BotLanguage,
   ): Promise<void> {
@@ -337,7 +341,7 @@ export class GroupToolsRuntime extends BotModuleHandler {
   /**
    * Handles /reports on|off.
    */
-  private async handleReportsToggle(c: Context, botId: number): Promise<void> {
+  private async handleReportsToggle(c: Context, botId: string): Promise<void> {
     const group = await this.guard(c, botId, 'reports');
     if (!group) return;
     const { chatId, lang } = group;
@@ -364,11 +368,12 @@ export class GroupToolsRuntime extends BotModuleHandler {
   /**
    * Handles the @admin trigger in reply to a message.
    */
-  private async handleAdminMention(c: Context, botId: number): Promise<void> {
+  private async handleAdminMention(c: Context, botId: string): Promise<void> {
     if (!c.chat || (c.chat.type !== 'supergroup' && c.chat.type !== 'group')) return;
     if (!c.msg?.reply_to_message) return;
     if (!c.msg.text?.trim().toLowerCase().startsWith('@admin')) return;
     const config = await this.chatSettings.getEffectiveConfig(botId, c.chat.id, this.moduleKey);
+    if (!isChatTargeted(config.targetChats, c.chat.id)) return;
     if (config.reportsEnabled === false) return;
     if (await this.adminGate.isAdmin(c.api, c.chat.id, c.from!.id)) return;
     const lang = await this.i18n.getChatLanguage(botId, c.chat.id);
@@ -378,7 +383,7 @@ export class GroupToolsRuntime extends BotModuleHandler {
   /**
    * Handles /adminlist.
    */
-  private async handleAdminList(c: Context, botId: number): Promise<void> {
+  private async handleAdminList(c: Context, botId: string): Promise<void> {
     const group = await this.guard(c, botId, 'adminlist');
     if (!group) return;
     const { chatId } = group;
@@ -395,7 +400,7 @@ export class GroupToolsRuntime extends BotModuleHandler {
   /**
    * Handles /promote and /demote (intersection privileges, reference model).
    */
-  private async handlePromote(c: Context, botId: number, promote: boolean): Promise<void> {
+  private async handlePromote(c: Context, botId: string, promote: boolean): Promise<void> {
     const group = await this.guard(c, botId, promote ? 'promote' : 'demote');
     if (!group) return;
     const { chatId, lang } = group;
@@ -443,7 +448,7 @@ export class GroupToolsRuntime extends BotModuleHandler {
   /**
    * Handles /id [target].
    */
-  private async handleId(c: Context, botId: number): Promise<void> {
+  private async handleId(c: Context, botId: string): Promise<void> {
     const group = await this.guard(c, botId, 'id');
     if (!group) return;
     const { chatId, lang } = group;
@@ -464,7 +469,7 @@ export class GroupToolsRuntime extends BotModuleHandler {
   /**
    * Handles /info [target] — user profile snapshot.
    */
-  private async handleInfo(c: Context, botId: number): Promise<void> {
+  private async handleInfo(c: Context, botId: string): Promise<void> {
     const group = await this.guard(c, botId, 'info');
     if (!group) return;
     const { chatId, lang } = group;
@@ -499,7 +504,7 @@ export class GroupToolsRuntime extends BotModuleHandler {
   /**
    * Handles /echo and /say — repeats text as the bot (admin only).
    */
-  private async handleEcho(c: Context, botId: number): Promise<void> {
+  private async handleEcho(c: Context, botId: string): Promise<void> {
     const group = await this.guard(c, botId, 'echo');
     if (!group) return;
     const { chatId, lang } = group;
@@ -513,7 +518,7 @@ export class GroupToolsRuntime extends BotModuleHandler {
   /**
    * Handles /disable and /enable.
    */
-  private async handleDisable(c: Context, botId: number, disable: boolean): Promise<void> {
+  private async handleDisable(c: Context, botId: string, disable: boolean): Promise<void> {
     const group = await this.guard(c, botId, disable ? 'disable' : 'enable');
     if (!group) return;
     const { chatId, lang } = group;
@@ -552,7 +557,7 @@ export class GroupToolsRuntime extends BotModuleHandler {
   /**
    * Handles /disabled — lists disabled commands.
    */
-  private async handleDisabledList(c: Context, botId: number): Promise<void> {
+  private async handleDisabledList(c: Context, botId: string): Promise<void> {
     const group = await this.guard(c, botId, 'disabled');
     if (!group) return;
     const { chatId, lang } = group;
@@ -574,7 +579,7 @@ export class GroupToolsRuntime extends BotModuleHandler {
   /**
    * Handles /disableable — lists disableable commands.
    */
-  private async handleDisableableList(c: Context, botId: number): Promise<void> {
+  private async handleDisableableList(c: Context, botId: string): Promise<void> {
     const group = await this.guard(c, botId, 'disableable');
     if (!group) return;
     await c
@@ -585,7 +590,7 @@ export class GroupToolsRuntime extends BotModuleHandler {
   /**
    * Handles /disabledel on|off.
    */
-  private async handleDisabledDel(c: Context, botId: number): Promise<void> {
+  private async handleDisabledDel(c: Context, botId: string): Promise<void> {
     const group = await this.guard(c, botId, 'disabledel');
     if (!group) return;
     const { chatId, lang } = group;
@@ -606,7 +611,7 @@ export class GroupToolsRuntime extends BotModuleHandler {
   /**
    * Handles /disableadmin on|off.
    */
-  private async handleDisableAdmin(c: Context, botId: number): Promise<void> {
+  private async handleDisableAdmin(c: Context, botId: string): Promise<void> {
     const group = await this.guard(c, botId, 'disableadmin');
     if (!group) return;
     const { chatId, lang } = group;

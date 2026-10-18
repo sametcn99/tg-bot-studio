@@ -56,7 +56,7 @@ export class MonetizationService implements OnApplicationShutdown {
    * Sends a Stars-locked paid media message to a chat.
    */
   async sendPaidMedia(
-    botId: number,
+    botId: string,
     data: Record<string, unknown>,
   ): Promise<{ messageId: number }> {
     const bot = this.pool.getBot(botId);
@@ -95,7 +95,7 @@ export class MonetizationService implements OnApplicationShutdown {
    * Grants a VIP subscription by creating a Star-priced invite link.
    */
   async grantVip(
-    botId: number,
+    botId: string,
     data: Record<string, unknown>,
   ): Promise<{ inviteLink: string; expiresAt: string }> {
     const bot = this.pool.getBot(botId);
@@ -156,14 +156,14 @@ export class MonetizationService implements OnApplicationShutdown {
   /**
    * Lists VIP subscriptions for a bot.
    */
-  async listVip(botId: number): Promise<VipSubscriptionRow[]> {
+  async listVip(botId: string): Promise<VipSubscriptionRow[]> {
     return this.monetizationModel.listSubscriptions(botId);
   }
 
   /**
    * Revokes a subscription and removes the member from the channel.
    */
-  async revokeVip(botId: number, id: number): Promise<void> {
+  async revokeVip(botId: string, id: string): Promise<void> {
     const row = await this.monetizationModel.findById(botId, id);
     if (!row) throw new NotFoundException(`Subscription ${id} not found`);
     await this.removeMember(botId, row);
@@ -185,7 +185,7 @@ export class MonetizationService implements OnApplicationShutdown {
   /**
    * Removes a subscriber from the protected channel.
    */
-  private async removeMember(botId: number, row: VipSubscriptionRow): Promise<void> {
+  private async removeMember(botId: string, row: VipSubscriptionRow): Promise<void> {
     const bot = this.pool.getBot(botId);
     if (!bot) return;
     await bot.api

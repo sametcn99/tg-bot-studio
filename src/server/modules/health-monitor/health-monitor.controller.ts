@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put, Query } from '@nestjs/common';
 import { HealthMonitorService } from './health-monitor.service';
 
 /**
@@ -17,7 +17,7 @@ export class HealthMonitorController {
    * @returns {Promise<object>} Settings payload.
    */
   @Get('alerts')
-  getSettings(@Param('botId', ParseIntPipe) botId: number) {
+  getSettings(@Param('botId') botId: string) {
     return this.service.getSettings(botId);
   }
 
@@ -29,7 +29,7 @@ export class HealthMonitorController {
    */
   @Put('alerts')
   updateSettings(
-    @Param('botId', ParseIntPipe) botId: number,
+    @Param('botId') botId: string,
     @Body() body: { enabled?: boolean; alertChatId?: string },
   ) {
     return this.service.updateSettings(botId, {
@@ -44,7 +44,7 @@ export class HealthMonitorController {
    * @returns {Promise<object>} Delivery outcome.
    */
   @Post('alerts/test')
-  sendTest(@Param('botId', ParseIntPipe) botId: number) {
+  sendTest(@Param('botId') botId: string) {
     return this.service.sendTestAlert(botId);
   }
 
@@ -54,7 +54,7 @@ export class HealthMonitorController {
    * @returns {Promise<object[]>} Events, newest first.
    */
   @Get('events')
-  listEvents(@Param('botId', ParseIntPipe) botId: number) {
+  listEvents(@Param('botId') botId: string) {
     return this.service.listEvents(botId);
   }
 }

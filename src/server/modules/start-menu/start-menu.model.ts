@@ -12,7 +12,7 @@ export class StartMenuModel {
   /**
    * Lists menu items for a bot ordered by position.
    */
-  async list(botId: number): Promise<Link[]> {
+  async list(botId: string): Promise<Link[]> {
     return this.prisma.link.findMany({
       where: { botId },
       orderBy: [{ orderIndex: 'asc' }, { id: 'asc' }],
@@ -22,7 +22,7 @@ export class StartMenuModel {
   /**
    * Lists active menu items for a bot.
    */
-  async listActive(botId: number): Promise<Link[]> {
+  async listActive(botId: string): Promise<Link[]> {
     return this.prisma.link.findMany({
       where: { botId, isActive: 1 },
       orderBy: [{ orderIndex: 'asc' }, { id: 'asc' }],
@@ -32,7 +32,7 @@ export class StartMenuModel {
   /**
    * Finds a menu item by botId and id.
    */
-  async findById(botId: number, id: number): Promise<Link | null> {
+  async findById(botId: string, id: string): Promise<Link | null> {
     return this.prisma.link.findFirst({
       where: { botId, id },
     });
@@ -42,7 +42,7 @@ export class StartMenuModel {
    * Creates a menu item.
    */
   async create(data: {
-    botId: number;
+    botId: string;
     title: string;
     description?: string | null;
     url: string;
@@ -69,7 +69,7 @@ export class StartMenuModel {
    * Updates an existing menu item.
    */
   async update(
-    id: number,
+    id: string,
     data: {
       title?: string;
       description?: string | null;
@@ -88,7 +88,7 @@ export class StartMenuModel {
   /**
    * Deletes a menu item.
    */
-  async delete(id: number): Promise<void> {
+  async delete(id: string): Promise<void> {
     await this.prisma.link.delete({
       where: { id },
     });
@@ -97,7 +97,7 @@ export class StartMenuModel {
   /**
    * Increments the click count on a link and returns its URL.
    */
-  async trackClick(id: number): Promise<string | null> {
+  async trackClick(id: string): Promise<string | null> {
     const link = await this.prisma.link.findUnique({
       where: { id },
       select: { url: true },

@@ -38,8 +38,8 @@ export class StarsFulfilmentService implements OnModuleInit, OnModuleDestroy {
    */
   private async handle(event: StarsPaymentEvent): Promise<void> {
     if (event.invoicePayload.startsWith('order:')) {
-      const orderId = Number(event.invoicePayload.slice('order:'.length));
-      if (Number.isFinite(orderId)) {
+      const orderId = event.invoicePayload.slice('order:'.length);
+      if (orderId) {
         await this.miniApps.markOrderPaid(orderId, event.telegramPaymentChargeId);
       }
     }

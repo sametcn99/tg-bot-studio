@@ -27,7 +27,7 @@ export class EngineHelpersService {
    * @param {User} from - Telegram user payload.
    * @returns {Promise<void>}
    */
-  async upsertUser(botId: number, from: User): Promise<void> {
+  async upsertUser(botId: string, from: User): Promise<void> {
     await this.userModel.upsertUser(botId, {
       telegramId: from.id,
       username: from.username ?? null,
@@ -43,7 +43,7 @@ export class EngineHelpersService {
    * @param {number} telegramId - Subscriber Telegram id.
    * @returns {Promise<BotUserRow | null>} Row when the subscriber is known.
    */
-  async getUser(botId: number, telegramId: number): Promise<BotUserRow | null> {
+  async getUser(botId: string, telegramId: number): Promise<BotUserRow | null> {
     return this.userModel.getUser(botId, telegramId);
   }
 
@@ -54,7 +54,7 @@ export class EngineHelpersService {
    * @param {number} amount - Delta applied to the balance.
    * @returns {Promise<void>}
    */
-  async addPoints(botId: number, telegramId: number, amount: number): Promise<void> {
+  async addPoints(botId: string, telegramId: number, amount: number): Promise<void> {
     await this.userModel.addPoints(botId, telegramId, amount);
   }
 
@@ -67,7 +67,7 @@ export class EngineHelpersService {
    * @returns {Promise<boolean>} True when the attribution was stored.
    */
   async setReferrer(
-    botId: number,
+    botId: string,
     telegramId: number,
     referrerId: number,
     pointsPerReferral: number,
@@ -81,7 +81,7 @@ export class EngineHelpersService {
    * @param {number} telegramId - User Telegram id.
    * @returns {Promise<boolean>} True when present in `blocked_users`.
    */
-  async isBlocked(botId: number, telegramId: number): Promise<boolean> {
+  async isBlocked(botId: string, telegramId: number): Promise<boolean> {
     return this.userModel.isBlocked(botId, telegramId);
   }
 
@@ -92,7 +92,7 @@ export class EngineHelpersService {
    * @param {string} reason - Ban reason for the audit trail.
    * @returns {Promise<void>}
    */
-  async blockUser(botId: number, from: User, reason: string): Promise<void> {
+  async blockUser(botId: string, from: User, reason: string): Promise<void> {
     await this.userModel.blockUser(botId, {
       telegramId: from.id,
       username: from.username ?? null,
@@ -107,7 +107,7 @@ export class EngineHelpersService {
    * @param {number} telegramId - User Telegram id.
    * @returns {Promise<void>}
    */
-  async unblockUser(botId: number, telegramId: number): Promise<void> {
+  async unblockUser(botId: string, telegramId: number): Promise<void> {
     await this.userModel.unblockUser(botId, telegramId);
   }
 }

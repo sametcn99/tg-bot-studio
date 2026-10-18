@@ -58,7 +58,7 @@ export default function EngagementPage({
   botId,
   module,
 }: {
-  botId: number;
+  botId: string;
   module: ModuleEntry;
 }): React.ReactElement {
   const { t } = useTranslation();

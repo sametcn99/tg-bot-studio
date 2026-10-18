@@ -2,7 +2,7 @@
  * Domain shape for bot user data with numeric telegram_id.
  */
 export interface BotUserEntity {
-  bot_id: number;
+  bot_id: string;
   telegram_id: number;
   username: string | null;
   first_name: string | null;
@@ -13,7 +13,7 @@ export interface BotUserEntity {
   tags_json: string | null;
   first_seen_at: string | null;
   last_seen_at: string | null;
-  botId: number;
+  botId: string;
   telegramId: number;
   firstName: string | null;
   lastName: string | null;

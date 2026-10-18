@@ -25,7 +25,7 @@ export class ModerationController {
    * @returns {Promise<object[]>} Banned user rows.
    */
   @Get('blocked')
-  blocked(@Param('botId', ParseIntPipe) botId: number) {
+  blocked(@Param('botId') botId: string) {
     return this.botUserModel.listBlocked(botId);
   }
 
@@ -36,7 +36,7 @@ export class ModerationController {
    * @returns {Promise<{success: boolean}>} Confirmation payload.
    */
   @Post('blocked')
-  async block(@Param('botId', ParseIntPipe) botId: number, @Body() body: Record<string, unknown>) {
+  async block(@Param('botId') botId: string, @Body() body: Record<string, unknown>) {
     await this.helpers.blockUser(
       botId,
       {
@@ -59,7 +59,7 @@ export class ModerationController {
    */
   @Delete('blocked/:telegramId')
   async unblock(
-    @Param('botId', ParseIntPipe) botId: number,
+    @Param('botId') botId: string,
     @Param('telegramId', ParseIntPipe) telegramId: number,
   ) {
     await this.helpers.unblockUser(botId, telegramId);
@@ -72,7 +72,7 @@ export class ModerationController {
    * @returns {Promise<object[]>} Group rows.
    */
   @Get('groups')
-  groups(@Param('botId', ParseIntPipe) botId: number) {
+  groups(@Param('botId') botId: string) {
     return this.chatConnectionModel.listGroups(botId);
   }
 }

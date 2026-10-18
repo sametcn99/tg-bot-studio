@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { findModule } from './module-registry';
+import { isChatTargeted } from '../common/utils/chat-targets.util';
 
 /** Cache entry for effective per-chat config. */
 interface CacheEntry {
@@ -12,11 +13,12 @@ interface CacheEntry {
 const CACHE_TTL_MS = 15_000;
 
 /**
- * Per-chat module configuration layer (reference parity). Effective config for a
- * chat merges in order: registry `defaultConfig` <- bot-level
- * `bot_modules.config_json` <- `chat_module_settings.config_json` override.
- * Runtimes read this inside their handlers (mirroring the autoresponder
- * per-message DB pattern) instead of the attach-time bot snapshot.
+ * Per-chat module configuration layer. For chat-scoped modules the chat
+ * entry IS the configuration: effective config merges the registry
+ * `defaultConfig` under `chat_module_settings.config_json` for that chat —
+ * there is no bot-level layer and no override/inheritance chain. A chat
+ * entry existing means the module is targeted at that chat; deleting the
+ * entry untargets it (the module stays idle there).
  */
 @Injectable()
 export class ChatSettingsService {
@@ -28,8 +30,10 @@ export class ChatSettingsService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Reads the effective module config for one chat (defaults + bot level +
-   * chat override), cached briefly to keep per-message reads cheap.
+   * Reads the effective module config for one chat: registry defaults
+   * merged under that chat's own entry. When an entry exists, the returned
+   * config carries `targetChats: [chatId]` so runtimes treat the chat as
+   * explicitly targeted; without an entry the module is targeted nowhere.
    *
    * @param {number} botId - Studio bot id.
    * @param {string | number} chatId - Telegram chat id.
@@ -37,7 +41,7 @@ export class ChatSettingsService {
    * @returns {Promise<Record<string, unknown>>} Effective configuration.
    */
   async getEffectiveConfig(
-    botId: number,
+    botId: string,
     chatId: string | number,
     moduleKey: string,
   ): Promise<Record<string, unknown>> {
@@ -48,24 +52,20 @@ export class ChatSettingsService {
     }
 
     const definition = findModule(moduleKey);
-    const botModule = await this.prisma.botModule.findUnique({
-      where: { botId_moduleKey: { botId, moduleKey } },
-    });
     const chatSetting = await this.prisma.chatModuleSetting.findUnique({
       where: { botId_chatId_moduleKey: { botId, chatId: String(chatId), moduleKey } },
     });
 
-    const botConfig = botModule?.configJson
-      ? (JSON.parse(botModule.configJson) as Record<string, unknown>)
-      : {};
     const chatConfig = chatSetting?.configJson
       ? (JSON.parse(chatSetting.configJson) as Record<string, unknown>)
       : {};
-    const config = {
+    const config: Record<string, unknown> = {
       ...(definition?.defaultConfig ?? {}),
-      ...botConfig,
       ...chatConfig,
     };
+    // Entry existence is the targeting signal consumed by every runtime
+    // gate (`isChatTargeted(config.targetChats, chatId)`).
+    config.targetChats = chatSetting ? [String(chatId)] : [];
 
     this.cache.set(key, { config, cachedAt: Date.now() });
     return config;
@@ -81,7 +81,7 @@ export class ChatSettingsService {
    * @returns {Promise<unknown>} Effective field value (undefined when unset).
    */
   async getValue(
-    botId: number,
+    botId: string,
     chatId: string | number,
     moduleKey: string,
     field: string,
@@ -91,15 +91,33 @@ export class ChatSettingsService {
   }
 
   /**
-   * Reads the raw chat override for one module (no defaults merged).
+   * Evaluates whether a module is explicitly targeted at one chat: a
+   * per-chat configuration entry must exist for it. No implicit default —
+   * without an entry the module stays idle in that chat, so every
+   * chat-operating module must have its targets configured (from Chat
+   * Connections) to act.
+   *
+   * @param {number} botId - Studio bot id.
+   * @param {string | number} chatId - Telegram chat id of the event.
+   * @param {string} moduleKey - Module registry key.
+   * @returns {Promise<boolean>} True only when the chat has a config entry.
+   */
+  async isTargeted(botId: string, chatId: string | number, moduleKey: string): Promise<boolean> {
+    const config = await this.getEffectiveConfig(botId, chatId, moduleKey);
+    return isChatTargeted(config.targetChats, chatId);
+  }
+
+  /**
+   * Reads the raw per-chat configuration entry for one module (no defaults
+   * merged). A non-null result with keys means the chat is targeted.
    *
    * @param {number} botId - Studio bot id.
    * @param {string | number} chatId - Telegram chat id.
    * @param {string} moduleKey - Module registry key.
-   * @returns {Promise<Record<string, unknown> | null>} Override fields or null.
+   * @returns {Promise<Record<string, unknown> | null>} Entry fields or null.
    */
   async getOverride(
-    botId: number,
+    botId: string,
     chatId: string | number,
     moduleKey: string,
   ): Promise<Record<string, unknown> | null> {
@@ -110,16 +128,18 @@ export class ChatSettingsService {
   }
 
   /**
-   * Saves (or replaces) a chat-level override and refreshes the cache.
+   * Saves (or replaces) one chat's configuration entry and refreshes the
+   * cache. The stored entry is the chat's full module configuration —
+   * creating it targets the module at the chat.
    *
    * @param {number} botId - Studio bot id.
    * @param {string | number} chatId - Telegram chat id.
    * @param {string} moduleKey - Module registry key.
-   * @param {Record<string, unknown>} config - Override fields to persist.
+   * @param {Record<string, unknown>} config - Configuration fields to persist.
    * @returns {Promise<void>} Resolves once stored.
    */
   async setOverride(
-    botId: number,
+    botId: string,
     chatId: string | number,
     moduleKey: string,
     config: Record<string, unknown>,
@@ -140,14 +160,15 @@ export class ChatSettingsService {
   }
 
   /**
-   * Removes a chat-level override so the chat falls back to bot defaults.
+   * Removes one chat's configuration entry, untargeting the module there
+   * (registry defaults alone leave it idle in that chat).
    *
    * @param {number} botId - Studio bot id.
    * @param {string | number} chatId - Telegram chat id.
    * @param {string} moduleKey - Module registry key.
    * @returns {Promise<void>} Resolves once deleted (no-op when absent).
    */
-  async clearOverride(botId: number, chatId: string | number, moduleKey: string): Promise<void> {
+  async clearOverride(botId: string, chatId: string | number, moduleKey: string): Promise<void> {
     await this.prisma.chatModuleSetting
       .delete({
         where: { botId_chatId_moduleKey: { botId, chatId: String(chatId), moduleKey } },
@@ -165,7 +186,7 @@ export class ChatSettingsService {
    * @param {string} [moduleKey] - Module key filter.
    * @returns {void}
    */
-  invalidate(botId?: number, chatId?: string | number, moduleKey?: string): void {
+  invalidate(botId?: string, chatId?: string | number, moduleKey?: string): void {
     for (const key of this.cache.keys()) {
       const [keyBot, keyChat, keyModule] = key.split(':');
       if (botId !== undefined && keyBot !== String(botId)) continue;

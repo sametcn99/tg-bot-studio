@@ -30,7 +30,7 @@ export class DiagnosticsService {
    * @returns {Promise<Record<string, unknown>>} Diagnostic report with actionable recommendations.
    * @throws {NotFoundException} When the bot does not exist.
    */
-  async getDiagnostics(botId: number): Promise<Record<string, unknown>> {
+  async getDiagnostics(botId: string): Promise<Record<string, unknown>> {
     const row = await this.botModel.findById(botId);
     if (!row) throw new NotFoundException(`Bot ${botId} not found`);
 

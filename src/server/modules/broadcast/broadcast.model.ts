@@ -38,7 +38,7 @@ export class BroadcastModel {
   /**
    * Lists broadcasts for a bot newest first.
    */
-  async list(botId: number): Promise<Broadcast[]> {
+  async list(botId: string): Promise<Broadcast[]> {
     return this.prisma.broadcast.findMany({
       where: { botId },
       orderBy: { id: 'desc' },
@@ -48,7 +48,7 @@ export class BroadcastModel {
   /**
    * Finds a broadcast by botId and id.
    */
-  async findById(botId: number, id: number): Promise<Broadcast | null> {
+  async findById(botId: string, id: string): Promise<Broadcast | null> {
     return this.prisma.broadcast.findFirst({
       where: { botId, id },
     });
@@ -58,7 +58,7 @@ export class BroadcastModel {
    * Creates a queued broadcast.
    */
   async create(data: {
-    botId: number;
+    botId: string;
     targetType: string;
     messageText: string;
     mediaUrl?: string | null;
@@ -88,7 +88,7 @@ export class BroadcastModel {
    * Updates status, counters, cursor, or experiment metadata of a broadcast.
    */
   async updateStatus(
-    id: number,
+    id: string,
     data: {
       status?: string;
       totalRecipients?: number;
@@ -119,7 +119,7 @@ export class BroadcastModel {
   /**
    * Lists every broadcast of an experiment group, variant order first.
    */
-  async listByExperiment(botId: number, experimentId: string): Promise<Broadcast[]> {
+  async listByExperiment(botId: string, experimentId: string): Promise<Broadcast[]> {
     const rows = await this.prisma.broadcast.findMany({
       where: { botId, experimentId },
       orderBy: { id: 'asc' },
@@ -133,7 +133,7 @@ export class BroadcastModel {
    * @param {AudienceFilter} data - Target filters.
    * @returns {Prisma.BotUserWhereInput} Prisma where clause.
    */
-  private audienceWhere(botId: number, data: AudienceFilter): Prisma.BotUserWhereInput {
+  private audienceWhere(botId: string, data: AudienceFilter): Prisma.BotUserWhereInput {
     const targetType = data.targetType ?? 'all';
     if (targetType === 'language') {
       return { botId, languageCode: data.language ?? 'en' };
@@ -150,7 +150,7 @@ export class BroadcastModel {
    * Counts the audience for a filter with a database-side COUNT — no row
    * hydration. Used for upfront `totalRecipients`.
    */
-  async countAudience(botId: number, data: AudienceFilter): Promise<number> {
+  async countAudience(botId: string, data: AudienceFilter): Promise<number> {
     return this.prisma.botUser.count({
       where: this.audienceWhere(botId, data),
     });
@@ -167,7 +167,7 @@ export class BroadcastModel {
    * @yields {AudienceUser} Next audience member.
    */
   async *iterateAudience(
-    botId: number,
+    botId: string,
     data: AudienceFilter,
     startAfterId = 0,
   ): AsyncGenerator<AudienceUser, void, unknown> {
@@ -225,8 +225,8 @@ export class BroadcastModel {
    * @returns {Promise<Broadcast>} Created rollout row.
    */
   async concludeExperiment(
-    botId: number,
-    loserQueuedIds: number[],
+    botId: string,
+    loserQueuedIds: string[],
     rollout: {
       targetType: string;
       messageText: string;
@@ -271,11 +271,11 @@ export class BroadcastModel {
    * @returns {Promise<number>} Created link id.
    */
   async createTrackingLink(
-    botId: number,
-    broadcastId: number,
+    botId: string,
+    broadcastId: string,
     index: number,
     url: string,
-  ): Promise<number> {
+  ): Promise<string> {
     const existing = await this.prisma.link.findFirst({
       where: { botId, title: `bc:${broadcastId}:${index}` },
     });
@@ -301,14 +301,14 @@ export class BroadcastModel {
    * @param {number} linkId - Clicked link id.
    * @returns {Promise<void>} Resolves once counters are updated.
    */
-  async creditTrackingClick(linkId: number): Promise<void> {
+  async creditTrackingClick(linkId: string): Promise<void> {
     const link = await this.prisma.link.findUnique({
       where: { id: linkId },
       select: { id: true, title: true },
     });
     if (!link || !link.title.startsWith('bc:')) return;
-    const broadcastId = Number(link.title.split(':')[1]);
-    if (!Number.isFinite(broadcastId) || broadcastId <= 0) return;
+    const broadcastId = link.title.split(':')[1];
+    if (!broadcastId) return;
     await this.prisma.broadcast
       .update({ where: { id: broadcastId }, data: { clicks: { increment: 1 } } })
       .catch(() => undefined);

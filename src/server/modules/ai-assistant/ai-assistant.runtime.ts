@@ -271,7 +271,7 @@ export class AiAssistantRuntime extends BotModuleHandler {
   /**
    * Checks whether a module is enabled for the bot.
    */
-  private async moduleEnabled(botId: number, moduleKey: string): Promise<boolean> {
+  private async moduleEnabled(botId: string, moduleKey: string): Promise<boolean> {
     const mod = await this.botModel.getModule(botId, moduleKey);
     return Boolean(mod?.isEnabled);
   }
@@ -279,7 +279,7 @@ export class AiAssistantRuntime extends BotModuleHandler {
   /**
    * Checks whether an autoresponder rule claims the message text.
    */
-  private async matchedAutoresponder(botId: number, text: string): Promise<boolean> {
+  private async matchedAutoresponder(botId: string, text: string): Promise<boolean> {
     if (!(await this.moduleEnabled(botId, 'autoresponder'))) return false;
     const rules = await this.autoresponderModel.list(botId);
     return rules.some(

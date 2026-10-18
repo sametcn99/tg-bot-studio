@@ -15,7 +15,7 @@ import type { Bot } from 'grammy';
  */
 export interface ModuleRuntimeContext {
   bot: Bot;
-  botId: number;
+  botId: string;
   config: Record<string, unknown>;
   sandbox?: boolean;
 }

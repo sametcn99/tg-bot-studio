@@ -2,9 +2,9 @@
  * Domain shape for mini app order with numeric telegram_id.
  */
 export interface MiniAppOrderEntity {
-  id: number;
-  bot_id: number;
-  app_id: number;
+  id: string;
+  bot_id: string;
+  app_id: string;
   telegram_id: number;
   total_amount: number;
   currency: string;

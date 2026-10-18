@@ -143,6 +143,7 @@
     "enabled": "{{count}} von {{total}} Modulen aktiviert",
     "configSaved": "Konfiguration gespeichert. Bot-Laufzeit neu geladen.",
     "toggleFailed": "Modul konnte nicht aktualisiert werden",
+    "chatScopedNote": "Dieses Modul wird pro Chat konfiguriert: Füge unten eine Gruppe oder einen Kanal hinzu und setze eigene Werte — jeder Chat kann sich anders verhalten.",
     "noOptions": "Dieses Modul hat keine konfigurierbaren Optionen.",
     "onePerLine": "Ein Eintrag pro Zeile",
     "docsLink": "Doku",
@@ -797,21 +798,6 @@
     "connectionNotFound": "Verbindung nicht gefunden.",
     "numericOnly": "Chat-spezifische Einstellungen erfordern eine numerische Chat-ID. Synchronisieren Sie den Bot."
   },
-  "chatOverrides": {
-    "title": "Chat-spezifische Einstellungen",
-    "hint": "Definieren Sie dieses Modul für jede Gruppe und jeden Kanal separat. Hier geänderte Werte überschreiben die bot-weiten Standards oben; unangetastete Felder erben sie weiter.",
-    "selectChat": "Gruppe oder Kanal auswählen",
-    "groups": "Gruppen",
-    "channels": "Kanäle",
-    "noneYet": "Noch keine Overrides — wählen Sie einen Chat, um eigene Werte festzulegen.",
-    "overriddenFields": "{{count}} Feld(er) überschrieben",
-    "botDefault": "Bot-Standards werden geerbt",
-    "inherit": "Bot-Standard erben",
-    "save": "Für diesen Chat speichern",
-    "saved": "Gespeichert",
-    "reset": "Auf Bot-Standard zurücksetzen",
-    "noFields": "Dieses Modul hat keine konfigurierbaren Felder."
-  },
   "federation": {
     "managerTitle": "Föderationsverwaltung",
     "managerEmpty": "Noch keine Föderationen. Erstelle eine mit /newfed <Name> im Bot-PM.",
@@ -982,5 +968,17 @@
     "noEvents": "Noch keine Health-Ereignisse aufgezeichnet.",
     "notNotified": "nicht benachrichtigt",
     "saved": "Alarmeinstellungen gespeichert"
+  },
+  "chatConfigs": {
+    "title": "Pro-Chat-Einstellungen",
+    "hint": "Jede Gruppe und jeder Kanal hat eine eigene Konfiguration — ein Kanal kann sich anders verhalten als ein anderer. Ein Chat hinzuzufügen aktiviert das Modul dort; das Entfernen des Eintrags deaktiviert es.",
+    "addChat": "Gruppe oder Kanal hinzufügen",
+    "allAdded": "Alle verbundenen Chats haben bereits eigene Einstellungen.",
+    "noneYet": "Noch keine Chats konfiguriert — das Modul bleibt inaktiv, bis du eines hinzufügst.",
+    "configured": "Konfiguriert",
+    "save": "Für diesen Chat speichern",
+    "saved": "Gespeichert",
+    "remove": "Diesen Chat entfernen",
+    "noFields": "Dieses Modul hat keine Pro-Chat-Felder — Speichern aktiviert es für den Chat."
   }
 }

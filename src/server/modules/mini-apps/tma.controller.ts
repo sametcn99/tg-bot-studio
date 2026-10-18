@@ -111,9 +111,7 @@ export class TmaController {
     @Req() req: Request & { tmaUser?: TmaUser },
   ) {
     const app = await this.appForSlug(slug);
-    const parsed = Number(orderId);
-    if (!Number.isFinite(parsed)) return null;
-    return this.service.getOrderStatus(app.bot_id, app.id, parsed, req.tmaUser!.id);
+    return this.service.getOrderStatus(app.bot_id, app.id, orderId, req.tmaUser!.id);
   }
 
   /**
@@ -192,7 +190,7 @@ export class TmaController {
   /**
    * Resolves the owning bot id for a slug.
    */
-  private async botIdForSlug(slug: string): Promise<number> {
+  private async botIdForSlug(slug: string): Promise<string> {
     const app = await this.appForSlug(slug);
     return app.bot_id;
   }
@@ -200,9 +198,9 @@ export class TmaController {
   /**
    * Loads the active app row for a slug.
    */
-  private async appForSlug(slug: string): Promise<{ id: number; bot_id: number }> {
+  private async appForSlug(slug: string): Promise<{ id: string; bot_id: string }> {
     const app = await this.miniAppModel.findBySlug(slug);
-    if (!app || app.isActive !== 1) return { id: 0, bot_id: 0 };
+    if (!app || app.isActive !== 1) return { id: '', bot_id: '' };
     return { id: app.id, bot_id: app.botId };
   }
 }

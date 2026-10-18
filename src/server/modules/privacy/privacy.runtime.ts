@@ -85,7 +85,7 @@ export class PrivacyRuntime extends BotModuleHandler {
    * @param {number} telegramId - Telegram user id.
    * @returns {Promise<string | null>} HTML summary, or null when nothing stored.
    */
-  private async collectSummary(botId: number, telegramId: number): Promise<string | null> {
+  private async collectSummary(botId: string, telegramId: number): Promise<string | null> {
     const [profile, warns, aiHistory, support, activity, memberState] = await Promise.all([
       this.prisma.botUser.findUnique({
         where: { botId_telegramId: { botId, telegramId: BigInt(telegramId) } },
@@ -127,7 +127,7 @@ export class PrivacyRuntime extends BotModuleHandler {
    * Deletes (or anonymizes where deletion breaks accounting) all data of a
    * user across this bot.
    */
-  private async deleteUserData(botId: number, telegramId: number): Promise<void> {
+  private async deleteUserData(botId: string, telegramId: number): Promise<void> {
     const scope = { botId, telegramId: BigInt(telegramId) };
     await this.prisma.$transaction([
       this.prisma.botUser.deleteMany({ where: scope }),

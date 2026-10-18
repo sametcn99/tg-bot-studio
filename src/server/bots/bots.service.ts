@@ -21,7 +21,7 @@ import { listModuleStates } from './module-states';
  * @interface BotWithStatus
  */
 export interface BotWithStatus {
-  id: number;
+  id: string;
   name: string;
   token: string;
   username: string | null;
@@ -96,7 +96,7 @@ export class BotsService {
    * @param {number} botId - Bot identifier.
    * @returns {Promise<{timezone: string}>} Effective settings.
    */
-  async getBotSettings(botId: number): Promise<{ timezone: string }> {
+  async getBotSettings(botId: string): Promise<{ timezone: string }> {
     await this.botModel.findById(botId);
     return { timezone: safeTimeZone(this.settings.getBotSetting(botId, 'timezone')) };
   }
@@ -109,7 +109,7 @@ export class BotsService {
    * @throws {StudioException} When the zone name is not a valid IANA zone.
    */
   async updateBotSettings(
-    botId: number,
+    botId: string,
     body: { timezone?: string },
   ): Promise<{ timezone: string }> {
     await this.botModel.findById(botId);
@@ -149,7 +149,7 @@ export class BotsService {
             }),
           ])
         : [[], [], []];
-    const toMap = (rows: Array<{ botId: number; _count: { _all: number } }>) =>
+    const toMap = (rows: Array<{ botId: string; _count: { _all: number } }>) =>
       new Map(rows.map((r) => [r.botId, r._count._all]));
     const modulesMap = toMap(moduleCounts);
     const appsMap = toMap(appCounts);
@@ -177,7 +177,7 @@ export class BotsService {
    * @returns {Promise<BotWithStatus>} Enriched bot record.
    * @throws {NotFoundException} When the bot does not exist.
    */
-  async findOne(id: number): Promise<BotWithStatus> {
+  async findOne(id: string): Promise<BotWithStatus> {
     const bot = await this.botModel.findById(id);
     if (!bot) this.throwNotFound(id);
 
@@ -208,7 +208,7 @@ export class BotsService {
    * @param {number} id - Studio bot identifier.
    * @throws {NotFoundException} Always.
    */
-  private throwNotFound(id: number): never {
+  private throwNotFound(id: string): never {
     throw new NotFoundException(`Bot ${id} not found`);
   }
 
@@ -249,7 +249,7 @@ export class BotsService {
    * @returns {Promise<BotWithStatus>} Updated bot record.
    * @throws {NotFoundException} When the bot does not exist.
    */
-  async update(id: number, dto: UpdateBotDto): Promise<BotWithStatus> {
+  async update(id: string, dto: UpdateBotDto): Promise<BotWithStatus> {
     const existing = await this.botModel.findById(id);
     if (!existing) throw new NotFoundException(`Bot ${id} not found`);
 
@@ -267,7 +267,7 @@ export class BotsService {
    * @param {number} id - Studio bot identifier.
    * @returns {Promise<void>} Resolves once fully removed.
    */
-  async remove(id: number): Promise<void> {
+  async remove(id: string): Promise<void> {
     this.pool.destroyBot(id);
     await this.botModel.delete(id);
     this.audit.log('bot.delete', { botId: id });
@@ -278,7 +278,7 @@ export class BotsService {
    * @param {number} botId - Studio bot identifier.
    * @returns {Promise<Array<Record<string, unknown>>>} Registry entries merged with persisted state.
    */
-  async listModules(botId: number): Promise<Array<Record<string, unknown>>> {
+  async listModules(botId: string): Promise<Array<Record<string, unknown>>> {
     const states = await listModuleStates(this.botModel, botId);
     return states.map((state) => ({
       ...state,
@@ -298,7 +298,7 @@ export class BotsService {
    * @throws {NotFoundException} When bot or module key is unknown.
    */
   async updateModule(
-    botId: number,
+    botId: string,
     moduleKey: string,
     dto: UpdateModuleStateDto,
   ): Promise<Record<string, unknown>> {
@@ -343,7 +343,7 @@ export class BotsService {
    * @param {number} botId - Studio bot identifier.
    * @returns {Promise<Record<string, unknown>>} Diagnostic report with actionable recommendations.
    */
-  async getDiagnostics(botId: number): Promise<Record<string, unknown>> {
+  async getDiagnostics(botId: string): Promise<Record<string, unknown>> {
     return this.diagnostics.getDiagnostics(botId);
   }
 
@@ -353,7 +353,7 @@ export class BotsService {
    * @param {string} presetKey - Bundle key (ecommerce/community/support/growth).
    * @returns {Promise<Record<string, unknown>>} Result and enabled module keys.
    */
-  async applyPreset(botId: number, presetKey: string): Promise<Record<string, unknown>> {
+  async applyPreset(botId: string, presetKey: string): Promise<Record<string, unknown>> {
     const bot = await this.botModel.findById(botId);
     if (!bot) {
       throw new NotFoundException(`Bot ${botId} not found`);
@@ -407,7 +407,7 @@ export class BotsService {
    * @returns {Promise<object>} Simulated bot response (text, photo, buttons).
    */
   async simulateMessage(
-    botId: number,
+    botId: string,
     text: string,
     options: {
       chatType?: 'private' | 'supergroup' | 'group';
@@ -430,7 +430,7 @@ export class BotsService {
    * @returns {Promise<object>} Simulated bot response.
    */
   async simulateCallback(
-    botId: number,
+    botId: string,
     callbackData: string,
     chatType: 'private' | 'supergroup' | 'group' = 'private',
   ): Promise<{
@@ -445,7 +445,7 @@ export class BotsService {
    * Clones an existing bot's complete module setup, autoresponders, drip flows,
    * and mini-apps to a new bot with a new token.
    */
-  async cloneBot(botId: number, data: { name?: string; token: string }): Promise<BotWithStatus> {
+  async cloneBot(botId: string, data: { name?: string; token: string }): Promise<BotWithStatus> {
     const original = await this.botModel.findById(botId);
     if (!original) this.throwNotFound(botId);
 
@@ -560,7 +560,7 @@ export class BotsService {
   /**
    * Exports full configuration bundle of a bot (excluding sensitive credentials).
    */
-  async exportConfig(botId: number): Promise<Record<string, unknown>> {
+  async exportConfig(botId: string): Promise<Record<string, unknown>> {
     const bot = await this.botModel.findById(botId);
     if (!bot) this.throwNotFound(botId);
 
@@ -628,7 +628,7 @@ export class BotsService {
    * bundle applies in one transaction; a failure leaves the bot untouched.
    */
   async importConfig(
-    botId: number,
+    botId: string,
     bundle: Record<string, unknown>,
   ): Promise<{
     success: boolean;

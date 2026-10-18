@@ -7,7 +7,7 @@ generator client {
 }
 
 model Bot {
-  id        Int     @id @default(autoincrement())
+  id        String     @id @default(uuid())
   name      String
   token     String  @unique
   username  String?
@@ -54,7 +54,7 @@ model Bot {
 /// Reference-parity per-chat module configuration override. Effective config for a
 /// chat is registry defaults <- bot-level `bot_modules.config_json` <- this.
 model ChatModuleSetting {
-  botId      Int    @map("bot_id")
+  botId      String    @map("bot_id")
   chatId     String @map("chat_id")
   moduleKey  String @map("module_key")
   configJson String @map("config_json")
@@ -68,7 +68,7 @@ model ChatModuleSetting {
 /// Persistent per-member moderation state: strike counters, captcha solved
 /// flag, active mute expiry, and module scratch data (flood windows, ...).
 model ChatMemberState {
-  botId           Int     @map("bot_id")
+  botId           String     @map("bot_id")
   chatId          String  @map("chat_id")
   telegramId      BigInt  @map("telegram_id")
   strikes         Int     @default(0)
@@ -85,8 +85,8 @@ model ChatMemberState {
 
 /// Individual warning event issued by admins or automated blocklists.
 model ChatWarn {
-  id          Int    @id @default(autoincrement())
-  botId       Int    @map("bot_id")
+  id          String    @id @default(uuid())
+  botId       String    @map("bot_id")
   chatId      String @map("chat_id")
   telegramId  BigInt @map("telegram_id")
   reason      String
@@ -101,7 +101,7 @@ model ChatWarn {
 /// Reference-style approved users: immune to automated moderation (flood,
 /// blocklists, locks) while staying enforced for everyone else.
 model ChatApproval {
-  botId      Int     @map("bot_id")
+  botId      String     @map("bot_id")
   chatId     String  @map("chat_id")
   telegramId BigInt  @map("telegram_id")
   reason     String?
@@ -121,7 +121,7 @@ model Fed {
   /// Telegram id of the owning user (fed creator).
   ownerTelegramId  BigInt  @map("owner_telegram_id")
   /// Studio bot through which the federation was created.
-  ownerBotId       Int     @map("owner_bot_id")
+  ownerBotId       String     @map("owner_bot_id")
   /// Optional channel/group that receives federation log events.
   logChatId        BigInt? @map("log_chat_id")
   fedReasonRequired Int    @default(0) @map("fed_reason_required")
@@ -165,7 +165,7 @@ model FedAdmin {
 /// the studio can enforce the same fed.
 model FedChat {
   fedId   String @map("fed_id")
-  botId   Int    @map("bot_id")
+  botId   String    @map("bot_id")
   chatId  String @map("chat_id")
   quiet   Int    @default(0)
   joinedAt String? @map("joined_at")
@@ -191,7 +191,7 @@ model FedSub {
 }
 
 model BotModule {
-  botId      Int     @map("bot_id")
+  botId      String     @map("bot_id")
   moduleKey  String  @map("module_key")
   isEnabled  Int     @default(0) @map("is_enabled")
   configJson String? @map("config_json")
@@ -203,8 +203,8 @@ model BotModule {
 }
 
 model MiniApp {
-  id           Int     @id @default(autoincrement())
-  botId        Int     @map("bot_id")
+  id           String     @id @default(uuid())
+  botId        String     @map("bot_id")
   name         String
   slug         String  @unique
   templateType String  @map("template_type")
@@ -224,9 +224,9 @@ model MiniApp {
 }
 
 model MiniAppOrder {
-  id          Int     @id @default(autoincrement())
-  botId       Int     @map("bot_id")
-  appId       Int     @map("app_id")
+  id          String     @id @default(uuid())
+  botId       String     @map("bot_id")
+  appId       String     @map("app_id")
   telegramId  BigInt  @map("telegram_id")
   totalAmount Float   @map("total_amount")
   currency    String
@@ -241,7 +241,7 @@ model MiniAppOrder {
 }
 
 model BotSetting {
-  botId Int    @map("bot_id")
+  botId String    @map("bot_id")
   key   String
   value String
 
@@ -252,7 +252,7 @@ model BotSetting {
 }
 
 model BotUser {
-  botId        Int     @map("bot_id")
+  botId        String     @map("bot_id")
   telegramId   BigInt  @map("telegram_id")
   username     String?
   firstName    String? @map("first_name")
@@ -271,8 +271,8 @@ model BotUser {
 }
 
 model Link {
-  id          Int     @id @default(autoincrement())
-  botId       Int     @map("bot_id")
+  id          String     @id @default(uuid())
+  botId       String     @map("bot_id")
   title       String
   description String?
   url         String
@@ -290,8 +290,8 @@ model Link {
 }
 
 model Broadcast {
-  id              Int     @id @default(autoincrement())
-  botId           Int     @map("bot_id")
+  id              String     @id @default(uuid())
+  botId           String     @map("bot_id")
   targetType      String  @map("target_type")
   messageText     String  @map("message_text")
   mediaUrl        String? @map("media_url")
@@ -326,8 +326,8 @@ model Broadcast {
 /// Shared media library asset: a reusable URL or Telegram file_id that the
 /// welcome/broadcast/drip/autoresponder composers pick instead of retyping.
 model MediaAsset {
-  id           Int     @id @default(autoincrement())
-  botId        Int     @map("bot_id")
+  id           String     @id @default(uuid())
+  botId        String     @map("bot_id")
   name         String
   /// `url` (http(s) media link) or `file_id` (Telegram-uploaded file id).
   source       String  @default("url")
@@ -350,8 +350,8 @@ model MediaAsset {
 /// nodes reply, input nodes capture text, condition nodes branch, delay nodes
 /// schedule continuation.
 model Flow {
-  id          Int     @id @default(autoincrement())
-  botId       Int     @map("bot_id")
+  id          String     @id @default(uuid())
+  botId       String     @map("bot_id")
   name        String
   /// `command` | `keyword` | `start`
   triggerType String  @default("command") @map("trigger_type")
@@ -372,8 +372,8 @@ model Flow {
 
 /// Per-user runtime position inside a flow (current node, captured variables).
 model FlowState {
-  botId      Int     @map("bot_id")
-  flowId     Int     @map("flow_id")
+  botId      String     @map("bot_id")
+  flowId     String     @map("flow_id")
   telegramId BigInt  @map("telegram_id")
   nodeId     String  @map("node_id")
   /// Waiting for a text input node when set.
@@ -397,8 +397,8 @@ model FlowState {
 /// Studio-level health alert raised by the bot health monitor (poller
 /// failures, recoveries) with optional Telegram admin notification state.
 model HealthEvent {
-  id        Int     @id @default(autoincrement())
-  botId     Int     @map("bot_id")
+  id        String     @id @default(uuid())
+  botId     String     @map("bot_id")
   /// `failed` | `recovering` | `recovered`
   level     String
   reason    String?
@@ -415,7 +415,7 @@ model HealthEvent {
 /// Saved full-bot configuration bundle (same shape as export/import JSON)
 /// listed in the template gallery and applied to bots in one click.
 model BotTemplate {
-  id          Int     @id @default(autoincrement())
+  id          String     @id @default(uuid())
   name        String
   description String?
   bundleJson  String  @map("bundle_json")
@@ -426,8 +426,8 @@ model BotTemplate {
 }
 
 model SupportMessage {
-  id            Int     @id @default(autoincrement())
-  botId         Int     @map("bot_id")
+  id            String     @id @default(uuid())
+  botId         String     @map("bot_id")
   telegramId    BigInt  @map("telegram_id")
   userMessageId Int?    @map("user_message_id")
   adminChatId   BigInt? @map("admin_chat_id")
@@ -446,8 +446,8 @@ model SupportMessage {
 }
 
 model DripCampaign {
-  id        Int    @id @default(autoincrement())
-  botId     Int    @map("bot_id")
+  id        String    @id @default(uuid())
+  botId     String    @map("bot_id")
   name      String
   stepsJson String @map("steps_json")
   isActive  Int    @default(1) @map("is_active")
@@ -459,8 +459,8 @@ model DripCampaign {
 }
 
 model DripSubscriber {
-  botId       Int     @map("bot_id")
-  campaignId  Int     @map("campaign_id")
+  botId       String     @map("bot_id")
+  campaignId  String     @map("campaign_id")
   telegramId  BigInt  @map("telegram_id")
   currentStep Int     @default(0) @map("current_step")
   nextRunAt   String? @map("next_run_at")
@@ -478,8 +478,8 @@ model DripSubscriber {
 }
 
 model Giveaway {
-  id                   Int     @id @default(autoincrement())
-  botId                Int     @map("bot_id")
+  id                   String     @id @default(uuid())
+  botId                String     @map("bot_id")
   title                String
   requiredChannelsJson String? @map("required_channels_json")
   winnersCount         Int     @default(1) @map("winners_count")
@@ -493,8 +493,8 @@ model Giveaway {
 }
 
 model ScheduledPost {
-  id           Int     @id @default(autoincrement())
-  botId        Int     @map("bot_id")
+  id           String     @id @default(uuid())
+  botId        String     @map("bot_id")
   targetChatId String  @map("target_chat_id")
   messageText  String  @map("message_text")
   mediaUrl     String? @map("media_url")
@@ -510,7 +510,7 @@ model ScheduledPost {
 }
 
 model BlockedUser {
-  botId      Int     @map("bot_id")
+  botId      String     @map("bot_id")
   telegramId BigInt  @map("telegram_id")
   username   String?
   firstName  String? @map("first_name")
@@ -524,7 +524,7 @@ model BlockedUser {
 }
 
 model BotGroup {
-  botId       Int     @map("bot_id")
+  botId       String     @map("bot_id")
   chatId      BigInt  @map("chat_id")
   title       String
   type        String
@@ -539,8 +539,8 @@ model BotGroup {
 }
 
 model ChatConnection {
-  id        Int     @id @default(autoincrement())
-  botId     Int     @map("bot_id")
+  id        String     @id @default(uuid())
+  botId     String     @map("bot_id")
   chatId    String  @map("chat_id")
   title     String
   type      String
@@ -555,8 +555,8 @@ model ChatConnection {
 }
 
 model Autoresponder {
-  id           Int     @id @default(autoincrement())
-  botId        Int     @map("bot_id")
+  id           String     @id @default(uuid())
+  botId        String     @map("bot_id")
   command      String
   responseText String  @map("response_text")
   mediaUrl     String? @map("media_url")
@@ -576,8 +576,8 @@ model Autoresponder {
 }
 
 model VipSubscription {
-  id         Int    @id @default(autoincrement())
-  botId      Int    @map("bot_id")
+  id         String    @id @default(uuid())
+  botId      String    @map("bot_id")
   telegramId BigInt @map("telegram_id")
   channelId  BigInt @map("channel_id")
   expiresAt  String @map("expires_at")
@@ -607,7 +607,7 @@ model Session {
 }
 
 model SecurityLog {
-  id        Int     @id @default(autoincrement())
+  id        String     @id @default(uuid())
   event     String
   ip        String?
   userAgent String? @map("user_agent")
@@ -625,7 +625,7 @@ model SystemSetting {
 }
 
 model ChatActivity {
-  botId        Int    @map("bot_id")
+  botId        String    @map("bot_id")
   chatId       String @map("chat_id")
   telegramId   BigInt @map("telegram_id")
   day          String
@@ -640,8 +640,8 @@ model ChatActivity {
 }
 
 model ScoreSchedule {
-  id                  Int     @id @default(autoincrement())
-  botId               Int     @map("bot_id")
+  id                  String     @id @default(uuid())
+  botId               String     @map("bot_id")
   name                String
   chatIdsJson         String  @map("chat_ids_json")
   period              String  @default("weekly")
@@ -667,8 +667,8 @@ model ScoreSchedule {
 }
 
 model AiChatHistory {
-  id               Int     @id @default(autoincrement())
-  botId            Int     @map("bot_id")
+  id               String     @id @default(uuid())
+  botId            String     @map("bot_id")
   telegramId       BigInt  @map("telegram_id")
   role             String
   content          String
@@ -686,8 +686,8 @@ model AiChatHistory {
 }
 
 model AiKnowledgeDoc {
-  id        Int     @id @default(autoincrement())
-  botId     Int     @map("bot_id")
+  id        String     @id @default(uuid())
+  botId     String     @map("bot_id")
   title     String
   content   String
   tags      String?
@@ -701,9 +701,9 @@ model AiKnowledgeDoc {
 
 /// Semantic RAG chunk with its optional embedding vector (JSON float array).
 model AiKnowledgeChunk {
-  id         Int     @id @default(autoincrement())
-  botId      Int     @map("bot_id")
-  docId      Int     @map("doc_id")
+  id         String     @id @default(uuid())
+  botId      String     @map("bot_id")
+  docId      String     @map("doc_id")
   idx        Int
   content    String
   vectorJson String? @map("vector_json")

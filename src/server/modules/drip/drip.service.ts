@@ -28,8 +28,8 @@ export interface DripStep {
  * @property {number} is_active - Enabled flag.
  */
 export interface DripCampaignRow {
-  id: number;
-  bot_id: number;
+  id: string;
+  bot_id: string;
   name: string;
   steps_json: string;
   is_active: number;
@@ -55,7 +55,7 @@ export class DripService extends BotModuleHandler implements OnApplicationShutdo
 
   private readonly logger = new Logger(DripService.name);
   private readonly ticker: ReturnType<typeof setInterval>;
-  private autoSubscribeConfig: Record<number, boolean> = {};
+  private autoSubscribeConfig: Record<string, boolean> = {};
 
   constructor(
     private readonly dripModel: DripModel,
@@ -94,7 +94,7 @@ export class DripService extends BotModuleHandler implements OnApplicationShutdo
   /**
    * Lists drip campaigns for a bot with parsed steps.
    */
-  async list(botId: number): Promise<Array<Record<string, unknown>>> {
+  async list(botId: string): Promise<Array<Record<string, unknown>>> {
     const campaigns = await this.dripModel.listCampaigns(botId);
     return Promise.all(
       campaigns.map(async (row) => {
@@ -118,7 +118,7 @@ export class DripService extends BotModuleHandler implements OnApplicationShutdo
   /**
    * Creates a campaign.
    */
-  async create(botId: number, data: Record<string, unknown>): Promise<Record<string, unknown>> {
+  async create(botId: string, data: Record<string, unknown>): Promise<Record<string, unknown>> {
     const created = await this.dripModel.createCampaign({
       botId,
       name: String(data.name ?? 'Untitled campaign'),
@@ -143,8 +143,8 @@ export class DripService extends BotModuleHandler implements OnApplicationShutdo
    * Updates a campaign.
    */
   async update(
-    botId: number,
-    id: number,
+    botId: string,
+    id: string,
     data: Record<string, unknown>,
   ): Promise<Record<string, unknown>> {
     const existing = await this.dripModel.findCampaignById(id);
@@ -174,14 +174,14 @@ export class DripService extends BotModuleHandler implements OnApplicationShutdo
   /**
    * Deletes a campaign and its subscribers.
    */
-  async remove(botId: number, id: number): Promise<void> {
+  async remove(botId: string, id: string): Promise<void> {
     await this.dripModel.deleteCampaign(id);
   }
 
   /**
    * Subscribes a user to a campaign, scheduling the first step.
    */
-  async subscribe(botId: number, campaignId: number, telegramId: number): Promise<void> {
+  async subscribe(botId: string, campaignId: string, telegramId: number): Promise<void> {
     const campaign = await this.dripModel.findCampaignById(campaignId);
     if (!campaign) return;
     const steps = safeJsonParse<DripStep[]>(campaign.stepsJson, [], 'drip:steps');
@@ -194,14 +194,14 @@ export class DripService extends BotModuleHandler implements OnApplicationShutdo
   /**
    * Lists campaign subscribers.
    */
-  async listSubscribers(botId: number, campaignId: number) {
+  async listSubscribers(botId: string, campaignId: string) {
     return this.dripModel.listSubscribers(botId, campaignId);
   }
 
   /**
    * Unsubscribes a user from a campaign.
    */
-  async unsubscribe(botId: number, campaignId: number, telegramId: number): Promise<void> {
+  async unsubscribe(botId: string, campaignId: string, telegramId: number): Promise<void> {
     await this.dripModel.unsubscribe(campaignId, telegramId);
   }
 

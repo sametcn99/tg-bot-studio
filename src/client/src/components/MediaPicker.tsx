@@ -21,7 +21,7 @@ import { localizedErrorMessage } from '../utils/errors';
 
 /** Library asset row as returned by the API. */
 export interface MediaAssetRow {
-  id: number;
+  id: string;
   name: string;
   source: string;
   value: string;
@@ -58,7 +58,7 @@ export default function MediaPicker({
   onClose,
   onSelect,
 }: {
-  botId: number;
+  botId: string;
   open: boolean;
   onClose: () => void;
   onSelect: (value: string, kind: string) => void;

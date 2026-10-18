@@ -17,9 +17,9 @@ import { StudioException } from '../../common/errors/studio-error';
  * for seamless compatibility across client components.
  */
 export interface ChatConnectionRow {
-  id: number;
-  botId: number;
-  bot_id: number;
+  id: string;
+  botId: string;
+  bot_id: string;
   chatId: string;
   chat_id: string;
   title: string;
@@ -124,7 +124,7 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
   /**
    * Lists every connection of a bot.
    */
-  async list(botId: number): Promise<ChatConnectionRow[]> {
+  async list(botId: string): Promise<ChatConnectionRow[]> {
     const list = await this.connectionModel.listConnections(botId);
     return list.map(toChatConnectionRow);
   }
@@ -132,7 +132,7 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
   /**
    * Creates a connection.
    */
-  async create(botId: number, data: Record<string, unknown>): Promise<ChatConnectionRow> {
+  async create(botId: string, data: Record<string, unknown>): Promise<ChatConnectionRow> {
     const rawChatId = data.chatId !== undefined ? data.chatId : data.chat_id;
     const chatId = normalizeChatId(rawChatId);
     const type = normalizeType(data.type);
@@ -145,9 +145,13 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
 
     const isActive =
       data.isActive !== undefined
-        ? data.isActive === false || data.isActive === 0 ? 0 : 1
+        ? data.isActive === false || data.isActive === 0
+          ? 0
+          : 1
         : data.is_active !== undefined
-          ? data.is_active === false || data.is_active === 0 ? 0 : 1
+          ? data.is_active === false || data.is_active === 0
+            ? 0
+            : 1
           : 1;
 
     const row = await this.connectionModel.createConnection({
@@ -169,8 +173,8 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
    * Updates a connection.
    */
   async update(
-    botId: number,
-    id: number,
+    botId: string,
+    id: string,
     data: Record<string, unknown>,
   ): Promise<ChatConnectionRow> {
     const existing = await this.getOrFail(botId, id);
@@ -193,9 +197,13 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
 
     const isActive =
       data.isActive !== undefined
-        ? data.isActive ? 1 : 0
+        ? data.isActive
+          ? 1
+          : 0
         : data.is_active !== undefined
-          ? data.is_active ? 1 : 0
+          ? data.is_active
+            ? 1
+            : 0
           : existing.isActive;
 
     const row = await this.connectionModel.updateConnection(id, {
@@ -211,7 +219,7 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
   /**
    * Deletes a connection.
    */
-  async remove(botId: number, id: number): Promise<void> {
+  async remove(botId: string, id: string): Promise<void> {
     await this.getOrFail(botId, id);
     await this.connectionModel.deleteConnection(id);
   }
@@ -219,7 +227,7 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
   /**
    * Reads the per-bot auto-sync flag from the connections module config.
    */
-  private async autoSyncEnabled(botId: number): Promise<boolean> {
+  private async autoSyncEnabled(botId: string): Promise<boolean> {
     const row = await this.prisma.botModule.findUnique({
       where: {
         botId_moduleKey: { botId, moduleKey: 'connections' },
@@ -246,7 +254,7 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
   /**
    * Imports every chat the bot runtime auto-discovered into the connection list.
    */
-  async syncFromBot(botId: number, enrich = false): Promise<{ synced: number }> {
+  async syncFromBot(botId: string, enrich = false): Promise<{ synced: number }> {
     const groups = await this.connectionModel.listGroups(botId);
     for (const group of groups) {
       const chatId = String(group.chat_id);
@@ -289,7 +297,7 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
   /**
    * Fetches chat info via live bot instance.
    */
-  private async fetchChatInfo(botId: number, chatId: string): Promise<DiscoveredChatInfo | null> {
+  private async fetchChatInfo(botId: string, chatId: string): Promise<DiscoveredChatInfo | null> {
     const bot = this.pool.getBot(botId);
     if (!bot) return null;
     try {
@@ -303,7 +311,7 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
   /**
    * Fetches a single connection or throws.
    */
-  private async getOrFail(botId: number, id: number): Promise<ChatConnectionRow> {
+  private async getOrFail(botId: string, id: string): Promise<ChatConnectionRow> {
     const row = await this.connectionModel.findConnectionById(botId, id);
     if (!row) throw new NotFoundException(`Connection ${id} not found`);
     return toChatConnectionRow(row);

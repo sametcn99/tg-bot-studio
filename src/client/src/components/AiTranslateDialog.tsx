@@ -57,7 +57,7 @@ export default function AiTranslateDialog({
   onClose,
   onApply,
 }: {
-  botId: number;
+  botId: string;
   open: boolean;
   text: string;
   onClose: () => void;

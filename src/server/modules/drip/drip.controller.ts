@@ -17,7 +17,7 @@ export class DripController {
    * @returns {object[]} Campaign rows.
    */
   @Get('campaigns')
-  list(@Param('botId', ParseIntPipe) botId: number) {
+  list(@Param('botId') botId: string) {
     return this.service.list(botId);
   }
 
@@ -28,7 +28,7 @@ export class DripController {
    * @returns {object} Created campaign.
    */
   @Post('campaigns')
-  create(@Param('botId', ParseIntPipe) botId: number, @Body() body: Record<string, unknown>) {
+  create(@Param('botId') botId: string, @Body() body: Record<string, unknown>) {
     return this.service.create(botId, body);
   }
 
@@ -41,8 +41,8 @@ export class DripController {
    */
   @Patch('campaigns/:id')
   update(
-    @Param('botId', ParseIntPipe) botId: number,
-    @Param('id', ParseIntPipe) id: number,
+    @Param('botId') botId: string,
+    @Param('id') id: string,
     @Body() body: Record<string, unknown>,
   ) {
     return this.service.update(botId, id, body);
@@ -55,7 +55,7 @@ export class DripController {
    * @returns {{success: boolean}} Confirmation payload.
    */
   @Delete('campaigns/:id')
-  remove(@Param('botId', ParseIntPipe) botId: number, @Param('id', ParseIntPipe) id: number) {
+  remove(@Param('botId') botId: string, @Param('id') id: string) {
     this.service.remove(botId, id);
     return { success: true };
   }
@@ -67,10 +67,7 @@ export class DripController {
    * @returns {object[]} Subscriber rows.
    */
   @Get('campaigns/:campaignId/subscribers')
-  listSubscribers(
-    @Param('botId', ParseIntPipe) botId: number,
-    @Param('campaignId', ParseIntPipe) campaignId: number,
-  ) {
+  listSubscribers(@Param('botId') botId: string, @Param('campaignId') campaignId: string) {
     return this.service.listSubscribers(botId, campaignId);
   }
 
@@ -83,8 +80,8 @@ export class DripController {
    */
   @Post('campaigns/:campaignId/subscribers')
   subscribe(
-    @Param('botId', ParseIntPipe) botId: number,
-    @Param('campaignId', ParseIntPipe) campaignId: number,
+    @Param('botId') botId: string,
+    @Param('campaignId') campaignId: string,
     @Body() body: { telegramId?: number },
   ) {
     this.service.subscribe(botId, campaignId, Number(body.telegramId));
@@ -100,8 +97,8 @@ export class DripController {
    */
   @Delete('campaigns/:campaignId/subscribers/:telegramId')
   unsubscribe(
-    @Param('botId', ParseIntPipe) botId: number,
-    @Param('campaignId', ParseIntPipe) campaignId: number,
+    @Param('botId') botId: string,
+    @Param('campaignId') campaignId: string,
     @Param('telegramId', ParseIntPipe) telegramId: number,
   ) {
     this.service.unsubscribe(botId, campaignId, telegramId);

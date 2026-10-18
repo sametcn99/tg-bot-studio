@@ -14,7 +14,7 @@ export class MessageScoreModel {
    * Records one activity event for a member in a chat.
    */
   async recordActivity(
-    botId: number,
+    botId: string,
     chatId: string,
     telegramId: number | bigint,
     flags: { reply: boolean; media: boolean },
@@ -68,7 +68,7 @@ export class MessageScoreModel {
    * Computes the weighted activity leaderboard using Prisma groupBy.
    */
   async getLeaderboard(
-    botId: number,
+    botId: string,
     chatId: string | undefined,
     sinceDay: string,
     limit: number,
@@ -149,7 +149,7 @@ export class MessageScoreModel {
   /**
    * Lists score schedules for a bot.
    */
-  async listSchedules(botId: number): Promise<ScoreSchedule[]> {
+  async listSchedules(botId: string): Promise<ScoreSchedule[]> {
     return this.prisma.scoreSchedule.findMany({
       where: { botId },
       orderBy: [{ status: 'desc' }, { runAt: 'asc' }],
@@ -159,7 +159,7 @@ export class MessageScoreModel {
   /**
    * Finds a score schedule by id.
    */
-  async findScheduleById(botId: number, id: number): Promise<ScoreSchedule | null> {
+  async findScheduleById(botId: string, id: string): Promise<ScoreSchedule | null> {
     return this.prisma.scoreSchedule.findFirst({
       where: { botId, id },
     });
@@ -169,7 +169,7 @@ export class MessageScoreModel {
    * Creates a score schedule.
    */
   async createSchedule(data: {
-    botId: number;
+    botId: string;
     name: string;
     chatIdsJson: string;
     period: string;
@@ -212,7 +212,7 @@ export class MessageScoreModel {
    * Updates an existing score schedule.
    */
   async updateSchedule(
-    id: number,
+    id: string,
     data: {
       name?: string;
       chatIdsJson?: string;
@@ -240,7 +240,7 @@ export class MessageScoreModel {
   /**
    * Deletes a score schedule.
    */
-  async deleteSchedule(id: number): Promise<void> {
+  async deleteSchedule(id: string): Promise<void> {
     await this.prisma.scoreSchedule.delete({
       where: { id },
     });
@@ -262,7 +262,7 @@ export class MessageScoreModel {
    * Updates result after dispatching a schedule.
    */
   async updateScheduleDispatch(
-    id: number,
+    id: string,
     data: {
       runAt: string;
       status: string;

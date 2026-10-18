@@ -40,7 +40,7 @@ export function ConfigFieldInput({
   onChange,
   action,
 }: {
-  botId: number;
+  botId: string;
   field: ConfigField;
   value: unknown;
   onChange: (value: unknown) => void;
@@ -282,7 +282,7 @@ function MediaSelectField({
   value,
   onChange,
 }: {
-  botId: number;
+  botId: string;
   label: string;
   value: string;
   onChange: (value: unknown) => void;
@@ -330,7 +330,7 @@ function TranslatableTextField({
   onChange,
   action,
 }: {
-  botId: number;
+  botId: string;
   field: ConfigField;
   value: string;
   helpAdornment?: React.ReactElement;

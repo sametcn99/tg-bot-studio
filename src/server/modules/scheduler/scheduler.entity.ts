@@ -1,13 +1,13 @@
 export interface ScheduledPostRow {
-  id: number;
-  bot_id: number;
-  target_chat_id: number | string;
+  id: string;
+  bot_id: string;
+  target_chat_id: string | number;
   message_text: string;
   media_url: string | null;
   buttons_json: string | null;
   scheduled_at: string;
   status: string;
-  botId: number;
+  botId: string;
   targetChatId: string;
   messageText: string;
   mediaUrl: string | null;

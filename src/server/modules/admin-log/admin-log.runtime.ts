@@ -5,6 +5,7 @@ import { AdminGateService } from '../../bot-engine/admin-gate.service';
 import { AdminLogService, type AdminLogCategory } from '../../bot-engine/admin-log.service';
 import { ChatSettingsService } from '../../bot-engine/chat-settings.service';
 import { escapeHtml } from '../../common/utils/telegram-text.util';
+import { isChatTargeted } from '../../common/utils/chat-targets.util';
 
 /**
  * Runtime for the Admin Log Channel module: subscribes to the shared
@@ -103,6 +104,8 @@ export class AdminLogRuntime extends BotModuleHandler {
         sourceChatId,
         this.moduleKey,
       );
+      // Explicit-target gate: only chats on the module's target list log.
+      if (!isChatTargeted(config.targetChats, sourceChatId)) return;
       const logChatId = Number(config.logChatId ?? 0);
       if (!logChatId) return;
       const categories = Array.isArray(config.categories)

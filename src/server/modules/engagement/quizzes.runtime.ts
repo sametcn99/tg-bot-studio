@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bot-module-handler';
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
 import { EngineHelpersService } from '../../bot-engine/engine-helpers.service';
+import { ChatSettingsService } from '../../bot-engine/chat-settings.service';
 import { EngagementService } from './engagement.service';
 
 /**
@@ -21,11 +22,13 @@ export class QuizzesRuntime extends BotModuleHandler {
   /**
    * @param {EngagementService} service - Engagement service.
    * @param {EngineHelpersService} helpers - Shared audience operations.
+   * @param {ChatSettingsService} chatSettings - Per-chat config layer.
    * @param {ModuleHandlerRegistry} registry - Handler registry (self sign-up).
    */
   constructor(
     private readonly service: EngagementService,
     private readonly helpers: EngineHelpersService,
+    private readonly chatSettings: ChatSettingsService,
     registry: ModuleHandlerRegistry,
   ) {
     super();
@@ -39,9 +42,14 @@ export class QuizzesRuntime extends BotModuleHandler {
    */
   register(ctx: ModuleRuntimeContext): void {
     const { bot } = ctx;
-    const command = String(ctx.config.defaultCommand ?? 'quiz');
+    const botId = ctx.botId;
 
-    bot.command(command, async (update) => {
+    // Explicit-target gate: quizzes run only in the module's configured chats.
+    const targeted = async (chatId: number): Promise<boolean> =>
+      this.chatSettings.isTargeted(botId, chatId, this.moduleKey);
+
+    bot.command(String(ctx.config.defaultCommand ?? 'quiz'), async (update) => {
+      if (!(await targeted(update.chat.id))) return;
       const quizzes = this.service.listQuizzes(ctx.botId);
       if (quizzes.length === 0) {
         await update.reply('No quizzes are configured yet.');
@@ -57,6 +65,7 @@ export class QuizzesRuntime extends BotModuleHandler {
     });
 
     bot.command('scoreboard', async (update) => {
+      if (!(await targeted(update.chat.id))) return;
       const quizzes = this.service.listQuizzes(ctx.botId);
       const blocks: string[] = [];
       for (const quiz of quizzes) {

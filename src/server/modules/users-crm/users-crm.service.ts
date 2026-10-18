@@ -40,7 +40,7 @@ export class UsersCrmService {
    * @param {object} [filters] - Optional filters.
    * @returns {Promise<CrmUser[]>} Matching subscriber profiles.
    */
-  async list(botId: number, filters?: { search?: string; tag?: string }): Promise<CrmUser[]> {
+  async list(botId: string, filters?: { search?: string; tag?: string }): Promise<CrmUser[]> {
     const rows = await this.userModel.listUsers(botId, 2000);
     let users = rows.map((row) => this.decode(row));
     if (filters?.search) {
@@ -68,7 +68,7 @@ export class UsersCrmService {
    * @returns {Promise<{items: CrmUser[]; total: number; page: number; pageSize: number}>} One page plus total.
    */
   async listPage(
-    botId: number,
+    botId: string,
     query: { search?: string; tag?: string; page?: number; pageSize?: number },
   ): Promise<{ items: CrmUser[]; total: number; page: number; pageSize: number }> {
     const result = await this.userModel.listUsersPage(botId, query);
@@ -83,7 +83,7 @@ export class UsersCrmService {
    * @returns {Promise<CrmUser>} Decoded profile.
    * @throws {NotFoundException} When the subscriber is unknown.
    */
-  async findOne(botId: number, telegramId: number): Promise<CrmUser> {
+  async findOne(botId: string, telegramId: number): Promise<CrmUser> {
     const row = await this.userModel.getUser(botId, telegramId);
     if (!row) throw new NotFoundException(`Subscriber ${telegramId} not found`);
     return this.decode(row);
@@ -98,7 +98,7 @@ export class UsersCrmService {
    * @returns {Promise<CrmUser>} Updated profile.
    */
   async updateTags(
-    botId: number,
+    botId: string,
     telegramId: number,
     tags: string[],
     notes: string,
@@ -118,7 +118,7 @@ export class UsersCrmService {
    * @param {'csv'|'json'} format - Export format.
    * @returns {Promise<string>} Serialized export document.
    */
-  async export(botId: number, format: 'csv' | 'json'): Promise<string> {
+  async export(botId: string, format: 'csv' | 'json'): Promise<string> {
     const users = await this.list(botId);
     if (format === 'json') return JSON.stringify(users, null, 2);
     const header =
@@ -150,7 +150,7 @@ export class UsersCrmService {
    * @param {number} botId - Owning bot id.
    * @returns {Promise<string[]>} Distinct tags in use.
    */
-  async distinctTags(botId: number): Promise<string[]> {
+  async distinctTags(botId: string): Promise<string[]> {
     const users = await this.list(botId);
     return [...new Set(users.flatMap((user) => user.tags))].sort();
   }

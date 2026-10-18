@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
 import { MediaLibraryService } from './media-library.service';
 import { CreateMediaAssetDto } from './dto/media-asset.dto';
 
@@ -18,7 +18,7 @@ export class MediaLibraryController {
    * @returns {Promise<object[]>} Asset rows.
    */
   @Get()
-  list(@Param('botId', ParseIntPipe) botId: number) {
+  list(@Param('botId') botId: string) {
     return this.service.list(botId);
   }
 
@@ -29,7 +29,7 @@ export class MediaLibraryController {
    * @returns {Promise<object>} Created asset row.
    */
   @Post()
-  create(@Param('botId', ParseIntPipe) botId: number, @Body() body: CreateMediaAssetDto) {
+  create(@Param('botId') botId: string, @Body() body: CreateMediaAssetDto) {
     return this.service.create(botId, body as unknown as Record<string, unknown>);
   }
 
@@ -40,7 +40,7 @@ export class MediaLibraryController {
    * @returns {Promise<{success: boolean}>} Confirmation payload.
    */
   @Delete(':id')
-  remove(@Param('botId', ParseIntPipe) botId: number, @Param('id', ParseIntPipe) id: number) {
+  remove(@Param('botId') botId: string, @Param('id') id: string) {
     return this.service.remove(botId, id);
   }
 }

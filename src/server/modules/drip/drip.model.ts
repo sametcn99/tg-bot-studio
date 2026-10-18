@@ -24,7 +24,7 @@ export class DripModel {
   /**
    * Lists campaigns for a bot.
    */
-  async listCampaigns(botId: number): Promise<DripCampaign[]> {
+  async listCampaigns(botId: string): Promise<DripCampaign[]> {
     return this.prisma.dripCampaign.findMany({
       where: { botId },
       orderBy: { id: 'asc' },
@@ -34,7 +34,7 @@ export class DripModel {
   /**
    * Finds campaign by id.
    */
-  async findCampaignById(id: number): Promise<DripCampaign | null> {
+  async findCampaignById(id: string): Promise<DripCampaign | null> {
     return this.prisma.dripCampaign.findUnique({
       where: { id },
     });
@@ -43,7 +43,7 @@ export class DripModel {
   /**
    * Finds the first active campaign for a bot.
    */
-  async findFirstActive(botId: number): Promise<DripCampaign | null> {
+  async findFirstActive(botId: string): Promise<DripCampaign | null> {
     return this.prisma.dripCampaign.findFirst({
       where: { botId, isActive: 1 },
       orderBy: { id: 'asc' },
@@ -53,7 +53,7 @@ export class DripModel {
   /**
    * Counts subscribers for a campaign.
    */
-  async countSubscribers(campaignId: number): Promise<number> {
+  async countSubscribers(campaignId: string): Promise<number> {
     return this.prisma.dripSubscriber.count({
       where: { campaignId },
     });
@@ -63,7 +63,7 @@ export class DripModel {
    * Creates a campaign.
    */
   async createCampaign(data: {
-    botId: number;
+    botId: string;
     name: string;
     stepsJson: string;
     isActive?: number;
@@ -82,7 +82,7 @@ export class DripModel {
    * Updates a campaign.
    */
   async updateCampaign(
-    id: number,
+    id: string,
     data: {
       name?: string;
       stepsJson?: string;
@@ -98,7 +98,7 @@ export class DripModel {
   /**
    * Deletes a campaign.
    */
-  async deleteCampaign(id: number): Promise<void> {
+  async deleteCampaign(id: string): Promise<void> {
     await this.prisma.dripCampaign.delete({
       where: { id },
     });
@@ -108,8 +108,8 @@ export class DripModel {
    * Subscribes a user to a campaign.
    */
   async subscribe(
-    botId: number,
-    campaignId: number,
+    botId: string,
+    campaignId: string,
     telegramId: number | bigint,
     nextRunAt: string,
   ): Promise<void> {
@@ -136,7 +136,7 @@ export class DripModel {
   /**
    * Unsubscribes a user from a campaign.
    */
-  async unsubscribe(campaignId: number, telegramId: number | bigint): Promise<void> {
+  async unsubscribe(campaignId: string, telegramId: number | bigint): Promise<void> {
     await this.prisma.dripSubscriber
       .delete({
         where: {
@@ -152,7 +152,7 @@ export class DripModel {
   /**
    * Lists subscribers for a campaign.
    */
-  async listSubscribers(botId: number, campaignId: number): Promise<DripSubscriberEntity[]> {
+  async listSubscribers(botId: string, campaignId: string): Promise<DripSubscriberEntity[]> {
     const rows = await this.prisma.dripSubscriber.findMany({
       where: { botId, campaignId },
     });
@@ -178,7 +178,7 @@ export class DripModel {
    * Advances a subscriber to the next step (resets the failure counter).
    */
   async advanceSubscriber(
-    campaignId: number,
+    campaignId: string,
     telegramId: number | bigint,
     nextIndex: number,
     nextRunAt: string,
@@ -206,7 +206,7 @@ export class DripModel {
    * @param {number | bigint} telegramId - Subscriber id.
    * @returns {Promise<number>} The new attempts count.
    */
-  async recordTransientFailure(campaignId: number, telegramId: number | bigint): Promise<number> {
+  async recordTransientFailure(campaignId: string, telegramId: number | bigint): Promise<number> {
     const updated = await this.prisma.dripSubscriber.update({
       where: {
         campaignId_telegramId: {

@@ -24,7 +24,7 @@ export class BotTemplateModel {
    * Finds one template.
    * @throws {NotFoundException} When the template does not exist.
    */
-  async findById(id: number): Promise<BotTemplate> {
+  async findById(id: string): Promise<BotTemplate> {
     const row = await this.prisma.botTemplate.findUnique({ where: { id } });
     if (!row) throw new NotFoundException(`Template ${id} not found`);
     return row;
@@ -48,7 +48,7 @@ export class BotTemplateModel {
    * Deletes a template.
    * @throws {NotFoundException} When the template does not exist.
    */
-  async remove(id: number): Promise<void> {
+  async remove(id: string): Promise<void> {
     const existing = await this.prisma.botTemplate.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException(`Template ${id} not found`);
     await this.prisma.botTemplate.delete({ where: { id } });

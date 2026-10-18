@@ -143,6 +143,7 @@
     "enabled": "{{count}} of {{total}} modules enabled",
     "configSaved": "Configuration saved. Bot runtime reloaded.",
     "toggleFailed": "Could not update the module",
+    "chatScopedNote": "This module is configured per chat: add a group or channel below and set its own values — each chat can behave differently.",
     "noOptions": "This module has no configurable options.",
     "onePerLine": "One entry per line",
     "docsLink": "Docs",
@@ -797,21 +798,6 @@
     "connectionNotFound": "Connection not found.",
     "numericOnly": "Per-chat settings need a numeric chat id. Sync the bot so this chat is stored with its id."
   },
-  "chatOverrides": {
-    "title": "Per-chat settings",
-    "hint": "Define this module separately for each group and channel. Values you change here override the bot-level defaults above; untouched fields keep inheriting them.",
-    "selectChat": "Select a group or channel",
-    "groups": "Groups",
-    "channels": "Channels",
-    "noneYet": "No overrides yet — pick a chat to define its own values.",
-    "overriddenFields": "{{count}} field(s) overridden",
-    "botDefault": "Inheriting bot defaults",
-    "inherit": "Inherit the bot default",
-    "save": "Save for this chat",
-    "saved": "Saved",
-    "reset": "Reset to bot default",
-    "noFields": "This module has no configurable fields."
-  },
   "federation": {
     "managerTitle": "Federation manager",
     "managerEmpty": "No federations yet. Create one with /newfed <name> in the bot's PM.",
@@ -982,5 +968,17 @@
     "noEvents": "No health events recorded yet.",
     "notNotified": "not notified",
     "saved": "Alert settings saved"
+  },
+  "chatConfigs": {
+    "title": "Per-chat settings",
+    "hint": "Each group and channel gets its own configuration — one channel can behave differently from another. Adding a chat activates the module there; removing the entry deactivates it.",
+    "addChat": "Add a group or channel",
+    "allAdded": "Every connected chat already has its own settings.",
+    "noneYet": "No chats configured yet — the module stays idle until you add one.",
+    "configured": "Configured",
+    "save": "Save for this chat",
+    "saved": "Saved",
+    "remove": "Remove this chat",
+    "noFields": "This module has no per-chat fields — saving activates it for this chat."
   }
 }

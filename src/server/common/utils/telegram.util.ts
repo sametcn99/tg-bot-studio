@@ -15,7 +15,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
  * @property {boolean} can_read_all_group_messages - Privacy mode status.
  */
 export interface TelegramMeInfo {
-  id: number;
+  id: string;
   username: string;
   first_name: string;
   can_join_groups?: boolean;

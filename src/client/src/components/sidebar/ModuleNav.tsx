@@ -148,7 +148,7 @@ export function ModuleNavSections({
   collapsed,
   onNavigate,
 }: {
-  botId: number;
+  botId: string;
   activeModuleKey: string | null;
   query: string;
   collapsed: boolean;

@@ -14,15 +14,15 @@ import {
  */
 export interface ApprovalHandlers {
   /** /approve <target> [reason] */
-  handleApprove(c: Context, botId: number): Promise<void>;
+  handleApprove(c: Context, botId: string): Promise<void>;
   /** /unapprove <target> */
-  handleUnapprove(c: Context, botId: number): Promise<void>;
+  handleUnapprove(c: Context, botId: string): Promise<void>;
   /** /approval <target> */
-  handleApprovalStatus(c: Context, botId: number): Promise<void>;
+  handleApprovalStatus(c: Context, botId: string): Promise<void>;
   /** /approved */
-  handleApprovedList(c: Context, botId: number): Promise<void>;
+  handleApprovedList(c: Context, botId: string): Promise<void>;
   /** /unapproveall — owner only */
-  handleUnapproveAll(c: Context, botId: number): Promise<void>;
+  handleUnapproveAll(c: Context, botId: string): Promise<void>;
 }
 
 /**

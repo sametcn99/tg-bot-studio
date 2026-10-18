@@ -66,7 +66,7 @@ export class BotsController {
    * @throws {NotFoundException} When the bot does not exist.
    */
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
+  findOne(@Param('id') id: string) {
     return this.botsService.findOne(id);
   }
 
@@ -77,7 +77,7 @@ export class BotsController {
    * @returns {Promise<object>} Updated bot record.
    */
   @Patch(':id')
-  update(@Param('id', ParseIntPipe) id: number, @Body() body: UpdateBotDto) {
+  update(@Param('id') id: string, @Body() body: UpdateBotDto) {
     return this.botsService.update(id, body);
   }
 
@@ -87,7 +87,7 @@ export class BotsController {
    * @returns {Promise<{success: boolean}>} Confirmation payload.
    */
   @Delete(':id')
-  async remove(@Param('id', ParseIntPipe) id: number) {
+  async remove(@Param('id') id: string) {
     await this.botsService.remove(id);
     return { success: true };
   }
@@ -96,7 +96,7 @@ export class BotsController {
    * Reads bot-level operational settings (IANA time zone).
    */
   @Get(':id/settings')
-  getSettings(@Param('id', ParseIntPipe) id: number) {
+  getSettings(@Param('id') id: string) {
     return this.botsService.getBotSettings(id);
   }
 
@@ -104,7 +104,7 @@ export class BotsController {
    * Updates bot-level operational settings (IANA time zone).
    */
   @Patch(':id/settings')
-  updateSettings(@Param('id', ParseIntPipe) id: number, @Body() body: { timezone?: string }) {
+  updateSettings(@Param('id') id: string, @Body() body: { timezone?: string }) {
     return this.botsService.updateBotSettings(id, body);
   }
 
@@ -114,7 +114,7 @@ export class BotsController {
    * @returns {object[]} Module descriptors.
    */
   @Get(':id/modules')
-  listModules(@Param('id', ParseIntPipe) id: number) {
+  listModules(@Param('id') id: string) {
     return this.botsService.listModules(id);
   }
 
@@ -127,7 +127,7 @@ export class BotsController {
    */
   @Put(':id/modules/:moduleKey')
   updateModule(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @Param('moduleKey') moduleKey: string,
     @Body() body: UpdateModuleStateDto,
   ) {
@@ -140,7 +140,7 @@ export class BotsController {
    * @returns {Promise<object>} Diagnostic report.
    */
   @Get(':id/diagnostics')
-  getDiagnostics(@Param('id', ParseIntPipe) id: number) {
+  getDiagnostics(@Param('id') id: string) {
     return this.botsService.getDiagnostics(id);
   }
 
@@ -151,7 +151,7 @@ export class BotsController {
    * @returns {Promise<object>} Result.
    */
   @Post(':id/presets/:presetKey')
-  applyPreset(@Param('id', ParseIntPipe) id: number, @Param('presetKey') presetKey: string) {
+  applyPreset(@Param('id') id: string, @Param('presetKey') presetKey: string) {
     return this.botsService.applyPreset(id, presetKey);
   }
 
@@ -163,7 +163,7 @@ export class BotsController {
    */
   @Post(':id/simulator/send')
   simulateMessage(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @Body()
     body: {
       message: string;
@@ -182,7 +182,7 @@ export class BotsController {
    */
   @Post(':id/simulator/callback')
   simulateCallback(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @Body() body: { callbackData: string; chatType?: 'private' | 'supergroup' | 'group' },
   ) {
     return this.botsService.simulateCallback(id, String(body.callbackData ?? ''), body.chatType);
@@ -192,7 +192,7 @@ export class BotsController {
    * Clones a bot configuration to a new bot.
    */
   @Post(':id/clone')
-  clone(@Param('id', ParseIntPipe) id: number, @Body() body: { name?: string; token: string }) {
+  clone(@Param('id') id: string, @Body() body: { name?: string; token: string }) {
     return this.botsService.cloneBot(id, body);
   }
 
@@ -200,7 +200,7 @@ export class BotsController {
    * Exports a bot configuration bundle as JSON.
    */
   @Get(':id/export')
-  export(@Param('id', ParseIntPipe) id: number) {
+  export(@Param('id') id: string) {
     return this.botsService.exportConfig(id);
   }
 
@@ -208,7 +208,7 @@ export class BotsController {
    * Imports a bot configuration bundle into an existing bot.
    */
   @Post(':id/import')
-  import(@Param('id', ParseIntPipe) id: number, @Body() bundle: Record<string, unknown>) {
+  import(@Param('id') id: string, @Body() bundle: Record<string, unknown>) {
     return this.botsService.importConfig(id, bundle);
   }
 }

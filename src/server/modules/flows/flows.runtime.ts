@@ -29,7 +29,7 @@ export class FlowsRuntime extends BotModuleHandler implements OnModuleDestroy {
   readonly moduleKey = 'flows';
 
   private readonly logger = new Logger(FlowsRuntime.name);
-  private readonly tickers = new Map<number, ReturnType<typeof setInterval>>();
+  private readonly tickers = new Map<string, ReturnType<typeof setInterval>>();
 
   /**
    * @param {FlowModel} flowModel - Flow + session persistence.
@@ -83,10 +83,10 @@ export class FlowsRuntime extends BotModuleHandler implements OnModuleDestroy {
         return;
       }
       const parts = data.slice(CALLBACK_PREFIX.length).split(':');
-      const flowId = Number(parts[0]);
+      const flowId = parts[0];
       const sourceNodeId = parts[1] ?? '';
       const buttonIndex = Number(parts[2] ?? 0);
-      if (!Number.isFinite(flowId) || !update.from) {
+      if (!flowId || !update.from) {
         await update.answerCallbackQuery().catch(() => undefined);
         return;
       }
@@ -140,7 +140,7 @@ export class FlowsRuntime extends BotModuleHandler implements OnModuleDestroy {
    */
   private async handleWaitingInput(
     bot: Bot,
-    botId: number,
+    botId: string,
     telegramId: number,
     text: string,
   ): Promise<boolean> {
@@ -188,7 +188,7 @@ export class FlowsRuntime extends BotModuleHandler implements OnModuleDestroy {
    */
   private async matchTrigger(
     bot: Bot,
-    botId: number,
+    botId: string,
     telegramId: number,
     text: string,
   ): Promise<boolean> {
@@ -225,7 +225,7 @@ export class FlowsRuntime extends BotModuleHandler implements OnModuleDestroy {
   /**
    * Resumes every session whose delay node elapsed.
    */
-  private async resumeDueFlows(bot: Bot, botId: number): Promise<void> {
+  private async resumeDueFlows(bot: Bot, botId: string): Promise<void> {
     try {
       const due = await this.flowModel.findDueStates(botId, new Date().toISOString());
       for (const { state, flow } of due) {
@@ -263,8 +263,8 @@ export class FlowsRuntime extends BotModuleHandler implements OnModuleDestroy {
    */
   private async executeFrom(
     bot: Bot,
-    botId: number,
-    flowId: number,
+    botId: string,
+    flowId: string,
     graph: FlowGraph,
     telegramId: number,
     startNodeId: string,
@@ -344,7 +344,7 @@ export class FlowsRuntime extends BotModuleHandler implements OnModuleDestroy {
     telegramId: number,
     text: string,
     mediaUrl: string | undefined,
-    flowId: number,
+    flowId: string,
     node: FlowNode,
     buttons: Array<{ text: string; url?: string; next?: string }>,
   ): Promise<void> {
@@ -411,7 +411,7 @@ export class FlowsRuntime extends BotModuleHandler implements OnModuleDestroy {
    * Builds the placeholder context from the user row plus flow variables.
    */
   private async buildContext(
-    botId: number,
+    botId: string,
     telegramId: number,
     vars: Record<string, string>,
   ): Promise<Record<string, string>> {
@@ -437,7 +437,7 @@ export class FlowsRuntime extends BotModuleHandler implements OnModuleDestroy {
   /**
    * Appends a CRM tag to the user's tag list.
    */
-  private async addTag(botId: number, telegramId: number, tag: string): Promise<void> {
+  private async addTag(botId: string, telegramId: number, tag: string): Promise<void> {
     const clean = tag.trim();
     if (!clean) return;
     const user = await this.prisma.botUser.findUnique({
@@ -484,7 +484,7 @@ export class FlowsRuntime extends BotModuleHandler implements OnModuleDestroy {
   /**
    * Reads the stored variables of a session (callback continuation).
    */
-  private async readVars(flowId: number, telegramId: number): Promise<Record<string, string>> {
+  private async readVars(flowId: string, telegramId: number): Promise<Record<string, string>> {
     const state = await this.flowModel.findState(flowId, BigInt(telegramId));
     return this.parseVars(state?.varsJson ?? null);
   }
@@ -492,7 +492,7 @@ export class FlowsRuntime extends BotModuleHandler implements OnModuleDestroy {
   /**
    * Ends the session of a user inside a flow.
    */
-  private async clearSession(flowId: number, telegramId: number): Promise<void> {
+  private async clearSession(flowId: string, telegramId: number): Promise<void> {
     await this.flowModel.clearState(flowId, BigInt(telegramId));
   }
 }

@@ -17,7 +17,7 @@ import { localizedErrorMessage } from '../utils/errors';
  * @property {number} dailyVolume - Messages in the current UTC day.
  */
 export interface BotSummary {
-  id: number;
+  id: string;
   name: string;
   username: string | null;
   is_active: number;
@@ -35,7 +35,7 @@ export interface BotSummary {
  * @property {boolean} loading - True while the initial bot list loads.
  * @property {string | null} error - Localized load error, or null.
  * @property {BotSummary | null} activeBot - Currently selected bot.
- * @property {(botId: number) => void} setActiveBotId - Switches the active zone.
+ * @property {(botId: string) => void} setActiveBotId - Switches the active zone.
  * @property {() => void} refresh - Reloads the bot list from the API.
  */
 interface BotContextValue {
@@ -43,7 +43,7 @@ interface BotContextValue {
   loading: boolean;
   error: string | null;
   activeBot: BotSummary | null;
-  setActiveBotId: (botId: number) => void;
+  setActiveBotId: (botId: string) => void;
   refresh: () => void;
 }
 
@@ -69,9 +69,9 @@ export function BotProvider({ children }: { children: React.ReactNode }): React.
   const [bots, setBots] = useState<BotSummary[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeBotId, setActiveBotIdState] = useState<number | null>(() => {
+  const [activeBotId, setActiveBotIdState] = useState<string | null>(() => {
     const stored = window.localStorage.getItem('studio-active-bot');
-    return stored ? Number(stored) : null;
+    return stored || null;
   });
 
   const refresh = useCallback(() => {
@@ -99,7 +99,7 @@ export function BotProvider({ children }: { children: React.ReactNode }): React.
     refresh();
   }, [authenticated, refresh]);
 
-  const setActiveBotId = useCallback((botId: number) => {
+  const setActiveBotId = useCallback((botId: string) => {
     setActiveBotIdState(botId);
     window.localStorage.setItem('studio-active-bot', String(botId));
   }, []);

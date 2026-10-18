@@ -25,7 +25,7 @@ export class MonetizationModel {
    * Creates a VIP subscription record.
    */
   async createSubscription(data: {
-    botId: number;
+    botId: string;
     telegramId: number | bigint;
     channelId: number | bigint;
     expiresAt: string;
@@ -45,7 +45,7 @@ export class MonetizationModel {
   /**
    * Lists VIP subscriptions for a bot newest first.
    */
-  async listSubscriptions(botId: number): Promise<VipSubscriptionEntity[]> {
+  async listSubscriptions(botId: string): Promise<VipSubscriptionEntity[]> {
     const rows = await this.prisma.vipSubscription.findMany({
       where: { botId },
       orderBy: { id: 'desc' },
@@ -56,7 +56,7 @@ export class MonetizationModel {
   /**
    * Finds a subscription by botId and id.
    */
-  async findById(botId: number, id: number): Promise<VipSubscriptionEntity | null> {
+  async findById(botId: string, id: string): Promise<VipSubscriptionEntity | null> {
     const row = await this.prisma.vipSubscription.findFirst({
       where: { botId, id },
     });
@@ -66,7 +66,7 @@ export class MonetizationModel {
   /**
    * Deactivates a subscription.
    */
-  async deactivate(id: number): Promise<void> {
+  async deactivate(id: string): Promise<void> {
     await this.prisma.vipSubscription.update({
       where: { id },
       data: { isActive: 0 },

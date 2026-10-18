@@ -18,7 +18,7 @@ export class HealthModel {
    * @returns {Promise<HealthEvent>} Created row.
    */
   async create(data: {
-    botId: number;
+    botId: string;
     level: string;
     reason?: string | null;
     message: string;
@@ -35,7 +35,7 @@ export class HealthModel {
    * @param {number} [limit] - Maximum rows (default 50).
    * @returns {Promise<HealthEvent[]>} Newest events first.
    */
-  async listRecent(botId?: number, limit = 50): Promise<HealthEvent[]> {
+  async listRecent(botId?: string, limit = 50): Promise<HealthEvent[]> {
     return this.prisma.healthEvent.findMany({
       where: botId ? { botId } : undefined,
       orderBy: { id: 'desc' },
@@ -63,7 +63,7 @@ export class HealthModel {
    * @param {number} id - Event id.
    * @returns {Promise<void>} Resolves once updated.
    */
-  async markNotified(id: number): Promise<void> {
+  async markNotified(id: string): Promise<void> {
     await this.prisma.healthEvent.update({ where: { id }, data: { notified: 1 } });
   }
 }

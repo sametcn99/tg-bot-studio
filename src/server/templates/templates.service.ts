@@ -5,7 +5,7 @@ import { LiveEventsService } from '../common/live/live-events.service';
 
 /** Client-facing template row with bundle summary. */
 export interface TemplateRow {
-  id: number;
+  id: string;
   name: string;
   description: string | null;
   sourceBotName: string | null;
@@ -60,7 +60,7 @@ export class TemplatesService {
   /**
    * Fetches the raw bundle of a template (download support).
    */
-  async getBundle(id: number): Promise<Record<string, unknown>> {
+  async getBundle(id: string): Promise<Record<string, unknown>> {
     const row = await this.templateModel.findById(id);
     return this.parseBundle(row.bundleJson);
   }
@@ -83,7 +83,7 @@ export class TemplatesService {
       bundleJson: JSON.stringify(bundle),
       sourceBotName: body.sourceBotName ? String(body.sourceBotName) : null,
     });
-    this.live.emit('templates', 0);
+    this.live.emit('templates', '');
     this.logger.log(`Template "${name}" saved (${created.id})`);
     return (await this.list()).find((row) => row.id === created.id)!;
   }
@@ -91,9 +91,9 @@ export class TemplatesService {
   /**
    * Deletes a template.
    */
-  async remove(id: number): Promise<{ success: boolean }> {
+  async remove(id: string): Promise<{ success: boolean }> {
     await this.templateModel.remove(id);
-    this.live.emit('templates', 0);
+    this.live.emit('templates', '');
     return { success: true };
   }
 
@@ -104,8 +104,8 @@ export class TemplatesService {
    * @returns {Promise<object>} Import result.
    */
   async apply(
-    botId: number,
-    templateId: number,
+    botId: string,
+    templateId: string,
   ): Promise<{ success: boolean; importedModules: number }> {
     const row = await this.templateModel.findById(templateId);
     const bundle = this.parseBundle(row.bundleJson);

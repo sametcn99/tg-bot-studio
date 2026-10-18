@@ -7,6 +7,7 @@ import { ChatSettingsService } from '../../bot-engine/chat-settings.service';
 import { RestrictionsService } from '../../bot-engine/restrictions.service';
 import { AdminLogService } from '../../bot-engine/admin-log.service';
 import { BotI18nService } from '../../bot-engine/bot-i18n.service';
+import { isChatTargeted } from '../../common/utils/chat-targets.util';
 
 /**
  * Pending captcha state kept in memory per (bot, chat, user) and mirrored
@@ -51,7 +52,7 @@ export class CaptchaRuntime extends BotModuleHandler {
   private readonly timers = new Map<string, ReturnType<typeof setTimeout>>();
 
   /** Per-bot recovery sweepers (cleared and replaced on re-register). */
-  private readonly sweepers = new Map<number, ReturnType<typeof setInterval>>();
+  private readonly sweepers = new Map<string, ReturnType<typeof setInterval>>();
 
   /**
    * @param {PrismaService} prisma - Prisma ORM access service.
@@ -194,6 +195,7 @@ export class CaptchaRuntime extends BotModuleHandler {
     const key = `${botId}:${chatId}:${member.id}`;
 
     const config = await this.chatSettings.getEffectiveConfig(botId, chatId, this.moduleKey);
+    if (!isChatTargeted(config.targetChats, chatId)) return;
     const mode = String(config.mode ?? 'button');
     const timeoutSeconds = Number(config.timeoutSeconds ?? 120);
     const kickOnFail = config.kickOnFail !== false;
@@ -402,7 +404,7 @@ export class CaptchaRuntime extends BotModuleHandler {
    * @returns {Promise<void>} Resolves once the row is written (errors logged).
    */
   private async persistCaptcha(
-    botId: number,
+    botId: string,
     chatId: number,
     userId: number,
     pending: PendingCaptcha | null,
@@ -492,6 +494,18 @@ export class CaptchaRuntime extends BotModuleHandler {
 
       const key = `${ctx.botId}:${record.chatId}:${record.userId}`;
       if (this.pending.has(key)) continue; // live timer owns this challenge
+
+      // Untargeted chats never re-arm: the module acts only where configured.
+      if (
+        !isChatTargeted(
+          (await this.chatSettings.getEffectiveConfig(ctx.botId, record.chatId, this.moduleKey))
+            .targetChats,
+          record.chatId,
+        )
+      ) {
+        await this.persistCaptcha(ctx.botId, record.chatId, record.userId, null);
+        continue;
+      }
 
       if (record.expiresAt <= Date.now()) {
         const config = await this.chatSettings.getEffectiveConfig(

@@ -12,7 +12,7 @@ export class GiveawayModel {
   /**
    * Lists giveaways for a bot newest first.
    */
-  async list(botId: number): Promise<Giveaway[]> {
+  async list(botId: string): Promise<Giveaway[]> {
     return this.prisma.giveaway.findMany({
       where: { botId },
       orderBy: { id: 'desc' },
@@ -22,7 +22,7 @@ export class GiveawayModel {
   /**
    * Finds a giveaway by botId and id.
    */
-  async findById(botId: number, id: number): Promise<Giveaway | null> {
+  async findById(botId: string, id: string): Promise<Giveaway | null> {
     return this.prisma.giveaway.findFirst({
       where: { botId, id },
     });
@@ -32,7 +32,7 @@ export class GiveawayModel {
    * Creates a giveaway.
    */
   async create(data: {
-    botId: number;
+    botId: string;
     title: string;
     requiredChannelsJson?: string | null;
     winnersCount?: number;
@@ -56,7 +56,7 @@ export class GiveawayModel {
    * Updates an existing giveaway.
    */
   async update(
-    id: number,
+    id: string,
     data: {
       title?: string;
       requiredChannelsJson?: string | null;
@@ -74,7 +74,7 @@ export class GiveawayModel {
   /**
    * Deletes a giveaway.
    */
-  async delete(id: number): Promise<void> {
+  async delete(id: string): Promise<void> {
     await this.prisma.giveaway.delete({
       where: { id },
     });
@@ -98,7 +98,7 @@ export class GiveawayModel {
   /**
    * Marks a giveaway as finished.
    */
-  async finish(id: number): Promise<Giveaway> {
+  async finish(id: string): Promise<Giveaway> {
     return this.prisma.giveaway.update({
       where: { id },
       data: { status: 'finished' },

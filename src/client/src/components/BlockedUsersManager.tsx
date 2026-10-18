@@ -40,7 +40,7 @@ interface BlockedUserRow {
  * blocked users, adds manual bans (id or @username), and lifts bans. This
  * backs the `/bots/:botId/moderation/blocked` CRUD endpoints.
  */
-export default function BlockedUsersManager({ botId }: { botId: number }): React.ReactElement {
+export default function BlockedUsersManager({ botId }: { botId: string }): React.ReactElement {
   const { t } = useTranslation();
   const theme = useTheme();
   const compactDialogs = useMediaQuery(theme.breakpoints.down('sm'));

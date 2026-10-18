@@ -1,4 +1,4 @@
-import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { AnalyticsService } from './analytics.service';
 
 /**
@@ -15,7 +15,7 @@ export class AnalyticsController {
    * @returns {Promise<object>} Totals and daily series.
    */
   @Get()
-  overview(@Param('botId', ParseIntPipe) botId: number, @Query('days') days?: string) {
+  overview(@Param('botId') botId: string, @Query('days') days?: string) {
     return this.analytics.overview(botId, Number(days ?? 7) === 30 ? 30 : 7);
   }
 }

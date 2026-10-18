@@ -78,7 +78,7 @@ export default function UsersCrmPage({
   botId,
   module,
 }: {
-  botId: number;
+  botId: string;
   module: ModuleEntry;
 }): React.ReactElement {
   const { t } = useTranslation();

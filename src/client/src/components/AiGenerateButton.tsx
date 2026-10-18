@@ -57,7 +57,7 @@ export default function AiGenerateButton({
   kind,
   onResult,
 }: {
-  botId: number | string;
+  botId: string | string;
   kind: string;
   onResult: (value: string) => void;
 }): React.ReactElement {

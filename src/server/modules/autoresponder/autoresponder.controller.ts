@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { AutoresponderService } from './autoresponder.service';
 
 /**
@@ -17,7 +17,7 @@ export class AutoresponderController {
    * @returns {object[]} Rule rows.
    */
   @Get()
-  list(@Param('botId', ParseIntPipe) botId: number) {
+  list(@Param('botId') botId: string) {
     return this.service.list(botId);
   }
 
@@ -28,7 +28,7 @@ export class AutoresponderController {
    * @returns {object} Created rule.
    */
   @Post()
-  create(@Param('botId', ParseIntPipe) botId: number, @Body() body: Record<string, unknown>) {
+  create(@Param('botId') botId: string, @Body() body: Record<string, unknown>) {
     return this.service.create(botId, body);
   }
 
@@ -41,8 +41,8 @@ export class AutoresponderController {
    */
   @Patch(':id')
   update(
-    @Param('botId', ParseIntPipe) botId: number,
-    @Param('id', ParseIntPipe) id: number,
+    @Param('botId') botId: string,
+    @Param('id') id: string,
     @Body() body: Record<string, unknown>,
   ) {
     return this.service.update(botId, id, body);
@@ -55,7 +55,7 @@ export class AutoresponderController {
    * @returns {{success: boolean}} Confirmation payload.
    */
   @Delete(':id')
-  remove(@Param('botId', ParseIntPipe) botId: number, @Param('id', ParseIntPipe) id: number) {
+  remove(@Param('botId') botId: string, @Param('id') id: string) {
     this.service.remove(botId, id);
     return { success: true };
   }

@@ -36,7 +36,7 @@ import { useSnackbar } from '../context/SnackbarContext';
 import { localizedErrorMessage } from '../utils/errors';
 
 interface KnowledgeDoc {
-  id: number;
+  id: string;
   title: string;
   content: string;
   tags: string | null;
@@ -60,13 +60,13 @@ interface AiMetrics {
   avgLatencyMs: number;
 }
 
-export default function AiKnowledgeDocsManager({ botId }: { botId: number }): React.ReactElement {
+export default function AiKnowledgeDocsManager({ botId }: { botId: string }): React.ReactElement {
   const { t } = useTranslation();
   const { showSuccess, showError } = useSnackbar();
   const [docs, setDocs] = useState<KnowledgeDoc[]>([]);
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingDocId, setEditingDocId] = useState<number | null>(null);
+  const [editingDocId, setEditingDocId] = useState<string | null>(null);
   const [docToView, setDocToView] = useState<KnowledgeDoc | null>(null);
   const [docToDelete, setDocToDelete] = useState<KnowledgeDoc | null>(null);
   const [newTitle, setNewTitle] = useState('');

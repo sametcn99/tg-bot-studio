@@ -2,8 +2,8 @@
  * Domain shape for support message with number IDs.
  */
 export interface SupportMessageEntity {
-  id: number;
-  bot_id: number;
+  id: string;
+  bot_id: string;
   telegram_id: number;
   user_message_id: number | null;
   admin_chat_id: number | null;

@@ -4,7 +4,12 @@
  * @module __tests__/chat-targets-util.spec
  */
 import { describe, expect, it } from 'bun:test';
-import { normalizeChatTargets } from '../common/utils/chat-targets.util';
+import {
+  isChatTargeted,
+  normalizeChatTargets,
+  SIMULATOR_GROUP_ID,
+  SIMULATOR_TELEGRAM_ID,
+} from '../common/utils/chat-targets.util';
 
 describe('normalizeChatTargets', () => {
   it('wraps a legacy single string target into a one-element list', () => {
@@ -33,5 +38,37 @@ describe('normalizeChatTargets', () => {
     expect(normalizeChatTargets(null)).toEqual([]);
     expect(normalizeChatTargets('')).toEqual([]);
     expect(normalizeChatTargets([])).toEqual([]);
+  });
+});
+
+describe('isChatTargeted', () => {
+  it('matches numeric chat ids in string or number form', () => {
+    expect(isChatTargeted(['-100123'], -100123)).toBe(true);
+    expect(isChatTargeted(['-100123'], '-100123')).toBe(true);
+  });
+
+  it('matches @username targets', () => {
+    expect(isChatTargeted(['@news'], '@news')).toBe(true);
+  });
+
+  it('rejects chats not on the list', () => {
+    expect(isChatTargeted(['-100123'], -100999)).toBe(false);
+  });
+
+  it('treats an empty or missing list as targeted nowhere (no default)', () => {
+    expect(isChatTargeted([], -100123)).toBe(false);
+    expect(isChatTargeted(undefined, -100123)).toBe(false);
+    expect(isChatTargeted(null, -100123)).toBe(false);
+    expect(isChatTargeted('not-an-array', -100123)).toBe(false);
+  });
+
+  it('normalizes mixed-type lists before matching', () => {
+    expect(isChatTargeted([-100123, '@news'], '-100123')).toBe(true);
+  });
+
+  it('always passes the reserved sandbox simulator ids', () => {
+    expect(isChatTargeted([], SIMULATOR_TELEGRAM_ID)).toBe(true);
+    expect(isChatTargeted(undefined, SIMULATOR_GROUP_ID)).toBe(true);
+    expect(isChatTargeted(['-100123'], String(SIMULATOR_GROUP_ID))).toBe(true);
   });
 });

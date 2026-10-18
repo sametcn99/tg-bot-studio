@@ -1,7 +1,7 @@
 /** Client-facing media asset row. */
 export interface MediaAssetRow {
-  id: number;
-  botId: number;
+  id: string;
+  botId: string;
   name: string;
   source: string;
   value: string;

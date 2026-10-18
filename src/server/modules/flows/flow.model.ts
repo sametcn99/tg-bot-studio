@@ -34,14 +34,14 @@ export class FlowModel {
    * @param {number} botId - Owning bot id.
    * @returns {Promise<Flow[]>} Flow rows, newest first.
    */
-  async list(botId: number): Promise<Flow[]> {
+  async list(botId: string): Promise<Flow[]> {
     return this.prisma.flow.findMany({ where: { botId }, orderBy: { id: 'desc' } });
   }
 
   /**
    * Finds one flow scoped to its bot.
    */
-  async findById(botId: number, id: number): Promise<Flow | null> {
+  async findById(botId: string, id: string): Promise<Flow | null> {
     return this.prisma.flow.findFirst({ where: { id, botId } });
   }
 
@@ -53,7 +53,7 @@ export class FlowModel {
    * @returns {Promise<Flow | null>} Matching active flow.
    */
   async findByTrigger(
-    botId: number,
+    botId: string,
     triggerType: 'command' | 'keyword' | 'start',
     triggerValue: string,
   ): Promise<Flow | null> {
@@ -67,7 +67,7 @@ export class FlowModel {
    * Creates a flow.
    */
   async create(data: {
-    botId: number;
+    botId: string;
     name: string;
     triggerType: string;
     triggerValue: string;
@@ -80,7 +80,7 @@ export class FlowModel {
   /**
    * Updates flow definition fields.
    */
-  async update(botId: number, id: number, data: Partial<Flow>): Promise<Flow> {
+  async update(botId: string, id: string, data: Partial<Flow>): Promise<Flow> {
     return this.prisma.flow.update({
       where: { id },
       data: { ...data, updatedAt: new Date().toISOString() },
@@ -90,14 +90,14 @@ export class FlowModel {
   /**
    * Deletes a flow and (by cascade) its sessions.
    */
-  async remove(botId: number, id: number): Promise<void> {
+  async remove(botId: string, id: string): Promise<void> {
     await this.prisma.flow.deleteMany({ where: { id, botId } });
   }
 
   /**
    * Reads the session of a user inside a flow.
    */
-  async findState(flowId: number, telegramId: bigint): Promise<FlowState | null> {
+  async findState(flowId: string, telegramId: bigint): Promise<FlowState | null> {
     return this.prisma.flowState.findUnique({
       where: { flowId_telegramId: { flowId, telegramId } },
     });
@@ -107,8 +107,8 @@ export class FlowModel {
    * Upserts the session position of a user.
    */
   async saveState(data: {
-    botId: number;
-    flowId: number;
+    botId: string;
+    flowId: string;
     telegramId: bigint;
     nodeId: string;
     waitInput: number;
@@ -142,7 +142,7 @@ export class FlowModel {
   /**
    * Removes the session of a user inside a flow.
    */
-  async clearState(flowId: number, telegramId: bigint): Promise<void> {
+  async clearState(flowId: string, telegramId: bigint): Promise<void> {
     await this.prisma.flowState
       .delete({ where: { flowId_telegramId: { flowId, telegramId } } })
       .catch(() => undefined);
@@ -155,7 +155,7 @@ export class FlowModel {
    * @returns {Promise<Array<{state: FlowState; flow: Flow}>>} Due continuations.
    */
   async findDueStates(
-    botId: number,
+    botId: string,
     nowIso: string,
   ): Promise<Array<{ state: FlowState; flow: Flow }>> {
     const states = await this.prisma.flowState.findMany({
@@ -179,7 +179,7 @@ export class FlowModel {
   /**
    * Deletes every session of a flow (used on flow redefinition).
    */
-  async clearFlowStates(flowId: number): Promise<void> {
+  async clearFlowStates(flowId: string): Promise<void> {
     await this.prisma.flowState.deleteMany({ where: { flowId } });
   }
 }

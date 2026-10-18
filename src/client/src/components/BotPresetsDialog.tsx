@@ -25,7 +25,7 @@ import { apiFetch } from '../services/api';
 import { useLocalizedModules } from '../registry/localize';
 
 interface BotPresetsDialogProps {
-  botId: number;
+  botId: string;
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;

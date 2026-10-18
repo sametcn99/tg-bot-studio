@@ -50,7 +50,7 @@ interface FedBanRow {
  * lists federations with counts, adds dashboard fbans, and imports
  * CSV/NDJSON ban lists (reference-compatible formats).
  */
-export default function FederationManager({ botId }: { botId: number }): React.ReactElement {
+export default function FederationManager({ botId }: { botId: string }): React.ReactElement {
   const { t } = useTranslation();
   const [feds, setFeds] = useState<FedSummary[]>([]);
   const [error, setError] = useState<string | null>(null);

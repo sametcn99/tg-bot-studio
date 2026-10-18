@@ -13,7 +13,7 @@ export class ChatConnectionModel {
   /**
    * Lists connections for a bot ordered by type and title.
    */
-  async listConnections(botId: number): Promise<ChatConnection[]> {
+  async listConnections(botId: string): Promise<ChatConnection[]> {
     return this.prisma.chatConnection.findMany({
       where: { botId },
       orderBy: [{ type: 'asc' }, { title: 'asc' }],
@@ -23,7 +23,7 @@ export class ChatConnectionModel {
   /**
    * Finds a connection by botId and numeric primary key id.
    */
-  async findConnectionById(botId: number, id: number): Promise<ChatConnection | null> {
+  async findConnectionById(botId: string, id: string): Promise<ChatConnection | null> {
     return this.prisma.chatConnection.findFirst({
       where: { botId, id },
     });
@@ -32,7 +32,7 @@ export class ChatConnectionModel {
   /**
    * Finds a connection by botId and chatId string.
    */
-  async findConnectionByChatId(botId: number, chatId: string): Promise<ChatConnection | null> {
+  async findConnectionByChatId(botId: string, chatId: string): Promise<ChatConnection | null> {
     return this.prisma.chatConnection.findUnique({
       where: {
         botId_chatId: { botId, chatId },
@@ -43,7 +43,7 @@ export class ChatConnectionModel {
   /**
    * Alias for findConnectionByChatId.
    */
-  async findByChatId(botId: number, chatId: string): Promise<ChatConnection | null> {
+  async findByChatId(botId: string, chatId: string): Promise<ChatConnection | null> {
     return this.findConnectionByChatId(botId, chatId);
   }
 
@@ -51,7 +51,7 @@ export class ChatConnectionModel {
    * Creates a chat connection.
    */
   async createConnection(data: {
-    botId: number;
+    botId: string;
     chatId: string;
     title: string;
     type: string;
@@ -75,7 +75,7 @@ export class ChatConnectionModel {
    * Updates a chat connection.
    */
   async updateConnection(
-    id: number,
+    id: string,
     data: {
       chatId?: string;
       title?: string;
@@ -99,7 +99,7 @@ export class ChatConnectionModel {
   /**
    * Deletes a chat connection.
    */
-  async deleteConnection(id: number): Promise<void> {
+  async deleteConnection(id: string): Promise<void> {
     await this.prisma.chatConnection.delete({
       where: { id },
     });
@@ -108,7 +108,7 @@ export class ChatConnectionModel {
   /**
    * Counts active connections for a bot.
    */
-  async countActiveConnections(botId: number): Promise<number> {
+  async countActiveConnections(botId: string): Promise<number> {
     return this.prisma.chatConnection.count({
       where: { botId, isActive: 1 },
     });
@@ -117,7 +117,7 @@ export class ChatConnectionModel {
   /**
    * Lists discovered bot groups for a bot.
    */
-  async listGroups(botId: number): Promise<BotGroupEntity[]> {
+  async listGroups(botId: string): Promise<BotGroupEntity[]> {
     const rows = await this.prisma.botGroup.findMany({
       where: { botId },
       orderBy: [{ isActive: 'desc' }, { title: 'asc' }],
@@ -134,7 +134,7 @@ export class ChatConnectionModel {
    * Upserts a discovered bot group.
    */
   async upsertGroup(data: {
-    botId: number;
+    botId: string;
     chatId: number | bigint;
     title: string;
     type: string;

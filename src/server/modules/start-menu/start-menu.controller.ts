@@ -1,15 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  HttpStatus,
-  Param,
-  ParseIntPipe,
-  Patch,
-  Post,
-  Res,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpStatus, Param, Patch, Post, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { StartMenuService } from './start-menu.service';
 import { Public } from '../../common/decorators/public.decorator';
@@ -31,7 +20,7 @@ export class StartMenuController {
    * @returns {Promise<object[]>} Ordered menu item rows.
    */
   @Get('bots/:botId/menu-items')
-  list(@Param('botId', ParseIntPipe) botId: number) {
+  list(@Param('botId') botId: string) {
     return this.menuService.list(botId);
   }
 
@@ -42,7 +31,7 @@ export class StartMenuController {
    * @returns {Promise<object>} Created menu item row.
    */
   @Post('bots/:botId/menu-items')
-  create(@Param('botId', ParseIntPipe) botId: number, @Body() body: Record<string, unknown>) {
+  create(@Param('botId') botId: string, @Body() body: Record<string, unknown>) {
     return this.menuService.create(botId, body);
   }
 
@@ -55,8 +44,8 @@ export class StartMenuController {
    */
   @Patch('bots/:botId/menu-items/:id')
   update(
-    @Param('botId', ParseIntPipe) botId: number,
-    @Param('id', ParseIntPipe) id: number,
+    @Param('botId') botId: string,
+    @Param('id') id: string,
     @Body() body: Record<string, unknown>,
   ) {
     return this.menuService.update(botId, id, body);
@@ -69,7 +58,7 @@ export class StartMenuController {
    * @returns {Promise<{success: boolean}>} Confirmation payload.
    */
   @Delete('bots/:botId/menu-items/:id')
-  async remove(@Param('botId', ParseIntPipe) botId: number, @Param('id', ParseIntPipe) id: number) {
+  async remove(@Param('botId') botId: string, @Param('id') id: string) {
     await this.menuService.remove(botId, id);
     return { success: true };
   }
@@ -83,7 +72,7 @@ export class StartMenuController {
    */
   @Public()
   @Get('go/:id')
-  async go(@Param('id', ParseIntPipe) id: number, @Res() res: Response): Promise<void> {
+  async go(@Param('id') id: string, @Res() res: Response): Promise<void> {
     const url = await this.menuService.trackClick(id);
     if (!url) {
       res.status(HttpStatus.NOT_FOUND).send('Link not found');

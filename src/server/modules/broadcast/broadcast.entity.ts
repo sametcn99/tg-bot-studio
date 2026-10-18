@@ -1,6 +1,6 @@
 export interface BroadcastRow {
-  id: number;
-  bot_id: number;
+  id: string;
+  bot_id: string;
   target_type: string;
   message_text: string;
   media_url: string | null;
@@ -10,7 +10,7 @@ export interface BroadcastRow {
   failed_count: number;
   status: string;
   created_at: string | null;
-  botId: number;
+  botId: string;
   targetType: string;
   messageText: string;
   mediaUrl: string | null;

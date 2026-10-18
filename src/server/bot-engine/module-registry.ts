@@ -60,7 +60,6 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     description:
       'Schedules future channel posts with inline buttons and branded caption watermarking.',
     defaultConfig: { watermarkText: '', timezoneOffsetMinutes: 0 },
-    chatScoped: true,
   },
   {
     key: 'support',
@@ -350,6 +349,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     category: 'Community & Moderation',
     description: 'Timed trivia quizzes delivered via sendPoll with persistent scoreboards.',
     defaultConfig: { defaultCommand: 'quiz' },
+    chatScoped: true,
   },
   {
     key: 'reactions',

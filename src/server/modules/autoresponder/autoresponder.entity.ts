@@ -1,6 +1,6 @@
 export interface AutoresponderRow {
-  id: number;
-  bot_id: number;
+  id: string;
+  bot_id: string;
   command: string;
   response_text: string;
   media_url: string | null;
@@ -11,7 +11,7 @@ export interface AutoresponderRow {
   match_mode: string;
   admin_only: number;
   repeat_seconds: number;
-  botId: number;
+  botId: string;
   responseText: string;
   mediaUrl: string | null;
   buttonsJson: string | null;

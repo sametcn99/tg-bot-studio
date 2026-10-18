@@ -5,7 +5,7 @@ export type AdminLogCategory = 'settings' | 'admin' | 'user' | 'automated' | 're
 
 /** A single admin-log event emitted by a module runtime. */
 export interface AdminLogEvent {
-  botId: number;
+  botId: string;
   chatId: number;
   category: AdminLogCategory;
   /** Human-readable description, already localized when applicable. */
@@ -24,17 +24,17 @@ export type AdminLogListener = (event: AdminLogEvent) => void;
 @Injectable()
 export class AdminLogService {
   private readonly logger = new Logger(AdminLogService.name);
-  private readonly listeners = new Map<number, AdminLogListener>();
+  private readonly listeners = new Map<string, AdminLogListener>();
 
   /**
    * Registers (replacing any previous) the log listener for a bot. Called on
    * every module attach; passing null detaches.
    *
-   * @param {number} botId - Studio bot id.
+   * @param {string} botId - Studio bot id.
    * @param {AdminLogListener | null} listener - Event sink or null to detach.
    * @returns {void}
    */
-  subscribe(botId: number, listener: AdminLogListener | null): void {
+  subscribe(botId: string, listener: AdminLogListener | null): void {
     if (listener === null) {
       this.listeners.delete(botId);
     } else {

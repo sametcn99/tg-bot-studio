@@ -38,7 +38,7 @@ import { localizedErrorMessage } from '../../utils/errors';
  * @interface BroadcastRow
  */
 interface BroadcastRow {
-  id: number;
+  id: string;
   target_type: string;
   total_recipients: number;
   success_count: number;
@@ -70,7 +70,7 @@ export default function BroadcastPage({
   botId,
   module,
 }: {
-  botId: number;
+  botId: string;
   module: ModuleEntry;
 }): React.ReactElement {
   const { t } = useTranslation();
@@ -125,7 +125,7 @@ export default function BroadcastPage({
   /**
    * Cancels an active or queued broadcast.
    */
-  function cancelBroadcast(id: number): void {
+  function cancelBroadcast(id: string): void {
     apiFetch(`/api/bots/${botId}/broadcasts/${id}/cancel`, { method: 'POST' })
       .then(reload)
       .catch((err: Error) => setError(localizedErrorMessage(err)));

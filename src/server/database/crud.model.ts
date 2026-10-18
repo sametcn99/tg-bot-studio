@@ -10,7 +10,7 @@ import { PrismaService } from './prisma.service';
  * this.prisma.mediaAsset;`) and keep their custom create/update methods —
  * those differ per module, the retrieval/lifecycle shape does not.
  */
-export abstract class BotScopedCrudModel<Row extends { id: number }> {
+export abstract class BotScopedCrudModel<Row extends { id: string }> {
   protected readonly prisma: PrismaService;
   protected abstract readonly delegate: any;
   protected readonly defaultOrder: Record<string, 'asc' | 'desc'> = { id: 'desc' };
@@ -28,7 +28,7 @@ export abstract class BotScopedCrudModel<Row extends { id: number }> {
    * @param {number} [take] - Optional row cap.
    * @returns {Promise<Row[]>} Rows.
    */
-  list(botId: number, take?: number): Promise<Row[]> {
+  list(botId: string, take?: number): Promise<Row[]> {
     return this.delegate.findMany({
       where: { botId },
       orderBy: this.defaultOrder,
@@ -42,7 +42,7 @@ export abstract class BotScopedCrudModel<Row extends { id: number }> {
    * @param {number} id - Row id.
    * @returns {Promise<Row | null>} Row when found.
    */
-  async findById(botId: number, id: number): Promise<Row | null> {
+  async findById(botId: string, id: string): Promise<Row | null> {
     return (await this.delegate.findFirst({ where: { id, botId } })) as Row | null;
   }
 
@@ -54,7 +54,7 @@ export abstract class BotScopedCrudModel<Row extends { id: number }> {
    * @returns {Promise<Row>} The row.
    * @throws {NotFoundException} When the row does not exist for the bot.
    */
-  async require(botId: number, id: number, label = 'Entity'): Promise<Row> {
+  async require(botId: string, id: string, label = 'Entity'): Promise<Row> {
     const row = await this.findById(botId, id);
     if (!row) throw new NotFoundException(`${label} ${id} not found`);
     return row;
@@ -68,7 +68,7 @@ export abstract class BotScopedCrudModel<Row extends { id: number }> {
    * @returns {Promise<void>} Resolves once removed.
    * @throws {NotFoundException} When the row does not exist for the bot.
    */
-  async delete(botId: number, id: number, label = 'Entity'): Promise<void> {
+  async delete(botId: string, id: string, label = 'Entity'): Promise<void> {
     await this.require(botId, id, label);
     await this.delegate.delete({ where: { id } });
   }

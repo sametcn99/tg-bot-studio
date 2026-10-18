@@ -48,10 +48,12 @@ export interface RestrictionInvocation {
 export async function groupContext(
   deps: ModerationDeps,
   c: Context,
-  botId: number,
+  botId: string,
 ): Promise<{ chatId: number; lang: BotLanguage } | null> {
   if (c.chat?.type !== 'supergroup' && c.chat?.type !== 'group') return null;
   if (!c.from) return null;
+  // Explicit-target gate: the module only serves its configured chats.
+  if (!(await deps.chatSettings.isTargeted(botId, c.chat.id, deps.moduleKey))) return null;
   // Bot-to-bot gate: other bots may only use commands per the chat's
   // bot2bot mode (off / admin / all).
   if (c.from.is_bot) {
@@ -80,7 +82,7 @@ export async function groupContext(
 export async function requireCapability(
   deps: ModerationDeps,
   c: Context,
-  botId: number,
+  botId: string,
   chatId: number,
   lang: BotLanguage,
   capability: AdminCapability,

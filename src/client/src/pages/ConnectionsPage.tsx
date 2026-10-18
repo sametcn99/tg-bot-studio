@@ -82,7 +82,7 @@ export default function ConnectionsPage({
   botId,
   module,
 }: {
-  botId: number;
+  botId: string;
   module: ModuleEntry;
 }): React.ReactElement {
   const { t } = useTranslation();
@@ -90,7 +90,7 @@ export default function ConnectionsPage({
   const { connections, loading, refresh } = useConnections();
   const { openDocs } = useModuleDocs();
   const [form, setForm] = useState<Record<string, string> | null>(null);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<ChatConnection | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);

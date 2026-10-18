@@ -105,7 +105,7 @@ export class BotI18nService {
    * @param {string | number} chatId - Telegram chat id.
    * @returns {Promise<BotLanguage>} Resolved language ('en' fallback).
    */
-  async getChatLanguage(botId: number, chatId: string | number): Promise<BotLanguage> {
+  async getChatLanguage(botId: string, chatId: string | number): Promise<BotLanguage> {
     const key = `${botId}:${chatId}`;
     const cached = this.cache.get(key);
     if (cached && Date.now() - cached.cachedAt < 30_000) {
@@ -135,7 +135,7 @@ export class BotI18nService {
    * @returns {Promise<void>} Resolves once stored.
    */
   async setChatLanguage(
-    botId: number,
+    botId: string,
     chatId: string | number,
     language: BotLanguage,
   ): Promise<void> {
@@ -158,7 +158,7 @@ export class BotI18nService {
    * @param {number} [botId] - Optional bot filter.
    * @returns {void}
    */
-  invalidate(botId?: number): void {
+  invalidate(botId?: string): void {
     if (botId === undefined) {
       this.cache.clear();
       return;

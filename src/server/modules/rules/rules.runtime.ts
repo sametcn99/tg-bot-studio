@@ -5,6 +5,7 @@ import { AdminGateService } from '../../bot-engine/admin-gate.service';
 import { BotI18nService } from '../../bot-engine/bot-i18n.service';
 import { ChatSettingsService } from '../../bot-engine/chat-settings.service';
 import { AdminLogService } from '../../bot-engine/admin-log.service';
+import { isChatTargeted } from '../../common/utils/chat-targets.util';
 
 /**
  * Runtime for the Group Rules module (reference parity): per-group rules text,
@@ -56,6 +57,7 @@ export class RulesRuntime extends BotModuleHandler {
       if (!payload.startsWith('rules_')) return;
       const chatId = payload.slice('rules_'.length);
       const config = await this.chatSettings.getEffectiveConfig(botId, chatId, this.moduleKey);
+      if (!isChatTargeted(config.targetChats, chatId)) return;
       const lang = await this.i18n.getChatLanguage(botId, chatId);
       const text = String(config.rulesText ?? '');
       if (!text) {
@@ -81,11 +83,12 @@ export class RulesRuntime extends BotModuleHandler {
   /**
    * Handles /rules — in-chat text or PM button delivery.
    */
-  private async handleRules(c: import('grammy').Context, botId: number): Promise<void> {
+  private async handleRules(c: import('grammy').Context, botId: string): Promise<void> {
     if (c.chat?.type !== 'supergroup' && c.chat?.type !== 'group') return;
     const chatId = c.chat.id;
     const lang = await this.i18n.getChatLanguage(botId, chatId);
     const config = await this.chatSettings.getEffectiveConfig(botId, chatId, this.moduleKey);
+    if (!isChatTargeted(config.targetChats, chatId)) return;
     const text = String(config.rulesText ?? '');
     if (!text) {
       await c.reply(this.i18n.t(lang, 'rules.noneSet')).catch(() => undefined);
@@ -116,8 +119,9 @@ export class RulesRuntime extends BotModuleHandler {
   /**
    * Handles /setrules <text>.
    */
-  private async handleSetRules(c: import('grammy').Context, botId: number): Promise<void> {
+  private async handleSetRules(c: import('grammy').Context, botId: string): Promise<void> {
     if (c.chat?.type !== 'supergroup' && c.chat?.type !== 'group') return;
+    if (!(await this.chatSettings.isTargeted(botId, c.chat.id, this.moduleKey))) return;
     if (
       !c.from ||
       !(await this.adminGate.hasCapability(c.api, c.chat.id, c.from.id, 'change_info'))
@@ -144,8 +148,9 @@ export class RulesRuntime extends BotModuleHandler {
   /**
    * Handles /resetrules.
    */
-  private async handleResetRules(c: import('grammy').Context, botId: number): Promise<void> {
+  private async handleResetRules(c: import('grammy').Context, botId: string): Promise<void> {
     if (c.chat?.type !== 'supergroup' && c.chat?.type !== 'group') return;
+    if (!(await this.chatSettings.isTargeted(botId, c.chat.id, this.moduleKey))) return;
     if (
       !c.from ||
       !(await this.adminGate.hasCapability(c.api, c.chat.id, c.from.id, 'change_info'))
@@ -162,8 +167,9 @@ export class RulesRuntime extends BotModuleHandler {
   /**
    * Handles /privaterules on|off (on by default, reference parity).
    */
-  private async handlePrivateRules(c: import('grammy').Context, botId: number): Promise<void> {
+  private async handlePrivateRules(c: import('grammy').Context, botId: string): Promise<void> {
     if (c.chat?.type !== 'supergroup' && c.chat?.type !== 'group') return;
+    if (!(await this.chatSettings.isTargeted(botId, c.chat.id, this.moduleKey))) return;
     if (
       !c.from ||
       !(await this.adminGate.hasCapability(c.api, c.chat.id, c.from.id, 'change_info'))
@@ -187,8 +193,9 @@ export class RulesRuntime extends BotModuleHandler {
   /**
    * Handles /setrulesbutton <label>.
    */
-  private async handleRulesButton(c: import('grammy').Context, botId: number): Promise<void> {
+  private async handleRulesButton(c: import('grammy').Context, botId: string): Promise<void> {
     if (c.chat?.type !== 'supergroup' && c.chat?.type !== 'group') return;
+    if (!(await this.chatSettings.isTargeted(botId, c.chat.id, this.moduleKey))) return;
     if (
       !c.from ||
       !(await this.adminGate.hasCapability(c.api, c.chat.id, c.from.id, 'change_info'))
@@ -209,8 +216,9 @@ export class RulesRuntime extends BotModuleHandler {
   /**
    * Handles /resetrulesbutton.
    */
-  private async handleRulesButtonReset(c: import('grammy').Context, botId: number): Promise<void> {
+  private async handleRulesButtonReset(c: import('grammy').Context, botId: string): Promise<void> {
     if (c.chat?.type !== 'supergroup' && c.chat?.type !== 'group') return;
+    if (!(await this.chatSettings.isTargeted(botId, c.chat.id, this.moduleKey))) return;
     if (
       !c.from ||
       !(await this.adminGate.hasCapability(c.api, c.chat.id, c.from.id, 'change_info'))

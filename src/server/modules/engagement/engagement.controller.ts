@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
 import { EngagementService } from './engagement.service';
 
 /**
@@ -17,7 +17,7 @@ export class EngagementController {
    * @returns {object[]} Quiz definitions.
    */
   @Get('quizzes')
-  listQuizzes(@Param('botId', ParseIntPipe) botId: number) {
+  listQuizzes(@Param('botId') botId: string) {
     return this.service.listQuizzes(botId);
   }
 
@@ -28,7 +28,7 @@ export class EngagementController {
    * @returns {object} Created quiz definition.
    */
   @Post('quizzes')
-  createQuiz(@Param('botId', ParseIntPipe) botId: number, @Body() body: Record<string, unknown>) {
+  createQuiz(@Param('botId') botId: string, @Body() body: Record<string, unknown>) {
     return this.service.createQuiz(botId, {
       question: String(body.question ?? ''),
       options: (body.options as string[]) ?? [],
@@ -44,7 +44,7 @@ export class EngagementController {
    * @returns {{success: boolean}} Confirmation payload.
    */
   @Delete('quizzes/:quizId')
-  removeQuiz(@Param('botId', ParseIntPipe) botId: number, @Param('quizId') quizId: string) {
+  removeQuiz(@Param('botId') botId: string, @Param('quizId') quizId: string) {
     this.service.removeQuiz(botId, quizId);
     return { success: true };
   }
@@ -56,7 +56,7 @@ export class EngagementController {
    * @returns {Record<string, number>} Correct answers per Telegram id.
    */
   @Get('quizzes/:quizId/scoreboard')
-  scoreboard(@Param('botId', ParseIntPipe) botId: number, @Param('quizId') quizId: string) {
+  scoreboard(@Param('botId') botId: string, @Param('quizId') quizId: string) {
     return this.service.getScoreboard(botId, quizId);
   }
 
@@ -66,7 +66,7 @@ export class EngagementController {
    * @returns {Record<string, number>} Reaction emoji counts.
    */
   @Get('reactions/summary')
-  reactionSummary(@Param('botId', ParseIntPipe) botId: number) {
+  reactionSummary(@Param('botId') botId: string) {
     return this.service.getReactionSummary(botId);
   }
 }

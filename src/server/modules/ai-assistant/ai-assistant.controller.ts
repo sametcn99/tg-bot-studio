@@ -5,7 +5,6 @@ import {
   Delete,
   Get,
   Param,
-  ParseIntPipe,
   Post,
   Put,
   Query,
@@ -59,7 +58,7 @@ export class AiAssistantController {
   /**
    * Resolves the effective AI config from the bot's stored module config.
    */
-  private async resolveConfig(botId: number): Promise<AiConfig> {
+  private async resolveConfig(botId: string): Promise<AiConfig> {
     const row = await this.botModel.getModule(botId, 'ai-assistant');
     const stored = row?.configJson ? (JSON.parse(row.configJson) as Partial<AiConfig>) : {};
     return {
@@ -79,11 +78,11 @@ export class AiAssistantController {
    */
   @Post('test')
   async test(
-    @Param('botId', ParseIntPipe) botId: number,
+    @Param('botId') botId: string,
     @Body() body: { message?: string },
   ): Promise<{
     reply: string;
-    sources: Array<{ docId: number; docTitle: string; content: string; score: number }>;
+    sources: Array<{ docId: string; docTitle: string; content: string; score: number }>;
   }> {
     const config = await this.resolveConfig(botId);
     const userMessage = String(body.message ?? 'Hello');
@@ -106,7 +105,7 @@ export class AiAssistantController {
    */
   @Post('generate')
   async generate(
-    @Param('botId', ParseIntPipe) botId: number,
+    @Param('botId') botId: string,
     @Body() body: { kind?: string; prompt?: string; locale?: string },
   ): Promise<{ result: string }> {
     const kind = String(body.kind ?? '');
@@ -142,7 +141,7 @@ export class AiAssistantController {
    */
   @Post('translate')
   async translate(
-    @Param('botId', ParseIntPipe) botId: number,
+    @Param('botId') botId: string,
     @Body() body: { texts?: Record<string, string>; targetLanguages?: string[] },
   ): Promise<{ translations: Record<string, Record<string, string>> }> {
     void botId;
@@ -259,7 +258,7 @@ export class AiAssistantController {
    * trailing window, powering the mini metrics panel on the config page.
    */
   @Get('metrics')
-  async metrics(@Param('botId', ParseIntPipe) botId: number, @Query('days') days?: string) {
+  async metrics(@Param('botId') botId: string, @Query('days') days?: string) {
     const parsed = Math.max(1, Math.min(90, Number(days ?? 7) || 7));
     return this.service.getUsageSummary(botId, parsed);
   }
@@ -268,7 +267,7 @@ export class AiAssistantController {
    * Rebuilds the semantic RAG index (chunking + embeddings) for every doc.
    */
   @Post('docs/reindex')
-  async reindex(@Param('botId', ParseIntPipe) botId: number) {
+  async reindex(@Param('botId') botId: string) {
     const config = await this.resolveConfig(botId);
     const chunks = await this.service.indexKnowledgeBase(botId, config);
     return { chunks };
@@ -278,7 +277,7 @@ export class AiAssistantController {
    * Lists all knowledge base documents for this bot.
    */
   @Get('docs')
-  async listDocs(@Param('botId', ParseIntPipe) botId: number) {
+  async listDocs(@Param('botId') botId: string) {
     return this.service.listDocs(botId);
   }
 
@@ -287,7 +286,7 @@ export class AiAssistantController {
    */
   @Post('docs')
   async addDoc(
-    @Param('botId', ParseIntPipe) botId: number,
+    @Param('botId') botId: string,
     @Body() body: { title: string; content: string; tags?: string },
   ) {
     if (!body.title || !body.content) {
@@ -302,8 +301,8 @@ export class AiAssistantController {
    */
   @Put('docs/:docId')
   async updateDoc(
-    @Param('botId', ParseIntPipe) botId: number,
-    @Param('docId', ParseIntPipe) docId: number,
+    @Param('botId') botId: string,
+    @Param('docId') docId: string,
     @Body() body: { title: string; content: string; tags?: string },
   ) {
     if (!body.title || !body.content) {
@@ -318,10 +317,7 @@ export class AiAssistantController {
    * Deletes a knowledge base document.
    */
   @Delete('docs/:docId')
-  async removeDoc(
-    @Param('botId', ParseIntPipe) botId: number,
-    @Param('docId', ParseIntPipe) docId: number,
-  ) {
+  async removeDoc(@Param('botId') botId: string, @Param('docId') docId: string) {
     await this.service.removeDoc(botId, docId);
     return { success: true };
   }

@@ -123,7 +123,7 @@ export class MessageScoreService implements OnApplicationShutdown {
    * @param {number} botId - Owning bot id.
    * @returns {string} Zone name.
    */
-  private botTimeZone(botId: number): string {
+  private botTimeZone(botId: string): string {
     return safeTimeZone(this.settings.getBotSetting(botId, 'timezone'));
   }
 
@@ -137,7 +137,7 @@ export class MessageScoreService implements OnApplicationShutdown {
    * rejection on the hot per-message path (scoring loss is non-critical).
    */
   recordActivity(
-    botId: number,
+    botId: string,
     chatId: number,
     telegramId: number,
     flags: { reply: boolean; media: boolean },
@@ -155,7 +155,7 @@ export class MessageScoreService implements OnApplicationShutdown {
    * Computes the weighted activity leaderboard.
    */
   async leaderboard(
-    botId: number,
+    botId: string,
     chatId: string | undefined,
     period: ScorePeriod,
     limit: number,
@@ -246,7 +246,7 @@ export class MessageScoreService implements OnApplicationShutdown {
   }
 
   async preview(
-    botId: number,
+    botId: string,
     data: Record<string, unknown>,
   ): Promise<Array<{ chatId: string; title: string; text: string }>> {
     const config = this.formatFromPayload(data);
@@ -268,7 +268,7 @@ export class MessageScoreService implements OnApplicationShutdown {
   }
 
   async sendNow(
-    botId: number,
+    botId: string,
     data: Record<string, unknown>,
   ): Promise<Array<{ chatId: string; ok: boolean; error?: string }>> {
     const bot = this.pool.getBot(botId);
@@ -306,12 +306,12 @@ export class MessageScoreService implements OnApplicationShutdown {
     return results;
   }
 
-  async listSchedules(botId: number): Promise<ScoreScheduleRow[]> {
+  async listSchedules(botId: string): Promise<ScoreScheduleRow[]> {
     const rows = await this.scoreModel.listSchedules(botId);
     return rows.map(toScoreScheduleRow);
   }
 
-  async createSchedule(botId: number, data: Record<string, unknown>): Promise<ScoreScheduleRow> {
+  async createSchedule(botId: string, data: Record<string, unknown>): Promise<ScoreScheduleRow> {
     const chatIds = this.targetChatIds(data);
     const frequency = this.frequencyFromPayload(data);
     const timeOfDay = /^\d{1,2}:\d{2}$/.test(String(data.timeOfDay ?? ''))
@@ -346,8 +346,8 @@ export class MessageScoreService implements OnApplicationShutdown {
   }
 
   async updateSchedule(
-    botId: number,
-    id: number,
+    botId: string,
+    id: string,
     data: Record<string, unknown>,
   ): Promise<ScoreScheduleRow> {
     const existing = await this.scheduleOrFail(botId, id);
@@ -428,12 +428,12 @@ export class MessageScoreService implements OnApplicationShutdown {
     return toScoreScheduleRow(updated);
   }
 
-  async removeSchedule(botId: number, id: number): Promise<void> {
+  async removeSchedule(botId: string, id: string): Promise<void> {
     await this.scheduleOrFail(botId, id);
     await this.scoreModel.deleteSchedule(id);
   }
 
-  async runScheduleNow(botId: number, id: number): Promise<ScoreScheduleRow> {
+  async runScheduleNow(botId: string, id: string): Promise<ScoreScheduleRow> {
     const schedule = await this.scheduleOrFail(botId, id);
     if (!this.pool.getBot(botId)) {
       throw new StudioException(
@@ -445,7 +445,7 @@ export class MessageScoreService implements OnApplicationShutdown {
     return this.scheduleOrFail(botId, id);
   }
 
-  private async scheduleOrFail(botId: number, id: number): Promise<ScoreScheduleRow> {
+  private async scheduleOrFail(botId: string, id: string): Promise<ScoreScheduleRow> {
     const row = await this.scoreModel.findScheduleById(botId, id);
     if (!row) throw new NotFoundException(`Score schedule ${id} not found`);
     return toScoreScheduleRow(row);
@@ -569,7 +569,7 @@ export class MessageScoreService implements OnApplicationShutdown {
   }
 
   private async weightsFor(
-    botId: number,
+    botId: string,
     chatId?: string,
   ): Promise<{ message: number; reply: number; media: number }> {
     // Effective per-chat weights (chat override -> bot config -> defaults).
@@ -583,12 +583,12 @@ export class MessageScoreService implements OnApplicationShutdown {
     };
   }
 
-  private async titleFor(botId: number, chatId: string): Promise<string> {
+  private async titleFor(botId: string, chatId: string): Promise<string> {
     const conn = await this.chatConnectionModel.findByChatId(botId, chatId);
     return conn?.title ?? chatId;
   }
 
-  private botName(botId: number): string {
+  private botName(botId: string): string {
     return this.pool.getBot(botId)?.botInfo?.first_name ?? '';
   }
 }

@@ -23,7 +23,7 @@ export class UsersCrmController {
    */
   @Get()
   list(
-    @Param('botId', ParseIntPipe) botId: number,
+    @Param('botId') botId: string,
     @Query('search') search?: string,
     @Query('tag') tag?: string,
     @Query('page') page?: string,
@@ -44,10 +44,7 @@ export class UsersCrmController {
    * @returns {Promise<object>} Subscriber profile.
    */
   @Get(':telegramId')
-  findOne(
-    @Param('botId', ParseIntPipe) botId: number,
-    @Param('telegramId', ParseIntPipe) telegramId: number,
-  ) {
+  findOne(@Param('botId') botId: string, @Param('telegramId', ParseIntPipe) telegramId: number) {
     return this.crmService.findOne(botId, telegramId);
   }
 
@@ -60,7 +57,7 @@ export class UsersCrmController {
    */
   @Patch(':telegramId')
   updateTags(
-    @Param('botId', ParseIntPipe) botId: number,
+    @Param('botId') botId: string,
     @Param('telegramId', ParseIntPipe) telegramId: number,
     @Body() body: { tags?: string[]; notes?: string },
   ) {
@@ -74,7 +71,7 @@ export class UsersCrmController {
    */
   @Get('export/csv')
   @Header('Content-Type', 'text/csv; charset=utf-8')
-  exportCsv(@Param('botId', ParseIntPipe) botId: number): Promise<string> {
+  exportCsv(@Param('botId') botId: string): Promise<string> {
     return this.crmService.export(botId, 'csv');
   }
 
@@ -85,7 +82,7 @@ export class UsersCrmController {
    */
   @Get('export/json')
   @Header('Content-Type', 'application/json; charset=utf-8')
-  exportJson(@Param('botId', ParseIntPipe) botId: number): Promise<string> {
+  exportJson(@Param('botId') botId: string): Promise<string> {
     return this.crmService.export(botId, 'json');
   }
 
@@ -95,7 +92,7 @@ export class UsersCrmController {
    * @returns {Promise<string[]>} Distinct tags.
    */
   @Get('tags/distinct')
-  distinctTags(@Param('botId', ParseIntPipe) botId: number): Promise<string[]> {
+  distinctTags(@Param('botId') botId: string): Promise<string[]> {
     return this.crmService.distinctTags(botId);
   }
 }

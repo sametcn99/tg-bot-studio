@@ -7,7 +7,6 @@ import {
 } from '@nestjs/common';
 import { InlineKeyboard } from 'grammy';
 import { BotPoolService } from '../../bot-engine/bot-pool.service';
-import { ChatSettingsService } from '../../bot-engine/chat-settings.service';
 import { renderTemplate } from '../../common/utils/template.util';
 import { safeTimeZone, wallTimeToUtc } from '../../common/utils/tz.util';
 import { safeJsonObjectParse } from '../../common/utils/json.util';
@@ -38,7 +37,6 @@ export class SchedulerService implements OnApplicationShutdown {
     private readonly botModel: BotModel,
     private readonly pool: BotPoolService,
     private readonly settings: SystemSettingsService,
-    private readonly chatSettings: ChatSettingsService,
   ) {
     this.ticker = setInterval(() => {
       void this.dispatchDue().catch((error: Error) =>
@@ -54,7 +52,7 @@ export class SchedulerService implements OnApplicationShutdown {
   /**
    * Lists scheduled posts for a bot.
    */
-  async list(botId: number): Promise<ScheduledPostRow[]> {
+  async list(botId: string): Promise<ScheduledPostRow[]> {
     const posts = await this.schedulerModel.list(botId);
     return posts.map(toScheduledPostRow);
   }
@@ -63,7 +61,7 @@ export class SchedulerService implements OnApplicationShutdown {
    * Reads module configuration for scheduler.
    */
   private async configFor(
-    botId: number,
+    botId: string,
   ): Promise<{ watermarkText: string; timezoneOffsetMinutes: number }> {
     const row = await this.botModel.getModule(botId, 'scheduler');
     const config = safeJsonObjectParse(row?.configJson, {}, `scheduler:${botId}`);
@@ -82,7 +80,7 @@ export class SchedulerService implements OnApplicationShutdown {
    * @param {string} scheduledAt - Submitted ISO-ish timestamp.
    * @returns {Promise<string>} UTC ISO instant.
    */
-  private async toUtcInstant(botId: number, scheduledAt: string): Promise<string> {
+  private async toUtcInstant(botId: string, scheduledAt: string): Promise<string> {
     if (scheduledAt.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(scheduledAt)) {
       return scheduledAt;
     }
@@ -112,7 +110,7 @@ export class SchedulerService implements OnApplicationShutdown {
    * ScheduledPost row is created per target so each chat dispatches,
    * retries, and reports independently.
    */
-  async create(botId: number, data: Record<string, unknown>): Promise<ScheduledPostRow[]> {
+  async create(botId: string, data: Record<string, unknown>): Promise<ScheduledPostRow[]> {
     const scheduledAt = await this.toUtcInstant(
       botId,
       String(data.scheduledAt ?? new Date().toISOString()),
@@ -146,8 +144,8 @@ export class SchedulerService implements OnApplicationShutdown {
    * every additional target.
    */
   async update(
-    botId: number,
-    id: number,
+    botId: string,
+    id: string,
     data: Record<string, unknown>,
   ): Promise<ScheduledPostRow> {
     const existing = await this.findOne(botId, id);
@@ -187,7 +185,7 @@ export class SchedulerService implements OnApplicationShutdown {
   /**
    * Cancels a scheduled post.
    */
-  async remove(botId: number, id: number): Promise<void> {
+  async remove(botId: string, id: string): Promise<void> {
     await this.findOne(botId, id);
     await this.schedulerModel.delete(id);
   }
@@ -195,7 +193,7 @@ export class SchedulerService implements OnApplicationShutdown {
   /**
    * Fetches one scheduled post.
    */
-  async findOne(botId: number, id: number): Promise<ScheduledPostRow> {
+  async findOne(botId: string, id: string): Promise<ScheduledPostRow> {
     const row = await this.schedulerModel.findById(botId, id);
     if (!row) throw new NotFoundException(`Scheduled post ${id} not found`);
     return toScheduledPostRow(row);
@@ -221,15 +219,7 @@ export class SchedulerService implements OnApplicationShutdown {
           date: localNow.toISOString().slice(0, 10),
           time: localNow.toISOString().slice(11, 16),
         });
-        // Watermark is chat-scoped: a per-chat override (Chat Connections ->
-        // per-chat settings) beats the bot-level default for this target.
-        const perChat = await this.chatSettings.getEffectiveConfig(
-          post.botId,
-          post.targetChatId,
-          'scheduler',
-        );
-        const watermarkText = String(perChat.watermarkText ?? '');
-        const text = watermarkText ? `${body}\n\n${watermarkText}` : body;
+        const text = config.watermarkText ? `${body}\n\n${config.watermarkText}` : body;
         const buttons = post.buttonsJson
           ? (JSON.parse(post.buttonsJson) as Array<{ text: string; url: string }>)
           : [];

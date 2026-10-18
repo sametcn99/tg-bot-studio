@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
 import { TemplatesService } from './templates.service';
 
 /**
@@ -36,7 +36,7 @@ export class TemplatesController {
    * @returns {Promise<object>} The stored bundle.
    */
   @Get(':id/bundle')
-  getBundle(@Param('id', ParseIntPipe) id: number) {
+  getBundle(@Param('id') id: string) {
     return this.service.getBundle(id);
   }
 
@@ -46,7 +46,7 @@ export class TemplatesController {
    * @returns {Promise<{success: boolean}>} Confirmation payload.
    */
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
+  remove(@Param('id') id: string) {
     return this.service.remove(id);
   }
 }
@@ -68,10 +68,7 @@ export class TemplateApplyController {
    * @returns {Promise<object>} Import result.
    */
   @Post(':templateId/apply')
-  apply(
-    @Param('botId', ParseIntPipe) botId: number,
-    @Param('templateId', ParseIntPipe) templateId: number,
-  ) {
+  apply(@Param('botId') botId: string, @Param('templateId') templateId: string) {
     return this.service.apply(botId, templateId);
   }
 }

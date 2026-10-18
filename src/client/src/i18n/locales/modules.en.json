@@ -566,11 +566,7 @@
         "Quiz polls need no extra rights beyond the bot being able to send polls in the group."
       ]
     },
-    "fields": {
-      "defaultCommand": {
-        "label": "Trigger command"
-      }
-    }
+    "fields": {}
   },
   "reactions": {
     "name": "Reaction Analytics",

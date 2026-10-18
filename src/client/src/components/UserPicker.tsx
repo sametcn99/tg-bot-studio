@@ -57,7 +57,7 @@ export default function UserPicker({
   label,
   helperText,
 }: {
-  botId: number | string;
+  botId: string | string;
   value: string | number;
   onChange: (value: number) => void;
   label?: string;

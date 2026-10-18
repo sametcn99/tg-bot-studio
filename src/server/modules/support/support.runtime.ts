@@ -154,7 +154,7 @@ export class SupportRuntime extends BotModuleHandler {
    */
   private async ensureTopic(
     bot: Bot,
-    botId: number,
+    botId: string,
     adminChatId: number,
     telegramId: number,
     firstName: string,

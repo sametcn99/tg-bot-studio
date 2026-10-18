@@ -3,7 +3,7 @@ import { Observable, Subject } from 'rxjs';
 
 /** Live change notification sent over SSE. */
 export interface LiveEvent {
-  data: { topic: string; botId: number; at: number };
+  data: { topic: string; botId: string; at: number };
 }
 
 /**
@@ -21,7 +21,7 @@ export class LiveEventsService {
    * @param {number} botId - Bot whose data changed.
    * @returns {void}
    */
-  emit(topic: string, botId: number): void {
+  emit(topic: string, botId: string): void {
     this.subjects.get(`${topic}:${botId}`)?.next({ data: { topic, botId, at: Date.now() } });
   }
 
@@ -31,7 +31,7 @@ export class LiveEventsService {
    * @param {number} botId - Bot to observe.
    * @returns {Observable<LiveEvent>} Cold observable of pings.
    */
-  stream(topic: string, botId: number): Observable<LiveEvent> {
+  stream(topic: string, botId: string): Observable<LiveEvent> {
     const key = `${topic}:${botId}`;
     let subject = this.subjects.get(key);
     if (!subject) {

@@ -14,7 +14,7 @@ import { findModule } from './module-registry';
  * Bot row shape.
  */
 interface BotRow {
-  id: number;
+  id: string;
   name: string;
   token: string;
   username: string | null;
@@ -71,8 +71,8 @@ const ALLOWED_UPDATE_TYPES = [
 @Injectable()
 export class BotPoolService implements OnApplicationBootstrap, OnApplicationShutdown {
   private readonly logger = new Logger(BotPoolService.name);
-  private readonly runtimes = new Map<number, BotRuntime>();
-  private readonly volume = new Map<number, number>();
+  private readonly runtimes = new Map<string, BotRuntime>();
+  private readonly volume = new Map<string, number>();
   private readonly discoveredChats = new Set<string>();
   private readonly volumeFlushTimer: ReturnType<typeof setInterval>;
   private flushingVolume = false;
@@ -279,7 +279,7 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
    * @param {number} botId - Studio bot identifier.
    * @returns {Promise<void>} Resolves once polling stopped or timed out.
    */
-  private async stopExisting(botId: number): Promise<void> {
+  private async stopExisting(botId: string): Promise<void> {
     const existing = this.runtimes.get(botId);
     if (!existing) return;
     this.runtimes.delete(botId);
@@ -296,7 +296,7 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
    * @param {number} botId - Studio bot identifier.
    * @returns {void}
    */
-  private attachEngineMiddleware(bot: Bot, botId: number): void {
+  private attachEngineMiddleware(bot: Bot, botId: string): void {
     bot.use(async (ctx, next) => {
       if (ctx.from) {
         // Fire-and-forget on purpose (must not delay the update), but never
@@ -375,13 +375,13 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
    * @param {number} botId - Studio bot identifier.
    * @returns {void}
    */
-  private attachStarsPaymentHandlers(bot: Bot, botId: number): void {
+  private attachStarsPaymentHandlers(bot: Bot, botId: string): void {
     bot.on('pre_checkout_query', async (ctx) => {
       const payload = ctx.preCheckoutQuery.invoice_payload;
       let ok = true;
       let errorMessage: string | undefined;
       if (payload.startsWith('order:')) {
-        const orderId = Number(payload.slice('order:'.length));
+        const orderId = payload.slice('order:'.length);
         const order = await this.prisma.miniAppOrder.findFirst({
           where: { id: orderId, botId, status: 'pending_payment' },
         });
@@ -419,7 +419,7 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
    * @param {number} botId - Studio bot identifier.
    * @returns {Promise<void>} Resolves once all handlers registered.
    */
-  private async attachModules(bot: Bot, botId: number): Promise<void> {
+  private async attachModules(bot: Bot, botId: string): Promise<void> {
     // Deterministic attach order: middleware sequencing must not depend on
     // SQLite's storage order.
     const rows = await this.prisma.botModule.findMany({
@@ -455,7 +455,7 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
    * @param {number} botId - Studio bot id.
    * @returns {Promise<void>} Resolves once attempted.
    */
-  private async registerGroupCommands(bot: Bot, botId: number): Promise<void> {
+  private async registerGroupCommands(bot: Bot, botId: string): Promise<void> {
     try {
       const rows = await this.prisma.botModule.findMany({
         where: { botId, isEnabled: 1 },
@@ -508,7 +508,7 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
    * @param {number} botId - Studio bot identifier.
    * @returns {Promise<void>} Resolves once polling stopped.
    */
-  async stopBot(botId: number): Promise<void> {
+  async stopBot(botId: string): Promise<void> {
     const runtime = this.runtimes.get(botId);
     if (runtime) {
       await runtime.bot.stop();
@@ -521,7 +521,7 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
    * @param {number} botId - Studio bot identifier.
    * @returns {Promise<void>} Resolves once the restart completed.
    */
-  async restartBot(botId: number): Promise<void> {
+  async restartBot(botId: string): Promise<void> {
     const row = await this.prisma.bot.findUnique({ where: { id: botId } });
     if (!row) return;
     if (row.isActive === 1) {
@@ -543,7 +543,7 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
    * @param {number} botId - Studio bot identifier.
    * @returns {void}
    */
-  destroyBot(botId: number): void {
+  destroyBot(botId: string): void {
     this.stopExisting(botId);
   }
 
@@ -552,7 +552,7 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
    * @param {number} botId - Studio bot identifier.
    * @returns {Bot | undefined} Instance when the bot is loaded.
    */
-  getBot(botId: number): Bot | undefined {
+  getBot(botId: string): Bot | undefined {
     return this.runtimes.get(botId)?.bot;
   }
 
@@ -562,7 +562,7 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
    * @returns {'active'|'starting'|'failed'|'stopped'|'inactive'|'retrying'} Health state.
    */
   getStatus(
-    botId: number,
+    botId: string,
     isActive: boolean,
   ): 'active' | 'starting' | 'failed' | 'stopped' | 'inactive' | 'retrying' {
     if (!isActive) return 'inactive';
@@ -572,7 +572,7 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
   /**
    * Returns extended runtime diagnostic state for the bot.
    */
-  getRuntimeInfo(botId: number): {
+  getRuntimeInfo(botId: string): {
     status: 'active' | 'starting' | 'failed' | 'stopped' | 'inactive' | 'retrying';
     retryCount: number;
     lastError?: string;
@@ -592,7 +592,7 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
    * @param {number} botId - Studio bot identifier.
    * @returns {number} Messages recorded for the current UTC day.
    */
-  getDailyVolume(botId: number): number {
+  getDailyVolume(botId: string): number {
     return this.volume.get(botId) ?? 0;
   }
 

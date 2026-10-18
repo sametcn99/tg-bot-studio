@@ -8,8 +8,8 @@ import { isHttpUrl } from '../../common/utils/url.util';
  * Menu item row in the `links` table backing the Start Menu module.
  */
 export interface MenuItemRow {
-  id: number;
-  bot_id: number;
+  id: string;
+  bot_id: string;
   title: string;
   description: string | null;
   url: string;
@@ -55,7 +55,7 @@ export class StartMenuService {
   /**
    * Lists menu items for a bot ordered by position.
    */
-  async list(botId: number): Promise<MenuItemRow[]> {
+  async list(botId: string): Promise<MenuItemRow[]> {
     const rows = await this.menuModel.list(botId);
     return rows.map((r) => this.toRow(r));
   }
@@ -63,7 +63,7 @@ export class StartMenuService {
   /**
    * Creates a menu item.
    */
-  async create(botId: number, data: Record<string, unknown>): Promise<MenuItemRow> {
+  async create(botId: string, data: Record<string, unknown>): Promise<MenuItemRow> {
     const created = await this.menuModel.create({
       botId,
       title: String(data.title ?? ''),
@@ -79,7 +79,7 @@ export class StartMenuService {
   /**
    * Updates a menu item.
    */
-  async update(botId: number, id: number, data: Record<string, unknown>): Promise<MenuItemRow> {
+  async update(botId: string, id: string, data: Record<string, unknown>): Promise<MenuItemRow> {
     await this.findOne(botId, id);
     const updated = await this.menuModel.update(id, {
       title: data.title !== undefined ? String(data.title) : undefined,
@@ -95,7 +95,7 @@ export class StartMenuService {
   /**
    * Deletes a menu item.
    */
-  async remove(botId: number, id: number): Promise<void> {
+  async remove(botId: string, id: string): Promise<void> {
     await this.findOne(botId, id);
     await this.menuModel.delete(id);
   }
@@ -107,7 +107,7 @@ export class StartMenuService {
    * @param {number} id - Clicked link id.
    * @returns {Promise<string | null>} Redirect URL, or null when unknown.
    */
-  async trackClick(id: number): Promise<string | null> {
+  async trackClick(id: string): Promise<string | null> {
     const url = await this.menuModel.trackClick(id);
     if (!url) return null;
     // Public redirect: only well-formed http(s) targets leave the studio.
@@ -126,7 +126,7 @@ export class StartMenuService {
   /**
    * Fetches a single menu item scoped to a bot.
    */
-  async findOne(botId: number, id: number): Promise<MenuItemRow> {
+  async findOne(botId: string, id: string): Promise<MenuItemRow> {
     const row = await this.menuModel.findById(botId, id);
     if (!row) throw new NotFoundException(`Menu item ${id} not found`);
     return this.toRow(row);

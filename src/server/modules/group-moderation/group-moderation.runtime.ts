@@ -157,7 +157,7 @@ export class GroupModerationRuntime extends BotModuleHandler {
    */
   private async handleRestriction(
     c: Context,
-    botId: number,
+    botId: string,
     action: 'ban' | 'tban' | 'mute' | 'tmute' | 'kick',
     options: { delete?: boolean; silent?: boolean } = {},
   ): Promise<void> {
@@ -290,7 +290,7 @@ export class GroupModerationRuntime extends BotModuleHandler {
   /**
    * Handles /unban.
    */
-  private async handleUnban(c: Context, botId: number): Promise<void> {
+  private async handleUnban(c: Context, botId: string): Promise<void> {
     const group = await groupContext(this.deps, c, botId);
     if (!group) return;
     const { chatId, lang } = group;
@@ -326,7 +326,7 @@ export class GroupModerationRuntime extends BotModuleHandler {
   /**
    * Handles /unmute.
    */
-  private async handleUnmute(c: Context, botId: number): Promise<void> {
+  private async handleUnmute(c: Context, botId: string): Promise<void> {
     const group = await groupContext(this.deps, c, botId);
     if (!group) return;
     const { chatId, lang } = group;
@@ -360,7 +360,7 @@ export class GroupModerationRuntime extends BotModuleHandler {
   /**
    * Handles /kickme — any member may remove themselves.
    */
-  private async handleKickme(c: Context, botId: number): Promise<void> {
+  private async handleKickme(c: Context, botId: string): Promise<void> {
     const group = await groupContext(this.deps, c, botId);
     if (!group) return;
     const { chatId, lang } = group;
@@ -378,7 +378,7 @@ export class GroupModerationRuntime extends BotModuleHandler {
   /**
    * Handles /del — deletes the replied message plus the command.
    */
-  private async handleDeleteSingle(c: Context, botId: number): Promise<void> {
+  private async handleDeleteSingle(c: Context, botId: string): Promise<void> {
     const group = await groupContext(this.deps, c, botId);
     if (!group) return;
     const { chatId, lang } = group;
@@ -392,7 +392,7 @@ export class GroupModerationRuntime extends BotModuleHandler {
   /**
    * Handles /purge [n] and /spurge [n].
    */
-  private async handlePurge(c: Context, botId: number, silent: boolean): Promise<void> {
+  private async handlePurge(c: Context, botId: string, silent: boolean): Promise<void> {
     const group = await groupContext(this.deps, c, botId);
     if (!group) return;
     const { chatId, lang } = group;
@@ -444,7 +444,7 @@ export class GroupModerationRuntime extends BotModuleHandler {
   /**
    * Handles /purgefrom — anchors the purge range start.
    */
-  private async handlePurgeFrom(c: Context, botId: number): Promise<void> {
+  private async handlePurgeFrom(c: Context, botId: string): Promise<void> {
     const group = await groupContext(this.deps, c, botId);
     if (!group) return;
     const { chatId } = group;
@@ -459,7 +459,7 @@ export class GroupModerationRuntime extends BotModuleHandler {
   /**
    * Handles /purgeto — purges from the anchored start to this message.
    */
-  private async handlePurgeTo(c: Context, botId: number): Promise<void> {
+  private async handlePurgeTo(c: Context, botId: string): Promise<void> {
     const group = await groupContext(this.deps, c, botId);
     if (!group) return;
     const { chatId, lang } = group;
@@ -494,7 +494,7 @@ export class GroupModerationRuntime extends BotModuleHandler {
   /**
    * Handles /silentactions on|off — owner only.
    */
-  private async handleSilentActions(c: Context, botId: number): Promise<void> {
+  private async handleSilentActions(c: Context, botId: string): Promise<void> {
     const group = await groupContext(this.deps, c, botId);
     if (!group) return;
     const { chatId, lang } = group;
@@ -522,7 +522,7 @@ export class GroupModerationRuntime extends BotModuleHandler {
   /**
    * Handles /adminerror on|off.
    */
-  private async handleAdminError(c: Context, botId: number): Promise<void> {
+  private async handleAdminError(c: Context, botId: string): Promise<void> {
     const group = await groupContext(this.deps, c, botId);
     if (!group) return;
     const { chatId, lang } = group;
@@ -575,7 +575,7 @@ ${label}`,
   /**
    * Handles /admincache — forces an admin list refresh.
    */
-  private async handleAdminCache(c: Context, botId: number): Promise<void> {
+  private async handleAdminCache(c: Context, botId: string): Promise<void> {
     const group = await groupContext(this.deps, c, botId);
     if (!group) return;
     const { chatId, lang } = group;

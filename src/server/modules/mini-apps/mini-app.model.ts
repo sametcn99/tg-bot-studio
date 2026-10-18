@@ -27,7 +27,7 @@ export class MiniAppModel {
   /**
    * Lists mini apps for a bot.
    */
-  async list(botId: number): Promise<MiniApp[]> {
+  async list(botId: string): Promise<MiniApp[]> {
     return this.prisma.miniApp.findMany({
       where: { botId },
       orderBy: { id: 'asc' },
@@ -37,7 +37,7 @@ export class MiniAppModel {
   /**
    * Finds a mini app by id.
    */
-  async findById(id: number): Promise<MiniApp | null> {
+  async findById(id: string): Promise<MiniApp | null> {
     return this.prisma.miniApp.findUnique({
       where: { id },
     });
@@ -56,7 +56,7 @@ export class MiniAppModel {
    * Creates a new mini app.
    */
   async create(data: {
-    botId: number;
+    botId: string;
     name: string;
     slug: string;
     templateType: string;
@@ -89,8 +89,8 @@ export class MiniAppModel {
    * Updates an existing mini app.
    */
   async update(
-    botId: number,
-    id: number,
+    botId: string,
+    id: string,
     data: {
       name?: string;
       title?: string;
@@ -119,7 +119,7 @@ export class MiniAppModel {
   /**
    * Deletes a mini app.
    */
-  async delete(id: number): Promise<void> {
+  async delete(id: string): Promise<void> {
     await this.prisma.miniApp.delete({
       where: { id },
     });
@@ -129,8 +129,8 @@ export class MiniAppModel {
    * Creates an order.
    */
   async createOrder(data: {
-    botId: number;
-    appId: number;
+    botId: string;
+    appId: string;
     telegramId: number | bigint;
     totalAmount: number;
     currency: string;
@@ -154,7 +154,7 @@ export class MiniAppModel {
   /**
    * Lists orders for an app.
    */
-  async listOrders(botId: number, appId: number, limit = 500): Promise<MiniAppOrderEntity[]> {
+  async listOrders(botId: string, appId: string, limit = 500): Promise<MiniAppOrderEntity[]> {
     const rows = await this.prisma.miniAppOrder.findMany({
       where: { botId, appId },
       orderBy: { id: 'desc' },
@@ -166,7 +166,7 @@ export class MiniAppModel {
   /**
    * Updates one order's lifecycle status (pending → pending_payment → paid).
    */
-  async updateOrderStatus(orderId: number, status: string): Promise<void> {
+  async updateOrderStatus(orderId: string, status: string): Promise<void> {
     await this.prisma.miniAppOrder
       .update({ where: { id: orderId }, data: { status } })
       .catch(() => undefined);
@@ -176,7 +176,7 @@ export class MiniAppModel {
    * Lists recent orders for a user.
    */
   async listUserOrders(
-    botId: number,
+    botId: string,
     telegramId: number | bigint,
     limit = 3,
   ): Promise<MiniAppOrderEntity[]> {

@@ -33,7 +33,7 @@ export class SupportModel {
   /**
    * Lists support messages for a bot.
    */
-  async listMessages(botId: number, limit = 500): Promise<SupportMessageEntity[]> {
+  async listMessages(botId: string, limit = 500): Promise<SupportMessageEntity[]> {
     const rows = await this.prisma.supportMessage.findMany({
       where: { botId },
       orderBy: { id: 'desc' },
@@ -47,14 +47,14 @@ export class SupportModel {
    * (groupBy + latest-message fetch); the old version hydrated every support
    * message of the bot into memory on each inbox load.
    */
-  async listThreads(botId: number): Promise<SupportThreadEntity[]> {
+  async listThreads(botId: string): Promise<SupportThreadEntity[]> {
     const groups = await this.prisma.supportMessage.groupBy({
       by: ['telegramId'],
       where: { botId },
       _count: { _all: true },
       _max: { id: true },
     });
-    const latestIds = groups.map((g) => g._max.id).filter((id): id is number => id !== null);
+    const latestIds = groups.map((g) => g._max.id).filter((id): id is string => id !== null);
     const latestRows =
       latestIds.length > 0
         ? await this.prisma.supportMessage.findMany({
@@ -84,7 +84,7 @@ export class SupportModel {
    * Creates a new support message.
    */
   async createMessage(data: {
-    botId: number;
+    botId: string;
     telegramId: number | bigint;
     userMessageId?: number | null;
     adminChatId?: number | bigint | null;
@@ -116,7 +116,7 @@ export class SupportModel {
    * Finds latest forum topic mapping for a user.
    */
   async findLatestTopicForUser(
-    botId: number,
+    botId: string,
     telegramId: number | bigint,
   ): Promise<{ admin_chat_id: number; forum_topic_id: number } | null> {
     const row = await this.prisma.supportMessage.findFirst({
@@ -143,7 +143,7 @@ export class SupportModel {
    * Gets conversation history for copilot draft generation.
    */
   async getThreadHistory(
-    botId: number,
+    botId: string,
     telegramId: number | bigint,
     limit = 10,
   ): Promise<Array<{ direction: string; message_text: string }>> {

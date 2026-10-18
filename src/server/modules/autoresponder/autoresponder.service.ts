@@ -15,7 +15,7 @@ export class AutoresponderService {
   /**
    * Lists autoresponder rules for a bot.
    */
-  async list(botId: number): Promise<AutoresponderRow[]> {
+  async list(botId: string): Promise<AutoresponderRow[]> {
     const list = await this.autoresponderModel.list(botId);
     return list.map(toAutoresponderRow);
   }
@@ -23,7 +23,7 @@ export class AutoresponderService {
   /**
    * Creates a rule.
    */
-  async create(botId: number, data: Record<string, unknown>): Promise<AutoresponderRow> {
+  async create(botId: string, data: Record<string, unknown>): Promise<AutoresponderRow> {
     const rawChatId = data.chatId !== undefined ? data.chatId : data.chat_id;
     const item = await this.autoresponderModel.create({
       botId,
@@ -50,8 +50,8 @@ export class AutoresponderService {
    * Updates a rule.
    */
   async update(
-    botId: number,
-    id: number,
+    botId: string,
+    id: string,
     data: Record<string, unknown>,
   ): Promise<AutoresponderRow> {
     const existing = await this.findOne(botId, id);
@@ -124,7 +124,7 @@ export class AutoresponderService {
   /**
    * Deletes a rule.
    */
-  async remove(botId: number, id: number): Promise<void> {
+  async remove(botId: string, id: string): Promise<void> {
     await this.findOne(botId, id);
     await this.autoresponderModel.delete(id);
   }
@@ -132,7 +132,7 @@ export class AutoresponderService {
   /**
    * Fetches one rule scoped to a bot.
    */
-  async findOne(botId: number, id: number): Promise<AutoresponderRow> {
+  async findOne(botId: string, id: string): Promise<AutoresponderRow> {
     const item = await this.autoresponderModel.findById(botId, id);
     if (!item) throw new NotFoundException(`Autoresponder ${id} not found`);
     return toAutoresponderRow(item);

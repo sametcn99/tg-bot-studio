@@ -12,7 +12,7 @@ export class AutoresponderModel {
   /**
    * Lists rules for a bot ordered by id.
    */
-  async list(botId: number): Promise<Autoresponder[]> {
+  async list(botId: string): Promise<Autoresponder[]> {
     return this.prisma.autoresponder.findMany({
       where: { botId },
       orderBy: { id: 'asc' },
@@ -22,7 +22,7 @@ export class AutoresponderModel {
   /**
    * Finds a rule by botId and id.
    */
-  async findById(botId: number, id: number): Promise<Autoresponder | null> {
+  async findById(botId: string, id: string): Promise<Autoresponder | null> {
     return this.prisma.autoresponder.findFirst({
       where: { botId, id },
     });
@@ -32,7 +32,7 @@ export class AutoresponderModel {
    * Creates an autoresponder rule.
    */
   async create(data: {
-    botId: number;
+    botId: string;
     command: string;
     responseText: string;
     mediaUrl?: string | null;
@@ -65,7 +65,7 @@ export class AutoresponderModel {
    * Updates an autoresponder rule.
    */
   async update(
-    id: number,
+    id: string,
     data: {
       command?: string;
       responseText?: string;
@@ -88,7 +88,7 @@ export class AutoresponderModel {
   /**
    * Deletes an autoresponder rule.
    */
-  async delete(id: number): Promise<void> {
+  async delete(id: string): Promise<void> {
     await this.prisma.autoresponder.delete({
       where: { id },
     });

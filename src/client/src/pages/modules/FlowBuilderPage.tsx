@@ -51,7 +51,7 @@ import {
 
 /** Flow row from the API. */
 interface FlowRow {
-  id: number;
+  id: string;
   name: string;
   triggerType: 'command' | 'keyword' | 'start';
   triggerValue: string;
@@ -72,7 +72,7 @@ export default function FlowBuilderPage({
   botId,
   module,
 }: {
-  botId: number;
+  botId: string;
   module: ModuleEntry;
 }): React.ReactElement {
   const { t } = useTranslation();
@@ -86,7 +86,7 @@ export default function FlowBuilderPage({
   const [newName, setNewName] = useState('');
   const [newTriggerType, setNewTriggerType] = useState<'command' | 'keyword' | 'start'>('command');
   const [newTriggerValue, setNewTriggerValue] = useState('');
-  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     reload();

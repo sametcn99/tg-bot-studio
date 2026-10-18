@@ -18,8 +18,8 @@ import { GiveawayModel } from './giveaway.model';
  * @property {string} status - `active` | `finished`.
  */
 export interface GiveawayRow {
-  id: number;
-  bot_id: number;
+  id: string;
+  bot_id: string;
   title: string;
   required_channels_json: string | null;
   winners_count: number;
@@ -64,7 +64,7 @@ export class GiveawaysService implements OnApplicationShutdown {
   /**
    * Lists giveaways for a bot with participant counts.
    */
-  async list(botId: number): Promise<Array<Record<string, unknown>>> {
+  async list(botId: string): Promise<Array<Record<string, unknown>>> {
     const rows = await this.giveawayModel.list(botId);
     return Promise.all(
       rows.map(async (row) => ({
@@ -92,7 +92,7 @@ export class GiveawaysService implements OnApplicationShutdown {
   /**
    * Creates a giveaway.
    */
-  async create(botId: number, data: Record<string, unknown>): Promise<Record<string, unknown>> {
+  async create(botId: string, data: Record<string, unknown>): Promise<Record<string, unknown>> {
     const item = await this.giveawayModel.create({
       botId,
       title: String(data.title ?? 'Untitled giveaway'),
@@ -126,8 +126,8 @@ export class GiveawaysService implements OnApplicationShutdown {
    * Updates a giveaway.
    */
   async update(
-    botId: number,
-    id: number,
+    botId: string,
+    id: string,
     data: Record<string, unknown>,
   ): Promise<Record<string, unknown>> {
     const existing = await this.giveawayModel.findById(botId, id);
@@ -170,7 +170,7 @@ export class GiveawaysService implements OnApplicationShutdown {
   /**
    * Deletes a giveaway and its participant bookkeeping.
    */
-  async remove(botId: number, id: number): Promise<void> {
+  async remove(botId: string, id: string): Promise<void> {
     await this.giveawayModel.delete(id);
     await this.settings.setBotJson(botId, `giveaway_participants_${id}`, []);
   }
@@ -178,7 +178,7 @@ export class GiveawaysService implements OnApplicationShutdown {
   /**
    * Reads the participant list of a giveaway.
    */
-  async participants(botId: number, giveawayId: number): Promise<number[]> {
+  async participants(botId: string, giveawayId: string): Promise<number[]> {
     return (
       (await this.settings.getBotJson<number[]>(botId, `giveaway_participants_${giveawayId}`)) ?? []
     );
@@ -187,7 +187,7 @@ export class GiveawaysService implements OnApplicationShutdown {
   /**
    * Adds a participant (idempotent).
    */
-  async addParticipant(botId: number, giveawayId: number, telegramId: number): Promise<boolean> {
+  async addParticipant(botId: string, giveawayId: string, telegramId: number): Promise<boolean> {
     const list = await this.participants(botId, giveawayId);
     if (list.includes(telegramId)) return false;
     list.push(telegramId);
@@ -198,7 +198,7 @@ export class GiveawaysService implements OnApplicationShutdown {
   /**
    * Verifies that a user is a member of every required channel.
    */
-  async verifyMembership(botId: number, telegramId: number, channels: string[]): Promise<boolean> {
+  async verifyMembership(botId: string, telegramId: number, channels: string[]): Promise<boolean> {
     const bot = this.pool.getBot(botId);
     if (!bot || channels.length === 0) return channels.length === 0;
     for (const channel of channels) {
@@ -271,7 +271,7 @@ export class GiveawaysService implements OnApplicationShutdown {
   /**
    * Deterministic seeded shuffle selecting `count` winners.
    */
-  private drawWinners(giveawayId: number, participants: number[], count: number): number[] {
+  private drawWinners(giveawayId: string, participants: number[], count: number): number[] {
     if (participants.length === 0) return [];
     const seedSource = `${giveawayId}:${[...participants].sort((a, b) => a - b).join(',')}`;
     let seed = 0;
@@ -294,7 +294,7 @@ export class GiveawaysService implements OnApplicationShutdown {
   /**
    * Builds the join button keyboard for a giveaway announcement.
    */
-  joinKeyboard(giveawayId: number): InlineKeyboard {
+  joinKeyboard(giveawayId: string): InlineKeyboard {
     return new InlineKeyboard().text('Participate', `giveaway:${giveawayId}:join`);
   }
 }

@@ -8,6 +8,7 @@ import { AdminLogService } from '../../bot-engine/admin-log.service';
 import { BotI18nService, type BotLanguage } from '../../bot-engine/bot-i18n.service';
 import { ChatSettingsService } from '../../bot-engine/chat-settings.service';
 import { RestrictionsService } from '../../bot-engine/restrictions.service';
+import { isChatTargeted } from '../../common/utils/chat-targets.util';
 import { formatDuration, splitDurationArg } from '../../common/utils/duration.util';
 import { userMentionHtml } from '../../common/utils/telegram-text.util';
 import { LOCK_TYPES, evaluateLocks, isAllowlisted } from './lock-evaluator';
@@ -70,6 +71,7 @@ export class LocksRuntime extends BotModuleHandler {
         update.chat.id,
         this.moduleKey,
       );
+      if (!isChatTargeted(config.targetChats, update.chat.id)) return;
       const lockedTypes = Array.isArray(config.lockedTypes) ? (config.lockedTypes as string[]) : [];
       if (lockedTypes.length === 0) return;
       if (await this.isImmune(botId, update, update.chat.id, update.from.id)) return;
@@ -113,7 +115,7 @@ export class LocksRuntime extends BotModuleHandler {
    * Admins, approved users, and bots we manage are immune to locks.
    */
   private async isImmune(
-    botId: number,
+    botId: string,
     update: Context,
     chatId: number,
     userId: number,
@@ -132,7 +134,7 @@ export class LocksRuntime extends BotModuleHandler {
    */
   private async applyAction(
     update: Context,
-    botId: number,
+    botId: string,
     chatId: number,
     userId: number,
     rule: LockRule,
@@ -177,7 +179,7 @@ export class LocksRuntime extends BotModuleHandler {
    */
   private async warnForLock(
     update: Context,
-    botId: number,
+    botId: string,
     chatId: number,
     from: { id: number; first_name?: string },
     violated: string[],
@@ -239,7 +241,7 @@ export class LocksRuntime extends BotModuleHandler {
    */
   private async guard(
     c: Context,
-    botId: number,
+    botId: string,
   ): Promise<{ chatId: number; lang: BotLanguage; config: Record<string, unknown> } | null> {
     if (c.chat?.type !== 'supergroup' && c.chat?.type !== 'group') return null;
     if (!c.from) return null;
@@ -249,13 +251,14 @@ export class LocksRuntime extends BotModuleHandler {
     }
     const lang = await this.i18n.getChatLanguage(botId, chatId);
     const config = await this.chatSettings.getEffectiveConfig(botId, chatId, this.moduleKey);
+    if (!isChatTargeted(config.targetChats, chatId)) return null;
     return { chatId, lang, config };
   }
 
   /**
    * Handles /lock and /unlock with `### reason {action}` custom rules.
    */
-  private async handleLock(c: Context, botId: number, lock: boolean): Promise<void> {
+  private async handleLock(c: Context, botId: string, lock: boolean): Promise<void> {
     const group = await this.guard(c, botId);
     if (!group) return;
     const { chatId, lang } = group;
@@ -335,7 +338,7 @@ export class LocksRuntime extends BotModuleHandler {
   /**
    * Handles /locks — shows active locks.
    */
-  private async handleListLocks(c: Context, botId: number): Promise<void> {
+  private async handleListLocks(c: Context, botId: string): Promise<void> {
     const group = await this.guard(c, botId);
     if (!group) return;
     const lockedTypes = Array.isArray(group.config.lockedTypes)
@@ -352,7 +355,7 @@ export class LocksRuntime extends BotModuleHandler {
   /**
    * Handles /locktypes — lists every supported lock type.
    */
-  private async handleLockTypes(c: Context, botId: number): Promise<void> {
+  private async handleLockTypes(c: Context, botId: string): Promise<void> {
     const group = await this.guard(c, botId);
     if (!group) return;
     await c.reply(LOCK_TYPES.join(', ')).catch(() => undefined);
@@ -361,7 +364,7 @@ export class LocksRuntime extends BotModuleHandler {
   /**
    * Handles /lockwarns on|off.
    */
-  private async handleLockWarns(c: Context, botId: number): Promise<void> {
+  private async handleLockWarns(c: Context, botId: string): Promise<void> {
     const group = await this.guard(c, botId);
     if (!group) return;
     const { chatId, lang } = group;
@@ -381,7 +384,7 @@ export class LocksRuntime extends BotModuleHandler {
   /**
    * Handles /allowlist (list, or add an entry).
    */
-  private async handleAllowlist(c: Context, botId: number): Promise<void> {
+  private async handleAllowlist(c: Context, botId: string): Promise<void> {
     const group = await this.guard(c, botId);
     if (!group) return;
     const { chatId, lang } = group;
@@ -414,7 +417,7 @@ export class LocksRuntime extends BotModuleHandler {
   /**
    * Handles /rmallowlist <entry>.
    */
-  private async handleRmAllowlist(c: Context, botId: number): Promise<void> {
+  private async handleRmAllowlist(c: Context, botId: string): Promise<void> {
     const group = await this.guard(c, botId);
     if (!group) return;
     const { chatId, lang } = group;

@@ -33,7 +33,7 @@ export class FlowsService {
   /**
    * Lists flows of a bot with parsed graph summaries.
    */
-  async list(botId: number) {
+  async list(botId: string) {
     const flows = await this.flowModel.list(botId);
     return flows.map((flow) => ({
       id: flow.id,
@@ -51,7 +51,7 @@ export class FlowsService {
   /**
    * Fetches one flow with its parsed graph.
    */
-  async findOne(botId: number, id: number) {
+  async findOne(botId: string, id: string) {
     const flow = await this.flowModel.findById(botId, id);
     if (!flow) throw new NotFoundException(`Flow ${id} not found`);
     return {
@@ -71,7 +71,7 @@ export class FlowsService {
    * Creates a flow after validating its graph.
    */
   async create(
-    botId: number,
+    botId: string,
     body: Record<string, unknown>,
   ): Promise<Awaited<ReturnType<FlowsService['findOne']>>> {
     await this.botModel.findById(botId);
@@ -93,7 +93,7 @@ export class FlowsService {
   /**
    * Updates a flow and resets its sessions.
    */
-  async update(botId: number, id: number, body: Record<string, unknown>) {
+  async update(botId: string, id: string, body: Record<string, unknown>) {
     const flow = await this.flowModel.findById(botId, id);
     if (!flow) throw new NotFoundException(`Flow ${id} not found`);
 
@@ -123,7 +123,7 @@ export class FlowsService {
   /**
    * Toggles a flow without touching its definition (keeps sessions).
    */
-  async setActive(botId: number, id: number, isActive: boolean) {
+  async setActive(botId: string, id: string, isActive: boolean) {
     const flow = await this.flowModel.findById(botId, id);
     if (!flow) throw new NotFoundException(`Flow ${id} not found`);
     await this.flowModel.update(botId, id, { isActive: isActive ? 1 : 0 });
@@ -135,7 +135,7 @@ export class FlowsService {
   /**
    * Deletes a flow.
    */
-  async remove(botId: number, id: number) {
+  async remove(botId: string, id: string) {
     await this.flowModel.remove(botId, id);
     this.live.emit('flows', botId);
     return { success: true };
@@ -200,9 +200,9 @@ export class FlowsService {
   /**
    * Counts active sessions per flow for the dashboard.
    */
-  async sessionCounts(botId: number): Promise<Record<number, number>> {
+  async sessionCounts(botId: string): Promise<Record<string, number>> {
     const flows = await this.flowModel.list(botId);
-    const counts: Record<number, number> = {};
+    const counts: Record<string, number> = {};
     for (const flow of flows) {
       counts[flow.id] = await this.prisma.flowState.count({ where: { flowId: flow.id } });
     }

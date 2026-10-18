@@ -52,7 +52,7 @@ export class MiniAppsService {
   /**
    * Lists Mini Apps for a bot with decoded config.
    */
-  async list(botId: number): Promise<Array<Record<string, unknown>>> {
+  async list(botId: string): Promise<Array<Record<string, unknown>>> {
     const rows = await this.miniAppModel.list(botId);
     return rows.map((row) => ({
       ...row,
@@ -64,7 +64,7 @@ export class MiniAppsService {
   /**
    * Creates a Mini App.
    */
-  async create(botId: number, data: Record<string, unknown>): Promise<Record<string, unknown>> {
+  async create(botId: string, data: Record<string, unknown>): Promise<Record<string, unknown>> {
     const templateType = String(data.templateType ?? '');
     if (!TEMPLATE_TYPES.includes(templateType as (typeof TEMPLATE_TYPES)[number])) {
       throw new BadRequestException(`templateType must be one of: ${TEMPLATE_TYPES.join(', ')}`);
@@ -102,8 +102,8 @@ export class MiniAppsService {
    * Updates a Mini App.
    */
   async update(
-    botId: number,
-    id: number,
+    botId: string,
+    id: string,
     data: Record<string, unknown>,
   ): Promise<Record<string, unknown>> {
     const existing = await this.miniAppModel.findById(id);
@@ -131,7 +131,7 @@ export class MiniAppsService {
   /**
    * Deletes a Mini App.
    */
-  async remove(botId: number, id: number): Promise<void> {
+  async remove(botId: string, id: string): Promise<void> {
     const existing = await this.miniAppModel.findById(id);
     if (!existing || existing.botId !== botId) {
       throw new NotFoundException(`Mini app ${id} not found`);
@@ -143,7 +143,7 @@ export class MiniAppsService {
    * Publishes a Mini App by pointing the chat bottom-left menu button at
    * its public URL via `setChatMenuButton`.
    */
-  async publish(botId: number, id: number, publicBaseUrl: string): Promise<{ menuUrl: string }> {
+  async publish(botId: string, id: string, publicBaseUrl: string): Promise<{ menuUrl: string }> {
     const app = await this.miniAppModel.findById(id);
     if (!app) throw new NotFoundException(`Mini app ${id} not found`);
     const bot = this.pool.getBot(botId);
@@ -193,7 +193,7 @@ export class MiniAppsService {
   /**
    * Reads loyalty points for a Mini App user (bot-scoped).
    */
-  async getLoyalty(botId: number, telegramId: number): Promise<Record<string, unknown>> {
+  async getLoyalty(botId: string, telegramId: number): Promise<Record<string, unknown>> {
     const user = await this.prisma.botUser.findUnique({
       where: {
         botId_telegramId: {
@@ -216,7 +216,7 @@ export class MiniAppsService {
    * by points plus the requesting user's own rank when outside the top list.
    */
   async getLeaderboard(
-    botId: number,
+    botId: string,
     telegramId: number,
     limit = 20,
   ): Promise<Record<string, unknown>> {
@@ -255,7 +255,7 @@ export class MiniAppsService {
    * the support module is configured, relays it to the admin chat.
    */
   async submitSupport(
-    botId: number,
+    botId: string,
     telegramId: number,
     message: string,
     senderName?: string,
@@ -307,7 +307,7 @@ export class MiniAppsService {
   /**
    * Performs the daily check-in, awarding the configured points.
    */
-  async checkin(botId: number, telegramId: number): Promise<Record<string, unknown>> {
+  async checkin(botId: string, telegramId: number): Promise<Record<string, unknown>> {
     const today = new Date().toISOString().slice(0, 10);
     const key = `checkin_${telegramId}`;
     if (this.settings.getBotJson<string>(botId, key) === today) {
@@ -335,7 +335,7 @@ export class MiniAppsService {
   /**
    * Performs the daily spin for the gamification wheel using server-side prizes and weights.
    */
-  async spin(botId: number, appId: number, telegramId: number): Promise<Record<string, unknown>> {
+  async spin(botId: string, appId: string, telegramId: number): Promise<Record<string, unknown>> {
     const app = await this.miniAppModel.findById(appId);
     if (!app || app.botId !== botId || app.isActive !== 1) {
       throw new StudioException('MINI_APP_NOT_FOUND', 'Mini App not found or inactive');
@@ -406,8 +406,8 @@ export class MiniAppsService {
    * Records a Mini App order with total calculated securely from server-side catalog.
    */
   async createOrder(
-    botId: number,
-    appId: number,
+    botId: string,
+    appId: string,
     telegramId: number,
     clientItems: Array<{ id: string; title?: string; price?: number; quantity: number }>,
   ): Promise<Record<string, unknown>> {
@@ -440,14 +440,14 @@ export class MiniAppsService {
    * Creates a Telegram Stars invoice for a verified cart and stores the
    * order as `pending_payment`. The engine's pre-checkout handler validates
    * the payload (`order:<id>`) before Telegram collects the payment.
-   * @returns {Promise<{orderId: number, invoiceLink: string, total: number}>} Checkout payload.
+   * @returns {Promise<{orderId: string, invoiceLink: string, total: number}>} Checkout payload.
    */
   async createStarsCheckout(
-    botId: number,
-    appId: number,
+    botId: string,
+    appId: string,
     telegramId: number,
     clientItems: Array<{ id: string; quantity: number }>,
-  ): Promise<{ orderId: number; invoiceLink: string; total: number }> {
+  ): Promise<{ orderId: string; invoiceLink: string; total: number }> {
     const bot = this.pool.getBot(botId);
     if (!bot) {
       throw new StudioException('BOT_NOT_RUNNING', 'Bot is not running');
@@ -501,7 +501,7 @@ export class MiniAppsService {
    * @param {string} chargeId - Telegram payment charge id.
    * @returns {Promise<void>}
    */
-  async markOrderPaid(orderId: number, chargeId: string): Promise<void> {
+  async markOrderPaid(orderId: string, chargeId: string): Promise<void> {
     const order = await this.prisma.miniAppOrder.findFirst({
       where: { id: orderId, status: 'pending_payment' },
     });
@@ -521,11 +521,11 @@ export class MiniAppsService {
    * Only visible to the owning Telegram user.
    */
   async getOrderStatus(
-    botId: number,
-    appId: number,
-    orderId: number,
+    botId: string,
+    appId: string,
+    orderId: string,
     telegramId: number,
-  ): Promise<{ id: number; status: string; totalAmount: number } | null> {
+  ): Promise<{ id: string; status: string; totalAmount: number } | null> {
     const order = await this.prisma.miniAppOrder.findFirst({
       where: { id: orderId, botId, appId, telegramId: BigInt(telegramId) },
       select: { id: true, status: true, totalAmount: true },
@@ -536,7 +536,7 @@ export class MiniAppsService {
   /**
    * Lists orders for a Mini App.
    */
-  async listOrders(botId: number, appId: number) {
+  async listOrders(botId: string, appId: string) {
     return this.miniAppModel.listOrders(botId, appId);
   }
 
@@ -544,8 +544,8 @@ export class MiniAppsService {
    * Stores a form submission.
    */
   submitForm(
-    botId: number,
-    appId: number,
+    botId: string,
+    appId: string,
     telegramId: number,
     answers: Record<string, unknown>,
   ): { received: true } {
@@ -560,7 +560,7 @@ export class MiniAppsService {
   /**
    * Lists form submissions for an app.
    */
-  listFormSubmissions(botId: number, appId: number): Array<Record<string, unknown>> {
+  listFormSubmissions(botId: string, appId: string): Array<Record<string, unknown>> {
     return this.settings.getBotJson<Array<Record<string, unknown>>>(botId, `forms_${appId}`) ?? [];
   }
 }

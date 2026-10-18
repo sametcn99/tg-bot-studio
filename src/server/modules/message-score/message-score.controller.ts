@@ -1,14 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  ParseIntPipe,
-  Patch,
-  Post,
-  Query,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { MessageScoreService, type ScorePeriod } from './message-score.service';
 import { ScorePayloadDto } from './dto/message-score.dto';
 
@@ -33,7 +23,7 @@ export class MessageScoreController {
    */
   @Get('leaderboard')
   leaderboard(
-    @Param('botId', ParseIntPipe) botId: number,
+    @Param('botId') botId: string,
     @Query('chatId') chatId?: string,
     @Query('period') period?: string,
     @Query('limit') limit?: string,
@@ -53,7 +43,7 @@ export class MessageScoreController {
    * @returns {object[]} Per-chat rendered previews.
    */
   @Post('preview')
-  preview(@Param('botId', ParseIntPipe) botId: number, @Body() body: ScorePayloadDto) {
+  preview(@Param('botId') botId: string, @Body() body: ScorePayloadDto) {
     return this.service.preview(botId, body as unknown as Record<string, unknown>);
   }
 
@@ -64,7 +54,7 @@ export class MessageScoreController {
    * @returns {Promise<object[]>} Per-chat delivery results.
    */
   @Post('send')
-  send(@Param('botId', ParseIntPipe) botId: number, @Body() body: ScorePayloadDto) {
+  send(@Param('botId') botId: string, @Body() body: ScorePayloadDto) {
     return this.service.sendNow(botId, body as unknown as Record<string, unknown>);
   }
 
@@ -74,7 +64,7 @@ export class MessageScoreController {
    * @returns {object[]} Schedule rows.
    */
   @Get('schedules')
-  listSchedules(@Param('botId', ParseIntPipe) botId: number) {
+  listSchedules(@Param('botId') botId: string) {
     return this.service.listSchedules(botId);
   }
 
@@ -85,7 +75,7 @@ export class MessageScoreController {
    * @returns {object} Created schedule.
    */
   @Post('schedules')
-  createSchedule(@Param('botId', ParseIntPipe) botId: number, @Body() body: ScorePayloadDto) {
+  createSchedule(@Param('botId') botId: string, @Body() body: ScorePayloadDto) {
     return this.service.createSchedule(botId, body as unknown as Record<string, unknown>);
   }
 
@@ -98,8 +88,8 @@ export class MessageScoreController {
    */
   @Patch('schedules/:id')
   updateSchedule(
-    @Param('botId', ParseIntPipe) botId: number,
-    @Param('id', ParseIntPipe) id: number,
+    @Param('botId') botId: string,
+    @Param('id') id: string,
     @Body() body: ScorePayloadDto,
   ) {
     return this.service.updateSchedule(botId, id, body as unknown as Record<string, unknown>);
@@ -112,10 +102,7 @@ export class MessageScoreController {
    * @returns {{success: boolean}} Confirmation payload.
    */
   @Delete('schedules/:id')
-  removeSchedule(
-    @Param('botId', ParseIntPipe) botId: number,
-    @Param('id', ParseIntPipe) id: number,
-  ) {
+  removeSchedule(@Param('botId') botId: string, @Param('id') id: string) {
     this.service.removeSchedule(botId, id);
     return { success: true };
   }
@@ -127,7 +114,7 @@ export class MessageScoreController {
    * @returns {Promise<object>} Updated schedule.
    */
   @Post('schedules/:id/run')
-  runSchedule(@Param('botId', ParseIntPipe) botId: number, @Param('id', ParseIntPipe) id: number) {
+  runSchedule(@Param('botId') botId: string, @Param('id') id: string) {
     return this.service.runScheduleNow(botId, id);
   }
 

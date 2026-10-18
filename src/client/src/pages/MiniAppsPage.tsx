@@ -53,7 +53,7 @@ import { useModuleDocs } from '../context/ModuleDocsContext';
  * @property {Record<string, unknown>} config - Parsed configuration.
  */
 interface MiniApp {
-  id: number;
+  id: string;
   name: string;
   slug: string;
   template_type: string;
@@ -274,7 +274,7 @@ export default function MiniAppsPage(): React.ReactElement {
                         </Button>
                       </Stack>
 
-                      <AppDataViewer botId={Number(botId)} app={selected} />
+                      <AppDataViewer botId={botId ?? ''} app={selected} />
                     </Stack>
                   </CardContent>
                 </Card>
@@ -300,7 +300,7 @@ export default function MiniAppsPage(): React.ReactElement {
 
       <CreateMiniAppDialog
         open={createOpen}
-        botId={Number(botId)}
+        botId={botId ?? ''}
         onClose={() => setCreateOpen(false)}
         onCreated={reload}
       />
@@ -402,7 +402,7 @@ function ThemeEditor({
  * @param {MiniApp} props.app - Selected Mini App.
  * @returns {React.ReactElement} The viewer.
  */
-function AppDataViewer({ botId, app }: { botId: number; app: MiniApp }): React.ReactElement {
+function AppDataViewer({ botId, app }: { botId: string; app: MiniApp }): React.ReactElement {
   const { t } = useTranslation();
   const [tab, setTab] = useState(0);
   const [rows, setRows] = useState<Array<Record<string, unknown>>>([]);
@@ -487,7 +487,7 @@ function CreateMiniAppDialog({
   onCreated,
 }: {
   open: boolean;
-  botId: number;
+  botId: string;
   onClose: () => void;
   onCreated: () => void;
 }): React.ReactElement {

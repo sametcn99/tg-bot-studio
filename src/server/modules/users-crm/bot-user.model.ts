@@ -43,7 +43,7 @@ export class BotUserModel {
    * Finds a user by botId and telegramId.
    */
   async findByTelegramId(
-    botId: number,
+    botId: string,
     telegramId: number | bigint,
   ): Promise<BotUserEntity | null> {
     return this.getUser(botId, telegramId);
@@ -55,7 +55,7 @@ export class BotUserModel {
    * raced under concurrent pollers) with busy retry.
    */
   async upsertUser(
-    botId: number,
+    botId: string,
     data: {
       telegramId: number | bigint;
       username?: string | null;
@@ -100,7 +100,7 @@ export class BotUserModel {
   /**
    * Finds a user by botId and telegramId.
    */
-  async getUser(botId: number, telegramId: number | bigint): Promise<BotUserEntity | null> {
+  async getUser(botId: string, telegramId: number | bigint): Promise<BotUserEntity | null> {
     const record = await this.prisma.botUser.findUnique({
       where: {
         botId_telegramId: {
@@ -117,7 +117,7 @@ export class BotUserModel {
    * atomically (no read-modify-write double-credit race); negative amounts
    * clamp at zero.
    */
-  async addPoints(botId: number, telegramId: number | bigint, amount: number): Promise<void> {
+  async addPoints(botId: string, telegramId: number | bigint, amount: number): Promise<void> {
     const where = {
       botId_telegramId: {
         botId,
@@ -149,7 +149,7 @@ export class BotUserModel {
    * points without recording (or vice versa).
    */
   async setReferrer(
-    botId: number,
+    botId: string,
     telegramId: number | bigint,
     referrerId: number | bigint,
     pointsPerReferral: number,
@@ -176,7 +176,7 @@ export class BotUserModel {
   /**
    * Checks whether a user is blocked.
    */
-  async isBlocked(botId: number, telegramId: number | bigint): Promise<boolean> {
+  async isBlocked(botId: string, telegramId: number | bigint): Promise<boolean> {
     const count = await this.prisma.blockedUser.count({
       where: {
         botId,
@@ -190,7 +190,7 @@ export class BotUserModel {
    * Bans a user for a bot.
    */
   async blockUser(
-    botId: number,
+    botId: string,
     data: {
       telegramId: number | bigint;
       username?: string | null;
@@ -221,7 +221,7 @@ export class BotUserModel {
   /**
    * Unbans a user.
    */
-  async unblockUser(botId: number, telegramId: number | bigint): Promise<void> {
+  async unblockUser(botId: string, telegramId: number | bigint): Promise<void> {
     await this.prisma.blockedUser
       .delete({
         where: {
@@ -237,7 +237,7 @@ export class BotUserModel {
   /**
    * Lists blocked users for a bot.
    */
-  async listBlocked(botId: number): Promise<BlockedUser[]> {
+  async listBlocked(botId: string): Promise<BlockedUser[]> {
     return this.prisma.blockedUser.findMany({
       where: { botId },
       orderBy: { blockedAt: 'desc' },
@@ -247,7 +247,7 @@ export class BotUserModel {
   /**
    * Lists subscribers with a limit.
    */
-  async listUsers(botId: number, limit = 2000): Promise<BotUserEntity[]> {
+  async listUsers(botId: string, limit = 2000): Promise<BotUserEntity[]> {
     const rows = await this.prisma.botUser.findMany({
       where: { botId },
       orderBy: { lastSeenAt: 'desc' },
@@ -265,7 +265,7 @@ export class BotUserModel {
    * @returns {Promise<{items: BotUserEntity[]; total: number; page: number; pageSize: number}>} One page plus total count.
    */
   async listUsersPage(
-    botId: number,
+    botId: string,
     query: { search?: string; tag?: string; page?: number; pageSize?: number },
   ): Promise<{
     items: BotUserEntity[];
@@ -308,7 +308,7 @@ export class BotUserModel {
    * Updates tags and notes JSON on a user.
    */
   async updateTags(
-    botId: number,
+    botId: string,
     telegramId: number | bigint,
     tagsJson: string,
   ): Promise<BotUserEntity> {
@@ -328,7 +328,7 @@ export class BotUserModel {
    * Top referrers by points.
    */
   async getReferralTop(
-    botId: number,
+    botId: string,
     limit: number,
   ): Promise<
     Array<{

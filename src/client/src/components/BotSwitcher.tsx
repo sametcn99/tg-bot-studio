@@ -24,7 +24,7 @@ export default function BotSwitcher(): React.ReactElement {
    * @param {number} botId - Selected bot id.
    * @returns {void}
    */
-  function select(botId: number): void {
+  function select(botId: string): void {
     setActiveBotId(botId);
     handleClose();
     navigate(`/bots/${botId}`);

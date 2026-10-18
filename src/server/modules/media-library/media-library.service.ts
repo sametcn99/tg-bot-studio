@@ -28,7 +28,7 @@ export class MediaLibraryService {
    * @param {number} botId - Owning bot id.
    * @returns {Promise<object[]>} Asset rows, newest first.
    */
-  async list(botId: number) {
+  async list(botId: string) {
     const assets = await this.mediaModel.list(botId);
     return assets.map(toMediaAssetRow);
   }
@@ -40,7 +40,7 @@ export class MediaLibraryService {
    * kind, mimeType, fileSize, tags.
    * @returns {Promise<object>} Created asset row.
    */
-  async create(botId: number, body: Record<string, unknown>) {
+  async create(botId: string, body: Record<string, unknown>) {
     await this.botModel.findById(botId);
     const name = String(body.name ?? '').trim();
     const value = String(body.value ?? '').trim();
@@ -79,7 +79,7 @@ export class MediaLibraryService {
    * @param {number} id - Asset id.
    * @returns {Promise<{success: boolean}>} Confirmation payload.
    */
-  async remove(botId: number, id: number) {
+  async remove(botId: string, id: string) {
     await this.mediaModel.remove(botId, id);
     this.live.emit('media', botId);
     return { success: true };

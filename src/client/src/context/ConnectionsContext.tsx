@@ -16,9 +16,9 @@ import { useBots } from './BotContext';
  * @property {string | null} created_at - Creation timestamp.
  */
 export interface ChatConnection {
-  id: number;
+  id: string;
   bot_id: number;
-  botId?: number;
+  botId?: string;
   chat_id: string;
   chatId?: string;
   title: string;
@@ -107,6 +107,6 @@ export function useConnections(): ConnectionsContextValue {
  * @param {number} botId - Active bot id.
  * @returns {string} Route path.
  */
-export function connectionsRoute(botId: number): string {
+export function connectionsRoute(botId: string): string {
   return `/bots/${botId}/m/connections`;
 }

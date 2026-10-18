@@ -49,7 +49,7 @@ export class GiveawaysRuntime extends BotModuleHandler {
             : '';
         await update.reply(
           `<b>${giveaway.title}</b>\n${(giveaway.prize_details as string) ?? ''}\nWinners: ${giveaway.winners_count}\nEnds: ${giveaway.ends_at ?? 'manual draw'}${requirement}`,
-          { parse_mode: 'HTML', reply_markup: this.service.joinKeyboard(giveaway.id as number) },
+          { parse_mode: 'HTML', reply_markup: this.service.joinKeyboard(String(giveaway.id)) },
         );
       }
     });
@@ -57,7 +57,7 @@ export class GiveawaysRuntime extends BotModuleHandler {
     bot.on('callback_query:data', async (update) => {
       if (!update.callbackQuery.data.startsWith('giveaway:')) return;
       const [, giveawayIdRaw] = update.callbackQuery.data.split(':');
-      const giveawayId = Number(giveawayIdRaw);
+      const giveawayId = giveawayIdRaw;
       const list = await this.service.list(ctx.botId);
       const giveaway = list.find((row) => row.id === giveawayId && row.status === 'active');
       if (!giveaway) {

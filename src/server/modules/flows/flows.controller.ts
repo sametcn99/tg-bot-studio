@@ -5,7 +5,6 @@ import {
   Get,
   Param,
   ParseBoolPipe,
-  ParseIntPipe,
   Patch,
   Post,
   Put,
@@ -30,7 +29,7 @@ export class FlowsController {
    * @returns {Promise<object[]>} Flow rows.
    */
   @Get()
-  list(@Param('botId', ParseIntPipe) botId: number) {
+  list(@Param('botId') botId: string) {
     return this.service.list(botId);
   }
 
@@ -40,7 +39,7 @@ export class FlowsController {
    * @returns {Promise<Record<string, number>>} Session counts keyed by flow id.
    */
   @Get('session-counts')
-  sessionCounts(@Param('botId', ParseIntPipe) botId: number) {
+  sessionCounts(@Param('botId') botId: string) {
     return this.service.sessionCounts(botId);
   }
 
@@ -48,7 +47,7 @@ export class FlowsController {
    * Fetches one flow.
    */
   @Get(':id')
-  findOne(@Param('botId', ParseIntPipe) botId: number, @Param('id', ParseIntPipe) id: number) {
+  findOne(@Param('botId') botId: string, @Param('id') id: string) {
     return this.service.findOne(botId, id);
   }
 
@@ -56,7 +55,7 @@ export class FlowsController {
    * Creates a flow.
    */
   @Post()
-  create(@Param('botId', ParseIntPipe) botId: number, @Body() body: SaveFlowDto) {
+  create(@Param('botId') botId: string, @Body() body: SaveFlowDto) {
     return this.service.create(botId, body as unknown as Record<string, unknown>);
   }
 
@@ -64,11 +63,7 @@ export class FlowsController {
    * Updates a flow (resets its sessions).
    */
   @Put(':id')
-  update(
-    @Param('botId', ParseIntPipe) botId: number,
-    @Param('id', ParseIntPipe) id: number,
-    @Body() body: SaveFlowDto,
-  ) {
+  update(@Param('botId') botId: string, @Param('id') id: string, @Body() body: SaveFlowDto) {
     return this.service.update(botId, id, body as unknown as Record<string, unknown>);
   }
 
@@ -77,8 +72,8 @@ export class FlowsController {
    */
   @Patch(':id/active')
   setActive(
-    @Param('botId', ParseIntPipe) botId: number,
-    @Param('id', ParseIntPipe) id: number,
+    @Param('botId') botId: string,
+    @Param('id') id: string,
     @Query('value', ParseBoolPipe) value: boolean,
   ) {
     return this.service.setActive(botId, id, value);
@@ -88,7 +83,7 @@ export class FlowsController {
    * Deletes a flow.
    */
   @Delete(':id')
-  remove(@Param('botId', ParseIntPipe) botId: number, @Param('id', ParseIntPipe) id: number) {
+  remove(@Param('botId') botId: string, @Param('id') id: string) {
     return this.service.remove(botId, id);
   }
 }

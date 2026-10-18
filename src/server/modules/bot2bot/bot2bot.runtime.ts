@@ -5,10 +5,11 @@ import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry'
 import { AdminGateService } from '../../bot-engine/admin-gate.service';
 import { ChatSettingsService } from '../../bot-engine/chat-settings.service';
 import { BotI18nService } from '../../bot-engine/bot-i18n.service';
+import { isChatTargeted } from '../../common/utils/chat-targets.util';
 
 /** Pending bot-issued admin actions awaiting review (in memory). */
 interface PendingBotAction {
-  botId: number;
+  botId: string;
   chatId: number;
   /** The command that triggered the action, for display. */
   label: string;
@@ -90,9 +91,10 @@ export class Bot2BotRuntime extends BotModuleHandler {
    * @param {number} botId - Studio bot id.
    * @returns {Promise<boolean>} True when the bot sender passes the gate.
    */
-  async allowsBotSender(c: Context, botId: number): Promise<boolean> {
+  async allowsBotSender(c: Context, botId: string): Promise<boolean> {
     if (!c.from?.is_bot || !c.chat) return true;
     const config = await this.chatSettings.getEffectiveConfig(botId, c.chat.id, this.moduleKey);
+    if (!isChatTargeted(config.targetChats, c.chat.id)) return false;
     const mode = String(config.mode ?? 'off');
     if (mode === 'off') return false;
     if (mode === 'all') return true;
@@ -112,7 +114,7 @@ export class Bot2BotRuntime extends BotModuleHandler {
    */
   async reviewIfNeeded(
     c: Context,
-    botId: number,
+    botId: string,
     label: string,
     execute: () => Promise<void>,
   ): Promise<boolean> {
@@ -137,7 +139,7 @@ export class Bot2BotRuntime extends BotModuleHandler {
   /**
    * Handles /bot2bot off|admin|all (admin, change_info).
    */
-  private async handleMode(c: Context, botId: number): Promise<void> {
+  private async handleMode(c: Context, botId: string): Promise<void> {
     const chatId = await this.requireSettings(c, botId);
     if (chatId === null) return;
     const mode = String(typeof c.match === 'string' ? c.match : '')
@@ -158,7 +160,7 @@ export class Bot2BotRuntime extends BotModuleHandler {
   /**
    * Handles /bot2botskipreview on|off (admin, change_info).
    */
-  private async handleSkipReview(c: Context, botId: number): Promise<void> {
+  private async handleSkipReview(c: Context, botId: string): Promise<void> {
     const chatId = await this.requireSettings(c, botId);
     if (chatId === null) return;
     const enable = ['on', 'yes', 'true'].includes(
@@ -175,13 +177,13 @@ export class Bot2BotRuntime extends BotModuleHandler {
   }
 
   /**
-   * Guard for the configuration commands: group + change_info.
+   * Guard for the configuration commands: group + change_info + explicit target.
    */
-  private async requireSettings(c: Context, botId: number): Promise<number | null> {
-    void botId;
+  private async requireSettings(c: Context, botId: string): Promise<number | null> {
     if (c.chat?.type !== 'supergroup' && c.chat?.type !== 'group') return null;
     if (!c.from) return null;
     const chatId = c.chat.id;
+    if (!(await this.chatSettings.isTargeted(botId, chatId, this.moduleKey))) return null;
     if (!(await this.adminGate.hasCapability(c.api, chatId, c.from.id, 'change_info'))) {
       return null;
     }

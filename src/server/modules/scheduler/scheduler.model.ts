@@ -12,7 +12,7 @@ export class SchedulerModel {
   /**
    * Lists scheduled posts for a bot.
    */
-  async list(botId: number): Promise<ScheduledPost[]> {
+  async list(botId: string): Promise<ScheduledPost[]> {
     return this.prisma.scheduledPost.findMany({
       where: { botId },
       orderBy: { scheduledAt: 'desc' },
@@ -22,7 +22,7 @@ export class SchedulerModel {
   /**
    * Finds a post by botId and id.
    */
-  async findById(botId: number, id: number): Promise<ScheduledPost | null> {
+  async findById(botId: string, id: string): Promise<ScheduledPost | null> {
     return this.prisma.scheduledPost.findFirst({
       where: { botId, id },
     });
@@ -32,7 +32,7 @@ export class SchedulerModel {
    * Creates a scheduled post.
    */
   async create(data: {
-    botId: number;
+    botId: string;
     targetChatId: string;
     messageText: string;
     mediaUrl?: string | null;
@@ -56,7 +56,7 @@ export class SchedulerModel {
    * Updates an existing scheduled post.
    */
   async update(
-    id: number,
+    id: string,
     data: {
       targetChatId?: string;
       messageText?: string;
@@ -74,7 +74,7 @@ export class SchedulerModel {
   /**
    * Deletes a scheduled post.
    */
-  async delete(id: number): Promise<void> {
+  async delete(id: string): Promise<void> {
     await this.prisma.scheduledPost.delete({
       where: { id },
     });
@@ -95,7 +95,7 @@ export class SchedulerModel {
   /**
    * Updates the status of a post.
    */
-  async updateStatus(id: number, status: string): Promise<ScheduledPost> {
+  async updateStatus(id: string, status: string): Promise<ScheduledPost> {
     return this.prisma.scheduledPost.update({
       where: { id },
       data: { status },

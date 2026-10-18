@@ -182,7 +182,8 @@ export function BrandMark({ size = 36 }: { size?: number }): React.ReactElement 
  */
 export function BotAvatar({ bot, size }: { bot: BotSummary; size: number }): React.ReactElement {
   const { t } = useTranslation();
-  const [from, to] = AVATAR_GRADIENTS[Math.abs(bot.id) % AVATAR_GRADIENTS.length];
+  const avatarHash = [...bot.id].reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  const [from, to] = AVATAR_GRADIENTS[avatarHash % AVATAR_GRADIENTS.length];
   const statusLabel = t(`status.${bot.status}`, {
     defaultValue: bot.status.charAt(0).toUpperCase() + bot.status.slice(1),
   });

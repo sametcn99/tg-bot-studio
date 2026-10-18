@@ -5,6 +5,7 @@ import { AdminGateService } from '../../bot-engine/admin-gate.service';
 import { ChatSettingsService } from '../../bot-engine/chat-settings.service';
 import { renderTemplate } from '../../common/utils/template.util';
 import { escapeHtml } from '../../common/utils/telegram-text.util';
+import { isChatTargeted } from '../../common/utils/chat-targets.util';
 
 /** Parsed inline button rows config: `[{text, url}]`. */
 interface ButtonSpec {
@@ -53,6 +54,7 @@ export class WelcomeRuntime extends BotModuleHandler {
       const chatId = update.chat.id;
       const members = update.msg.new_chat_members ?? [];
       const config = await this.chatSettings.getEffectiveConfig(botId, chatId, this.moduleKey);
+      if (!isChatTargeted(config.targetChats, chatId)) return;
       const template = String(config.template ?? 'Welcome {mention} to {group_name}!');
 
       for (const member of members) {
@@ -92,6 +94,7 @@ export class WelcomeRuntime extends BotModuleHandler {
       const chatId = update.chat.id;
       const member = update.msg.left_chat_member;
       const config = await this.chatSettings.getEffectiveConfig(botId, chatId, this.moduleKey);
+      if (!isChatTargeted(config.targetChats, chatId)) return;
 
       if (config.goodbyeEnabled === true && member && !member.is_bot) {
         const template = String(config.goodbyeText ?? 'Nice knowing you, {first_name}!');
@@ -223,12 +226,12 @@ export class WelcomeRuntime extends BotModuleHandler {
   }
 
   /**
-   * Guard: group + change_info.
+   * Guard: group + change_info + explicit target chat.
    */
-  private async guard(c: import('grammy').Context, botId: number): Promise<number | null> {
-    void botId;
+  private async guard(c: import('grammy').Context, botId: string): Promise<number | null> {
     if (c.chat?.type !== 'supergroup' && c.chat?.type !== 'group') return null;
     if (!c.from) return null;
+    if (!(await this.chatSettings.isTargeted(botId, c.chat.id, this.moduleKey))) return null;
     if (!(await this.adminGate.hasCapability(c.api, c.chat.id, c.from.id, 'change_info'))) {
       return null;
     }
@@ -240,7 +243,7 @@ export class WelcomeRuntime extends BotModuleHandler {
    */
   private async handleSet(
     c: import('grammy').Context,
-    botId: number,
+    botId: string,
     field: string,
   ): Promise<void> {
     const chatId = await this.guard(c, botId);
@@ -261,7 +264,7 @@ export class WelcomeRuntime extends BotModuleHandler {
    */
   private async handleReset(
     c: import('grammy').Context,
-    botId: number,
+    botId: string,
     field: string,
     resetField: string,
   ): Promise<void> {
@@ -278,7 +281,7 @@ export class WelcomeRuntime extends BotModuleHandler {
    */
   private async handleView(
     c: import('grammy').Context,
-    botId: number,
+    botId: string,
     field: string,
     enabledField: string,
   ): Promise<void> {

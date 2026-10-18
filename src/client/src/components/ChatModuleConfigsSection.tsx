@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Box,
@@ -13,8 +13,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import RestartAltIcon from '@mui/icons-material/RestartAlt';
-import UndoIcon from '@mui/icons-material/Undo';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../services/api';
 import { useConnections, type ChatConnection } from '../context/ConnectionsContext';
@@ -23,13 +22,13 @@ import { ConfigFieldInput } from './ConfigFieldInput';
 import { localizedErrorMessage } from '../utils/errors';
 import type { ModuleEntry } from '../registry/modules';
 
-/** Override row returned by the chat-overrides list endpoint. */
-interface ChatOverrideRow {
+/** Per-chat configuration entry returned by the module's chat-config list endpoint. */
+interface ChatConfigRow {
   chatId: string;
   override: Record<string, unknown>;
 }
 
-/** Override snapshot returned by the per-chat read endpoint. */
+/** Snapshot returned by the per-chat read endpoint. */
 interface ChatSettingsSnapshot {
   moduleKey: string;
   chatId: string;
@@ -41,51 +40,49 @@ interface ChatSettingsSnapshot {
 /** Display title for a chat id, falling back to the raw id. */
 function chatLabelFor(connections: ChatConnection[], chatId: string): string {
   const conn = connections.find((row) => (row.chat_id ?? row.chatId) === chatId);
-  return conn ? `${conn.title}` : chatId;
+  return conn ? conn.title : chatId;
 }
 
 /**
- * Per-group and per-channel override editor for one chat-scoped module.
- * Renders below the bot-level config card on the module page: pick any
- * connected group or channel and define its own values. Only fields the
- * user touches are stored as the override; everything else keeps
- * inheriting the bot-level defaults, and the whole override can be reset
- * with one click. The connection settings page embeds the same section in
- * `fixedChatId` mode (one chat, no picker).
+ * Per-chat configuration editor for one chat-scoped module — the module's
+ * ONLY configuration surface. Every group and channel gets its own entry:
+ * adding a chat activates the module there, each entry holds the full
+ * field set for that chat (one channel can behave differently from
+ * another), and removing the entry deactivates the module for that chat.
+ * There is no bot-level default layer and no override/inheritance chain.
+ * The connection settings page embeds the same section in `fixedChatId`
+ * mode (one chat, no picker).
  * @param {object} props - Component props.
  * @param {number} props.botId - Active bot id.
  * @param {ModuleEntry} props.module - Localized module catalog entry.
- * @param {Record<string, unknown>} props.botConfig - Effective bot-level
- * config (registry defaults merged under the saved bot config).
  * @param {string} [props.fixedChatId] - Pins the editor to one chat and
  * hides the picker and chips row (connection settings page).
- * @returns {React.ReactElement | null} The section, or null while loading.
+ * @returns {React.ReactElement} The section.
  */
-export function ChatOverrideSection({
+export function ChatModuleConfigsSection({
   botId,
   module,
-  botConfig,
   fixedChatId,
 }: {
-  botId: number;
+  botId: string;
   module: ModuleEntry;
-  botConfig: Record<string, unknown>;
   fixedChatId?: string;
 }): React.ReactElement {
   const { t } = useTranslation();
   const { connections, loading: connectionsLoading } = useConnections();
-  const [overrides, setOverrides] = useState<Record<string, Record<string, unknown>>>({});
+  const [entries, setEntries] = useState<Record<string, Record<string, unknown>>>({});
   const [selectedChatId, setSelectedChatId] = useState<string>(fixedChatId ?? '');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    setLoading(true);
+  const reloadEntries = useCallback((): void => {
     const request = fixedChatId
       ? apiFetch<ChatSettingsSnapshot>(
           `/api/bots/${botId}/chat-settings/${fixedChatId}/${module.key}`,
-        ).then((snapshot) => ({ [fixedChatId]: snapshot.override ?? {} }))
-      : apiFetch<ChatOverrideRow[]>(`/api/bots/${botId}/modules/${module.key}/chat-overrides`).then(
+        ).then((snapshot) => ({
+          [fixedChatId]: snapshot.override ?? {},
+        }))
+      : apiFetch<ChatConfigRow[]>(`/api/bots/${botId}/modules/${module.key}/chat-overrides`).then(
           (rows) => {
             const map: Record<string, Record<string, unknown>> = {};
             for (const row of rows) map[row.chatId] = row.override ?? {};
@@ -93,36 +90,54 @@ export function ChatOverrideSection({
           },
         );
     request
-      .then((map) => setOverrides(map))
+      .then((map) => setEntries(map))
       .catch((err: Error) => setError(localizedErrorMessage(err)))
       .finally(() => setLoading(false));
   }, [botId, module.key, fixedChatId]);
 
-  // Only numeric chat ids can receive per-chat settings: Telegram update
+  useEffect(() => {
+    setLoading(true);
+    reloadEntries();
+  }, [reloadEntries]);
+
+  // Only numeric chat ids can receive per-chat configs: Telegram update
   // events address chats by numeric id, never by @username.
-  const groups = useMemo(
+  const configurableChats = useMemo(
     () =>
       connections.filter(
-        (row) => /^-?\d+$/.test(row.chat_id ?? row.chatId ?? '') && (row.type === 'group' || row.type === 'supergroup'),
+        (row) =>
+          /^-?\d+$/.test(row.chat_id ?? row.chatId ?? '') &&
+          (row.type === 'group' || row.type === 'supergroup' || row.type === 'channel'),
       ),
     [connections],
   );
+
+  const groups = useMemo(
+    () => configurableChats.filter((row) => row.type === 'group' || row.type === 'supergroup'),
+    [configurableChats],
+  );
   const channels = useMemo(
-    () => connections.filter((row) => /^-?\d+$/.test(row.chat_id ?? row.chatId ?? '') && row.type === 'channel'),
-    [connections],
+    () => configurableChats.filter((row) => row.type === 'channel'),
+    [configurableChats],
+  );
+
+  /** Chats without an entry yet — the "add target" pool. */
+  const addable = useMemo(
+    () => configurableChats.filter((row) => !((row.chat_id ?? row.chatId ?? '') in entries)),
+    [configurableChats, entries],
   );
 
   /**
-   * Merges a saved/cleared override back into the local map; chats whose
-   * override becomes empty drop out of the chip row entirely.
+   * Merges a saved/removed entry back into the local map; deleting the
+   * last field of an entry drops the chat from the targeted set.
    */
-  function applyOverride(chatId: string, override: Record<string, unknown>): void {
-    setOverrides((prev) => {
+  function applyEntry(chatId: string, config: Record<string, unknown> | null): void {
+    setEntries((prev) => {
       const next = { ...prev };
-      if (Object.keys(override).length === 0) {
+      if (!config) {
         delete next[chatId];
       } else {
-        next[chatId] = override;
+        next[chatId] = config;
       }
       return next;
     });
@@ -157,7 +172,7 @@ export function ChatOverrideSection({
               fontWeight: 700,
             }}
           >
-            {t('chatOverrides.title')}
+            {t('chatConfigs.title')}
           </Typography>
           <Typography
             variant="body2"
@@ -165,7 +180,7 @@ export function ChatOverrideSection({
               color: 'text.secondary',
             }}
           >
-            {t('chatOverrides.hint')}
+            {t('chatConfigs.hint')}
           </Typography>
         </Box>
       )}
@@ -176,44 +191,46 @@ export function ChatOverrideSection({
         <>
           <TextField
             select
-            label={t('chatOverrides.selectChat')}
+            label={t('chatConfigs.addChat')}
             size="small"
             fullWidth
-            value={selectedChatId}
-            onChange={(event) => setSelectedChatId(event.target.value)}
+            value=""
+            onChange={(event) => {
+              const chatId = event.target.value;
+              if (chatId) setSelectedChatId(chatId);
+            }}
+            helperText={
+              addable.length === 0 && configurableChats.length > 0
+                ? t('chatConfigs.allAdded')
+                : undefined
+            }
           >
             <MenuItem disabled value="">
-              {t('chatOverrides.selectChat')}
+              {t('chatConfigs.addChat')}
             </MenuItem>
-            {groups.length > 0 && (
-              <MenuItem disabled dense>
-                {t('chatOverrides.groups')}
-              </MenuItem>
-            )}
-            {groups.map((row) => {
-              const id = row.chat_id ?? row.chatId ?? '';
-              return (
-                <MenuItem key={id} value={id}>
-                  {row.title} · {id}
-                </MenuItem>
-              );
-            })}
-            {channels.length > 0 && (
-              <MenuItem disabled dense>
-                {t('chatOverrides.channels')}
-              </MenuItem>
-            )}
-            {channels.map((row) => {
-              const id = row.chat_id ?? row.chatId ?? '';
-              return (
-                <MenuItem key={id} value={id}>
-                  {row.title} · {id}
-                </MenuItem>
-              );
-            })}
+            {groups
+              .filter((row) => !((row.chat_id ?? row.chatId ?? '') in entries))
+              .map((row) => {
+                const id = row.chat_id ?? row.chatId ?? '';
+                return (
+                  <MenuItem key={id} value={id}>
+                    {row.title} · {id}
+                  </MenuItem>
+                );
+              })}
+            {channels
+              .filter((row) => !((row.chat_id ?? row.chatId ?? '') in entries))
+              .map((row) => {
+                const id = row.chat_id ?? row.chatId ?? '';
+                return (
+                  <MenuItem key={id} value={id}>
+                    {row.title} · {id}
+                  </MenuItem>
+                );
+              })}
           </TextField>
 
-          {Object.keys(overrides).length > 0 ? (
+          {Object.keys(entries).length > 0 ? (
             <Stack
               direction="row"
               spacing={1}
@@ -222,19 +239,20 @@ export function ChatOverrideSection({
                 flexWrap: 'wrap',
               }}
             >
-              {Object.entries(overrides).map(([chatId, override]) => (
+              {Object.entries(entries).map(([chatId]) => (
                 <Chip
                   key={chatId}
                   size="small"
                   color={chatId === selectedChatId ? 'primary' : 'default'}
                   variant={chatId === selectedChatId ? 'filled' : 'outlined'}
-                  label={`${chatLabelFor(connections, chatId)} · ${Object.keys(override).length}`}
+                  label={chatLabelFor(connections, chatId)}
                   onClick={() => setSelectedChatId(chatId)}
                   onDelete={() => {
                     apiFetch(`/api/bots/${botId}/chat-settings/${chatId}/${module.key}`, {
                       method: 'DELETE',
                     }).catch(() => undefined);
-                    applyOverride(chatId, {});
+                    applyEntry(chatId, null);
+                    if (selectedChatId === chatId) setSelectedChatId('');
                   }}
                 />
               ))}
@@ -246,22 +264,21 @@ export function ChatOverrideSection({
                 color: 'text.secondary',
               }}
             >
-              {t('chatOverrides.noneYet')}
+              {t('chatConfigs.noneYet')}
             </Typography>
           )}
         </>
       )}
 
       {activeChatId && (
-        <ChatOverrideEditor
+        <ChatConfigEditor
           key={`${module.key}:${activeChatId}`}
           botId={botId}
           module={module}
           chatId={activeChatId}
           chatLabel={chatLabelFor(connections, activeChatId)}
-          botConfig={botConfig}
-          override={overrides[activeChatId] ?? {}}
-          onApply={applyOverride}
+          existing={entries[activeChatId]}
+          onApply={applyEntry}
         />
       )}
     </Stack>
@@ -279,67 +296,84 @@ export function ChatOverrideSection({
 }
 
 /**
- * Field editor for one selected chat: seeds a draft from the saved override,
- * shows the inherited bot-level value for untouched fields, and stores only
- * the fields the user actually changed.
+ * Field editor for one chat: seeds the form from the chat's saved entry on
+ * top of the registry defaults (the chat-settings snapshot's effective
+ * values) and stores the complete configuration as this chat's entry.
  */
-function ChatOverrideEditor({
+function ChatConfigEditor({
   botId,
   module,
   chatId,
   chatLabel,
-  botConfig,
-  override,
+  existing,
   onApply,
 }: {
-  botId: number;
+  botId: string;
   module: ModuleEntry;
   chatId: string;
   chatLabel: string;
-  botConfig: Record<string, unknown>;
-  override: Record<string, unknown>;
-  onApply: (chatId: string, override: Record<string, unknown>) => void;
+  existing: Record<string, unknown> | undefined;
+  onApply: (chatId: string, config: Record<string, unknown> | null) => void;
 }): React.ReactElement {
   const { t } = useTranslation();
   const { showSuccess, showError } = useSnackbar();
-  const [draft, setDraft] = useState<Record<string, unknown>>({ ...override });
+  // An entry with zero stored fields is treated as "not yet configured" so
+  // the form seeds from the effective defaults instead of opening empty.
+  const isNew = !existing || Object.keys(existing).length === 0;
+  const [draft, setDraft] = useState<Record<string, unknown> | null>(
+    isNew ? null : { ...existing },
+  );
   const [savedFlash, setSavedFlash] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const dirtyFields = Object.keys(draft).length;
+  useEffect(() => {
+    if (!isNew) return;
+    // New entry: seed the form with the effective defaults for this chat.
+    let cancelled = false;
+    apiFetch<ChatSettingsSnapshot>(`/api/bots/${botId}/chat-settings/${chatId}/${module.key}`)
+      .then((snapshot) => {
+        if (!cancelled) setDraft({ ...snapshot.effective });
+      })
+      .catch(() => {
+        if (!cancelled) setDraft({});
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [botId, chatId, module.key, isNew]);
+
+  if (draft === null) {
+    return (
+      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+        {t('common.loading')}
+      </Typography>
+    );
+  }
 
   /**
-   * Stores one overridden value in the draft.
+   * Stores one value in the draft.
    */
   function setField(key: string, value: unknown): void {
-    setDraft((prev) => ({ ...prev, [key]: value }));
+    setDraft((prev) => (prev ? { ...prev, [key]: value } : prev));
   }
 
   /**
-   * Drops one field from the draft so it inherits the bot default again.
-   */
-  function inheritField(key: string): void {
-    setDraft((prev) => {
-      const next = { ...prev };
-      delete next[key];
-      return next;
-    });
-  }
-
-  /**
-   * Persists the draft as this chat's override.
+   * Persists the draft as this chat's complete configuration entry —
+   * creating it targets the module at this chat.
    */
   function save(): void {
     setError(null);
+    const payload = { ...draft };
+    delete payload.targetChats;
     apiFetch(`/api/bots/${botId}/chat-settings/${chatId}/${module.key}`, {
       method: 'PUT',
-      body: JSON.stringify(draft),
+      body: JSON.stringify(payload),
     })
       .then(() => {
-        onApply(chatId, { ...draft });
+        onApply(chatId, { ...payload });
         setSavedFlash(true);
         window.setTimeout(() => setSavedFlash(false), 2_500);
-        showSuccess(t('chatOverrides.saved'));
+        showSuccess(t('chatConfigs.saved'));
       })
       .catch((err: Error) => {
         const message = localizedErrorMessage(err);
@@ -349,16 +383,16 @@ function ChatOverrideEditor({
   }
 
   /**
-   * Clears the whole override so the chat inherits every bot default.
+   * Removes the entry so the module goes idle in this chat.
    */
-  function reset(): void {
+  function remove(): void {
     setError(null);
     apiFetch(`/api/bots/${botId}/chat-settings/${chatId}/${module.key}`, {
       method: 'DELETE',
     })
       .then(() => {
         setDraft({});
-        onApply(chatId, {});
+        onApply(chatId, null);
       })
       .catch((err: Error) => {
         const message = localizedErrorMessage(err);
@@ -387,16 +421,7 @@ function ChatOverrideEditor({
         >
           {chatLabel} · {chatId}
         </Typography>
-        <Chip
-          size="small"
-          color={dirtyFields > 0 ? 'primary' : 'default'}
-          variant={dirtyFields > 0 ? 'filled' : 'outlined'}
-          label={
-            dirtyFields > 0
-              ? t('chatOverrides.overriddenFields', { count: dirtyFields })
-              : t('chatOverrides.botDefault')
-          }
-        />
+        <Chip size="small" color="primary" variant="outlined" label={t('chatConfigs.configured')} />
       </Stack>
 
       {error && (
@@ -411,21 +436,8 @@ function ChatOverrideEditor({
             key={field.key}
             botId={botId}
             field={field}
-            value={draft[field.key] !== undefined ? draft[field.key] : botConfig[field.key]}
+            value={draft[field.key]}
             onChange={(value) => setField(field.key, value)}
-            action={
-              draft[field.key] !== undefined ? (
-                <Tooltip title={t('chatOverrides.inherit')}>
-                  <IconButton
-                    size="small"
-                    aria-label={t('chatOverrides.inherit')}
-                    onClick={() => inheritField(field.key)}
-                  >
-                    <UndoIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              ) : undefined
-            }
           />
         ))}
         {(module.configFields ?? []).length === 0 && (
@@ -435,22 +447,23 @@ function ChatOverrideEditor({
               color: 'text.secondary',
             }}
           >
-            {t('chatOverrides.noFields')}
+            {t('chatConfigs.noFields')}
           </Typography>
         )}
 
-        <Stack direction="row" spacing={1}>
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
           <Button size="small" variant="contained" onClick={save} disabled={savedFlash}>
-            {savedFlash ? t('chatOverrides.saved') : t('chatOverrides.save')}
+            {savedFlash ? t('chatConfigs.saved') : t('chatConfigs.save')}
           </Button>
-          <Button
-            size="small"
-            startIcon={<RestartAltIcon />}
-            onClick={reset}
-            disabled={dirtyFields === 0}
-          >
-            {t('chatOverrides.reset')}
-          </Button>
+          <Tooltip title={t('chatConfigs.remove')}>
+            <IconButton
+              size="small"
+              aria-label={`${t('chatConfigs.remove')} ${chatLabel}`}
+              onClick={remove}
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
         </Stack>
       </Stack>
     </Box>

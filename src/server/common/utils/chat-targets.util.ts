@@ -1,10 +1,19 @@
 /**
- * Normalizes a chat-target payload field into a clean list of chat ids.
- * Accepts the legacy single value (string or number, numeric ids or
- * `@username`) and the multi-select array form, deduplicating while keeping
- * the first occurrence order.
+ * Normalizes a submitted target chat field (single id or id array) into a
+ * deduplicated list of chat id strings, and the target-scope predicate
+ * consumed by every chat-operating module runtime.
  * @module common/utils/chat-targets
  */
+
+/**
+ * Reserved Telegram user id representing the sandbox tester (int32-safe).
+ * The studio simulator feeds synthetic updates through these ids, so target
+ * gates always let them pass — sandbox testing never requires targeting.
+ */
+export const SIMULATOR_TELEGRAM_ID = 2_000_000_000;
+
+/** Reserved chat id representing the sandbox supergroup (int32-safe). */
+export const SIMULATOR_GROUP_ID = -100_200_000_000;
 
 /**
  * Normalizes one raw chat-target entry to its stored string form.
@@ -35,4 +44,21 @@ export function normalizeChatTargets(input: unknown): string[] {
     out.push(normalized);
   }
   return out;
+}
+
+/**
+ * Evaluates whether a chat is among a module's explicitly configured target
+ * chats. No implicit default: an empty or missing list means the module is
+ * not targeted anywhere and must stay idle in that chat.
+ * @param {unknown} targetChats - Config value of the `targetChats` key.
+ * @param {string | number} chatId - Chat id the event came from.
+ * @returns {boolean} True only when the chat is explicitly listed.
+ */
+export function isChatTargeted(targetChats: unknown, chatId: string | number): boolean {
+  // Sandbox simulator: synthetic updates always pass so studio-side testing
+  // works without adding the reserved ids to every module's target list.
+  const raw = String(chatId);
+  if (raw === String(SIMULATOR_TELEGRAM_ID) || raw === String(SIMULATOR_GROUP_ID)) return true;
+  if (!Array.isArray(targetChats) || targetChats.length === 0) return false;
+  return normalizeChatTargets(targetChats).includes(raw);
 }

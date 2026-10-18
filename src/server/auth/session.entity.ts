@@ -17,7 +17,7 @@ export interface SessionEntity {
  * Domain shape for security log row.
  */
 export interface SecurityLogEntity {
-  id: number;
+  id: string;
   event: string;
   ip: string | null;
   user_agent: string | null;

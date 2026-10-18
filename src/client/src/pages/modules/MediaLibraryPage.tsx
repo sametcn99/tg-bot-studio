@@ -24,7 +24,7 @@ import { formatDateTime } from '../../utils/format';
 
 /** Library asset row as returned by the API. */
 interface MediaAsset {
-  id: number;
+  id: string;
   name: string;
   source: string;
   value: string;
@@ -45,7 +45,7 @@ export default function MediaLibraryPage({
   botId,
   module,
 }: {
-  botId: number;
+  botId: string;
   module: ModuleEntry;
 }): React.ReactElement {
   const { t } = useTranslation();
@@ -53,7 +53,7 @@ export default function MediaLibraryPage({
   const [assets, setAssets] = useState<MediaAsset[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     reload();

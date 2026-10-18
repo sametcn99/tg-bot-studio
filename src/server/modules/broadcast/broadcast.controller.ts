@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post, Sse } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Sse } from '@nestjs/common';
 import type { MessageEvent } from '@nestjs/common';
 import { BroadcastService } from './broadcast.service';
 import { CreateBroadcastDto } from './dto/broadcast.dto';
@@ -23,7 +23,7 @@ export class BroadcastController {
    * (queue, progress tick, cancel) for instant progress updates.
    */
   @Sse('stream')
-  stream(@Param('botId', ParseIntPipe) botId: number): import('rxjs').Observable<MessageEvent> {
+  stream(@Param('botId') botId: string): import('rxjs').Observable<MessageEvent> {
     return this.live.stream('broadcasts', botId);
   }
 
@@ -33,7 +33,7 @@ export class BroadcastController {
    * @returns {object[]} Broadcast rows, newest first.
    */
   @Get()
-  list(@Param('botId', ParseIntPipe) botId: number) {
+  list(@Param('botId') botId: string) {
     return this.service.list(botId);
   }
 
@@ -45,7 +45,7 @@ export class BroadcastController {
    * @returns {object} Queued broadcast row(s).
    */
   @Post()
-  create(@Param('botId', ParseIntPipe) botId: number, @Body() body: CreateBroadcastDto) {
+  create(@Param('botId') botId: string, @Body() body: CreateBroadcastDto) {
     return this.service.create(botId, body as unknown as Record<string, unknown>);
   }
 
@@ -56,7 +56,7 @@ export class BroadcastController {
    * @returns {object} Broadcast row.
    */
   @Get(':id')
-  findOne(@Param('botId', ParseIntPipe) botId: number, @Param('id', ParseIntPipe) id: number) {
+  findOne(@Param('botId') botId: string, @Param('id') id: string) {
     return this.service.findOne(botId, id);
   }
 
@@ -67,7 +67,7 @@ export class BroadcastController {
    * @returns {object} Broadcast row.
    */
   @Post(':id/cancel')
-  cancel(@Param('botId', ParseIntPipe) botId: number, @Param('id', ParseIntPipe) id: number) {
+  cancel(@Param('botId') botId: string, @Param('id') id: string) {
     return this.service.cancel(botId, id);
   }
 
@@ -79,7 +79,7 @@ export class BroadcastController {
    * @returns {Promise<object>} Broadcast row re-queued for delivery.
    */
   @Post(':id/resume')
-  resume(@Param('botId', ParseIntPipe) botId: number, @Param('id', ParseIntPipe) id: number) {
+  resume(@Param('botId') botId: string, @Param('id') id: string) {
     return this.service.resume(botId, id);
   }
 
@@ -93,15 +93,12 @@ export class BroadcastController {
    */
   @Post('experiments/:experimentId/choose-winner')
   chooseWinner(
-    @Param('botId', ParseIntPipe) botId: number,
+    @Param('botId') botId: string,
     @Param('experimentId') experimentId: string,
     @Body() body: Record<string, unknown>,
   ) {
-    const override = Number(body.variantBroadcastId);
-    return this.service.chooseWinner(
-      botId,
-      experimentId,
-      Number.isFinite(override) && override > 0 ? override : undefined,
-    );
+    const override =
+      typeof body.variantBroadcastId === 'string' ? body.variantBroadcastId.trim() : undefined;
+    return this.service.chooseWinner(botId, experimentId, override || undefined);
   }
 }

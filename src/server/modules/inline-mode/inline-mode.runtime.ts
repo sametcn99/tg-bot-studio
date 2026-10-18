@@ -123,7 +123,7 @@ export class InlineModeRuntime extends BotModuleHandler {
    *   misconfiguration/timeout/error.
    */
   private async answerWithAi(
-    botId: number,
+    botId: string,
     query: InlineQuery,
     timeoutMs: number,
   ): Promise<InlineSuggestion | null> {

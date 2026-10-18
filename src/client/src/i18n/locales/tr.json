@@ -143,6 +143,7 @@
     "enabled": "{{total}} modülden {{count}} tanesi aktif",
     "configSaved": "Yapılandırma kaydedildi. Bot çalışma zamanı güncellendi.",
     "toggleFailed": "Modül güncellenemedi",
+    "chatScopedNote": "Bu modül sohbet bazlı yapılandırılır: aşağıdan bir grup veya kanal ekleyip kendi değerlerini ayarlayın — her sohbet farklı davranabilir.",
     "noOptions": "Bu modülün yapılandırılabilir seçeneği yok.",
     "onePerLine": "Satır başına bir kayıt",
     "docsLink": "Doküman",
@@ -797,21 +798,6 @@
     "connectionNotFound": "Bağlantı bulunamadı.",
     "numericOnly": "Sohbet bazlı ayarlar için sayısal sohbet kimliği gerekir. Botu senkronize edin."
   },
-  "chatOverrides": {
-    "title": "Sohbet bazlı ayarlar",
-    "hint": "Bu modülü her grup ve kanal için ayrı ayrı tanımlayın. Burada değiştirdiğiniz değerler yukarıdaki bot geneli varsayılanlarını geçersiz kılar; dokunulmayan alanlar onları devralmaya devam eder.",
-    "selectChat": "Grup veya kanal seçin",
-    "groups": "Gruplar",
-    "channels": "Kanallar",
-    "noneYet": "Henüz geçersiz kılma yok — kendi değerlerini tanımlamak için bir sohbet seçin.",
-    "overriddenFields": "{{count}} alan geçersiz kılındı",
-    "botDefault": "Bot varsayılanları devralınıyor",
-    "inherit": "Bot varsayılanını devral",
-    "save": "Bu sohbet için kaydet",
-    "saved": "Kaydedildi",
-    "reset": "Bot varsayılanına dön",
-    "noFields": "Bu modülün yapılandırılabilir alanı yok."
-  },
   "federation": {
     "managerTitle": "Federasyon yöneticisi",
     "managerEmpty": "Henüz federasyon yok. Botun PM'inde /newfed <ad> ile oluşturun.",
@@ -982,5 +968,17 @@
     "noEvents": "Henüz sağlık olayı kaydedilmedi.",
     "notNotified": "bildirilmedi",
     "saved": "Alarm ayarları kaydedildi"
+  },
+  "chatConfigs": {
+    "title": "Sohbet bazlı ayarlar",
+    "hint": "Her grup ve kanal kendi yapılandırmasına sahiptir — bir kanal diğerinden farklı davranabilir. Sohbet eklemek modülü orada etkinleştirir; kaydı silmek devre dışı bırakır.",
+    "addChat": "Grup veya kanal ekle",
+    "allAdded": "Bağlı tüm sohbetlerin zaten kendi ayarları var.",
+    "noneYet": "Henüz yapılandırılmış sohbet yok — bir tane ekleyene kadar modül boşta bekler.",
+    "configured": "Yapılandırıldı",
+    "save": "Bu sohbet için kaydet",
+    "saved": "Kaydedildi",
+    "remove": "Bu sohbeti kaldır",
+    "noFields": "Bu modülün sohbet bazlı alanı yok — kaydetmek sohbet için etkinleştirir."
   }
 }

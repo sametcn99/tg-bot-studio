@@ -26,7 +26,7 @@ import { formatDateTime } from '../utils/format';
 
 /** Template gallery row. */
 interface TemplateRow {
-  id: number;
+  id: string;
   name: string;
   description: string | null;
   sourceBotName: string | null;
@@ -53,7 +53,7 @@ export default function TemplateGalleryDialog({
   onClose,
   onApplied,
 }: {
-  botId: number;
+  botId: string;
   open: boolean;
   onClose: () => void;
   onApplied?: () => void;
@@ -62,8 +62,8 @@ export default function TemplateGalleryDialog({
   const { showSuccess, showError } = useSnackbar();
   const [rows, setRows] = useState<TemplateRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [applyingId, setApplyingId] = useState<number | null>(null);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [applyingId, setApplyingId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -277,7 +277,7 @@ export function SaveTemplateDialog({
   open,
   onClose,
 }: {
-  botId: number;
+  botId: string;
   botName: string;
   open: boolean;
   onClose: () => void;

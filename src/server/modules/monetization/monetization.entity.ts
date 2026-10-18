@@ -2,8 +2,8 @@
  * Domain shape for VIP subscription with number IDs.
  */
 export interface VipSubscriptionEntity {
-  id: number;
-  bot_id: number;
+  id: string;
+  bot_id: string;
   telegram_id: number;
   channel_id: number;
   expires_at: string;

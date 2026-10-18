@@ -73,7 +73,7 @@ export class WebhooksService {
    * @param {number} botId - Owning bot id.
    * @returns {WebhookEndpoint[]} Endpoint definitions.
    */
-  list(botId: number): WebhookEndpoint[] {
+  list(botId: string): WebhookEndpoint[] {
     return this.settings.getBotJson<WebhookEndpoint[]>(botId, 'webhook_endpoints') ?? [];
   }
 
@@ -85,7 +85,7 @@ export class WebhooksService {
    * @returns {WebhookEndpoint} Created endpoint.
    * @throws {Error} When the URL fails the public-http validation.
    */
-  create(botId: number, data: Record<string, unknown>): WebhookEndpoint {
+  create(botId: string, data: Record<string, unknown>): WebhookEndpoint {
     const url = String(data.url ?? '');
     const violation = assertPublicHttpUrl(url);
     if (violation) {
@@ -109,7 +109,7 @@ export class WebhooksService {
    * @param {string} id - Endpoint identifier.
    * @returns {void}
    */
-  remove(botId: number, id: string): void {
+  remove(botId: string, id: string): void {
     this.settings.setBotJson(
       botId,
       'webhook_endpoints',
@@ -125,7 +125,7 @@ export class WebhooksService {
    * @param {Record<string, unknown>} payload - Event payload.
    * @returns {Promise<void>} Resolves once delivery was attempted everywhere.
    */
-  async dispatch(botId: number, event: string, payload: Record<string, unknown>): Promise<void> {
+  async dispatch(botId: string, event: string, payload: Record<string, unknown>): Promise<void> {
     const endpoints = this.list(botId).filter(
       (endpoint) => endpoint.events.length === 0 || endpoint.events.includes(event),
     );
@@ -171,7 +171,7 @@ export class WebhooksService {
    * @param {DeliveryLog} entry - Delivery outcome.
    * @returns {void}
    */
-  private logDelivery(botId: number, entry: DeliveryLog): void {
+  private logDelivery(botId: string, entry: DeliveryLog): void {
     const log = this.settings.getBotJson<DeliveryLog[]>(botId, 'webhook_delivery_log') ?? [];
     log.unshift(entry);
     this.settings.setBotJson(botId, 'webhook_delivery_log', log.slice(0, 100));
@@ -182,7 +182,7 @@ export class WebhooksService {
    * @param {number} botId - Owning bot id.
    * @returns {DeliveryLog[]} Newest entries first.
    */
-  deliveryLog(botId: number): DeliveryLog[] {
+  deliveryLog(botId: string): DeliveryLog[] {
     return this.settings.getBotJson<DeliveryLog[]>(botId, 'webhook_delivery_log') ?? [];
   }
 
@@ -243,7 +243,7 @@ export class WebhooksService {
    * @returns {'unknown' | 'invalid' | 'ok'} Verification outcome.
    */
   verifyInboundAction(
-    botId: number,
+    botId: string,
     hookId: string,
     rawBody: Buffer | string | undefined,
     provided: string | undefined,
@@ -264,7 +264,7 @@ export class WebhooksService {
    * @returns {Promise<boolean>} True when an action matched and was attempted.
    */
   async handleInbound(
-    botId: number,
+    botId: string,
     hookId: string,
     payload: Record<string, unknown>,
   ): Promise<boolean> {
@@ -289,7 +289,7 @@ export class WebhooksService {
    * @param {number} botId - Owning bot id.
    * @returns {InboundAction[]} Configured actions.
    */
-  listInbound(botId: number): InboundAction[] {
+  listInbound(botId: string): InboundAction[] {
     return this.settings.getBotJson<InboundAction[]>(botId, 'webhook_inbound') ?? [];
   }
 
@@ -301,7 +301,7 @@ export class WebhooksService {
    * @param {Record<string, unknown>} data - targetChatId, template.
    * @returns {InboundAction & {url: string}} Created action with its URL and secret.
    */
-  createInbound(botId: number, data: Record<string, unknown>): InboundAction & { url: string } {
+  createInbound(botId: string, data: Record<string, unknown>): InboundAction & { url: string } {
     const actions = this.listInbound(botId);
     // Connections may reference public chats by @username; numeric ids stay numbers.
     const rawTarget = data.targetChatId;
@@ -329,7 +329,7 @@ export class WebhooksService {
    * @param {string} hookId - Inbound hook identifier.
    * @returns {void}
    */
-  removeInbound(botId: number, hookId: string): void {
+  removeInbound(botId: string, hookId: string): void {
     this.settings.setBotJson(
       botId,
       'webhook_inbound',

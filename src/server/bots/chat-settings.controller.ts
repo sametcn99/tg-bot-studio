@@ -1,13 +1,4 @@
-import {
-  BadRequestException,
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  ParseIntPipe,
-  Put,
-} from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Param, Put } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { ChatSettingsService } from '../bot-engine/chat-settings.service';
 import { findModule } from '../bot-engine/module-registry';
@@ -37,10 +28,7 @@ export class ChatSettingsController {
    * @returns {Promise<object[]>} Rows of `{ chatId, override }` per chat.
    */
   @Get('modules/:moduleKey/chat-overrides')
-  async listForModule(
-    @Param('botId', ParseIntPipe) botId: number,
-    @Param('moduleKey') moduleKey: string,
-  ) {
+  async listForModule(@Param('botId') botId: string, @Param('moduleKey') moduleKey: string) {
     this.assertChatScoped(moduleKey);
     const rows = await this.prisma.chatModuleSetting.findMany({
       where: { botId, moduleKey },
@@ -63,7 +51,7 @@ export class ChatSettingsController {
    */
   @Get('chat-settings/:chatId/:moduleKey')
   async read(
-    @Param('botId', ParseIntPipe) botId: number,
+    @Param('botId') botId: string,
     @Param('chatId') chatId: string,
     @Param('moduleKey') moduleKey: string,
   ) {
@@ -91,7 +79,7 @@ export class ChatSettingsController {
    */
   @Put('chat-settings/:chatId/:moduleKey')
   async save(
-    @Param('botId', ParseIntPipe) botId: number,
+    @Param('botId') botId: string,
     @Param('chatId') chatId: string,
     @Param('moduleKey') moduleKey: string,
     @Body() body: Record<string, unknown>,
@@ -113,7 +101,7 @@ export class ChatSettingsController {
    */
   @Delete('chat-settings/:chatId/:moduleKey')
   async clear(
-    @Param('botId', ParseIntPipe) botId: number,
+    @Param('botId') botId: string,
     @Param('chatId') chatId: string,
     @Param('moduleKey') moduleKey: string,
   ) {

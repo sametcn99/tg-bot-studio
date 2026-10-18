@@ -99,7 +99,7 @@ export default function BotDashboardPage(): React.ReactElement {
   // File import ref
   const importFileRef = useRef<HTMLInputElement | null>(null);
 
-  const bot = bots.find((entry) => entry.id === Number(botId)) ?? activeBot;
+  const bot = bots.find((entry) => entry.id === botId) ?? activeBot;
 
   const {
     data: securityPosture,

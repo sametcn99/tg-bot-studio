@@ -5,12 +5,9 @@ import { PrismaService } from '../database/prisma.service';
 import { ModuleHandlerRegistry } from './module-handler-registry';
 import { findModule } from './module-registry';
 import { safeJsonObjectParse } from '../common/utils/json.util';
+import { SIMULATOR_TELEGRAM_ID, SIMULATOR_GROUP_ID } from '../common/utils/chat-targets.util';
 
-/** Reserved Telegram user id representing the sandbox tester (int32-safe). */
-export const SIMULATOR_TELEGRAM_ID = 2_000_000_000;
-
-/** Reserved chat id representing the sandbox supergroup (int32-safe). */
-export const SIMULATOR_GROUP_ID = -100_200_000_000;
+export { SIMULATOR_TELEGRAM_ID, SIMULATOR_GROUP_ID };
 
 /** What the sandbox should synthesize for this run. */
 export type SimulationEvent = 'message' | 'join' | 'leave' | 'chat_member';
@@ -105,7 +102,7 @@ export class SimulatorService {
    * @returns {Promise<SimulationResult>} First captured outgoing message.
    */
   async send(
-    botId: number,
+    botId: string,
     input: {
       text?: string;
       callbackData?: string;
@@ -272,7 +269,7 @@ export class SimulatorService {
    * @param {number} botId - Studio bot id.
    * @returns {Promise<void>} Resolves once all handlers attached.
    */
-  private async attachEnabledModules(simBot: Bot, botId: number): Promise<void> {
+  private async attachEnabledModules(simBot: Bot, botId: string): Promise<void> {
     const rows = await this.prisma.botModule.findMany({
       where: { botId, isEnabled: 1 },
       orderBy: { moduleKey: 'asc' },

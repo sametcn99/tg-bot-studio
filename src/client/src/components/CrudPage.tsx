@@ -79,7 +79,7 @@ export default function CrudPage({
   botId,
   module,
 }: {
-  botId: number;
+  botId: string;
   module: ModuleEntry;
 }): React.ReactElement {
   const { t } = useTranslation();
@@ -90,7 +90,7 @@ export default function CrudPage({
 
   const [rows, setRows] = useState<Record<string, unknown>[] | null>(null);
   const [form, setForm] = useState<Record<string, unknown> | null>(null);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [enabled, setEnabled] = useState(false);
@@ -163,7 +163,7 @@ export default function CrudPage({
    * @returns {void}
    */
   function openEdit(row: Record<string, unknown>): void {
-    setEditingId(Number(row.id));
+    setEditingId(String(row.id));
     const seeded: Record<string, unknown> = { ...resource.initialForm };
     for (const field of resource.formFields) {
       const serverKey = serverKeyFor(field.key);

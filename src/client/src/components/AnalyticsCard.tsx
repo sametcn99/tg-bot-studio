@@ -38,7 +38,7 @@ interface BotAnalytics {
  * @param {number} props.botId - Active bot id.
  * @returns {React.ReactElement} The analytics card.
  */
-export default function AnalyticsCard({ botId }: { botId: number }): React.ReactElement {
+export default function AnalyticsCard({ botId }: { botId: string }): React.ReactElement {
   const { t } = useTranslation();
   const [days, setDays] = useState<7 | 30>(7);
   const { data, error, loading, reload } = useApi<BotAnalytics>(

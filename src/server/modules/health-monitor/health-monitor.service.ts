@@ -43,7 +43,7 @@ type SweepStatus = 'active' | 'starting' | 'failed' | 'stopped' | 'inactive' | '
 @Injectable()
 export class HealthMonitorService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(HealthMonitorService.name);
-  private readonly lastStatus = new Map<number, SweepStatus>();
+  private readonly lastStatus = new Map<string, SweepStatus>();
   private readonly sweepTimer: ReturnType<typeof setInterval>;
   private operatorBot: { token: string; bot: Bot } | null = null;
 
@@ -161,7 +161,7 @@ export class HealthMonitorService implements OnModuleInit, OnModuleDestroy {
    * @param {number} botId - Owning bot id.
    * @returns {Promise<HealthAlertSettings>} Effective settings.
    */
-  async getSettings(botId: number): Promise<HealthAlertSettings> {
+  async getSettings(botId: string): Promise<HealthAlertSettings> {
     return {
       enabled: this.settings.getBotSetting(botId, 'healthAlertsEnabled') === '1',
       alertChatId: this.settings.getBotSetting(botId, 'healthAlertChatId') ?? '',
@@ -174,7 +174,7 @@ export class HealthMonitorService implements OnModuleInit, OnModuleDestroy {
    * @param {HealthAlertSettings} body - Patch payload.
    * @returns {Promise<HealthAlertSettings>} Effective settings after the update.
    */
-  async updateSettings(botId: number, body: HealthAlertSettings): Promise<HealthAlertSettings> {
+  async updateSettings(botId: string, body: HealthAlertSettings): Promise<HealthAlertSettings> {
     const chatId = String(body.alertChatId ?? '').trim();
     if (chatId && !/^-?\d+$/.test(chatId)) {
       throw new BadRequestException('alertChatId must be a numeric Telegram chat id');
@@ -224,7 +224,7 @@ export class HealthMonitorService implements OnModuleInit, OnModuleDestroy {
    * @param {number} botId - Owning bot id.
    * @returns {Promise<{delivered: boolean; detail: string}>} Delivery outcome.
    */
-  async sendTestAlert(botId: number): Promise<{ delivered: boolean; detail: string }> {
+  async sendTestAlert(botId: string): Promise<{ delivered: boolean; detail: string }> {
     const config = await this.getSettings(botId);
     if (!config.alertChatId) {
       return { delivered: false, detail: 'No alert chat configured yet.' };
@@ -245,7 +245,7 @@ export class HealthMonitorService implements OnModuleInit, OnModuleDestroy {
    * @param {number} [botId] - Optional bot filter.
    * @returns {Promise<object[]>} Newest events first.
    */
-  async listEvents(botId?: number) {
+  async listEvents(botId?: string) {
     const events = await this.healthModel.listRecent(botId, 50);
     return events.map((event) => ({
       id: event.id,
@@ -263,7 +263,7 @@ export class HealthMonitorService implements OnModuleInit, OnModuleDestroy {
    * Telegram message to the configured chat.
    */
   private async recordAndNotify(
-    botId: number,
+    botId: string,
     botName: string,
     level: 'failed' | 'recovering' | 'recovered',
     title: string,
@@ -298,7 +298,7 @@ export class HealthMonitorService implements OnModuleInit, OnModuleDestroy {
    * most urgent alert) can never deliver through itself.
    * @returns {Promise<boolean>} True when delivered through any transport.
    */
-  private async deliver(botId: number, chatId: string, text: string): Promise<boolean> {
+  private async deliver(botId: string, chatId: string, text: string): Promise<boolean> {
     const bot = this.pool.getBot(botId);
     if (bot) {
       try {

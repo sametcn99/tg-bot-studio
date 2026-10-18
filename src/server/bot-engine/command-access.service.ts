@@ -33,7 +33,7 @@ export class CommandAccessService {
    */
   async isCommandAllowed(
     api: Api,
-    botId: number,
+    botId: string,
     chatId: number,
     userId: number,
     command: string,

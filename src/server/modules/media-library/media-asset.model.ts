@@ -23,7 +23,7 @@ export class MediaAssetModel extends BotScopedCrudModel<MediaAsset> {
    * @returns {Promise<MediaAsset>} Created row.
    */
   async create(data: {
-    botId: number;
+    botId: string;
     name: string;
     source: string;
     value: string;
@@ -53,7 +53,7 @@ export class MediaAssetModel extends BotScopedCrudModel<MediaAsset> {
    * @param {number} id - Asset id.
    * @returns {Promise<void>} Resolves once removed.
    */
-  async remove(botId: number, id: number): Promise<void> {
+  async remove(botId: string, id: string): Promise<void> {
     await this.delete(botId, id, 'Media asset');
   }
 }

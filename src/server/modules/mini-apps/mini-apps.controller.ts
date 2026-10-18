@@ -1,14 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  ParseIntPipe,
-  Patch,
-  Post,
-  Query,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { MiniAppsService } from './mini-apps.service';
 import { toCsv } from '../../common/utils/csv.util';
 
@@ -28,7 +18,7 @@ export class MiniAppsController {
    * @returns {object[]} App rows with parsed config.
    */
   @Get()
-  list(@Param('botId', ParseIntPipe) botId: number) {
+  list(@Param('botId') botId: string) {
     return this.service.list(botId);
   }
 
@@ -39,7 +29,7 @@ export class MiniAppsController {
    * @returns {Promise<object>} Created app.
    */
   @Post()
-  create(@Param('botId', ParseIntPipe) botId: number, @Body() body: Record<string, unknown>) {
+  create(@Param('botId') botId: string, @Body() body: Record<string, unknown>) {
     return this.service.create(botId, body);
   }
 
@@ -52,8 +42,8 @@ export class MiniAppsController {
    */
   @Patch(':id')
   update(
-    @Param('botId', ParseIntPipe) botId: number,
-    @Param('id', ParseIntPipe) id: number,
+    @Param('botId') botId: string,
+    @Param('id') id: string,
     @Body() body: Record<string, unknown>,
   ) {
     return this.service.update(botId, id, body);
@@ -66,7 +56,7 @@ export class MiniAppsController {
    * @returns {{success: boolean}} Confirmation payload.
    */
   @Delete(':id')
-  remove(@Param('botId', ParseIntPipe) botId: number, @Param('id', ParseIntPipe) id: number) {
+  remove(@Param('botId') botId: string, @Param('id') id: string) {
     this.service.remove(botId, id);
     return { success: true };
   }
@@ -80,8 +70,8 @@ export class MiniAppsController {
    */
   @Post(':id/publish')
   publish(
-    @Param('botId', ParseIntPipe) botId: number,
-    @Param('id', ParseIntPipe) id: number,
+    @Param('botId') botId: string,
+    @Param('id') id: string,
     @Body() body: { publicBaseUrl?: string },
   ) {
     return this.service.publish(botId, id, body.publicBaseUrl ?? '');
@@ -94,7 +84,7 @@ export class MiniAppsController {
    * @returns {object[]} Order rows.
    */
   @Get(':id/orders')
-  orders(@Param('botId', ParseIntPipe) botId: number, @Param('id', ParseIntPipe) id: number) {
+  orders(@Param('botId') botId: string, @Param('id') id: string) {
     return this.service.listOrders(botId, id);
   }
 
@@ -106,11 +96,7 @@ export class MiniAppsController {
    * @returns {object[]|string} Submissions as JSON rows or a CSV document.
    */
   @Get(':id/forms')
-  forms(
-    @Param('botId', ParseIntPipe) botId: number,
-    @Param('id', ParseIntPipe) id: number,
-    @Query('format') format?: string,
-  ) {
+  forms(@Param('botId') botId: string, @Param('id') id: string, @Query('format') format?: string) {
     const submissions = this.service.listFormSubmissions(botId, id);
     if (format !== 'csv') return submissions;
     const rows = submissions.map((entry) => {

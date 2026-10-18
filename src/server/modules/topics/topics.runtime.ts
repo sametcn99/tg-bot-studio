@@ -127,16 +127,18 @@ export class TopicsRuntime extends BotModuleHandler {
   }
 
   /**
-   * Shared guard: forum-adjacent group + manage_topics capability.
+   * Shared guard: forum-adjacent group + manage_topics capability +
+   * explicit target chat.
    */
   private async withGuard(
     c: import('grammy').Context,
-    botId: number,
+    botId: string,
     handler: (chatId: number, lang: BotLanguage, args: string) => Promise<void>,
   ): Promise<void> {
     if (c.chat?.type !== 'supergroup' && c.chat?.type !== 'group') return;
     if (!c.from) return;
     const chatId = c.chat.id;
+    if (!(await this.chatSettings.isTargeted(botId, chatId, this.moduleKey))) return;
     if (!(await this.adminGate.hasCapability(c.api, chatId, c.from.id, 'manage_topics'))) {
       return;
     }

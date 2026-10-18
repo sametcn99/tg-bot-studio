@@ -41,7 +41,7 @@ export interface AiConfig {
 
 /** A knowledge chunk matched during retrieval, with its similarity score. */
 export interface RetrievedChunk {
-  docId: number;
+  docId: string;
   docTitle: string;
   content: string;
   score: number;
@@ -91,7 +91,7 @@ export class AiAssistantService {
    * Returns only the reply text (sources available via `completeWithSources`).
    */
   async completeWithContext(
-    botId: number,
+    botId: string,
     telegramId: number,
     config: AiConfig,
     history: ChatMessage[],
@@ -105,7 +105,7 @@ export class AiAssistantService {
    * grounded the answer (used by the RAG tester for citations).
    */
   async completeWithSources(
-    botId: number,
+    botId: string,
     telegramId: number,
     config: AiConfig,
     history: ChatMessage[],
@@ -312,7 +312,7 @@ export class AiAssistantService {
    * keeps working.
    * @returns {Promise<number>} Number of chunks stored.
    */
-  async indexKnowledgeBase(botId: number, config: AiConfig): Promise<number> {
+  async indexKnowledgeBase(botId: string, config: AiConfig): Promise<number> {
     const docs = await this.aiModel.listDocs(botId);
     if (docs.length === 0) return 0;
     const tagFilter = this.parseTagFilter(config);
@@ -367,7 +367,7 @@ export class AiAssistantService {
    * @returns {{context: string, sources: RetrievedChunk[]}} Context block and citations.
    */
   private async retrieveKnowledgeDocs(
-    botId: number,
+    botId: string,
     config: AiConfig,
     query: string,
   ): Promise<{ context: string; sources: RetrievedChunk[] }> {
@@ -472,7 +472,7 @@ export class AiAssistantService {
    * Fetches user balance and orders if the query relates to account or orders.
    */
   private async getUserActionContext(
-    botId: number,
+    botId: string,
     telegramId: number,
     query: string,
   ): Promise<string> {
@@ -555,7 +555,7 @@ export class AiAssistantService {
   /**
    * Loads persisted conversation turns for a user from Prisma.
    */
-  async getHistory(botId: number, telegramId: number, limit = 10): Promise<ChatMessage[]> {
+  async getHistory(botId: string, telegramId: number, limit = 10): Promise<ChatMessage[]> {
     return this.aiModel.getHistory(botId, telegramId, limit);
   }
 
@@ -563,18 +563,18 @@ export class AiAssistantService {
    * Appends a message to persistent chat history and returns its row id.
    */
   async saveMessage(
-    botId: number,
+    botId: string,
     telegramId: number,
     role: 'user' | 'assistant',
     content: string,
-  ): Promise<number> {
+  ): Promise<string> {
     return this.aiModel.saveMessage(botId, telegramId, role, content);
   }
 
   /**
    * Knowledge Docs CRUD: lists all docs for a bot.
    */
-  async listDocs(botId: number) {
+  async listDocs(botId: string) {
     return this.aiModel.listDocs(botId);
   }
 
@@ -582,12 +582,12 @@ export class AiAssistantService {
    * Knowledge Docs CRUD: adds a new doc and re-indexes it in the background.
    */
   async addDoc(
-    botId: number,
+    botId: string,
     title: string,
     content: string,
     tags?: string,
     config?: AiConfig,
-  ): Promise<{ id: number }> {
+  ): Promise<{ id: string }> {
     const created = await this.aiModel.addDoc(botId, title, content, tags);
     if (config) {
       void this.indexKnowledgeBase(botId, config).catch(() => undefined);
@@ -599,8 +599,8 @@ export class AiAssistantService {
    * Knowledge Docs CRUD: updates an existing doc and re-indexes it.
    */
   async updateDoc(
-    botId: number,
-    docId: number,
+    botId: string,
+    docId: string,
     title: string,
     content: string,
     tags?: string,
@@ -615,7 +615,7 @@ export class AiAssistantService {
   /**
    * Knowledge Docs CRUD: deletes a doc.
    */
-  async removeDoc(botId: number, docId: number): Promise<void> {
+  async removeDoc(botId: string, docId: string): Promise<void> {
     await this.aiModel.removeDoc(botId, docId);
   }
 
@@ -709,7 +709,7 @@ export class AiAssistantService {
   /**
    * Aggregate AI usage metrics for the dashboard (trailing window).
    */
-  async getUsageSummary(botId: number, days: number) {
+  async getUsageSummary(botId: string, days: number) {
     return this.aiModel.usageSummary(botId, days);
   }
 }

@@ -40,7 +40,7 @@ import { localizedErrorMessage } from '../../utils/errors';
  * @property {number} is_active - Active flag.
  */
 interface VipRow {
-  id: number;
+  id: string;
   telegram_id: number;
   channel_id: number;
   expires_at: string;
@@ -59,7 +59,7 @@ export default function MonetizationPage({
   botId,
   module,
 }: {
-  botId: number;
+  botId: string;
   module: ModuleEntry;
 }): React.ReactElement {
   const { t } = useTranslation();

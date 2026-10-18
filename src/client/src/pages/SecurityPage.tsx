@@ -56,7 +56,7 @@ interface SessionInfo {
  * @property {string} created_at - Timestamp.
  */
 interface SecurityLog {
-  id: number;
+  id: string;
   event: string;
   ip: string | null;
   details: string | null;

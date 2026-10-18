@@ -13,7 +13,7 @@ export class AiModel {
    * Loads persisted conversation turns for a user from Prisma.
    */
   async getHistory(
-    botId: number,
+    botId: string,
     telegramId: number | bigint,
     limit = 10,
   ): Promise<AiChatHistoryMessage[]> {
@@ -41,11 +41,11 @@ export class AiModel {
    * (used to attach usage metrics afterwards).
    */
   async saveMessage(
-    botId: number,
+    botId: string,
     telegramId: number | bigint,
     role: 'user' | 'assistant',
     content: string,
-  ): Promise<number> {
+  ): Promise<string> {
     const created = await this.prisma.aiChatHistory.create({
       data: {
         botId,
@@ -62,7 +62,7 @@ export class AiModel {
   /**
    * Lists all knowledge documents for a bot.
    */
-  async listDocs(botId: number): Promise<AiKnowledgeDocEntity[]> {
+  async listDocs(botId: string): Promise<AiKnowledgeDocEntity[]> {
     const rows = await this.prisma.aiKnowledgeDoc.findMany({
       where: { botId },
       orderBy: { id: 'desc' },
@@ -81,11 +81,11 @@ export class AiModel {
    * Adds a new knowledge document.
    */
   async addDoc(
-    botId: number,
+    botId: string,
     title: string,
     content: string,
     tags?: string,
-  ): Promise<{ id: number }> {
+  ): Promise<{ id: string }> {
     const created = await this.prisma.aiKnowledgeDoc.create({
       data: {
         botId,
@@ -102,8 +102,8 @@ export class AiModel {
    * Updates an existing knowledge document.
    */
   async updateDoc(
-    botId: number,
-    docId: number,
+    botId: string,
+    docId: string,
     title: string,
     content: string,
     tags?: string,
@@ -121,7 +121,7 @@ export class AiModel {
   /**
    * Deletes a knowledge document.
    */
-  async removeDoc(botId: number, docId: number): Promise<void> {
+  async removeDoc(botId: string, docId: string): Promise<void> {
     await this.prisma.aiKnowledgeDoc.deleteMany({
       where: { botId, id: docId },
     });
@@ -131,8 +131,8 @@ export class AiModel {
    * Replaces the stored chunks of one document (used on re-index).
    */
   async replaceChunks(
-    botId: number,
-    docId: number,
+    botId: string,
+    docId: string,
     chunks: Array<{ idx: number; content: string; vectorJson?: string | null }>,
   ): Promise<void> {
     await this.prisma.aiKnowledgeChunk.deleteMany({ where: { botId, docId } });
@@ -153,10 +153,10 @@ export class AiModel {
   /**
    * Lists every chunk (with vectors) for a bot, oldest docs first.
    */
-  async listChunks(botId: number): Promise<
+  async listChunks(botId: string): Promise<
     Array<{
-      id: number;
-      docId: number;
+      id: string;
+      docId: string;
       idx: number;
       content: string;
       vectorJson: string | null;
@@ -173,7 +173,7 @@ export class AiModel {
   /**
    * Number of indexed chunks for a bot (0 = semantic index missing).
    */
-  async countChunks(botId: number): Promise<number> {
+  async countChunks(botId: string): Promise<number> {
     return this.prisma.aiKnowledgeChunk.count({ where: { botId } });
   }
 
@@ -181,7 +181,7 @@ export class AiModel {
    * Records per-request AI usage metrics alongside the chat turn.
    */
   async recordMetrics(
-    historyId: number | null,
+    historyId: string | null,
     metrics: {
       promptTokens?: number;
       completionTokens?: number;
@@ -207,7 +207,7 @@ export class AiModel {
    * Aggregate AI usage for a bot over the trailing window (days).
    */
   async usageSummary(
-    botId: number,
+    botId: string,
     days: number,
   ): Promise<{
     requests: number;

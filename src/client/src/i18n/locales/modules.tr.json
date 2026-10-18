@@ -549,11 +549,7 @@
   "quizzes": {
     "name": "Bilgi Yarışmaları & Anketler",
     "description": "Kalıcı skor tablolu, zamanlı bilgi yarışmaları.",
-    "fields": {
-      "defaultCommand": {
-        "label": "Tetikleyici komut"
-      }
-    },
+    "fields": {},
     "docs": {
       "overview": [
         "sendPoll tabanlı, doğru cevapları otomatik puanlanan yarışmalar.",

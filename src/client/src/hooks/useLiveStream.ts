@@ -19,7 +19,7 @@ import { apiFetch, getToken } from '../services/api';
  */
 export function useLiveStream(
   topic: 'support' | 'broadcasts',
-  botId: number | string | undefined,
+  botId: string | string | undefined,
   onData: () => void,
 ): void {
   const dataRef = useRef(onData);
