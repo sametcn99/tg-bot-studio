@@ -149,6 +149,12 @@
     "choose": "Choisissez une langue :",
     "unsupported": "Langues prises en charge : en, tr, de, ru, es, az, ar, fr, it, pt, uk, fa, id, uz."
   },
+  "fileSearch": {
+    "foundHeader": "{user}, résultats pour « {query} » :",
+    "moreCount": "…et {count} autres",
+    "noResult": "{user}, aucun fichier indexé ne correspond à « {query} ».",
+    "tooShort": "Écris ce qu'il faut chercher après la commande ({min} caractères minimum)."
+  },
   "topics": {
     "created": "Sujet créé : {name}",
     "renamed": "Sujet renommé en {name}.",

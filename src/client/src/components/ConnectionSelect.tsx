@@ -2,10 +2,12 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Alert,
+  Box,
   Button,
   Chip,
-  InputAdornment,
+  CircularProgress,
   IconButton,
+  InputAdornment,
   Link,
   MenuItem,
   Stack,
@@ -13,9 +15,12 @@ import {
   Tooltip,
 } from '@mui/material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import SyncIcon from '@mui/icons-material/Sync';
 import { useTranslation } from 'react-i18next';
 import { useBots } from '../context/BotContext';
 import { useConnections, connectionsRoute } from '../context/ConnectionsContext';
+import { useSnackbar } from '../context/SnackbarContext';
+import { apiFetch } from '../services/api';
 
 /** Sentinel menu value switching the picker into free-form id entry. */
 const MANUAL_VALUE = '__manual__';
@@ -26,31 +31,62 @@ const MANUAL_VALUE = '__manual__';
  * @param {object} props - Component props.
  * @param {string} [props.typeLabel] - Optional connection type label for a filtered empty state.
  * @param {boolean} [props.compact] - Removes the bottom margin for inline (dialog) usage.
+ * @param {string} [props.botId] - Owning bot id.
+ * @param {() => Promise<void> | void} [props.onSync] - Action to sync discovered chats from bot.
+ * @param {boolean} [props.syncing] - True while sync is underway.
  * @returns {React.ReactElement} The alert.
  */
 export function NoConnectionsNotice({
   typeLabel,
   compact,
+  botId,
+  onSync,
+  syncing,
 }: {
   typeLabel?: string;
   compact?: boolean;
+  botId?: string;
+  onSync?: () => Promise<void> | void;
+  syncing?: boolean;
 }): React.ReactElement {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { activeBot } = useBots();
+  const effectiveBotId = botId || activeBot?.id;
 
   return (
     <Alert
       severity="info"
       sx={compact ? undefined : { mb: 2 }}
       action={
-        <Button
-          color="inherit"
-          size="small"
-          onClick={() => activeBot && navigate(connectionsRoute(activeBot.id))}
-        >
-          {t('connections.manage')}
-        </Button>
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+          {onSync && effectiveBotId && (
+            <Button
+              color="inherit"
+              size="small"
+              disabled={syncing}
+              startIcon={
+                syncing ? (
+                  <CircularProgress size={14} color="inherit" />
+                ) : (
+                  <SyncIcon fontSize="small" />
+                )
+              }
+              onClick={() => void onSync()}
+            >
+              {t('connections.sync')}
+            </Button>
+          )}
+          {effectiveBotId && (
+            <Button
+              color="inherit"
+              size="small"
+              onClick={() => navigate(connectionsRoute(effectiveBotId))}
+            >
+              {t('connections.manage')}
+            </Button>
+          )}
+        </Stack>
       }
     >
       {typeLabel ? t('connections.noneOfType', { type: typeLabel }) : t('connections.noneYet')}
@@ -61,7 +97,7 @@ export function NoConnectionsNotice({
 /**
  * Shared option list builder: connections filtered by type, with any current
  * values that are not connected appended as manual options so legacy ids
- * stay visible.
+ * stay visible. Zero and empty string are ignored since they represent unset state.
  * @param {import('../context/ConnectionsContext').ChatConnection[]} connections - Full list.
  * @param {string[] | undefined} types - Optional type filter.
  * @param {string[]} currentValues - Currently selected chat ids.
@@ -80,8 +116,9 @@ function buildOptions(
       label: `${row.title} · ${id}`,
     };
   });
-  for (const value of currentValues) {
-    if (value && !options.some((option) => option.value === value)) {
+  for (const raw of currentValues) {
+    const value = String(raw ?? '').trim();
+    if (value && value !== '0' && !options.some((option) => option.value === value)) {
       options.unshift({ value, label: `${value} (manual)` });
     }
   }
@@ -134,11 +171,12 @@ function helpAdornmentFor(
  * notice when nothing suitable is connected.
  * @param {object} props - Component props.
  * @param {string} props.label - Field label.
- * @param {string} props.value - Current chat id value.
+ * @param {string|number} props.value - Current chat id value.
  * @param {(value: string) => void} props.onChange - Emits the picked or typed chat id.
  * @param {string[]} [props.types] - Connection type filter (channel/group/supergroup).
  * @param {string} [props.helperText] - Helper text under the field.
  * @param {boolean} [props.disabled] - Disables the picker.
+ * @param {string} [props.botId] - Owning bot identifier.
  * @returns {React.ReactElement} The picker.
  */
 export function ConnectionSelect({
@@ -148,19 +186,27 @@ export function ConnectionSelect({
   types,
   helperText,
   disabled,
+  botId,
 }: {
   label: string;
-  value: string;
+  value: string | number | undefined | null;
   onChange: (value: string) => void;
   types?: string[];
   helperText?: string;
   disabled?: boolean;
+  botId?: string;
 }): React.ReactElement {
   const { t } = useTranslation();
-  const { connections, loading } = useConnections();
+  const { showSuccess, showError } = useSnackbar();
+  const { connections, loading, refresh } = useConnections();
+  const { activeBot } = useBots();
+  const targetBotId = botId || activeBot?.id;
   const [manual, setManual] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
-  const currentValue = String(value ?? '');
+  const rawStr = value === undefined || value === null ? '' : String(value).trim();
+  const currentValue = rawStr === '0' ? '' : rawStr;
+
   const options = useMemo(
     () => buildOptions(connections, types, currentValue ? [currentValue] : []),
     [connections, types, currentValue],
@@ -168,15 +214,41 @@ export function ConnectionSelect({
   const poolEmpty = isPoolEmpty(loading, connections, types);
   const adornment = helpAdornmentFor(helperText, t('common.help'));
 
+  const handleSync = async (): Promise<void> => {
+    if (!targetBotId || syncing) return;
+    setSyncing(true);
+    try {
+      const res = await apiFetch<{ synced: number }>(`/api/bots/${targetBotId}/connections/sync`, {
+        method: 'POST',
+      });
+      await refresh(targetBotId);
+      showSuccess(
+        t('connections.syncedCount', { count: res.synced }) || `Synced ${res.synced} chats`,
+      );
+    } catch (err: unknown) {
+      showError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   if (poolEmpty || manual) {
     return (
       <Stack spacing={1}>
-        {poolEmpty && <NoConnectionsNotice compact typeLabel={typesToLabel(types)} />}
+        {poolEmpty && (
+          <NoConnectionsNotice
+            compact
+            typeLabel={typesToLabel(types)}
+            botId={targetBotId}
+            onSync={handleSync}
+            syncing={syncing}
+          />
+        )}
         <TextField
           label={label}
           size="small"
           fullWidth
-          disabled={disabled}
+          disabled={disabled || syncing}
           placeholder="-1001234567890 or @username"
           value={currentValue}
           onChange={(event) => onChange(event.target.value.trim())}
@@ -202,28 +274,53 @@ export function ConnectionSelect({
     );
   }
 
+  const selectEndAdornment = (
+    <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', mr: 2 }}>
+      {targetBotId && (
+        <Tooltip title={t('connections.sync')}>
+          <span>
+            <IconButton
+              size="small"
+              disabled={syncing}
+              aria-label={t('connections.sync')}
+              onClick={(e) => {
+                e.stopPropagation();
+                void handleSync();
+              }}
+            >
+              {syncing ? <CircularProgress size={16} /> : <SyncIcon fontSize="small" />}
+            </IconButton>
+          </span>
+        </Tooltip>
+      )}
+      {adornment}
+    </Stack>
+  );
+
   return (
     <TextField
       select
       label={label}
       size="small"
       fullWidth
-      disabled={disabled}
+      disabled={disabled || syncing}
       value={options.some((option) => option.value === currentValue) ? currentValue : ''}
       onChange={(event) => {
         if (event.target.value === MANUAL_VALUE) {
           setManual(true);
-          onChange('');
         } else {
           onChange(event.target.value);
         }
       }}
-      slotProps={adornment ? { input: { endAdornment: adornment } } : undefined}
+      slotProps={{ input: { endAdornment: selectEndAdornment } }}
     >
       {loading ? (
         <MenuItem disabled>{t('common.loading')}</MenuItem>
       ) : (
         <>
+          <MenuItem value="">
+            <em>{t('common.none')}</em>
+          </MenuItem>
           {options.map((option) => (
             <MenuItem key={option.value} value={option.value}>
               {option.label}
@@ -248,6 +345,7 @@ export function ConnectionSelect({
  * @param {(value: string[]) => void} props.onChange - Emits the picked chat ids.
  * @param {string[]} [props.types] - Connection type filter.
  * @param {string} [props.helperText] - Helper text under the field.
+ * @param {string} [props.botId] - Owning bot identifier.
  * @returns {React.ReactElement} The picker.
  */
 export function ConnectionMultiSelect({
@@ -256,16 +354,26 @@ export function ConnectionMultiSelect({
   onChange,
   types,
   helperText,
+  botId,
 }: {
   label: string;
   value: string[];
   onChange: (value: string[]) => void;
   types?: string[];
   helperText?: string;
+  botId?: string;
 }): React.ReactElement {
   const { t } = useTranslation();
-  const { connections, loading } = useConnections();
-  const currentValue = useMemo(() => (Array.isArray(value) ? value.map(String) : []), [value]);
+  const { showSuccess, showError } = useSnackbar();
+  const { connections, loading, refresh } = useConnections();
+  const { activeBot } = useBots();
+  const targetBotId = botId || activeBot?.id;
+  const [syncing, setSyncing] = useState(false);
+
+  const currentValue = useMemo(
+    () => (Array.isArray(value) ? value.map(String).filter((v) => v && v !== '0') : []),
+    [value],
+  );
 
   const options = useMemo(
     () => buildOptions(connections, types, currentValue),
@@ -274,14 +382,39 @@ export function ConnectionMultiSelect({
   const optionByValue = new Map(options.map((option) => [option.value, option]));
   const poolEmpty = isPoolEmpty(loading, connections, types);
 
+  const handleSync = async (): Promise<void> => {
+    if (!targetBotId || syncing) return;
+    setSyncing(true);
+    try {
+      const res = await apiFetch<{ synced: number }>(`/api/bots/${targetBotId}/connections/sync`, {
+        method: 'POST',
+      });
+      await refresh(targetBotId);
+      showSuccess(
+        t('connections.syncedCount', { count: res.synced }) || `Synced ${res.synced} chats`,
+      );
+    } catch (err: unknown) {
+      showError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   if (poolEmpty) {
     return (
       <Stack spacing={1}>
-        <NoConnectionsNotice compact typeLabel={typesToLabel(types)} />
+        <NoConnectionsNotice
+          compact
+          typeLabel={typesToLabel(types)}
+          botId={targetBotId}
+          onSync={handleSync}
+          syncing={syncing}
+        />
         <TextField
           label={label}
           size="small"
           fullWidth
+          disabled={syncing}
           placeholder="-1001234567890, @channel (comma separated)"
           value={currentValue.join(', ')}
           onChange={(event) =>
@@ -289,7 +422,7 @@ export function ConnectionMultiSelect({
               event.target.value
                 .split(',')
                 .map((entry) => entry.trim())
-                .filter(Boolean),
+                .filter((item) => Boolean(item) && item !== '0'),
             )
           }
           helperText={helperText}
@@ -304,6 +437,7 @@ export function ConnectionMultiSelect({
       label={label}
       size="small"
       fullWidth
+      disabled={syncing}
       value={currentValue}
       onChange={(event) => onChange((event.target.value as unknown as string[]).map(String))}
       helperText={helperText}

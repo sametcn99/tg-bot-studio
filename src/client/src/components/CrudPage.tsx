@@ -610,6 +610,7 @@ export default function CrudPage({
                   </Box>
                 )}
                 <CrudFormField
+                  botId={botId}
                   field={field}
                   value={form?.[field.key]}
                   onChange={(value) =>
@@ -679,10 +680,12 @@ function CellValue({
  * @returns {React.ReactElement} The widget.
  */
 function CrudFormField({
+  botId,
   field,
   value,
   onChange,
 }: {
+  botId?: string;
   field: CrudField;
   value: unknown;
   onChange: (value: unknown) => void;
@@ -699,10 +702,11 @@ function CrudFormField({
       return (
         <ConnectionSelect
           label={field.label}
-          value={value === undefined || value === null ? '' : String(value)}
+          value={value === undefined || value === null || value === 0 ? '' : String(value)}
           onChange={(next) => onChange(next)}
           types={field.connectionTypes}
           helperText={field.help}
+          botId={botId}
         />
       );
     case 'chatMultiSelect':
@@ -713,6 +717,7 @@ function CrudFormField({
           onChange={(next) => onChange(next)}
           types={field.connectionTypes}
           helperText={field.help}
+          botId={botId}
         />
       );
     case 'number':

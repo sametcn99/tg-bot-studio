@@ -149,6 +149,12 @@
     "choose": "اختر لغة:",
     "unsupported": "اللغات المدعومة: en, tr, de, ru, es, az, ar, fr, it, pt, uk, fa, id, uz."
   },
+  "fileSearch": {
+    "foundHeader": "{user}، نتائج \"{query}\":",
+    "moreCount": "…و {count} أخرى",
+    "noResult": "{user}، لا يوجد ملف مفهرس مطابق لـ \"{query}\".",
+    "tooShort": "اكتب ما تريد البحث عنه بعد الأمر ({min} أحرف على الأقل)."
+  },
   "topics": {
     "created": "تم إنشاء الموضوع: {name}",
     "renamed": "تمت إعادة تسمية الموضوع إلى {name}.",

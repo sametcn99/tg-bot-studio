@@ -70,8 +70,13 @@ export function BotProvider({ children }: { children: React.ReactNode }): React.
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [activeBotId, setActiveBotIdState] = useState<string | null>(() => {
-    const stored = window.localStorage.getItem('studio-active-bot');
-    return stored || null;
+    if (typeof window !== 'undefined') {
+      const match = window.location.pathname.match(/^\/bots\/([^/]+)/);
+      if (match && match[1]) return match[1];
+      const stored = window.localStorage.getItem('studio-active-bot');
+      if (stored) return stored;
+    }
+    return null;
   });
 
   const refresh = useCallback(() => {
@@ -80,9 +85,16 @@ export function BotProvider({ children }: { children: React.ReactNode }): React.
       .then((list) => {
         setBots(list);
         setError(null);
-        setActiveBotIdState((current) =>
-          current && list.some((bot) => bot.id === current) ? current : (list[0]?.id ?? null),
-        );
+        setActiveBotIdState((current) => {
+          if (current && list.some((bot) => bot.id === current)) return current;
+          if (typeof window !== 'undefined') {
+            const match = window.location.pathname.match(/^\/bots\/([^/]+)/);
+            if (match && match[1] && list.some((bot) => bot.id === match[1])) {
+              return match[1];
+            }
+          }
+          return list[0]?.id ?? null;
+        });
       })
       .catch((err: unknown) => {
         setError(localizedErrorMessage(err));

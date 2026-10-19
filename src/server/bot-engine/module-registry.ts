@@ -26,7 +26,7 @@ export interface ModuleDefinition {
 }
 
 /**
- * The full module catalog (21 toggleable modules).
+ * The full module catalog (36 toggleable modules).
  * @type {readonly ModuleDefinition[]}
  */
 export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
@@ -110,6 +110,26 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     description:
       'Reusable URL and Telegram file_id assets for every media-capable composer (welcome, broadcast, drip, autoresponder, scheduler) with a one-click picker.',
     defaultConfig: {},
+  },
+  {
+    key: 'file-search',
+    name: 'Group File Search',
+    category: 'Directory & Content',
+    description:
+      'Indexes files shared in targeted groups and auto-answers "does anyone have X?" questions with a mention and t.me links to the matching files; /ara and /find search on demand.',
+    defaultConfig: {
+      builtInTriggers: true,
+      extraTriggerPatterns: [],
+      matchMode: 'all',
+      includeCaptions: true,
+      minQueryLength: 3,
+      maxResults: 5,
+      userCooldownSeconds: 30,
+      chatCooldownSeconds: 10,
+      noResultReply: false,
+      fallbackCopy: true,
+    },
+    chatScoped: true,
   },
   {
     key: 'inline-mode',

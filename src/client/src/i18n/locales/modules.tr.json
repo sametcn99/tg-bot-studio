@@ -1268,6 +1268,75 @@
       ]
     }
   },
+  "file-search": {
+    "name": "Grup Dosya Arama",
+    "description": "Hedeflenen gruplarda paylaşılan dosyaları indeksler ve \"X var mı?\" sorularını t.me linkleriyle otomatik yanıtlar.",
+    "fields": {
+      "builtInTriggers": {
+        "label": "Yerleşik soru tetikleyicileri",
+        "help": "\"var mı\" veya \"does anyone have\" gibi Türkçe/İngilizce soru kalıplarını tanır."
+      },
+      "extraTriggerPatterns": {
+        "label": "Ek tetikleyici kalıpları (regex)",
+        "help": "Büyük/küçük harf duyarsız regex; eşleşen mesaj arama sorusu sayılır."
+      },
+      "matchMode": {
+        "label": "Eşleşme modu",
+        "help": "all: tüm terimler eşleşmeli; any: en az biri."
+      },
+      "includeCaptions": {
+        "label": "Medya açıklamalarını indeksle",
+        "help": "Foto/video açıklamaları arama metnine katılır."
+      },
+      "minQueryLength": {
+        "label": "En küçük sorgu uzunluğu",
+        "help": "Daha kısa sorular yok sayılır."
+      },
+      "maxResults": {
+        "label": "Yanıt başına en fazla sonuç",
+        "help": "Bir yanıt en fazla kaç dosya listeler."
+      },
+      "userCooldownSeconds": {
+        "label": "Kullanıcı başına bekleme (sn)",
+        "help": "Aynı kullanıcıya verilen otomatik yanıtlar arasındaki en az saniye."
+      },
+      "chatCooldownSeconds": {
+        "label": "Sohbet başına bekleme (sn)",
+        "help": "Aynı sohbette yanıtlar arasındaki en az saniye."
+      },
+      "noResultReply": {
+        "label": "Sonuç yoksa yanıt ver",
+        "help": "Kapalı: sessiz kal. Açık: sorana eşleşme olmadığını söyle."
+      },
+      "fallbackCopy": {
+        "label": "Basit gruplarda dosyayı yeniden gönder",
+        "help": "Basit gruplarda mesaj linki yoktur; dosya yanıt olarak kopyalanır."
+      }
+    },
+    "docs": {
+      "overview": [
+        "Hedeflenen grupta paylaşılan her dosya (belge, video, ses, açıklamalı foto) dosya adı ve açıklamasıyla indekslenir.",
+        "Biri \"X var mı?\" diye sorduğunda bot, soruyu soranı etiketleyip eşleşen dosyaların t.me linkleriyle yanıtlar.",
+        "/ara ve /find komutları soru kalıbına ihtiyaç duymadan indeksi arar.",
+        "Türkçe karakterler otomatik katlanır: \"basvuru\" yazınca \"Başvuru Formu.pdf\" bulunur.",
+        "Eski dosyalar da gerekli mi? Connections → Tarama Hesapları'ndan bir hesap bağlayın ve bu sayfadan geçmiş taraması çalıştırın."
+      ],
+      "setup": [
+        "Bot üye mesajlarını görmeli: grubun admini yapın veya @BotFather üzerinden gizlilik modunu kapatın (/setprivacy).",
+        "Modülü etkinleştirin, sonra sohbet bazlı ayarlarndan hedef grupları Sohbet Bağlantıları'ndan ekleyin.",
+        "Bu andan itibaren paylaşılan dosyalar indekslenir — Bot API mesaj geçmişini okuyamaz.",
+        "İsterseniz diğer diller için ek regex tetikleyicileri ekleyin.",
+        "İsteğe bağlı: modül etkinleştirilmeden önce paylaşılan dosyaları indekslemek için bir tarama hesabı bağlayıp geçmiş taramasını çalıştırın."
+      ],
+      "troubleshooting": [
+        "Bot yanıt vermiyor: gizlilik modunu/admin yetkilerini ve sohbetin sohbet bazlı ayarlar hedefi olduğunu kontrol edin.",
+        "Eski dosyalar aranamaz: indeks yalnızca etkinleştirildikten sonra paylaşılan dosyaları içerir.",
+        "Basit (süper olmayan) gruplarda mesaj linki yoktur; fallbackCopy açıkken bot dosyayı kendisi yeniden gönderir.",
+        "Çok mu konuşuyor? Bekleme sürelerini artırın veya yerleşik tetikleyicileri kapatıp yalnızca /ara'yı bırakın.",
+        "Tarama hesabı üye değil diyor: seçilen tarama hesabı o grubun üyesi olmalı."
+      ]
+    }
+  },
   "inline-mode": {
     "name": "Inline Mod Yanıtları",
     "description": "Herhangi bir sohbette @bot sorgularını kayıtlı hazır yanıtlarla veya AI yanıtlarıyla cevaplar.",

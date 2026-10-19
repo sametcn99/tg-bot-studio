@@ -149,6 +149,12 @@
     "choose": "یک زبان انتخاب کنید:",
     "unsupported": "زبان‌های پشتیبانی‌شده: en, tr, de, ru, es, az, ar, fr, it, pt, uk, fa, id, uz."
   },
+  "fileSearch": {
+    "foundHeader": "{user}، نتایج برای «{query}»:",
+    "moreCount": "…و {count} مورد دیگر",
+    "noResult": "{user}، هیچ فایل ایندکس‌شده‌ای با «{query}» مطابقت ندارد.",
+    "tooShort": "بعد از دستور بنویس چه چیزی را جستجو کنیم (حداقل {min} نویسه)."
+  },
   "topics": {
     "created": "موضوع ایجاد شد: {name}",
     "renamed": "نام موضوع به {name} تغییر کرد.",

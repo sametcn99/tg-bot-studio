@@ -1268,6 +1268,75 @@
       ]
     }
   },
+  "file-search": {
+    "name": "Gruppen-Dateisuche",
+    "description": "Indiziert in Zielgruppen geteilte Dateien und beantwortet “hat jemand X?”-Fragen automatisch mit t.me-Links.",
+    "fields": {
+      "builtInTriggers": {
+        "label": "Eingebaute Fragen-Auslöser",
+        "help": "Erkennt türkische/englische Fragephrasen wie “var mı” oder “does anyone have”."
+      },
+      "extraTriggerPatterns": {
+        "label": "Zusätzliche Auslöser (Regex)",
+        "help": "Groß-/Kleinschreibung ignorierende Regex; ein Treffer markiert die Nachricht als Suchfrage."
+      },
+      "matchMode": {
+        "label": "Treffermodus",
+        "help": "all: jeder Begriff muss passen; any: mindestens einer."
+      },
+      "includeCaptions": {
+        "label": "Medien-Beschriftungen indizieren",
+        "help": "Beschriftungen von Fotos/Videos werden in den Suchtext aufgenommen."
+      },
+      "minQueryLength": {
+        "label": "Minimale Suchlänge",
+        "help": "Kürzere Fragen werden ignoriert."
+      },
+      "maxResults": {
+        "label": "Max. Ergebnisse pro Antwort",
+        "help": "Wie viele Dateien eine Antwort höchstens auflistet."
+      },
+      "userCooldownSeconds": {
+        "label": "Cooldown pro Benutzer (s)",
+        "help": "Mindestsekunden zwischen Auto-Antworten für denselben Benutzer."
+      },
+      "chatCooldownSeconds": {
+        "label": "Cooldown pro Chat (s)",
+        "help": "Mindestsekunden zwischen Antworten im selben Chat."
+      },
+      "noResultReply": {
+        "label": "Antworten, wenn nichts gefunden",
+        "help": "Aus: still bleiben. Ein: dem Frager mitteilen, dass nichts passte."
+      },
+      "fallbackCopy": {
+        "label": "Dateien in einfachen Gruppen erneut senden",
+        "help": "Einfache Gruppen haben keine Nachrichten-Links; die Datei wird als Antwort kopiert."
+      }
+    },
+    "docs": {
+      "overview": [
+        "Jede in einer Zielgruppe geteilte Datei (Dokumente, Videos, Audio, Fotos mit Beschriftung) wird mit Dateiname und Beschriftung indiziert.",
+        "Wenn jemand “X var mı?” / “has anyone got X?” fragt, antwortet der Bot mit Erwähnung und t.me-Links zu den passenden Dateien.",
+        "/ara und /find durchsuchen den Index auf Knopfdruck ohne Fragephrase.",
+        "Türkische Zeichen werden automatisch gefaltet: “basvuru” findet “Başvuru Formu.pdf”.",
+        "Auch ältere Dateien? Verbinde ein Scan-Konto (Connections → Scan-Konten) und starte auf dieser Seite einen Verlaufs-Backfill."
+      ],
+      "setup": [
+        "Der Bot muss Mitgliedsnachrichten sehen: zum Gruppenadmin machen oder den Privacy-Modus bei @BotFather deaktivieren (/setprivacy).",
+        "Modul aktivieren, dann in der Per-Chat-Konfiguration die Zielgruppen aus den Chat-Verbindungen hinzufügen.",
+        "Ab diesem Moment geteilte Dateien werden indiziert — die Bot-API kann den Nachrichtenverlauf nicht lesen.",
+        "Optional zusätzliche Auslöser-Regexes für andere Sprachen hinterlegen.",
+        "Optional: Verbinde ein Scan-Konto und führe den Backfill aus, um vor der Aktivierung geteilte Dateien zu indizieren."
+      ],
+      "troubleshooting": [
+        "Bot antwortet nicht: Privacy-Modus/Admin-Rechte prüfen und sicherstellen, dass der Chat in der Per-Chat-Anleitung Ziel ist.",
+        "Alte Dateien sind nicht durchsuchbar: der Index enthält nur nach dem Aktivieren geteilte Dateien.",
+        "In einfachen (keine Super-)Gruppen gibt es keine Nachrichten-Links; der Bot sendet die Datei selbst, wenn fallbackCopy an ist.",
+        "Zu geschwätzig? Cooldowns erhöhen oder eingebaute Auslöser ausschalten und nur /ara behalten.",
+        "Backfill meldet, das Konto sei kein Mitglied: das gewählte Scan-Konto muss Mitglied dieser Gruppe sein."
+      ]
+    }
+  },
   "inline-mode": {
     "name": "Inline-Modus-Antworten",
     "description": "Beantwortet @bot-Abfragen in jedem Chat mit gespeicherten Schnellantworten oder KI-Antworten.",

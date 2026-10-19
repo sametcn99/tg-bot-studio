@@ -131,17 +131,19 @@ export class ChatConnectionModel {
   }
 
   /**
-   * Upserts a discovered bot group.
+   * Upserts a discovered bot group and mirrors it to ChatConnection.
    */
   async upsertGroup(data: {
     botId: string;
-    chatId: number | bigint;
+    chatId: number | bigint | string;
     title: string;
     type: string;
+    username?: string | null;
     isActive?: number;
   }): Promise<BotGroup> {
     const chatId = BigInt(data.chatId);
-    return this.prisma.botGroup.upsert({
+    const chatIdStr = data.chatId.toString();
+    const group = await this.prisma.botGroup.upsert({
       where: {
         botId_chatId: { botId: data.botId, chatId },
       },
@@ -160,5 +162,32 @@ export class ChatConnectionModel {
         ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
       },
     });
+
+    try {
+      await this.prisma.chatConnection.upsert({
+        where: {
+          botId_chatId: { botId: data.botId, chatId: chatIdStr },
+        },
+        create: {
+          botId: data.botId,
+          chatId: chatIdStr,
+          title: data.title,
+          type: data.type,
+          username: data.username ?? null,
+          isActive: data.isActive ?? 1,
+          createdAt: new Date().toISOString(),
+        },
+        update: {
+          title: data.title,
+          type: data.type,
+          ...(data.username !== undefined ? { username: data.username } : {}),
+          ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
+        },
+      });
+    } catch {
+      // Ignore mirror errors
+    }
+
+    return group;
   }
 }

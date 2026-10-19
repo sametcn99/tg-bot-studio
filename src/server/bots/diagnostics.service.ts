@@ -134,6 +134,7 @@ export class DiagnosticsService {
         'cleaning',
         'antiraid',
         'autoresponder',
+        'file-search',
       ].includes(String(m.key)),
     );
     if (canReadAll) {

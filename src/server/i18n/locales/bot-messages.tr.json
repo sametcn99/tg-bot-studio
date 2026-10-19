@@ -149,6 +149,12 @@
     "choose": "Bir dil seç:",
     "unsupported": "Desteklenen diller: en, tr, de, ru, es, az, ar, fr, it, pt, uk, fa, id, uz."
   },
+  "fileSearch": {
+    "foundHeader": "{user}, \"{query}\" için bulduklarım:",
+    "moreCount": "…ve {count} tane daha",
+    "noResult": "{user}, \"{query}\" ile eşleşen indekslenmiş dosya yok.",
+    "tooShort": "Aranacak metni komuttan sonra yazın (en az {min} karakter)."
+  },
   "topics": {
     "created": "Konu oluşturuldu: {name}",
     "renamed": "Konu adı {name} yapıldı.",

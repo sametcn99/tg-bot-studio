@@ -6,6 +6,8 @@ import PageHeader from '../components/PageHeader';
 import AiKnowledgeDocsManager from '../components/AiKnowledgeDocsManager';
 import FederationManager from '../components/FederationManager';
 import BlockedUsersManager from '../components/BlockedUsersManager';
+import FileIndexSection from '../components/FileIndexSection';
+import BackfillSection from '../components/BackfillSection';
 import { LoadingState } from '../components/Feedback';
 import { ConfigFieldInput } from '../components/ConfigFieldInput';
 import { ChatModuleConfigsSection } from '../components/ChatModuleConfigsSection';
@@ -241,6 +243,8 @@ export default function ModuleConfigPage({
       {module.key === 'ai-assistant' && <AiKnowledgeDocsManager botId={botId} />}
       {module.key === 'federation' && <FederationManager botId={botId} />}
       {module.key === 'moderation' && <BlockedUsersManager botId={botId} />}
+      {module.key === 'file-search' && <BackfillSection botId={botId} />}
+      {module.key === 'file-search' && <FileIndexSection botId={botId} />}
     </Box>
   );
 }

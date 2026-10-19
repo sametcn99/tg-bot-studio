@@ -149,6 +149,12 @@
     "choose": "Bir dil seçin:",
     "unsupported": "Dəstəklənən dillər: en, tr, de, ru, es, az, ar, fr, it, pt, uk, fa, id, uz."
   },
+  "fileSearch": {
+    "foundHeader": "{user}, «{query}» üçün tapılanlar:",
+    "moreCount": "…və daha {count}",
+    "noResult": "{user}, «{query}» ilə uyğun indekslənmiş fayl yoxdur.",
+    "tooShort": "Əmrdən sonra nə axtarmaq istədiyini yaz (ən azı {min} simvol)."
+  },
   "topics": {
     "created": "Mövzu yaradıldı: {name}",
     "renamed": "Mövzunun adı {name} edildi.",

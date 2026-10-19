@@ -41,6 +41,8 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { UsersCrmModule } from './modules/users-crm/users-crm.module';
 import { MiniAppsModule } from './modules/mini-apps/mini-apps.module';
 import { MediaLibraryModule } from './modules/media-library/media-library.module';
+import { FileSearchModule } from './modules/file-search/file-search.module';
+import { ScanAccountsModule } from './modules/scan-accounts/scan-accounts.module';
 import { InlineModeModule } from './modules/inline-mode/inline-mode.module';
 import { FlowsModule } from './modules/flows/flows.module';
 import { HealthMonitorModule } from './modules/health-monitor/health-monitor.module';
@@ -108,6 +110,8 @@ import { TemplatesModule } from './templates/templates.module';
     UsersCrmModule,
     MiniAppsModule,
     MediaLibraryModule,
+    FileSearchModule,
+    ScanAccountsModule,
     InlineModeModule,
     FlowsModule,
     HealthMonitorModule,

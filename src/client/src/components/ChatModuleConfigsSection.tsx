@@ -69,11 +69,15 @@ export function ChatModuleConfigsSection({
   fixedChatId?: string;
 }): React.ReactElement {
   const { t } = useTranslation();
-  const { connections, loading: connectionsLoading } = useConnections();
+  const { connections, loading: connectionsLoading, refresh } = useConnections();
   const [entries, setEntries] = useState<Record<string, Record<string, unknown>>>({});
   const [selectedChatId, setSelectedChatId] = useState<string>(fixedChatId ?? '');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    refresh(botId);
+  }, [botId, refresh]);
 
   const reloadEntries = useCallback((): void => {
     const request = fixedChatId

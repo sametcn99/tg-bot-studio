@@ -40,13 +40,13 @@ export interface ChatConnection {
 interface ConnectionsContextValue {
   connections: ChatConnection[];
   loading: boolean;
-  refresh: () => void;
+  refresh: (targetBotId?: string) => Promise<ChatConnection[]>;
 }
 
 const ConnectionsContext = createContext<ConnectionsContextValue>({
   connections: [],
   loading: true,
-  refresh: () => undefined,
+  refresh: () => Promise.resolve([]),
 });
 
 /**
@@ -66,28 +66,43 @@ export function ConnectionsProvider({
   const [connections, setConnections] = useState<ChatConnection[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const refresh = useCallback(() => {
-    if (!activeBot) {
-      setConnections([]);
-      setLoading(false);
-      return;
-    }
+  const fetchConnections = useCallback((targetBotId: string) => {
     setLoading(true);
-    apiFetch<ChatConnection[]>(`/api/bots/${activeBot.id}/connections`)
+    return apiFetch<ChatConnection[]>(`/api/bots/${targetBotId}/connections`)
       .then((rows) => {
         setConnections(rows);
         setLoading(false);
+        return rows;
       })
       .catch(() => {
         setConnections([]);
         setLoading(false);
+        return [];
       });
-  }, [activeBot]);
+  }, []);
+
+  const refresh = useCallback(
+    (targetBotId?: string) => {
+      const id = targetBotId || activeBot?.id;
+      if (!id) {
+        setConnections([]);
+        setLoading(false);
+        return Promise.resolve([]);
+      }
+      return fetchConnections(id);
+    },
+    [activeBot?.id, fetchConnections],
+  );
 
   useEffect(() => {
     if (!authenticated) return;
-    refresh();
-  }, [authenticated, refresh]);
+    if (activeBot?.id) {
+      void fetchConnections(activeBot.id);
+    } else {
+      setConnections([]);
+      setLoading(false);
+    }
+  }, [authenticated, activeBot?.id, fetchConnections]);
 
   const value = useMemo(() => ({ connections, loading, refresh }), [connections, loading, refresh]);
 

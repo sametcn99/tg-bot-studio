@@ -138,59 +138,67 @@ export class CleaningRuntime extends BotModuleHandler {
     const { bot, botId } = ctx;
 
     // Used command cleanup (delayed so commands still get processed).
-    bot.on('message:text', async (update) => {
-      if (update.chat?.type !== 'supergroup' && update.chat?.type !== 'group') return;
-      const text = update.msg.text;
-      if (!text.startsWith('/')) return;
+    bot.on('message:text', async (update, next) => {
+      try {
+        if (update.chat?.type !== 'supergroup' && update.chat?.type !== 'group') return;
+        const text = update.msg.text;
+        if (!text.startsWith('/')) return;
 
-      const config = await this.chatSettings.getEffectiveConfig(
-        botId,
-        update.chat.id,
-        this.moduleKey,
-      );
-      if (!isChatTargeted(config.targetChats, update.chat.id)) return;
-      const setting = String(config.cleanCommand ?? 'off');
-      if (setting === 'off') return;
+        const config = await this.chatSettings.getEffectiveConfig(
+          botId,
+          update.chat.id,
+          this.moduleKey,
+        );
+        if (!isChatTargeted(config.targetChats, update.chat.id)) return;
+        const setting = String(config.cleanCommand ?? 'off');
+        if (setting === 'off') return;
 
-      const command = text.slice(1).split(/[\s@]/)[0].toLowerCase();
-      const kind = ADMIN_COMMANDS.has(command)
-        ? 'admin'
-        : USER_COMMANDS.has(command)
-          ? 'user'
-          : 'other';
-      const wanted =
-        setting === 'all' ||
-        (setting === 'admin' && kind === 'admin') ||
-        (setting === 'user' && kind === 'user') ||
-        (setting === 'other' && kind === 'other');
-      if (!wanted) return;
+        const command = text.slice(1).split(/[\s@]/)[0].toLowerCase();
+        const kind = ADMIN_COMMANDS.has(command)
+          ? 'admin'
+          : USER_COMMANDS.has(command)
+            ? 'user'
+            : 'other';
+        const wanted =
+          setting === 'all' ||
+          (setting === 'admin' && kind === 'admin') ||
+          (setting === 'user' && kind === 'user') ||
+          (setting === 'other' && kind === 'other');
+        if (!wanted) return;
 
-      const chatId = update.chat.id;
-      const messageId = update.msg.message_id;
-      setTimeout(() => {
-        void bot.api.deleteMessage(chatId, messageId).catch(() => undefined);
-      }, CLEAN_DELAY_MS);
+        const chatId = update.chat.id;
+        const messageId = update.msg.message_id;
+        setTimeout(() => {
+          void bot.api.deleteMessage(chatId, messageId).catch(() => undefined);
+        }, CLEAN_DELAY_MS);
+      } finally {
+        await next();
+      }
     });
 
     // Service message cleanup by type.
-    bot.on('message', async (update) => {
-      if (update.chat?.type !== 'supergroup' && update.chat?.type !== 'group') return;
-      const msg = update.msg;
-      const type = this.serviceType(msg);
-      if (!type) return;
+    bot.on('message', async (update, next) => {
+      try {
+        if (update.chat?.type !== 'supergroup' && update.chat?.type !== 'group') return;
+        const msg = update.msg;
+        const type = this.serviceType(msg);
+        if (!type) return;
 
-      const config = await this.chatSettings.getEffectiveConfig(
-        botId,
-        update.chat.id,
-        this.moduleKey,
-      );
-      if (!isChatTargeted(config.targetChats, update.chat.id)) return;
-      const types = Array.isArray(config.cleanServiceTypes)
-        ? (config.cleanServiceTypes as string[])
-        : [];
-      if (types.length === 0) return;
-      if (types.includes('all') || types.includes(type)) {
-        await update.deleteMessage().catch(() => undefined);
+        const config = await this.chatSettings.getEffectiveConfig(
+          botId,
+          update.chat.id,
+          this.moduleKey,
+        );
+        if (!isChatTargeted(config.targetChats, update.chat.id)) return;
+        const types = Array.isArray(config.cleanServiceTypes)
+          ? (config.cleanServiceTypes as string[])
+          : [];
+        if (types.length === 0) return;
+        if (types.includes('all') || types.includes(type)) {
+          await update.deleteMessage().catch(() => undefined);
+        }
+      } finally {
+        await next();
       }
     });
 

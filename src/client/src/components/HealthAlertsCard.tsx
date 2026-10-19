@@ -99,7 +99,7 @@ export default function HealthAlertsCard({ botId }: { botId: string }): React.Re
     level === 'failed' ? 'error' : level === 'recovering' ? 'warning' : 'success';
 
   return (
-    <Card>
+    <Card sx={{ mb: 3, borderRadius: 3 }}>
       <CardContent>
         <Stack
           direction="row"
@@ -160,6 +160,7 @@ export default function HealthAlertsCard({ botId }: { botId: string }): React.Re
                   setSettings((current) => (current ? { ...current, alertChatId: value } : current))
                 }
                 helperText={t('health.alertChatIdHelp')}
+                botId={botId}
               />
               <Box sx={{ pt: 0.5 }}>
                 <Button size="small" variant="contained" onClick={() => save(settings)}>

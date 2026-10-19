@@ -1,9 +1,10 @@
-import React, { useCallback, useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
 import { Box, Drawer, IconButton, useMediaQuery, useTheme } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import MenuIcon from '@mui/icons-material/Menu';
 import { useTranslation } from 'react-i18next';
+import { useBots } from '../context/BotContext';
 import BotSimulatorDrawer from './BotSimulatorDrawer';
 import Sidebar, { SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_WIDTH } from './Sidebar';
 
@@ -20,11 +21,23 @@ const SIDEBAR_COLLAPSED_KEY = 'studio-sidebar-collapsed';
 export default function Layout(): React.ReactElement {
   const { t } = useTranslation();
   const theme = useTheme();
+  const location = useLocation();
+  const { activeBot, setActiveBotId } = useBots();
   const isCompact = useMediaQuery(theme.breakpoints.down('md'));
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [collapsed, setCollapsed] = useState<boolean>(
     () => window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1',
   );
+
+  useEffect(() => {
+    const match = location.pathname.match(/^\/bots\/([^/]+)/);
+    if (match && match[1]) {
+      const routeBotId = match[1];
+      if (activeBot?.id !== routeBotId) {
+        setActiveBotId(routeBotId);
+      }
+    }
+  }, [location.pathname, activeBot?.id, setActiveBotId]);
 
   const toggleCollapsed = useCallback((): void => {
     setCollapsed((current) => {

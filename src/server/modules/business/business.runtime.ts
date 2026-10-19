@@ -35,35 +35,39 @@ export class BusinessRuntime extends BotModuleHandler {
     const autoReplyText = String(ctx.config.autoReplyText ?? '');
     if (!autoReplyText) return;
 
-    bot.on('message', async (update) => {
-      const message = update.msg as {
-        business_connection_id?: string;
-        business_chat_id?: number;
-        chat?: { id: number };
-        text?: string;
-      };
-      if (!message.business_connection_id) return;
-      if (message.text?.startsWith('/')) return;
-      if (configuredConnection && message.business_connection_id !== configuredConnection) return;
-
-      // Business replies target the business chat id when present.
-      const target = message.business_chat_id ?? message.chat?.id;
-      if (!target) return;
-
+    bot.on('message', async (update, next) => {
       try {
-        await (
-          bot.api.raw as unknown as {
-            sendMessage: (params: Record<string, unknown>) => Promise<unknown>;
-          }
-        ).sendMessage({
-          chat_id: target,
-          business_connection_id: message.business_connection_id,
-          text: autoReplyText,
-        });
-      } catch (error) {
-        this.logger.warn(
-          `Business reply failed: ${error instanceof Error ? error.message : String(error)}`,
-        );
+        const message = update.msg as {
+          business_connection_id?: string;
+          business_chat_id?: number;
+          chat?: { id: number };
+          text?: string;
+        };
+        if (!message.business_connection_id) return;
+        if (message.text?.startsWith('/')) return;
+        if (configuredConnection && message.business_connection_id !== configuredConnection) return;
+
+        // Business replies target the business chat id when present.
+        const target = message.business_chat_id ?? message.chat?.id;
+        if (!target) return;
+
+        try {
+          await (
+            bot.api.raw as unknown as {
+              sendMessage: (params: Record<string, unknown>) => Promise<unknown>;
+            }
+          ).sendMessage({
+            chat_id: target,
+            business_connection_id: message.business_connection_id,
+            text: autoReplyText,
+          });
+        } catch (error) {
+          this.logger.warn(
+            `Business reply failed: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
+      } finally {
+        await next();
       }
     });
   }

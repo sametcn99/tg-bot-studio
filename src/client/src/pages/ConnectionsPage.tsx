@@ -22,6 +22,8 @@ import {
   Tooltip,
   Typography,
   Chip,
+  Tab,
+  Tabs,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
@@ -30,12 +32,13 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SyncIcon from '@mui/icons-material/Sync';
 import SettingsIcon from '@mui/icons-material/Settings';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { apiFetch } from '../services/api';
 import PageHeader from '../components/PageHeader';
 import ConfirmDialog from '../components/ConfirmDialog';
+import ScanAccountsSection from '../components/ScanAccountsSection';
 import { LoadingState } from '../components/Feedback';
 import { useConnections } from '../context/ConnectionsContext';
 import { useModuleDocs } from '../context/ModuleDocsContext';
@@ -87,6 +90,8 @@ export default function ConnectionsPage({
 }): React.ReactElement {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get('tab') === 'scan-accounts' ? 'scan-accounts' : 'chats';
   const { connections, loading, refresh } = useConnections();
   const { openDocs } = useModuleDocs();
   const [form, setForm] = useState<Record<string, string> | null>(null);
@@ -101,6 +106,7 @@ export default function ConnectionsPage({
   const compactDialogs = useMediaQuery(theme.breakpoints.down('sm'));
 
   useEffect(() => {
+    refresh(botId);
     apiFetch<Array<{ key: string; isEnabled: boolean; config: Record<string, unknown> }>>(
       `/api/bots/${botId}/modules`,
     )
@@ -113,7 +119,7 @@ export default function ConnectionsPage({
         }
       })
       .catch(() => undefined);
-  }, [botId]);
+  }, [botId, refresh]);
 
   /**
    * Persists the auto-sync preference in the connections module config.
@@ -174,7 +180,7 @@ export default function ConnectionsPage({
     apiFetch(url, { method: editingId ? 'PATCH' : 'POST', body: JSON.stringify(payload) })
       .then(() => {
         setForm(null);
-        refresh();
+        refresh(botId);
       })
       .catch((err: Error) => setError(localizedErrorMessage(err)));
   }
@@ -188,7 +194,7 @@ export default function ConnectionsPage({
     apiFetch(`/api/bots/${botId}/connections/${deleting.id}`, { method: 'DELETE' })
       .then(() => {
         setDeleting(null);
-        refresh();
+        refresh(botId);
       })
       .catch((err: Error) => setError(localizedErrorMessage(err)));
   }
@@ -207,7 +213,7 @@ export default function ConnectionsPage({
             ? t('connections.syncedCount', { count: result.synced })
             : t('connections.nothingToSync'),
         );
-        refresh();
+        refresh(botId);
       })
       .catch((err: Error) => setError(localizedErrorMessage(err)));
   }
@@ -223,8 +229,17 @@ export default function ConnectionsPage({
       method: 'PATCH',
       body: JSON.stringify({ isActive: !currentActive }),
     })
-      .then(refresh)
+      .then(() => refresh(botId))
       .catch((err: Error) => setError(localizedErrorMessage(err)));
+  }
+
+  /**
+   * Switches the page tab, reflected in the URL for deep links.
+   * @param {string} next - Tab key ('chats' | 'scan-accounts').
+   * @returns {void}
+   */
+  function switchTab(next: string): void {
+    setSearchParams(next === 'chats' ? {} : { tab: next }, { replace: true });
   }
 
   return (
@@ -234,46 +249,48 @@ export default function ConnectionsPage({
         subtitle={module.description}
         onDocs={() => openDocs(module)}
         actions={
-          <Stack
-            direction="row"
-            spacing={1}
-            sx={{
-              alignItems: 'center',
-            }}
-          >
-            <Tooltip title={t('connections.autoSyncTooltip')}>
-              <Stack
-                direction="row"
-                spacing={0.5}
-                sx={{
-                  alignItems: 'center',
-                }}
-              >
-                <Typography
-                  variant="body2"
+          tab === 'chats' ? (
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: 'center',
+              }}
+            >
+              <Tooltip title={t('connections.autoSyncTooltip')}>
+                <Stack
+                  direction="row"
+                  spacing={0.5}
                   sx={{
-                    color: 'text.secondary',
+                    alignItems: 'center',
                   }}
                 >
-                  {t('connections.autoSync')}
-                </Typography>
-                <Switch
-                  size="small"
-                  checked={autoSync}
-                  onChange={(event) => toggleAutoSync(event.target.checked)}
-                  slotProps={{
-                    input: { 'aria-label': t('connections.autoSyncAria') },
-                  }}
-                />
-              </Stack>
-            </Tooltip>
-            <Button startIcon={<SyncIcon />} onClick={sync}>
-              {t('connections.sync')}
-            </Button>
-            <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
-              {t('actions.add')}
-            </Button>
-          </Stack>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'text.secondary',
+                    }}
+                  >
+                    {t('connections.autoSync')}
+                  </Typography>
+                  <Switch
+                    size="small"
+                    checked={autoSync}
+                    onChange={(event) => toggleAutoSync(event.target.checked)}
+                    slotProps={{
+                      input: { 'aria-label': t('connections.autoSyncAria') },
+                    }}
+                  />
+                </Stack>
+              </Tooltip>
+              <Button startIcon={<SyncIcon />} onClick={sync}>
+                {t('connections.sync')}
+              </Button>
+              <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
+                {t('actions.add')}
+              </Button>
+            </Stack>
+          ) : undefined
         }
       />
 
@@ -288,137 +305,153 @@ export default function ConnectionsPage({
         </Alert>
       )}
 
-      <Card>
-        {loading ? (
-          <LoadingState label={t('common.loading')} />
-        ) : (
-          <TableContainer sx={{ overflowX: 'auto' }}>
-            <Table size="small" aria-label={t('connections.recordsAria', { name: module.name })}>
-              <TableHead>
-                <TableRow>
-                  <TableCell>{t('common.title')}</TableCell>
-                  <TableCell>{t('connections.type')}</TableCell>
-                  <TableCell>{t('connections.chatId')}</TableCell>
-                  <TableCell>{t('connections.username')}</TableCell>
-                  <TableCell>{t('status.active')}</TableCell>
-                  <TableCell align="right">{t('common.actions')}</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {connections.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell>
-                      <Typography
-                        variant="body2"
-                        noWrap
-                        sx={{
-                          fontWeight: 600,
-                          maxWidth: 260,
-                        }}
-                      >
-                        {row.title}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        size="small"
-                        color={chipColor(row.type)}
-                        label={typeLabel(row.type, t)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Typography
-                        variant="body2"
-                        noWrap
-                        sx={{
-                          fontFamily: 'monospace',
-                        }}
-                      >
-                        {row.chat_id ?? row.chatId}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" noWrap>
-                        {row.username ? `@${row.username}` : '—'}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Switch
-                        size="small"
-                        checked={Boolean(row.is_active ?? row.isActive)}
-                        onChange={() => toggleActive(row)}
-                        slotProps={{
-                          input: { 'aria-label': `${row.title} ${t('status.active')}` },
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Tooltip title={t('connectionSettings.title', { title: row.title })}>
-                        <IconButton
-                          size="small"
-                          onClick={() => navigate(`/bots/${botId}/connections/${row.id}/settings`)}
-                          aria-label={`${t('connectionSettings.title', { title: row.title })}`}
-                        >
-                          <SettingsIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title={t('actions.edit')}>
-                        <IconButton
-                          size="small"
-                          onClick={() => openEdit(row)}
-                          aria-label={`${t('actions.edit')} ${row.title}`}
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title={t('actions.delete')}>
-                        <IconButton
-                          size="small"
-                          onClick={() => setDeleting(row)}
-                          aria-label={`${t('actions.delete')} ${row.title}`}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {connections.length === 0 && (
+      <Tabs
+        value={tab}
+        onChange={(_event, next: string) => switchTab(next)}
+        sx={{ mb: 2 }}
+        slotProps={{ indicator: {} }}
+      >
+        <Tab value="chats" label={t('scanAccounts.tabChats')} />
+        <Tab value="scan-accounts" label={t('scanAccounts.tabScan')} />
+      </Tabs>
+
+      {tab === 'scan-accounts' && <ScanAccountsSection botId={botId} />}
+
+      {tab === 'chats' && (
+        <Card>
+          {loading ? (
+            <LoadingState label={t('common.loading')} />
+          ) : (
+            <TableContainer sx={{ overflowX: 'auto' }}>
+              <Table size="small" aria-label={t('connections.recordsAria', { name: module.name })}>
+                <TableHead>
                   <TableRow>
-                    <TableCell colSpan={6}>
-                      <Stack
-                        spacing={1}
-                        sx={{
-                          alignItems: 'center',
-                          py: 3,
-                        }}
-                      >
-                        <Typography
-                          align="center"
-                          sx={{
-                            color: 'text.secondary',
-                          }}
-                        >
-                          {t('connections.empty')}
-                        </Typography>
-                        <Typography
-                          variant="caption"
-                          align="center"
-                          sx={{
-                            color: 'text.secondary',
-                          }}
-                        >
-                          {t('connections.emptyHint')}
-                        </Typography>
-                      </Stack>
-                    </TableCell>
+                    <TableCell>{t('common.title')}</TableCell>
+                    <TableCell>{t('connections.type')}</TableCell>
+                    <TableCell>{t('connections.chatId')}</TableCell>
+                    <TableCell>{t('connections.username')}</TableCell>
+                    <TableCell>{t('status.active')}</TableCell>
+                    <TableCell align="right">{t('common.actions')}</TableCell>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
-      </Card>
+                </TableHead>
+                <TableBody>
+                  {connections.map((row) => (
+                    <TableRow key={row.id}>
+                      <TableCell>
+                        <Typography
+                          variant="body2"
+                          noWrap
+                          sx={{
+                            fontWeight: 600,
+                            maxWidth: 260,
+                          }}
+                        >
+                          {row.title}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          size="small"
+                          color={chipColor(row.type)}
+                          label={typeLabel(row.type, t)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Typography
+                          variant="body2"
+                          noWrap
+                          sx={{
+                            fontFamily: 'monospace',
+                          }}
+                        >
+                          {row.chat_id ?? row.chatId}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" noWrap>
+                          {row.username ? `@${row.username}` : '—'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Switch
+                          size="small"
+                          checked={Boolean(row.is_active ?? row.isActive)}
+                          onChange={() => toggleActive(row)}
+                          slotProps={{
+                            input: { 'aria-label': `${row.title} ${t('status.active')}` },
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell align="right">
+                        <Tooltip title={t('connectionSettings.title', { title: row.title })}>
+                          <IconButton
+                            size="small"
+                            onClick={() =>
+                              navigate(`/bots/${botId}/connections/${row.id}/settings`)
+                            }
+                            aria-label={`${t('connectionSettings.title', { title: row.title })}`}
+                          >
+                            <SettingsIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title={t('actions.edit')}>
+                          <IconButton
+                            size="small"
+                            onClick={() => openEdit(row)}
+                            aria-label={`${t('actions.edit')} ${row.title}`}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title={t('actions.delete')}>
+                          <IconButton
+                            size="small"
+                            onClick={() => setDeleting(row)}
+                            aria-label={`${t('actions.delete')} ${row.title}`}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {connections.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6}>
+                        <Stack
+                          spacing={1}
+                          sx={{
+                            alignItems: 'center',
+                            py: 3,
+                          }}
+                        >
+                          <Typography
+                            align="center"
+                            sx={{
+                              color: 'text.secondary',
+                            }}
+                          >
+                            {t('connections.empty')}
+                          </Typography>
+                          <Typography
+                            variant="caption"
+                            align="center"
+                            sx={{
+                              color: 'text.secondary',
+                            }}
+                          >
+                            {t('connections.emptyHint')}
+                          </Typography>
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </Card>
+      )}
 
       <Dialog
         open={Boolean(form)}

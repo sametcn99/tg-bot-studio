@@ -122,9 +122,10 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
   }
 
   /**
-   * Lists every connection of a bot.
+   * Lists every connection of a bot, ensuring any discovered groups are synced.
    */
   async list(botId: string): Promise<ChatConnectionRow[]> {
+    await this.syncFromBot(botId, false).catch(() => undefined);
     const list = await this.connectionModel.listConnections(botId);
     return list.map(toChatConnectionRow);
   }
@@ -255,9 +256,12 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
    * Imports every chat the bot runtime auto-discovered into the connection list.
    */
   async syncFromBot(botId: string, enrich = false): Promise<{ synced: number }> {
-    const groups = await this.connectionModel.listGroups(botId);
+    const groups = await this.prisma.botGroup.findMany({
+      where: { botId },
+      orderBy: [{ isActive: 'desc' }, { title: 'asc' }],
+    });
     for (const group of groups) {
-      const chatId = String(group.chat_id);
+      const chatId = group.chatId.toString();
       const known = await this.connectionModel.findConnectionByChatId(botId, chatId);
       let title = group.title;
       let type = normalizeType(group.type);
@@ -281,13 +285,13 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
           title,
           type,
           username,
-          isActive: group.is_active ? 1 : 0,
+          isActive: group.isActive ? 1 : 0,
           createdAt: new Date().toISOString(),
         },
         update: {
           title,
           type,
-          isActive: group.is_active ? 1 : 0,
+          isActive: group.isActive ? 1 : 0,
         },
       });
     }

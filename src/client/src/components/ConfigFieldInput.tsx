@@ -49,7 +49,13 @@ export function ConfigFieldInput({
   const { t } = useTranslation();
   // Chat picks stay numeric when the id is numeric so numeric config keys
   // (support admin chat, VIP channel) keep their stored type.
-  const onChatChange = (next: string): void => onChange(/^-?\d+$/.test(next) ? Number(next) : next);
+  const onChatChange = (next: string): void => {
+    if (!next) {
+      onChange(typeof value === 'number' ? 0 : '');
+      return;
+    }
+    onChange(/^-?\d+$/.test(next) ? Number(next) : next);
+  };
 
   const helpAdornment = field.help ? (
     <InputAdornment position="end">
@@ -77,10 +83,11 @@ export function ConfigFieldInput({
         <Box sx={{ flexGrow: 1 }}>
           <ConnectionSelect
             label={field.label}
-            value={value === undefined || value === null ? '' : String(value)}
+            value={value === undefined || value === null || value === 0 ? '' : String(value)}
             onChange={onChatChange}
             types={field.connectionTypes}
             helperText={field.help}
+            botId={botId}
           />
         </Box>
         {action}
@@ -104,6 +111,7 @@ export function ConfigFieldInput({
             onChange={(next) => onChange(next)}
             types={field.connectionTypes}
             helperText={field.help}
+            botId={botId}
           />
         </Box>
         {action}

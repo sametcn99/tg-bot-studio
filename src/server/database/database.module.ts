@@ -17,6 +17,8 @@ import { MonetizationModel } from '../modules/monetization/monetization.model';
 import { AiModel } from '../modules/ai-assistant/ai.model';
 import { SessionModel } from '../auth/session.model';
 import { MediaAssetModel } from '../modules/media-library/media-asset.model';
+import { GroupFileIndexModel } from '../modules/file-search/group-file-index.model';
+import { ScanAccountModel } from '../modules/scan-accounts/scan-account.model';
 import { FlowModel } from '../modules/flows/flow.model';
 import { HealthModel } from '../modules/health-monitor/health.model';
 import { BotTemplateModel } from '../templates/bot-template.model';
@@ -44,6 +46,8 @@ const MODELS = [
   AiModel,
   SessionModel,
   MediaAssetModel,
+  GroupFileIndexModel,
+  ScanAccountModel,
   FlowModel,
   HealthModel,
   BotTemplateModel,

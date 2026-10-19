@@ -149,6 +149,12 @@
     "choose": "Til tanlang:",
     "unsupported": "Qoʻllab-quvvatlanadigan tillar: en, tr, de, ru, es, az, ar, fr, it, pt, uk, fa, id, uz."
   },
+  "fileSearch": {
+    "foundHeader": "{user}, \"{query}\" uchun topilmalar:",
+    "moreCount": "…va yana {count} ta",
+    "noResult": "{user}, \"{query}\" ga mos indekslangan fayl yo'q.",
+    "tooShort": "Buyruqdan keyin nima qidirishni yozing (kamida {min} belgi)."
+  },
   "topics": {
     "created": "Mavzu yaratildi: {name}",
     "renamed": "Mavzu nomi {name} qilib oʻzgartirildi.",

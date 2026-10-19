@@ -67,7 +67,7 @@ export default function AnalyticsCard({ botId }: { botId: string }): React.React
   }, [data]);
 
   return (
-    <Card sx={{ mb: 3 }}>
+    <Card sx={{ mb: 3, borderRadius: 3 }}>
       <CardContent>
         <Stack
           direction="row"

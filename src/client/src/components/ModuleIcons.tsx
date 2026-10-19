@@ -38,6 +38,7 @@ import ForumIcon2 from '@mui/icons-material/Forum';
 import HubIcon from '@mui/icons-material/Hub';
 import TranslateIcon from '@mui/icons-material/Translate';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
+import FindInPageIcon from '@mui/icons-material/FindInPage';
 
 /** Module keys mapped to their icon components. */
 const MODULE_ICON_COMPONENTS: Record<string, React.ElementType> = {
@@ -61,6 +62,7 @@ const MODULE_ICON_COMPONENTS: Record<string, React.ElementType> = {
   'paid-media': PaidIcon,
   'vip-subs': StarIcon,
   webhooks: WebhookIcon,
+  'file-search': FindInPageIcon,
   'mini-apps': WidgetsIcon,
   'group-moderation': ShieldIcon,
   'group-tools': BuildIcon,

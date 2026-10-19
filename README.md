@@ -77,6 +77,7 @@ Backups are atomic (`VACUUM INTO`) and run **automatically once per UTC day** (d
 - **Visual flow builder**: multi-step conversation trees (message, input, condition, delay, tag nodes) triggered by commands, keywords, or `/start`, with persistent per-user sessions, inline-button navigation, and sandbox testing through the real middleware chain.
 - **Broadcast A/B experiments**: up to 3 variants sent to a deterministic test split, per-variant click-through tracking via redirect links, and one-click winner roll-out to the remaining audience.
 - **Shared media library**: reusable URL / Telegram file_id assets with a picker wired into the broadcast, welcome, flow, and autoresponder composers.
+- **Group file search**: indexes files shared in targeted groups and auto-answers "X var mı?" / "does anyone have X?" questions with a mention and t.me links; `/ara` and `/find` search on demand.
 - **Inline mode**: answer `@bot <query>` searches in any chat with saved quick answers, optionally routed through the AI assistant (requires `/setinline` in @BotFather).
 - **AI translation**: translate any studio text (welcome templates, rules, broadcasts) into a subset of the 14 supported bot languages in one provider call, then apply the result to the field.
 - **Mini App templates**: seven ready templates — e-commerce (Stars checkout), loyalty hub, forms, reward wheel, webview, points leaderboard, and a support desk that relays requests to the support module's admin chat.
@@ -121,16 +122,16 @@ tg-bot-studio/
         ├── i18n/               # Bot-side locale packs (14 languages)
         ├── metrics/            # Prometheus metrics endpoint (/api/metrics)
         ├── templates/          # Bot template gallery (save/apply export bundles)
-        └── modules/            # Isolated feature modules (35 toggleable)
+        └── modules/            # Isolated feature modules (36 toggleable)
 ```
 
 ## Module Catalog
 
-All 35 modules are toggleable per bot from the Modules page and grouped into four sidebar categories:
+All 36 modules are toggleable per bot from the Modules page and grouped into four sidebar categories:
 
 | Category                  | Modules                                                                                                                                                                                                                                                                                                    |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Directory & Content       | Chat Connections, Start Menu, Channel Post Scheduler, Shared Media Library                                                                                                                                                                                                                                 |
+| Directory & Content       | Chat Connections, Start Menu, Channel Post Scheduler, Shared Media Library, Group File Search                                                                                                                                                                                                                                 |
 | Communication & CRM       | Support Desk (Livegram), Business Secretary, Drip Sequences, Broadcast Engine, Audience CRM                                                                                                                                                                                                                |
 | Community & Moderation    | Group Welcome & Goodbye, Captcha Gatekeeper, Moderation & Anti-Spam, Group Moderation Commands, Group Admin Tools, Chat Locks, AntiRaid, Group Rules, Admin Log Channel, Message Cleaning, Forum Topic Management, Ban Federations, Bot Reply Language, Giveaways Engine, Referral Leaderboard, Quizzes & Polls, Reaction Analytics, Message Score & Leaderboard |
 | Automation & Monetization | AI Assistant, Commands & Auto-Responder, Paid Media Paywall, VIP Subscriptions, Webhooks Hub, Bot-to-Bot Commands, Inline Mode Answers, Visual Flow Builder                                                                                                                                                 |
@@ -140,6 +141,14 @@ Every module ships with an integrated Documentation & Setup Guide dialog (Overvi
 ### Chat Connections
 
 Register groups and channels once in the Connections module; every target-chat field across the studio (Scheduler, Support Desk, Giveaways, VIP Subscriptions, Paid Media, Webhooks) becomes a dropdown powered by that shared list. Chats the bot is added to are learned automatically — the engine records every group/channel the bot operates in and a 30-second auto-sync imports them into the address book (titles and usernames enriched via `getChat`), so the Connections list stays current without any manual action. Auto-sync can be turned off per bot from the Connections page, and numeric ids (`-100…`) as well as public `@usernames` are supported. Modules without any matching connection show an inline notice linking straight to the Connections page while still allowing manual id entry.
+
+### Group File Search
+
+Indexes every file shared in the module's target groups (documents, videos, audio, photos with captions — filename plus caption, Turkish-folded so "basvuru" finds "Başvuru Formu.pdf"). When a member asks a question like "X var mı?", "kimde var?", "yok mu?", or "does anyone have X?", the bot replies to their message, mentions them, and lists the matching files as t.me message links (newest first, capped by a per-chat max-results setting). `/ara <query>` and `/find <query>` search the index explicitly, per-user and per-chat cooldowns keep the group quiet, and additional trigger regexes can be configured per chat for other languages. The module page lists the whole index with a free-text filter, links back to the original messages, and supports pruning stale rows.
+
+> **Group privacy note:** the bot only sees member messages when it is a group administrator or privacy mode is disabled via BotFather. The Bot API exposes no message history, so the index starts filling from the moment the module is enabled — earlier files cannot be searched. In basic (non-supergroup) groups message links do not exist; the bot re-sends the matched file itself as the reply.
+
+**Retroactive indexing (backfill):** the Bot API cannot read history, but the studio can index it through a connected Telegram account. Connections → *Scan Accounts* manages one or more MTProto accounts per bot (login wizard: optional api_id/api_hash from my.telegram.org, phone, code, 2FA; the session is stored AES-GCM encrypted and used only to read the histories you pick). From the module page, choose an account, a target chat and a depth (last 1,000/5,000/10,000 or the entire history) — the paced scan upserts every media message into the same index with real message ids, is flood-wait aware, cancellable, and safe to re-run (no duplicates). GramJS (`telegram`) runs under Bun.
 
 ### Message Score & Leaderboard
 

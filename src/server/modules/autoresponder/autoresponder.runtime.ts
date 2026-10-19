@@ -57,67 +57,82 @@ export class AutoresponderRuntime extends BotModuleHandler {
   register(ctx: ModuleRuntimeContext): void {
     const { bot } = ctx;
 
-    bot.on(['message:text', 'channel_post:text'], async (update) => {
-      const chatType = update.chat?.type;
-      const isPrivate = chatType === 'private';
-      const isGroup = chatType === 'supergroup' || chatType === 'group';
-      const isChannel = chatType === 'channel';
-      if (!isPrivate && !isGroup && !isChannel) return;
-      const text = (update.msg?.text ?? '').trim();
-      if (!text) return;
-      const from = update.from;
-      if (from && from.id === bot.botInfo?.id) return;
-      if (from && from.is_bot && isGroup) return;
-
-      const chatId = String(update.chat!.id);
-      const templateCtx: TemplateContext = {
-        first_name: from?.first_name ?? update.chat?.title ?? '',
-        last_name: from?.last_name ?? '',
-        username: from?.username ?? update.chat?.username ?? '',
-        user_id: from?.id ?? 0,
-        mention: from?.username
-          ? `@${from.username}`
-          : from
-            ? `<a href="tg://user?id=${from.id}">${from.first_name}</a>`
-            : (update.chat?.title ?? ''),
-        group_name: update.chat?.title,
-        bot_name: bot.botInfo?.first_name ?? '',
-        date: new Date().toISOString().slice(0, 10),
-        time: new Date().toISOString().slice(11, 16),
-      };
-
-      // Default /start message (skipped when the Start Menu module owns /start).
-      if (isPrivate && text.startsWith('/start')) {
-        const startMessage = String(ctx.config.startMessage ?? '');
-        if (startMessage && !(await this.startMenuOwnsStart(ctx.botId))) {
-          await update.reply(renderTemplate(startMessage, templateCtx), {
-            parse_mode: 'HTML',
-          });
-        }
-        return;
+    bot.on(['message:text', 'channel_post:text'], async (update, next) => {
+      try {
+        await this.handleTextMessage(ctx, update);
+      } finally {
+        await next();
       }
-
-      const rules = (await this.service.list(ctx.botId)).filter((rule) => rule.is_active);
-      const matched = await this.findMatch(
-        update,
-        rules,
-        text,
-        chatId,
-        isPrivate,
-        isGroup,
-        isChannel,
-        ctx.botId,
-      );
-      if (!matched) return;
-
-      // {admin} fillings: admin-only rules stay silent for regular users in groups.
-      if (matched.admin_only === 1 && isGroup && from) {
-        const isAdmin = await this.adminGate.isAdmin(update.api, Number(chatId), from.id);
-        if (!isAdmin) return;
-      }
-
-      await this.sendRule(update, matched, templateCtx);
     });
+  }
+
+  /**
+   * Runs keyword/command rule matching for one text message.
+   * @param {ModuleRuntimeContext} ctx - Runtime context with bot and config.
+   * @param {Context} update - grammY context.
+   * @returns {Promise<void>} Resolves once handled.
+   */
+  private async handleTextMessage(ctx: ModuleRuntimeContext, update: Context): Promise<void> {
+    const { bot } = ctx;
+    const chatType = update.chat?.type;
+    const isPrivate = chatType === 'private';
+    const isGroup = chatType === 'supergroup' || chatType === 'group';
+    const isChannel = chatType === 'channel';
+    if (!isPrivate && !isGroup && !isChannel) return;
+    const text = (update.msg?.text ?? '').trim();
+    if (!text) return;
+    const from = update.from;
+    if (from && from.id === bot.botInfo?.id) return;
+    if (from && from.is_bot && isGroup) return;
+
+    const chatId = String(update.chat!.id);
+    const templateCtx: TemplateContext = {
+      first_name: from?.first_name ?? update.chat?.title ?? '',
+      last_name: from?.last_name ?? '',
+      username: from?.username ?? update.chat?.username ?? '',
+      user_id: from?.id ?? 0,
+      mention: from?.username
+        ? `@${from.username}`
+        : from
+          ? `<a href="tg://user?id=${from.id}">${from.first_name}</a>`
+          : (update.chat?.title ?? ''),
+      group_name: update.chat?.title,
+      bot_name: bot.botInfo?.first_name ?? '',
+      date: new Date().toISOString().slice(0, 10),
+      time: new Date().toISOString().slice(11, 16),
+    };
+
+    // Default /start message (skipped when the Start Menu module owns /start).
+    if (isPrivate && text.startsWith('/start')) {
+      const startMessage = String(ctx.config.startMessage ?? '');
+      if (startMessage && !(await this.startMenuOwnsStart(ctx.botId))) {
+        await update.reply(renderTemplate(startMessage, templateCtx), {
+          parse_mode: 'HTML',
+        });
+      }
+      return;
+    }
+
+    const rules = (await this.service.list(ctx.botId)).filter((rule) => rule.is_active);
+    const matched = await this.findMatch(
+      update,
+      rules,
+      text,
+      chatId,
+      isPrivate,
+      isGroup,
+      isChannel,
+      ctx.botId,
+    );
+    if (!matched) return;
+
+    // {admin} fillings: admin-only rules stay silent for regular users in groups.
+    if (matched.admin_only === 1 && isGroup && from) {
+      const isAdmin = await this.adminGate.isAdmin(update.api, Number(chatId), from.id);
+      if (!isAdmin) return;
+    }
+
+    await this.sendRule(update, matched, templateCtx);
   }
 
   /**

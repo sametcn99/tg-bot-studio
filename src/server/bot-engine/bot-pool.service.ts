@@ -495,6 +495,9 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
       if (enabled.has('language')) {
         commands.push({ command: 'setlang', description: 'Set bot reply language' });
       }
+      if (enabled.has('file-search')) {
+        commands.push({ command: 'ara', description: 'Search shared files' });
+      }
       if (commands.length === 0) return;
 
       await bot.api.setMyCommands(commands, { scope: { type: 'all_group_chats' } });

@@ -44,6 +44,8 @@ model Bot {
   chatApprovals    ChatApproval[]
   fedChats         FedChat[]
   mediaAssets      MediaAsset[]
+  fileIndexEntries GroupFileIndex[]
+  scanAccounts     ScanAccount[]
   flows            Flow[]
   flowStates       FlowState[]
   healthEvents     HealthEvent[]
@@ -343,6 +345,64 @@ model MediaAsset {
 
   @@index([botId])
   @@map("media_assets")
+}
+
+/// Indexed media file shared in a group the file-search module targets:
+/// one row per media message, carrying everything needed to answer
+/// "does anyone have X?" questions with a t.me link later.
+model GroupFileIndex {
+  id         String  @id @default(uuid())
+  botId      String  @map("bot_id")
+  chatId     String  @map("chat_id")
+  messageId  Int     @map("message_id")
+  /// Media kind: document | video | audio | voice | video_note | animation | photo.
+  kind       String
+  fileName   String? @map("file_name")
+  caption    String?
+  mimeType   String? @map("mime_type")
+  fileSize   Int?    @map("file_size")
+  fileId     String? @map("file_id")
+  senderId   BigInt? @map("sender_id")
+  senderName String? @map("sender_name")
+  /// ISO date of the original Telegram message.
+  sentAt     String? @map("sent_at")
+  /// Turkish-folded normalized "fileName + caption" the matcher scans.
+  searchText String  @map("search_text")
+  createdAt  String? @map("created_at")
+
+  bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@unique([botId, chatId, messageId])
+  @@index([botId, chatId])
+  @@map("group_file_index")
+}
+
+/// Telegram user account connected for retroactive file-search backfill:
+/// an MTProto (GramJS) session string stored AES-GCM encrypted, used only
+/// to read group history the account is a member of. Scoped per bot like
+/// chat connections.
+model ScanAccount {
+  id         String  @id @default(uuid())
+  botId      String  @map("bot_id")
+  /// Phone in international format, e.g. +905xxxxxxxxx.
+  phone      String
+  /// Free-form operator label ("Personal", "Backup", ...).
+  label      String?
+  username   String?
+  firstName  String?
+  /// AES-GCM encrypted GramJS StringSession payload; never returned by APIs.
+  sessionEnc String  @map("session_enc")
+  /// active | expired (auth lost — needs re-login).
+  status     String  @default("active")
+  lastUsedAt String? @map("last_used_at")
+  createdAt  String? @map("created_at")
+  updatedAt  String? @map("updated_at")
+
+  bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@unique([botId, phone])
+  @@index([botId])
+  @@map("scan_accounts")
 }
 
 /// Visual flow (multi-step conversation tree) built in the studio editor and

@@ -149,6 +149,12 @@
     "choose": "Pilih bahasa:",
     "unsupported": "Bahasa yang didukung: en, tr, de, ru, es, az, ar, fr, it, pt, uk, fa, id, uz."
   },
+  "fileSearch": {
+    "foundHeader": "{user}, hasil untuk \"{query}\":",
+    "moreCount": "…dan {count} lagi",
+    "noResult": "{user}, tidak ada file terindeks yang cocok dengan \"{query}\".",
+    "tooShort": "Tulis yang ingin dicari setelah perintah (minimal {min} karakter)."
+  },
   "topics": {
     "created": "Topik dibuat: {name}",
     "renamed": "Topik diganti namanya menjadi {name}.",

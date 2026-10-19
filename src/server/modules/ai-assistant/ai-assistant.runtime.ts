@@ -42,26 +42,30 @@ export class AiAssistantRuntime extends BotModuleHandler {
     const config = ctx.config as unknown as AiConfig;
 
     // ----- Text Messages Handler ---------------------------------------------
-    bot.on('message:text', async (update) => {
-      if (update.chat?.type !== 'private') return;
-      if (update.msg.text.startsWith('/')) return;
-      if (!update.from) return;
+    bot.on('message:text', async (update, next) => {
+      try {
+        if (update.chat?.type !== 'private') return;
+        if (update.msg.text.startsWith('/')) return;
+        if (!update.from) return;
 
-      // The support desk owns private conversations when active.
-      if (await this.moduleEnabled(ctx.botId, 'support')) return;
-      // Autoresponder keyword rules take precedence.
-      if (await this.matchedAutoresponder(ctx.botId, update.msg.text)) return;
+        // The support desk owns private conversations when active.
+        if (await this.moduleEnabled(ctx.botId, 'support')) return;
+        // Autoresponder keyword rules take precedence.
+        if (await this.matchedAutoresponder(ctx.botId, update.msg.text)) return;
 
-      await this.handleUserTurn(ctx, update, update.msg.text);
+        await this.handleUserTurn(ctx, update, update.msg.text);
+      } finally {
+        await next();
+      }
     });
 
     // ----- Multimodal Voice/Audio Messages Handler ---------------------------
-    bot.on(['message:voice', 'message:audio'], async (update) => {
-      if (update.chat?.type !== 'private') return;
-      if (!update.from) return;
-      if (await this.moduleEnabled(ctx.botId, 'support')) return;
-
+    bot.on(['message:voice', 'message:audio'], async (update, next) => {
       try {
+        if (update.chat?.type !== 'private') return;
+        if (!update.from) return;
+        if (await this.moduleEnabled(ctx.botId, 'support')) return;
+
         const file = await update.getFile();
         if (!file.file_path || !this.service.isConfigured(config)) return;
 
@@ -89,6 +93,8 @@ export class AiAssistantRuntime extends BotModuleHandler {
         this.logger.warn(
           `Voice processing error: ${err instanceof Error ? err.message : String(err)}`,
         );
+      } finally {
+        await next();
       }
     });
   }

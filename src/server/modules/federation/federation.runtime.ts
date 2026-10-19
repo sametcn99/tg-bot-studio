@@ -96,11 +96,15 @@ export class FederationRuntime extends BotModuleHandler {
       }
     });
 
-    bot.on('message', async (c) => {
-      if (!c.chat || (c.chat.type !== 'supergroup' && c.chat.type !== 'group')) return;
-      if (!c.from || c.from.is_bot) return;
-      // Cheap throttle: only inspect every message via the cached ban map.
-      await passive(c, c.from.id);
+    bot.on('message', async (c, next) => {
+      try {
+        if (!c.chat || (c.chat.type !== 'supergroup' && c.chat.type !== 'group')) return;
+        if (!c.from || c.from.is_bot) return;
+        // Cheap throttle: only inspect every message via the cached ban map.
+        await passive(c, c.from.id);
+      } finally {
+        await next();
+      }
     });
 
     // --- Fed lifecycle (PM) -------------------------------------------------

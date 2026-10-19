@@ -117,27 +117,31 @@ export class CaptchaRuntime extends BotModuleHandler {
     });
 
     // Math-mode answer handling (in-group text or PM).
-    bot.on('message:text', async (update) => {
-      const chatType = update.chat?.type;
-      const isGroup = chatType === 'supergroup' || chatType === 'group';
-      const isPrivate = chatType === 'private';
-      if (!isGroup && !isPrivate) return;
-      if (!update.from || update.from.id === bot.botInfo?.id) return;
+    bot.on('message:text', async (update, next) => {
+      try {
+        const chatType = update.chat?.type;
+        const isGroup = chatType === 'supergroup' || chatType === 'group';
+        const isPrivate = chatType === 'private';
+        if (!isGroup && !isPrivate) return;
+        if (!update.from || update.from.id === bot.botInfo?.id) return;
 
-      // In groups only the challenged member's numeric reply counts.
-      const groupKey = isGroup ? `${botId}:${update.chat!.id}:${update.from.id}` : null;
-      const pmCandidates = [...this.pending.entries()].filter(
-        ([key, value]) => key.endsWith(`:${update.from!.id}`) && value.captchaMessageId === -1,
-      );
-      const key = groupKey && this.pending.has(groupKey) ? groupKey : pmCandidates[0]?.[0];
-      if (!key) return;
-      const pending = this.pending.get(key)!;
-      if (pending.answer === 0) return;
-      if (Number(update.msg.text.trim()) !== pending.answer) return;
+        // In groups only the challenged member's numeric reply counts.
+        const groupKey = isGroup ? `${botId}:${update.chat!.id}:${update.from.id}` : null;
+        const pmCandidates = [...this.pending.entries()].filter(
+          ([key, value]) => key.endsWith(`:${update.from!.id}`) && value.captchaMessageId === -1,
+        );
+        const key = groupKey && this.pending.has(groupKey) ? groupKey : pmCandidates[0]?.[0];
+        if (!key) return;
+        const pending = this.pending.get(key)!;
+        if (pending.answer === 0) return;
+        if (Number(update.msg.text.trim()) !== pending.answer) return;
 
-      await this.verify(ctx, key, update.from.first_name);
-      if (isPrivate && !pending.joinRequest) {
-        await update.reply('✅').catch(() => undefined);
+        await this.verify(ctx, key, update.from.first_name);
+        if (isPrivate && !pending.joinRequest) {
+          await update.reply('✅').catch(() => undefined);
+        }
+      } finally {
+        await next();
       }
     });
 

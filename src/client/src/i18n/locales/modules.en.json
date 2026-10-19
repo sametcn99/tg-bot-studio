@@ -1268,6 +1268,75 @@
       ]
     }
   },
+  "file-search": {
+    "name": "Group File Search",
+    "description": "Indexes files shared in targeted groups and auto-answers “does anyone have X?” questions with t.me links.",
+    "fields": {
+      "builtInTriggers": {
+        "label": "Built-in question triggers",
+        "help": "Detect Turkish/English question phrases like “var mı” or “does anyone have”."
+      },
+      "extraTriggerPatterns": {
+        "label": "Extra trigger patterns (regex)",
+        "help": "Case-insensitive regexes; a match marks the message as a search question."
+      },
+      "matchMode": {
+        "label": "Match mode",
+        "help": "all: every term must hit; any: at least one term."
+      },
+      "includeCaptions": {
+        "label": "Index media captions",
+        "help": "Captions of photos/videos join the searchable text."
+      },
+      "minQueryLength": {
+        "label": "Minimum query length",
+        "help": "Shorter questions are ignored."
+      },
+      "maxResults": {
+        "label": "Max results per answer",
+        "help": "How many files one answer lists at most."
+      },
+      "userCooldownSeconds": {
+        "label": "Per-user cooldown (s)",
+        "help": "Minimum seconds between auto-answers for the same user."
+      },
+      "chatCooldownSeconds": {
+        "label": "Per-chat cooldown (s)",
+        "help": "Minimum seconds between answers in the same chat."
+      },
+      "noResultReply": {
+        "label": "Reply when nothing found",
+        "help": "Off: stay silent. On: tell the asker nothing matched."
+      },
+      "fallbackCopy": {
+        "label": "Re-share files in basic groups",
+        "help": "Basic groups have no message links; copy the file as the answer."
+      }
+    },
+    "docs": {
+      "overview": [
+        "Every file shared in a targeted group (documents, videos, audio, photos with captions) is indexed with its filename and caption.",
+        "When someone asks “X var mı?” / “does anyone have X?”, the bot replies with a mention and t.me links to the matching files.",
+        "/ara and /find search the index on demand without needing a question phrase.",
+        "Turkish characters fold automatically: typing “basvuru” finds “Başvuru Formu.pdf”.",
+        "Need older files too? Connect a scan account (Connections → Scan Accounts) and run a history backfill from this page."
+      ],
+      "setup": [
+        "The bot must see member messages: make it a group admin or disable privacy mode via @BotFather (/setprivacy).",
+        "Enable the module, then open its per-chat configuration and add the target groups from Chat Connections.",
+        "Files shared from that moment on are indexed — the Bot API cannot read message history, so the index builds going forward.",
+        "Optionally add extra trigger regexes for other languages.",
+        "Optional: connect a scan account and run the backfill to index files shared before the module was enabled."
+      ],
+      "troubleshooting": [
+        "Bot answers nothing: check privacy mode / admin rights and that the chat is targeted in the per-chat editor.",
+        "Old files cannot be searched: the index only contains files shared after enabling.",
+        "In basic (non-supergroup) groups message links do not exist; the bot re-sends the file itself when fallbackCopy is on.",
+        "Too chatty? Raise the cooldowns or turn off the built-in triggers and keep only /ara.",
+        "Backfill says the account is not a member: the chosen scan account must be a member of that group."
+      ]
+    }
+  },
   "inline-mode": {
     "name": "Inline Mode Answers",
     "description": "Answer @bot queries in any chat with saved quick answers or AI-generated replies.",

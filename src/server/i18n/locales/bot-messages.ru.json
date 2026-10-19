@@ -149,6 +149,12 @@
     "choose": "Выберите язык:",
     "unsupported": "Поддерживаемые языки: en, tr, de, ru, es, az, ar, fr, it, pt, uk, fa, id, uz."
   },
+  "fileSearch": {
+    "foundHeader": "{user}, результаты по «{query}»:",
+    "moreCount": "…и ещё {count}",
+    "noResult": "{user}, в индексе нет файла по запросу «{query}».",
+    "tooShort": "Напишите после команды, что искать (минимум {min} символов)."
+  },
   "topics": {
     "created": "Тема создана: {name}",
     "renamed": "Тема переименована в {name}.",
