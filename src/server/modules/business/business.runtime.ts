@@ -66,6 +66,10 @@ export class BusinessRuntime extends BotModuleHandler {
             `Business reply failed: ${error instanceof Error ? error.message : String(error)}`,
           );
         }
+      } catch (err) {
+        this.logger.warn(
+          `Business message handling error: ${err instanceof Error ? err.message : String(err)}`,
+        );
       } finally {
         await next();
       }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bot-module-handler';
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
 import { EngineHelpersService } from '../../bot-engine/engine-helpers.service';
@@ -11,6 +11,7 @@ import { BotUserModel } from './bot-user.model';
  */
 @Injectable()
 export class ReferralsRuntime extends BotModuleHandler {
+  private readonly logger = new Logger(ReferralsRuntime.name);
   /** Registry key of the module. */
   readonly moduleKey = 'referrals';
 
@@ -52,6 +53,10 @@ export class ReferralsRuntime extends BotModuleHandler {
         if (attributed) {
           void update.reply('You were referred successfully. Your friend earned bonus points.');
         }
+      } catch (err) {
+        this.logger.warn(
+          `Referrals /start handling error for bot ${ctx.botId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
       } finally {
         await next();
       }

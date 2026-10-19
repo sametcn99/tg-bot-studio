@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InputFile, type Context } from 'grammy';
 import type { Fed } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
@@ -24,6 +24,7 @@ const MAX_SUBS = 5;
  */
 @Injectable()
 export class FederationRuntime extends BotModuleHandler {
+  private readonly logger = new Logger(FederationRuntime.name);
   /** Registry key of the module. */
   readonly moduleKey = 'federation';
 
@@ -95,6 +96,10 @@ export class FederationRuntime extends BotModuleHandler {
         if (status === 'member' || status === 'administrator') {
           await passive(c, c.chatMember.new_chat_member.user.id);
         }
+      } catch (err) {
+        this.logger.warn(
+          `Federation chat_member error: ${err instanceof Error ? err.message : String(err)}`,
+        );
       } finally {
         await next();
       }
@@ -106,6 +111,10 @@ export class FederationRuntime extends BotModuleHandler {
         if (!c.from || c.from.is_bot) return;
         // Cheap throttle: only inspect every message via the cached ban map.
         await passive(c, c.from.id);
+      } catch (err) {
+        this.logger.warn(
+          `Federation message passive check error: ${err instanceof Error ? err.message : String(err)}`,
+        );
       } finally {
         await next();
       }

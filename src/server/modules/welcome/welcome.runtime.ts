@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bot-module-handler';
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
 import { AdminGateService } from '../../bot-engine/admin-gate.service';
@@ -21,6 +21,7 @@ interface ButtonSpec {
  */
 @Injectable()
 export class WelcomeRuntime extends BotModuleHandler {
+  private readonly logger = new Logger(WelcomeRuntime.name);
   /** Registry key of the module. */
   readonly moduleKey = 'welcome';
 
@@ -88,6 +89,10 @@ export class WelcomeRuntime extends BotModuleHandler {
         if (config.deleteServiceMessages !== false) {
           await update.deleteMessage().catch(() => undefined);
         }
+      } catch (err) {
+        this.logger.warn(
+          `Welcome greeting error for bot ${botId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
       } finally {
         await next();
       }
@@ -116,6 +121,10 @@ export class WelcomeRuntime extends BotModuleHandler {
         if (config.deleteLeaveMessages === true) {
           await update.deleteMessage().catch(() => undefined);
         }
+      } catch (err) {
+        this.logger.warn(
+          `Goodbye message error for bot ${botId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
       } finally {
         await next();
       }

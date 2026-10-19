@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bot-module-handler';
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
 import { AdminGateService } from '../../bot-engine/admin-gate.service';
@@ -14,6 +14,7 @@ import { isChatTargeted } from '../../common/utils/chat-targets.util';
  */
 @Injectable()
 export class RulesRuntime extends BotModuleHandler {
+  private readonly logger = new Logger(RulesRuntime.name);
   /** Registry key of the module. */
   readonly moduleKey = 'rules';
 
@@ -66,6 +67,10 @@ export class RulesRuntime extends BotModuleHandler {
           return;
         }
         await c.reply(text, { parse_mode: 'HTML' }).catch(() => undefined);
+      } catch (err) {
+        this.logger.warn(
+          `Rules /start handling error for bot ${botId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
       } finally {
         await next();
       }

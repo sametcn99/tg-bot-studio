@@ -93,6 +93,10 @@ export class InlineModeRuntime extends BotModuleHandler {
           cache_time: Math.max(1, Math.min(300, parsed.cacheSeconds)),
           is_personal: true,
         });
+      } catch (err) {
+        this.logger.warn(
+          `Inline mode error for bot ${botId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
       } finally {
         await next();
       }

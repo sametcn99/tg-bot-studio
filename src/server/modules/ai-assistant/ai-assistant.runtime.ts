@@ -54,6 +54,10 @@ export class AiAssistantRuntime extends BotModuleHandler {
         if (await this.matchedAutoresponder(ctx.botId, update.msg.text)) return;
 
         await this.handleUserTurn(ctx, update, update.msg.text);
+      } catch (err) {
+        this.logger.warn(
+          `AI text message processing error: ${err instanceof Error ? err.message : String(err)}`,
+        );
       } finally {
         await next();
       }

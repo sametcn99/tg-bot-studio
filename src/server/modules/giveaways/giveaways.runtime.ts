@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bot-module-handler';
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
 import { GiveawaysService } from './giveaways.service';
@@ -10,6 +10,7 @@ import { GiveawaysService } from './giveaways.service';
  */
 @Injectable()
 export class GiveawaysRuntime extends BotModuleHandler {
+  private readonly logger = new Logger(GiveawaysRuntime.name);
   /** Registry key of the module. */
   readonly moduleKey = 'giveaways';
 
@@ -87,6 +88,10 @@ export class GiveawaysRuntime extends BotModuleHandler {
         await update.answerCallbackQuery({
           text: added ? 'You are participating. Good luck.' : 'You are already participating.',
         });
+      } catch (err) {
+        this.logger.warn(
+          `Giveaway callback handling error for bot ${ctx.botId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
       } finally {
         await next();
       }

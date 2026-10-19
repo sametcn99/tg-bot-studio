@@ -56,55 +56,67 @@ export class FlowsRuntime extends BotModuleHandler implements OnModuleDestroy {
 
     // Message pipeline: resume waiting inputs first, then trigger matching.
     bot.on(['message', 'channel_post'], async (update, next) => {
-      const chat = update.chat;
-      const from = update.from;
-      if (!chat || chat.type !== 'private' || !from || from.is_bot) {
+      try {
+        const chat = update.chat;
+        const from = update.from;
+        if (!chat || chat.type !== 'private' || !from || from.is_bot) {
+          return;
+        }
+        const text = update.msg?.text ?? update.msg?.caption ?? '';
+
+        // 1. Continue a waiting input node.
+        const handledInput = await this.handleWaitingInput(bot, botId, from.id, text);
+        if (handledInput) return;
+
+        // 2. Match a flow trigger.
+        const triggered = await this.matchTrigger(bot, botId, from.id, text);
+        if (triggered) return;
+      } catch (err) {
+        this.logger.warn(
+          `Flows message handling error for bot ${botId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      } finally {
         await next();
-        return;
       }
-      const text = update.msg?.text ?? update.msg?.caption ?? '';
-
-      // 1. Continue a waiting input node.
-      const handledInput = await this.handleWaitingInput(bot, botId, from.id, text);
-      if (handledInput) return;
-
-      // 2. Match a flow trigger.
-      const triggered = await this.matchTrigger(bot, botId, from.id, text);
-      if (triggered) return;
-
-      await next();
     });
 
     // Button navigation inside a flow.
     bot.on('callback_query:data', async (update, next) => {
-      const data = update.callbackQuery.data ?? '';
-      if (!data.startsWith(CALLBACK_PREFIX)) {
-        await next();
-        return;
-      }
-      const parts = data.slice(CALLBACK_PREFIX.length).split(':');
-      const flowId = parts[0];
-      const sourceNodeId = parts[1] ?? '';
-      const buttonIndex = Number(parts[2] ?? 0);
-      if (!flowId || !update.from) {
+      try {
+        const data = update.callbackQuery.data ?? '';
+        if (!data.startsWith(CALLBACK_PREFIX)) {
+          return;
+        }
+        const parts = data.slice(CALLBACK_PREFIX.length).split(':');
+        const flowId = parts[0];
+        const sourceNodeId = parts[1] ?? '';
+        const buttonIndex = Number(parts[2] ?? 0);
+        if (!flowId || !update.from) {
+          await update.answerCallbackQuery().catch(() => undefined);
+          return;
+        }
+        const flow = await this.flowModel.findById(botId, flowId);
+        if (!flow || flow.isActive !== 1) {
+          await update.answerCallbackQuery('This flow is no longer active.').catch(() => undefined);
+          return;
+        }
+        const graph = this.flowModel.parseGraph(flow.graphJson);
+        const source = graph.nodes.find((node) => node.id === sourceNodeId);
+        const targetId = source?.buttons?.[buttonIndex]?.next ?? source?.next;
         await update.answerCallbackQuery().catch(() => undefined);
-        return;
+        if (!targetId) {
+          await this.clearSession(flowId, update.from.id);
+          return;
+        }
+        const vars = await this.readVars(flowId, update.from.id);
+        await this.executeFrom(bot, botId, flowId, graph, update.from.id, targetId, vars);
+      } catch (err) {
+        this.logger.warn(
+          `Flows callback handling error for bot ${botId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      } finally {
+        await next();
       }
-      const flow = await this.flowModel.findById(botId, flowId);
-      if (!flow || flow.isActive !== 1) {
-        await update.answerCallbackQuery('This flow is no longer active.').catch(() => undefined);
-        return;
-      }
-      const graph = this.flowModel.parseGraph(flow.graphJson);
-      const source = graph.nodes.find((node) => node.id === sourceNodeId);
-      const targetId = source?.buttons?.[buttonIndex]?.next ?? source?.next;
-      await update.answerCallbackQuery().catch(() => undefined);
-      if (!targetId) {
-        await this.clearSession(flowId, update.from.id);
-        return;
-      }
-      const vars = await this.readVars(flowId, update.from.id);
-      await this.executeFrom(bot, botId, flowId, graph, update.from.id, targetId, vars);
     });
 
     // Delay sweeper: resume flows whose wait elapsed. Clear any previous

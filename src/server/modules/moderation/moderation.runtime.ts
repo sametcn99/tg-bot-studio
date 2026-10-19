@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import type { Context } from 'grammy';
 import type { User } from 'grammy/types';
 import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bot-module-handler';
@@ -23,6 +23,7 @@ import { matchBlocklist } from './blocklist-matcher';
  */
 @Injectable()
 export class ModerationRuntime extends BotModuleHandler {
+  private readonly logger = new Logger(ModerationRuntime.name);
   /** Registry key of the module. */
   readonly moduleKey = 'moderation';
 
@@ -151,6 +152,10 @@ export class ModerationRuntime extends BotModuleHandler {
             return;
           }
         }
+      } catch (err) {
+        this.logger.warn(
+          `Moderation message handling error for bot ${botId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
       } finally {
         await next();
       }

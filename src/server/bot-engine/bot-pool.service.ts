@@ -365,6 +365,10 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
               `upsertGroup (my_chat_member) failed for bot ${botId}: ${error instanceof Error ? error.message : String(error)}`,
             );
           });
+      } catch (err) {
+        this.logger.warn(
+          `my_chat_member update handling error for bot ${botId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
       } finally {
         await next();
       }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bot-module-handler';
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
 import { ChatSettingsService } from '../../bot-engine/chat-settings.service';
@@ -114,6 +114,7 @@ const BOT_MESSAGE_TTL_MS = 5 * 60_000;
  */
 @Injectable()
 export class CleaningRuntime extends BotModuleHandler {
+  private readonly logger = new Logger(CleaningRuntime.name);
   /** Registry key of the module. */
   readonly moduleKey = 'cleaning';
 
@@ -171,6 +172,10 @@ export class CleaningRuntime extends BotModuleHandler {
         setTimeout(() => {
           void bot.api.deleteMessage(chatId, messageId).catch(() => undefined);
         }, CLEAN_DELAY_MS);
+      } catch (err) {
+        this.logger.warn(
+          `Cleaning command cleanup error: ${err instanceof Error ? err.message : String(err)}`,
+        );
       } finally {
         await next();
       }
@@ -197,6 +202,10 @@ export class CleaningRuntime extends BotModuleHandler {
         if (types.includes('all') || types.includes(type)) {
           await update.deleteMessage().catch(() => undefined);
         }
+      } catch (err) {
+        this.logger.warn(
+          `Cleaning service message error: ${err instanceof Error ? err.message : String(err)}`,
+        );
       } finally {
         await next();
       }

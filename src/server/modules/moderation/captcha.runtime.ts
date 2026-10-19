@@ -89,6 +89,10 @@ export class CaptchaRuntime extends BotModuleHandler {
           if (member.is_bot) continue;
           await this.challenge(ctx, update.chat.id, member, false);
         }
+      } catch (err) {
+        this.logger.warn(
+          `Captcha new_chat_members error for bot ${botId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
       } finally {
         await next();
       }
@@ -103,6 +107,10 @@ export class CaptchaRuntime extends BotModuleHandler {
         const config = await this.chatSettings.getEffectiveConfig(botId, chat.id, this.moduleKey);
         if (config.joinRequestIntegration !== true) return;
         await this.challenge(ctx, chat.id, update.chatJoinRequest.from, true);
+      } catch (err) {
+        this.logger.warn(
+          `Captcha chat_join_request error for bot ${botId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
       } finally {
         await next();
       }
@@ -123,6 +131,10 @@ export class CaptchaRuntime extends BotModuleHandler {
         }
         await this.verify(ctx, key, update.callbackQuery.from.first_name);
         await update.answerCallbackQuery({ text: '✅' }).catch(() => undefined);
+      } catch (err) {
+        this.logger.warn(
+          `Captcha callback_query error for bot ${botId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
       } finally {
         await next();
       }
@@ -152,6 +164,10 @@ export class CaptchaRuntime extends BotModuleHandler {
         if (isPrivate && !pending.joinRequest) {
           await update.reply('✅').catch(() => undefined);
         }
+      } catch (err) {
+        this.logger.warn(
+          `Captcha math message:text error for bot ${botId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
       } finally {
         await next();
       }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import type { Context } from 'grammy';
 import { PrismaService } from '../../database/prisma.service';
 import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bot-module-handler';
@@ -29,6 +29,7 @@ interface LockRule {
  */
 @Injectable()
 export class LocksRuntime extends BotModuleHandler {
+  private readonly logger = new Logger(LocksRuntime.name);
   /** Registry key of the module. */
   readonly moduleKey = 'locks';
 
@@ -101,6 +102,10 @@ export class LocksRuntime extends BotModuleHandler {
         if (config.lockWarns === true) {
           await this.warnForLock(update, botId, update.chat.id, update.from, violated);
         }
+      } catch (err) {
+        this.logger.warn(
+          `Locks message handling error for bot ${botId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
       } finally {
         await next();
       }

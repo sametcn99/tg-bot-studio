@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import type { Context } from 'grammy';
 import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bot-module-handler';
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
@@ -25,6 +25,7 @@ interface RaidState {
  */
 @Injectable()
 export class AntiraidRuntime extends BotModuleHandler {
+  private readonly logger = new Logger(AntiraidRuntime.name);
   /** Registry key of the module. */
   readonly moduleKey = 'antiraid';
 
@@ -104,6 +105,10 @@ export class AntiraidRuntime extends BotModuleHandler {
         }
 
         this.state.set(key, state);
+      } catch (err) {
+        this.logger.warn(
+          `AntiRaid join tracking error for bot ${botId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
       } finally {
         await next();
       }

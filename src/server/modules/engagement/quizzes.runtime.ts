@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bot-module-handler';
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
 import { EngineHelpersService } from '../../bot-engine/engine-helpers.service';
@@ -13,6 +13,7 @@ import { EngagementService } from './engagement.service';
  */
 @Injectable()
 export class QuizzesRuntime extends BotModuleHandler {
+  private readonly logger = new Logger(QuizzesRuntime.name);
   /** Registry key of the module. */
   readonly moduleKey = 'quizzes';
 
@@ -95,6 +96,10 @@ export class QuizzesRuntime extends BotModuleHandler {
         if (chosen === undefined || chosen !== quiz.correctOptionId) return;
         this.service.recordCorrectAnswer(ctx.botId, quizId, update.pollAnswer.user.id);
         this.helpers.addPoints(ctx.botId, update.pollAnswer.user.id, quiz.points);
+      } catch (err) {
+        this.logger.warn(
+          `Quizzes poll_answer error for bot ${ctx.botId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
       } finally {
         await next();
       }

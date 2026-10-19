@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import type { Context } from 'grammy';
 import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bot-module-handler';
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
@@ -41,6 +41,7 @@ const DISABLEABLE_COMMANDS = [
  */
 @Injectable()
 export class GroupToolsRuntime extends BotModuleHandler {
+  private readonly logger = new Logger(GroupToolsRuntime.name);
   /** Registry key of the module. */
   readonly moduleKey = 'group-tools';
 
@@ -84,6 +85,10 @@ export class GroupToolsRuntime extends BotModuleHandler {
     bot.on('message', async (c, next) => {
       try {
         await this.handleLinkedChannelPost(c, botId);
+      } catch (err) {
+        this.logger.warn(
+          `Group-tools linked channel handling error: ${err instanceof Error ? err.message : String(err)}`,
+        );
       } finally {
         await next();
       }
@@ -96,6 +101,10 @@ export class GroupToolsRuntime extends BotModuleHandler {
     bot.on('message:text', async (c, next) => {
       try {
         await this.handleAdminMention(c, botId);
+      } catch (err) {
+        this.logger.warn(
+          `Group-tools admin mention handling error: ${err instanceof Error ? err.message : String(err)}`,
+        );
       } finally {
         await next();
       }

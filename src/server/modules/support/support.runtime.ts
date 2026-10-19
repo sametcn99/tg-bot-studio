@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import type { Bot } from 'grammy';
 import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bot-module-handler';
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
@@ -15,6 +15,7 @@ import { SystemSettingsService } from '../../database/system-settings.service';
  */
 @Injectable()
 export class SupportRuntime extends BotModuleHandler {
+  private readonly logger = new Logger(SupportRuntime.name);
   /** Registry key of the module. */
   readonly moduleKey = 'support';
 
@@ -92,6 +93,10 @@ export class SupportRuntime extends BotModuleHandler {
           await bot.api.sendMessage(telegramId, welcomeText).catch(() => undefined);
           this.settings.setBotSetting(ctx.botId, lastKey, new Date().toISOString());
         }
+      } catch (err) {
+        this.logger.warn(
+          `Support user->admin relay error for bot ${ctx.botId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
       } finally {
         await next();
       }
@@ -151,6 +156,10 @@ export class SupportRuntime extends BotModuleHandler {
           messageText: update.msg.text ?? update.msg.caption ?? null,
           mediaType: 'text',
         });
+      } catch (err) {
+        this.logger.warn(
+          `Support admin->user relay error for bot ${ctx.botId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
       } finally {
         await next();
       }

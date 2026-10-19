@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InlineKeyboard, type Context } from 'grammy';
 import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bot-module-handler';
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
@@ -15,6 +15,7 @@ import { StartMenuService, type MenuItemRow } from './start-menu.service';
  */
 @Injectable()
 export class StartMenuRuntime extends BotModuleHandler {
+  private readonly logger = new Logger(StartMenuRuntime.name);
   /** Registry key of the module. */
   readonly moduleKey = 'start-menu';
 
@@ -42,6 +43,10 @@ export class StartMenuRuntime extends BotModuleHandler {
       try {
         if (update.chat?.type !== 'private') return;
         await this.sendMenu(ctx, update);
+      } catch (err) {
+        this.logger.warn(
+          `Start-menu /start handling error for bot ${ctx.botId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
       } finally {
         await next();
       }
@@ -52,6 +57,10 @@ export class StartMenuRuntime extends BotModuleHandler {
         try {
           if (update.chat?.type !== 'private') return;
           await this.sendMenu(ctx, update);
+        } catch (err) {
+          this.logger.warn(
+            `Start-menu /menu handling error for bot ${ctx.botId}: ${err instanceof Error ? err.message : String(err)}`,
+          );
         } finally {
           await next();
         }

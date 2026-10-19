@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import type { Message } from 'grammy/types';
 import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bot-module-handler';
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
@@ -42,6 +42,7 @@ const MEDIA_KEYS: ReadonlyArray<keyof Message> = [
  */
 @Injectable()
 export class MessageScoreRuntime extends BotModuleHandler {
+  private readonly logger = new Logger(MessageScoreRuntime.name);
   /** Registry key of the module. */
   readonly moduleKey = 'message-score';
 
@@ -85,6 +86,10 @@ export class MessageScoreRuntime extends BotModuleHandler {
           reply: isReplyToOther,
           media: isMedia,
         });
+      } catch (err) {
+        this.logger.warn(
+          `Message-score recording error for bot ${ctx.botId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
       } finally {
         await next();
       }
