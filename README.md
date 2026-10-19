@@ -194,4 +194,4 @@ Manage and reply to customer tickets directly from the web dashboard. Features c
 - Four interface languages (English, Turkish, German, Russian) switchable instantly from the top navigation bar; bots themselves reply in any of 14 languages, settable per group.
 - API reference lives at `/api/docs` (OpenAPI/Swagger UI) on any running instance.
 
-> **Manifest note:** frontend libraries (React, MUI, i18next, …) are intentionally declared in `devDependencies` — Vite bundles them into `dist/client`, and the Docker runner's `bun install --production` correctly excludes them, keeping the runtime image small. Do not import them from server code; it would build locally and crash in the container. Dependabot keeps both npm and GitHub Actions dependencies fresh (weekly, grouped minor/patch).
+> **Manifest note:** frontend libraries (React, MUI, i18next, …) are intentionally declared in `devDependencies` — Vite bundles them into `dist/client`, and the Docker runner's `bun install --production` correctly excludes them, keeping the runtime image small. Do not import them from server code; it would build locally and crash in the container.
