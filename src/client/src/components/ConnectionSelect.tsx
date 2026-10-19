@@ -314,23 +314,25 @@ export function ConnectionSelect({
       }}
       slotProps={{ input: { endAdornment: selectEndAdornment } }}
     >
-      {loading ? (
-        <MenuItem disabled>{t('common.loading')}</MenuItem>
-      ) : (
-        <>
-          <MenuItem value="">
-            <em>{t('common.none')}</em>
-          </MenuItem>
-          {options.map((option) => (
-            <MenuItem key={option.value} value={option.value}>
-              {option.label}
-            </MenuItem>
-          ))}
-          <MenuItem value={MANUAL_VALUE} divider>
-            {t('connections.manualOption')}
-          </MenuItem>
-        </>
-      )}
+      {loading
+        ? [
+            <MenuItem key="loading" disabled>
+              {t('common.loading')}
+            </MenuItem>,
+          ]
+        : [
+            <MenuItem key="none" value="">
+              <em>{t('common.none')}</em>
+            </MenuItem>,
+            ...options.map((option) => (
+              <MenuItem key={option.value} value={option.value}>
+                {option.label}
+              </MenuItem>
+            )),
+            <MenuItem key="manual" value={MANUAL_VALUE} divider>
+              {t('connections.manualOption')}
+            </MenuItem>,
+          ]}
     </TextField>
   );
 }

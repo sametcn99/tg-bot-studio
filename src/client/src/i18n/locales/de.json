@@ -275,6 +275,7 @@
     "yes": "Ja",
     "no": "Nein",
     "optional": "(optional)",
+    "none": "Keine",
     "help": "Hilfe",
     "dataTable": "Datentabelle",
     "errorTitle": "Etwas ist schiefgelaufen",

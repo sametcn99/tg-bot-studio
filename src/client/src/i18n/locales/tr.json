@@ -275,6 +275,7 @@
     "yes": "Evet",
     "no": "Hayır",
     "optional": "(isteğe bağlı)",
+    "none": "Yok",
     "help": "Yardım",
     "dataTable": "Veri tablosu",
     "errorTitle": "Bir şeyler ters gitti",

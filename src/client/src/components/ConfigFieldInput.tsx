@@ -158,7 +158,7 @@ export function ConfigFieldInput({
     label: field.label,
     fullWidth: true,
     size: 'small' as const,
-    InputProps: helpAdornment ? { endAdornment: helpAdornment } : undefined,
+    slotProps: helpAdornment ? { input: { endAdornment: helpAdornment } } : undefined,
   };
 
   switch (field.type) {
