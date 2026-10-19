@@ -38,15 +38,23 @@ export class StartMenuRuntime extends BotModuleHandler {
   register(ctx: ModuleRuntimeContext): void {
     const { bot } = ctx;
 
-    bot.command('start', async (update: Context) => {
-      if (update.chat?.type !== 'private') return;
-      await this.sendMenu(ctx, update);
+    bot.command('start', async (update: Context, next) => {
+      try {
+        if (update.chat?.type !== 'private') return;
+        await this.sendMenu(ctx, update);
+      } finally {
+        await next();
+      }
     });
 
     if (ctx.config.enableMenuCommand) {
-      bot.command('menu', async (update: Context) => {
-        if (update.chat?.type !== 'private') return;
-        await this.sendMenu(ctx, update);
+      bot.command('menu', async (update: Context, next) => {
+        try {
+          if (update.chat?.type !== 'private') return;
+          await this.sendMenu(ctx, update);
+        } finally {
+          await next();
+        }
       });
     }
   }

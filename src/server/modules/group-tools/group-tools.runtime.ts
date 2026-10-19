@@ -81,13 +81,25 @@ export class GroupToolsRuntime extends BotModuleHandler {
     // --- Linked channel ---------------------------------------------------
     bot.command('antichannelpin', (c) => this.handleToggleSetting(c, botId, 'antichannelPins'));
     bot.command('cleanlinked', (c) => this.handleToggleSetting(c, botId, 'cleanLinked'));
-    bot.on('message', (c) => this.handleLinkedChannelPost(c, botId));
+    bot.on('message', async (c, next) => {
+      try {
+        await this.handleLinkedChannelPost(c, botId);
+      } finally {
+        await next();
+      }
+    });
 
     // --- Reports ----------------------------------------------------------
     bot.command('report', (c) => this.handleReport(c, botId));
     bot.command('reports', (c) => this.handleReportsToggle(c, botId));
     // @admin text trigger (reply-based).
-    bot.on('message:text', (c) => this.handleAdminMention(c, botId));
+    bot.on('message:text', async (c, next) => {
+      try {
+        await this.handleAdminMention(c, botId);
+      } finally {
+        await next();
+      }
+    });
 
     // --- Admin tooling ----------------------------------------------------
     bot.command('adminlist', (c) => this.handleAdminList(c, botId));

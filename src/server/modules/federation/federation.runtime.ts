@@ -89,10 +89,14 @@ export class FederationRuntime extends BotModuleHandler {
         .catch(() => undefined);
     };
 
-    bot.on('chat_member', async (c) => {
-      const status = c.chatMember.new_chat_member.status;
-      if (status === 'member' || status === 'administrator') {
-        await passive(c, c.chatMember.new_chat_member.user.id);
+    bot.on('chat_member', async (c, next) => {
+      try {
+        const status = c.chatMember.new_chat_member.status;
+        if (status === 'member' || status === 'administrator') {
+          await passive(c, c.chatMember.new_chat_member.user.id);
+        }
+      } finally {
+        await next();
       }
     });
 

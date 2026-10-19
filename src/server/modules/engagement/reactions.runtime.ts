@@ -41,22 +41,26 @@ export class ReactionsRuntime extends BotModuleHandler {
    * @returns {void}
    */
   register(ctx: ModuleRuntimeContext): void {
-    ctx.bot.on('message_reaction', async (update) => {
-      const reaction = update.messageReaction;
-      const chatId = (reaction as { chat_id?: number }).chat_id;
-      const userId = (reaction as { user_id?: number }).user_id;
-      if (!userId || !chatId) return;
+    ctx.bot.on('message_reaction', async (update, next) => {
+      try {
+        const reaction = update.messageReaction;
+        const chatId = (reaction as { chat_id?: number }).chat_id;
+        const userId = (reaction as { user_id?: number }).user_id;
+        if (!userId || !chatId) return;
 
-      // Effective per-chat weight (chat override -> bot config -> default),
-      // and the explicit-target gate: untargeted chats earn nothing.
-      const config = await this.chatSettings.getEffectiveConfig(ctx.botId, chatId, this.moduleKey);
-      if (!isChatTargeted(config.targetChats, chatId)) return;
-      const pointsPerReaction = Math.max(0, Number(config.pointsPerReaction ?? 1));
+        // Effective per-chat weight (chat override -> bot config -> default),
+        // and the explicit-target gate: untargeted chats earn nothing.
+        const config = await this.chatSettings.getEffectiveConfig(ctx.botId, chatId, this.moduleKey);
+        if (!isChatTargeted(config.targetChats, chatId)) return;
+        const pointsPerReaction = Math.max(0, Number(config.pointsPerReaction ?? 1));
 
-      for (const entry of reaction.new_reaction) {
-        if (entry.type !== 'emoji') continue;
-        this.service.recordReaction(ctx.botId, entry.emoji);
-        this.helpers.addPoints(ctx.botId, userId, pointsPerReaction);
+        for (const entry of reaction.new_reaction) {
+          if (entry.type !== 'emoji') continue;
+          this.service.recordReaction(ctx.botId, entry.emoji);
+          this.helpers.addPoints(ctx.botId, userId, pointsPerReaction);
+        }
+      } finally {
+        await next();
       }
     });
   }

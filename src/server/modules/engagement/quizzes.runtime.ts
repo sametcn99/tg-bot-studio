@@ -85,15 +85,19 @@ export class QuizzesRuntime extends BotModuleHandler {
       );
     });
 
-    bot.on('poll_answer', (update) => {
-      const quizId = this.activePolls.get(`${ctx.botId}:${update.pollAnswer.poll_id}`);
-      if (!quizId) return;
-      const quiz = this.service.listQuizzes(ctx.botId).find((entry) => entry.id === quizId);
-      if (!quiz || !update.pollAnswer.user) return;
-      const [chosen] = update.pollAnswer.option_ids;
-      if (chosen === undefined || chosen !== quiz.correctOptionId) return;
-      this.service.recordCorrectAnswer(ctx.botId, quizId, update.pollAnswer.user.id);
-      this.helpers.addPoints(ctx.botId, update.pollAnswer.user.id, quiz.points);
+    bot.on('poll_answer', async (update, next) => {
+      try {
+        const quizId = this.activePolls.get(`${ctx.botId}:${update.pollAnswer.poll_id}`);
+        if (!quizId) return;
+        const quiz = this.service.listQuizzes(ctx.botId).find((entry) => entry.id === quizId);
+        if (!quiz || !update.pollAnswer.user) return;
+        const [chosen] = update.pollAnswer.option_ids;
+        if (chosen === undefined || chosen !== quiz.correctOptionId) return;
+        this.service.recordCorrectAnswer(ctx.botId, quizId, update.pollAnswer.user.id);
+        this.helpers.addPoints(ctx.botId, update.pollAnswer.user.id, quiz.points);
+      } finally {
+        await next();
+      }
     });
   }
 }

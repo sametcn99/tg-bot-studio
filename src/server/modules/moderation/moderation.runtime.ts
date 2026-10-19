@@ -88,67 +88,71 @@ export class ModerationRuntime extends BotModuleHandler {
   register(ctx: ModuleRuntimeContext): void {
     const { bot, botId } = ctx;
 
-    bot.on('message', async (update) => {
-      if (update.chat?.type !== 'supergroup' && update.chat?.type !== 'group') return;
-      if (!update.from || update.from.id === bot.botInfo?.id) return;
-      const chatId = update.chat.id;
-      const from = update.from;
-      const key = `${botId}:${chatId}:${from.id}`;
-      this.sweepStaleState();
-      this.lastSeen.set(key, Date.now());
+    bot.on('message', async (update, next) => {
+      try {
+        if (update.chat?.type !== 'supergroup' && update.chat?.type !== 'group') return;
+        if (!update.from || update.from.id === bot.botInfo?.id) return;
+        const chatId = update.chat.id;
+        const from = update.from;
+        const key = `${botId}:${chatId}:${from.id}`;
+        this.sweepStaleState();
+        this.lastSeen.set(key, Date.now());
 
-      const config = await this.chatSettings.getEffectiveConfig(botId, chatId, this.moduleKey);
-      if (!isChatTargeted(config.targetChats, chatId)) return;
+        const config = await this.chatSettings.getEffectiveConfig(botId, chatId, this.moduleKey);
+        if (!isChatTargeted(config.targetChats, chatId)) return;
 
-      // Admins and approved users are immune to automated moderation.
-      if (await this.isImmune(botId, update, chatId, from)) return;
+        // Admins and approved users are immune to automated moderation.
+        if (await this.isImmune(botId, update, chatId, from)) return;
 
-      // Blocklist (reference precedence: locks run in the locks module middleware
-      // before blocklists when both modules are enabled).
-      const blockedWords = Array.isArray(config.blockedWords)
-        ? (config.blockedWords as string[])
-        : [];
-      if (blockedWords.length > 0 && config.blocklistDelete !== false) {
-        const hit = matchBlocklist(blockedWords, update.msg, from);
-        if (hit) {
-          await this.applyBlocklistHit(
-            ctx,
-            update,
-            chatId,
-            from,
-            config,
-            hit.trigger,
-            hit.action,
-            hit.durationSeconds,
-          );
+        // Blocklist (reference precedence: locks run in the locks module middleware
+        // before blocklists when both modules are enabled).
+        const blockedWords = Array.isArray(config.blockedWords)
+          ? (config.blockedWords as string[])
+          : [];
+        if (blockedWords.length > 0 && config.blocklistDelete !== false) {
+          const hit = matchBlocklist(blockedWords, update.msg, from);
+          if (hit) {
+            await this.applyBlocklistHit(
+              ctx,
+              update,
+              chatId,
+              from,
+              config,
+              hit.trigger,
+              hit.action,
+              hit.durationSeconds,
+            );
+            return;
+          }
+        }
+
+        // Link blocking.
+        const text = update.msg.text ?? update.msg.caption ?? '';
+        if (
+          config.blockLinks === true &&
+          (text.includes('http://') || text.includes('https://') || text.includes('t.me/'))
+        ) {
+          await this.applyBlocklistHit(ctx, update, chatId, from, config, 'Link posting');
           return;
         }
-      }
 
-      // Link blocking.
-      const text = update.msg.text ?? update.msg.caption ?? '';
-      if (
-        config.blockLinks === true &&
-        (text.includes('http://') || text.includes('https://') || text.includes('t.me/'))
-      ) {
-        await this.applyBlocklistHit(ctx, update, chatId, from, config, 'Link posting');
-        return;
-      }
-
-      // Flood control (persistent window via sliding timestamps).
-      const floodLimit = Number(config.floodMessageLimit ?? 0);
-      if (floodLimit > 0) {
-        const windowSeconds = Number(config.floodWindowSeconds ?? 10);
-        const now = Date.now();
-        const windowStart = now - windowSeconds * 1000;
-        const timestamps = (this.floodWindow.get(key) ?? []).filter((ts) => ts >= windowStart);
-        timestamps.push(now);
-        this.floodWindow.set(key, timestamps);
-        if (timestamps.length > floodLimit) {
-          this.floodWindow.set(key, []);
-          await this.applyFloodPunishment(update, botId, chatId, from, config);
-          return;
+        // Flood control (persistent window via sliding timestamps).
+        const floodLimit = Number(config.floodMessageLimit ?? 0);
+        if (floodLimit > 0) {
+          const windowSeconds = Number(config.floodWindowSeconds ?? 10);
+          const now = Date.now();
+          const windowStart = now - windowSeconds * 1000;
+          const timestamps = (this.floodWindow.get(key) ?? []).filter((ts) => ts >= windowStart);
+          timestamps.push(now);
+          this.floodWindow.set(key, timestamps);
+          if (timestamps.length > floodLimit) {
+            this.floodWindow.set(key, []);
+            await this.applyFloodPunishment(update, botId, chatId, from, config);
+            return;
+          }
         }
+      } finally {
+        await next();
       }
     });
 

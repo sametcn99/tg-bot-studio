@@ -49,67 +49,75 @@ export class WelcomeRuntime extends BotModuleHandler {
   register(ctx: ModuleRuntimeContext): void {
     const { bot, botId } = ctx;
 
-    bot.on('message:new_chat_members', async (update) => {
-      if (update.chat?.type !== 'supergroup' && update.chat?.type !== 'group') return;
-      const chatId = update.chat.id;
-      const members = update.msg.new_chat_members ?? [];
-      const config = await this.chatSettings.getEffectiveConfig(botId, chatId, this.moduleKey);
-      if (!isChatTargeted(config.targetChats, chatId)) return;
-      const template = String(config.template ?? 'Welcome {mention} to {group_name}!');
+    bot.on('message:new_chat_members', async (update, next) => {
+      try {
+        if (update.chat?.type !== 'supergroup' && update.chat?.type !== 'group') return;
+        const chatId = update.chat.id;
+        const members = update.msg.new_chat_members ?? [];
+        const config = await this.chatSettings.getEffectiveConfig(botId, chatId, this.moduleKey);
+        if (!isChatTargeted(config.targetChats, chatId)) return;
+        const template = String(config.template ?? 'Welcome {mention} to {group_name}!');
 
-      for (const member of members) {
-        if (member.is_bot) continue;
-        const text = renderTemplate(
-          template,
-          this.templateParams(member, update.chat.title, bot.botInfo?.first_name ?? ''),
-        );
+        for (const member of members) {
+          if (member.is_bot) continue;
+          const text = renderTemplate(
+            template,
+            this.templateParams(member, update.chat.title, bot.botInfo?.first_name ?? ''),
+          );
 
-        // Cleanwelcome: drop the previous greeting so only one stays visible.
-        if (config.cleanWelcome === true) {
-          const previous = this.lastGreeting.get(`${botId}:${chatId}`);
-          if (previous) {
-            await bot.api.deleteMessage(chatId, previous).catch(() => undefined);
+          // Cleanwelcome: drop the previous greeting so only one stays visible.
+          if (config.cleanWelcome === true) {
+            const previous = this.lastGreeting.get(`${botId}:${chatId}`);
+            if (previous) {
+              await bot.api.deleteMessage(chatId, previous).catch(() => undefined);
+            }
+          }
+
+          const sent = await this.sendGreeting(update, chatId, text, config);
+          if (sent) {
+            this.lastGreeting.set(`${botId}:${chatId}`, sent.message_id);
+            const autoDelete = Number(config.autoDeleteSeconds ?? 0);
+            if (autoDelete >= 15 && autoDelete <= 3_600) {
+              setTimeout(() => {
+                void bot.api.deleteMessage(chatId, sent.message_id).catch(() => undefined);
+              }, autoDelete * 1000);
+            }
           }
         }
 
-        const sent = await this.sendGreeting(update, chatId, text, config);
-        if (sent) {
-          this.lastGreeting.set(`${botId}:${chatId}`, sent.message_id);
-          const autoDelete = Number(config.autoDeleteSeconds ?? 0);
-          if (autoDelete >= 15 && autoDelete <= 3_600) {
-            setTimeout(() => {
-              void bot.api.deleteMessage(chatId, sent.message_id).catch(() => undefined);
-            }, autoDelete * 1000);
-          }
+        if (config.deleteServiceMessages !== false) {
+          await update.deleteMessage().catch(() => undefined);
         }
-      }
-
-      if (config.deleteServiceMessages !== false) {
-        await update.deleteMessage().catch(() => undefined);
+      } finally {
+        await next();
       }
     });
 
-    bot.on('message:left_chat_member', async (update) => {
-      if (update.chat?.type !== 'supergroup' && update.chat?.type !== 'group') return;
-      const chatId = update.chat.id;
-      const member = update.msg.left_chat_member;
-      const config = await this.chatSettings.getEffectiveConfig(botId, chatId, this.moduleKey);
-      if (!isChatTargeted(config.targetChats, chatId)) return;
+    bot.on('message:left_chat_member', async (update, next) => {
+      try {
+        if (update.chat?.type !== 'supergroup' && update.chat?.type !== 'group') return;
+        const chatId = update.chat.id;
+        const member = update.msg.left_chat_member;
+        const config = await this.chatSettings.getEffectiveConfig(botId, chatId, this.moduleKey);
+        if (!isChatTargeted(config.targetChats, chatId)) return;
 
-      if (config.goodbyeEnabled === true && member && !member.is_bot) {
-        const template = String(config.goodbyeText ?? 'Nice knowing you, {first_name}!');
-        const text = renderTemplate(
-          template,
-          this.templateParams(member, update.chat.title, bot.botInfo?.first_name ?? ''),
-        );
-        await this.sendGreeting(update, chatId, text, {
-          ...config,
-          mediaUrl: config.goodbyeMediaUrl,
-        });
-      }
+        if (config.goodbyeEnabled === true && member && !member.is_bot) {
+          const template = String(config.goodbyeText ?? 'Nice knowing you, {first_name}!');
+          const text = renderTemplate(
+            template,
+            this.templateParams(member, update.chat.title, bot.botInfo?.first_name ?? ''),
+          );
+          await this.sendGreeting(update, chatId, text, {
+            ...config,
+            mediaUrl: config.goodbyeMediaUrl,
+          });
+        }
 
-      if (config.deleteLeaveMessages === true) {
-        await update.deleteMessage().catch(() => undefined);
+        if (config.deleteLeaveMessages === true) {
+          await update.deleteMessage().catch(() => undefined);
+        }
+      } finally {
+        await next();
       }
     });
 

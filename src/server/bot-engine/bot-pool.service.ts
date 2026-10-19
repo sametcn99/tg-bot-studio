@@ -346,24 +346,28 @@ export class BotPoolService implements OnApplicationBootstrap, OnApplicationShut
       await next();
     });
 
-    bot.on('my_chat_member', (ctx) => {
-      const chat = ctx.myChatMember.chat;
-      const active = ['member', 'administrator', 'creator'].includes(
-        ctx.myChatMember.new_chat_member.status,
-      );
-      void this.chatConnectionModel
-        .upsertGroup({
-          botId,
-          chatId: chat.id,
-          title: chat.title ?? String(chat.id),
-          type: chat.type,
-          isActive: active ? 1 : 0,
-        })
-        .catch((error: unknown) => {
-          this.logger.warn(
-            `upsertGroup (my_chat_member) failed for bot ${botId}: ${error instanceof Error ? error.message : String(error)}`,
-          );
-        });
+    bot.on('my_chat_member', async (ctx, next) => {
+      try {
+        const chat = ctx.myChatMember.chat;
+        const active = ['member', 'administrator', 'creator'].includes(
+          ctx.myChatMember.new_chat_member.status,
+        );
+        void this.chatConnectionModel
+          .upsertGroup({
+            botId,
+            chatId: chat.id,
+            title: chat.title ?? String(chat.id),
+            type: chat.type,
+            isActive: active ? 1 : 0,
+          })
+          .catch((error: unknown) => {
+            this.logger.warn(
+              `upsertGroup (my_chat_member) failed for bot ${botId}: ${error instanceof Error ? error.message : String(error)}`,
+            );
+          });
+      } finally {
+        await next();
+      }
     });
   }
 

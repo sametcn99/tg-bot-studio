@@ -38,18 +38,22 @@ export class ReferralsRuntime extends BotModuleHandler {
     const pointsPerReferral = Number(ctx.config.pointsPerReferral ?? 10);
     const leaderboardSize = Number(ctx.config.leaderboardSize ?? 10);
 
-    bot.command('start', async (update) => {
-      const payload = update.msg?.text?.replace(/^\/start(@\S+)?\s*/, '').trim() ?? '';
-      const match = /^ref_(\d+)$/.exec(payload);
-      if (!match || !update.from) return;
-      const attributed = await this.helpers.setReferrer(
-        ctx.botId,
-        update.from.id,
-        Number(match[1]),
-        pointsPerReferral,
-      );
-      if (attributed) {
-        void update.reply('You were referred successfully. Your friend earned bonus points.');
+    bot.command('start', async (update, next) => {
+      try {
+        const payload = update.msg?.text?.replace(/^\/start(@\S+)?\s*/, '').trim() ?? '';
+        const match = /^ref_(\d+)$/.exec(payload);
+        if (!match || !update.from) return;
+        const attributed = await this.helpers.setReferrer(
+          ctx.botId,
+          update.from.id,
+          Number(match[1]),
+          pointsPerReferral,
+        );
+        if (attributed) {
+          void update.reply('You were referred successfully. Your friend earned bonus points.');
+        }
+      } finally {
+        await next();
       }
     });
 

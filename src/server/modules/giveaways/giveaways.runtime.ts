@@ -54,38 +54,42 @@ export class GiveawaysRuntime extends BotModuleHandler {
       }
     });
 
-    bot.on('callback_query:data', async (update) => {
-      if (!update.callbackQuery.data.startsWith('giveaway:')) return;
-      const [, giveawayIdRaw] = update.callbackQuery.data.split(':');
-      const giveawayId = giveawayIdRaw;
-      const list = await this.service.list(ctx.botId);
-      const giveaway = list.find((row) => row.id === giveawayId && row.status === 'active');
-      if (!giveaway) {
-        await update.answerCallbackQuery({ text: 'This giveaway is no longer active.' });
-        return;
-      }
-      if (!update.callbackQuery.from) return;
+    bot.on('callback_query:data', async (update, next) => {
+      try {
+        if (!update.callbackQuery.data.startsWith('giveaway:')) return;
+        const [, giveawayIdRaw] = update.callbackQuery.data.split(':');
+        const giveawayId = giveawayIdRaw;
+        const list = await this.service.list(ctx.botId);
+        const giveaway = list.find((row) => row.id === giveawayId && row.status === 'active');
+        if (!giveaway) {
+          await update.answerCallbackQuery({ text: 'This giveaway is no longer active.' });
+          return;
+        }
+        if (!update.callbackQuery.from) return;
 
-      const channels = giveaway.requiredChannels as string[];
-      const verified = await this.service.verifyMembership(
-        ctx.botId,
-        update.callbackQuery.from.id,
-        channels,
-      );
-      if (!verified) {
+        const channels = giveaway.requiredChannels as string[];
+        const verified = await this.service.verifyMembership(
+          ctx.botId,
+          update.callbackQuery.from.id,
+          channels,
+        );
+        if (!verified) {
+          await update.answerCallbackQuery({
+            text: 'Please join all required channels first, then try again.',
+          });
+          return;
+        }
+        const added = await this.service.addParticipant(
+          ctx.botId,
+          giveawayId,
+          update.callbackQuery.from.id,
+        );
         await update.answerCallbackQuery({
-          text: 'Please join all required channels first, then try again.',
+          text: added ? 'You are participating. Good luck.' : 'You are already participating.',
         });
-        return;
+      } finally {
+        await next();
       }
-      const added = await this.service.addParticipant(
-        ctx.botId,
-        giveawayId,
-        update.callbackQuery.from.id,
-      );
-      await update.answerCallbackQuery({
-        text: added ? 'You are participating. Good luck.' : 'You are already participating.',
-      });
     });
   }
 }

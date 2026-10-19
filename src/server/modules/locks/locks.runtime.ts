@@ -62,43 +62,47 @@ export class LocksRuntime extends BotModuleHandler {
   register(ctx: ModuleRuntimeContext): void {
     const { bot, botId } = ctx;
 
-    bot.on('message', async (update) => {
-      if (update.chat?.type !== 'supergroup' && update.chat?.type !== 'group') return;
-      if (!update.from || update.from.id === bot.botInfo?.id) return;
+    bot.on('message', async (update, next) => {
+      try {
+        if (update.chat?.type !== 'supergroup' && update.chat?.type !== 'group') return;
+        if (!update.from || update.from.id === bot.botInfo?.id) return;
 
-      const config = await this.chatSettings.getEffectiveConfig(
-        botId,
-        update.chat.id,
-        this.moduleKey,
-      );
-      if (!isChatTargeted(config.targetChats, update.chat.id)) return;
-      const lockedTypes = Array.isArray(config.lockedTypes) ? (config.lockedTypes as string[]) : [];
-      if (lockedTypes.length === 0) return;
-      if (await this.isImmune(botId, update, update.chat.id, update.from.id)) return;
-      const allowlist = Array.isArray(config.allowlist) ? (config.allowlist as string[]) : [];
-      if (isAllowlisted(allowlist, update.msg)) return;
+        const config = await this.chatSettings.getEffectiveConfig(
+          botId,
+          update.chat.id,
+          this.moduleKey,
+        );
+        if (!isChatTargeted(config.targetChats, update.chat.id)) return;
+        const lockedTypes = Array.isArray(config.lockedTypes) ? (config.lockedTypes as string[]) : [];
+        if (lockedTypes.length === 0) return;
+        if (await this.isImmune(botId, update, update.chat.id, update.from.id)) return;
+        const allowlist = Array.isArray(config.allowlist) ? (config.allowlist as string[]) : [];
+        if (isAllowlisted(allowlist, update.msg)) return;
 
-      const violated = evaluateLocks(lockedTypes, update.msg, update.chat.id);
-      if (violated.length === 0) return;
+        const violated = evaluateLocks(lockedTypes, update.msg, update.chat.id);
+        if (violated.length === 0) return;
 
-      await update.deleteMessage().catch(() => undefined);
+        await update.deleteMessage().catch(() => undefined);
 
-      const rules = (config.lockRules as Record<string, LockRule>) ?? {};
-      const rule = rules[violated[0]];
+        const rules = (config.lockRules as Record<string, LockRule>) ?? {};
+        const rule = rules[violated[0]];
 
-      this.adminLog.emit({
-        botId,
-        chatId: update.chat.id,
-        category: 'automated',
-        text: `Lock hit [${violated.join(', ')}] from ${update.from.first_name}`,
-      });
+        this.adminLog.emit({
+          botId,
+          chatId: update.chat.id,
+          category: 'automated',
+          text: `Lock hit [${violated.join(', ')}] from ${update.from.first_name}`,
+        });
 
-      if (rule?.action) {
-        await this.applyAction(update, botId, update.chat.id, update.from.id, rule);
-        return;
-      }
-      if (config.lockWarns === true) {
-        await this.warnForLock(update, botId, update.chat.id, update.from, violated);
+        if (rule?.action) {
+          await this.applyAction(update, botId, update.chat.id, update.from.id, rule);
+          return;
+        }
+        if (config.lockWarns === true) {
+          await this.warnForLock(update, botId, update.chat.id, update.from, violated);
+        }
+      } finally {
+        await next();
       }
     });
 

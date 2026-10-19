@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InlineKeyboard, type Context } from 'grammy';
 import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bot-module-handler';
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
@@ -28,6 +28,7 @@ interface ReplyButton {
  */
 @Injectable()
 export class AutoresponderRuntime extends BotModuleHandler {
+  private readonly logger = new Logger(AutoresponderRuntime.name);
   /** Registry key of the module. */
   readonly moduleKey = 'autoresponder';
 
@@ -60,6 +61,10 @@ export class AutoresponderRuntime extends BotModuleHandler {
     bot.on(['message:text', 'channel_post:text'], async (update, next) => {
       try {
         await this.handleTextMessage(ctx, update);
+      } catch (err) {
+        this.logger.warn(
+          `Autoresponder message handling failed for bot ${ctx.botId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
       } finally {
         await next();
       }

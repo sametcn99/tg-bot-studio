@@ -82,38 +82,50 @@ export class CaptchaRuntime extends BotModuleHandler {
   register(ctx: ModuleRuntimeContext): void {
     const { bot, botId } = ctx;
 
-    bot.on('message:new_chat_members', async (update) => {
-      if (update.chat?.type !== 'supergroup' && update.chat?.type !== 'group') return;
-      for (const member of update.msg.new_chat_members ?? []) {
-        if (member.is_bot) continue;
-        await this.challenge(ctx, update.chat.id, member, false);
+    bot.on('message:new_chat_members', async (update, next) => {
+      try {
+        if (update.chat?.type !== 'supergroup' && update.chat?.type !== 'group') return;
+        for (const member of update.msg.new_chat_members ?? []) {
+          if (member.is_bot) continue;
+          await this.challenge(ctx, update.chat.id, member, false);
+        }
+      } finally {
+        await next();
       }
     });
 
     // Join requests: challenge in PM, auto-approve on success.
-    bot.on('chat_join_request', async (update) => {
-      const chat = update.chatJoinRequest.chat;
-      const chatType = chat.type as string;
-      if (chatType !== 'supergroup' && chatType !== 'group') return;
-      const config = await this.chatSettings.getEffectiveConfig(botId, chat.id, this.moduleKey);
-      if (config.joinRequestIntegration !== true) return;
-      await this.challenge(ctx, chat.id, update.chatJoinRequest.from, true);
+    bot.on('chat_join_request', async (update, next) => {
+      try {
+        const chat = update.chatJoinRequest.chat;
+        const chatType = chat.type as string;
+        if (chatType !== 'supergroup' && chatType !== 'group') return;
+        const config = await this.chatSettings.getEffectiveConfig(botId, chat.id, this.moduleKey);
+        if (config.joinRequestIntegration !== true) return;
+        await this.challenge(ctx, chat.id, update.chatJoinRequest.from, true);
+      } finally {
+        await next();
+      }
     });
 
-    bot.on('callback_query:data', async (update) => {
-      if (!update.callbackQuery.data.startsWith('captcha:')) return;
-      const [, userIdRaw, nonce] = update.callbackQuery.data.split(':');
-      const chatId = Number(update.callbackQuery.message?.chat.id ?? 0);
-      const key = `${botId}:${chatId}:${userIdRaw}`;
-      const pending = this.pending.get(key);
-      if (!pending || pending.nonce !== nonce) {
-        await update
-          .answerCallbackQuery({ text: 'This challenge is no longer valid.' })
-          .catch(() => undefined);
-        return;
+    bot.on('callback_query:data', async (update, next) => {
+      try {
+        if (!update.callbackQuery.data.startsWith('captcha:')) return;
+        const [, userIdRaw, nonce] = update.callbackQuery.data.split(':');
+        const chatId = Number(update.callbackQuery.message?.chat.id ?? 0);
+        const key = `${botId}:${chatId}:${userIdRaw}`;
+        const pending = this.pending.get(key);
+        if (!pending || pending.nonce !== nonce) {
+          await update
+            .answerCallbackQuery({ text: 'This challenge is no longer valid.' })
+            .catch(() => undefined);
+          return;
+        }
+        await this.verify(ctx, key, update.callbackQuery.from.first_name);
+        await update.answerCallbackQuery({ text: '✅' }).catch(() => undefined);
+      } finally {
+        await next();
       }
-      await this.verify(ctx, key, update.callbackQuery.from.first_name);
-      await update.answerCallbackQuery({ text: '✅' }).catch(() => undefined);
     });
 
     // Math-mode answer handling (in-group text or PM).

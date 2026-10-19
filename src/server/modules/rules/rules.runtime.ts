@@ -51,20 +51,24 @@ export class RulesRuntime extends BotModuleHandler {
     bot.command('resetrulesbutton', (c) => this.handleRulesButtonReset(c, botId));
 
     // PM deep link used by the {rules} placeholder: /start rules_<chatId>.
-    bot.command('start', async (c) => {
-      if (c.chat?.type !== 'private' || !c.from) return;
-      const payload = String(typeof c.match === 'string' ? c.match : '').trim();
-      if (!payload.startsWith('rules_')) return;
-      const chatId = payload.slice('rules_'.length);
-      const config = await this.chatSettings.getEffectiveConfig(botId, chatId, this.moduleKey);
-      if (!isChatTargeted(config.targetChats, chatId)) return;
-      const lang = await this.i18n.getChatLanguage(botId, chatId);
-      const text = String(config.rulesText ?? '');
-      if (!text) {
-        await c.reply(this.i18n.t(lang, 'rules.noneSet')).catch(() => undefined);
-        return;
+    bot.command('start', async (c, next) => {
+      try {
+        if (c.chat?.type !== 'private' || !c.from) return;
+        const payload = String(typeof c.match === 'string' ? c.match : '').trim();
+        if (!payload.startsWith('rules_')) return;
+        const chatId = payload.slice('rules_'.length);
+        const config = await this.chatSettings.getEffectiveConfig(botId, chatId, this.moduleKey);
+        if (!isChatTargeted(config.targetChats, chatId)) return;
+        const lang = await this.i18n.getChatLanguage(botId, chatId);
+        const text = String(config.rulesText ?? '');
+        if (!text) {
+          await c.reply(this.i18n.t(lang, 'rules.noneSet')).catch(() => undefined);
+          return;
+        }
+        await c.reply(text, { parse_mode: 'HTML' }).catch(() => undefined);
+      } finally {
+        await next();
       }
-      await c.reply(text, { parse_mode: 'HTML' }).catch(() => undefined);
     });
   }
 

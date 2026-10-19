@@ -65,25 +65,29 @@ export class MessageScoreRuntime extends BotModuleHandler {
    * @returns {void}
    */
   register(ctx: ModuleRuntimeContext): void {
-    ctx.bot.on('message', async (update) => {
-      const chat = update.chat;
-      if (chat.type !== 'group' && chat.type !== 'supergroup') return;
-      const from = update.msg.from;
-      if (!from || from.is_bot) return;
-      // Explicit-target gate: only configured chats accumulate activity.
-      if (!(await this.chatSettings.isTargeted(ctx.botId, chat.id, this.moduleKey))) return;
-      const msg = update.msg;
-      if (SERVICE_KEYS.some((key) => msg[key] !== undefined)) return;
+    ctx.bot.on('message', async (update, next) => {
+      try {
+        const chat = update.chat;
+        if (chat.type !== 'group' && chat.type !== 'supergroup') return;
+        const from = update.msg.from;
+        if (!from || from.is_bot) return;
+        // Explicit-target gate: only configured chats accumulate activity.
+        if (!(await this.chatSettings.isTargeted(ctx.botId, chat.id, this.moduleKey))) return;
+        const msg = update.msg;
+        if (SERVICE_KEYS.some((key) => msg[key] !== undefined)) return;
 
-      const replyTarget = msg.reply_to_message?.from;
-      const isReplyToOther = Boolean(
-        msg.reply_to_message && (!replyTarget || replyTarget.id !== from.id),
-      );
-      const isMedia = MEDIA_KEYS.some((key) => msg[key] !== undefined);
-      this.service.recordActivity(ctx.botId, chat.id, from.id, {
-        reply: isReplyToOther,
-        media: isMedia,
-      });
+        const replyTarget = msg.reply_to_message?.from;
+        const isReplyToOther = Boolean(
+          msg.reply_to_message && (!replyTarget || replyTarget.id !== from.id),
+        );
+        const isMedia = MEDIA_KEYS.some((key) => msg[key] !== undefined);
+        this.service.recordActivity(ctx.botId, chat.id, from.id, {
+          reply: isReplyToOther,
+          media: isMedia,
+        });
+      } finally {
+        await next();
+      }
     });
   }
 }

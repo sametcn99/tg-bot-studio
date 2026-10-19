@@ -60,49 +60,53 @@ export class AntiraidRuntime extends BotModuleHandler {
     const { bot, botId } = ctx;
 
     // Join tracking: raid bans + auto-trigger rate detection.
-    bot.on(['message:new_chat_members', 'chat_member'], async (update) => {
-      if (!update.chat || (update.chat.type !== 'supergroup' && update.chat.type !== 'group')) {
-        return;
-      }
-      const chatId = update.chat.id;
-      const config = await this.chatSettings.getEffectiveConfig(botId, chatId, this.moduleKey);
-      if (!isChatTargeted(config.targetChats, chatId)) return;
-      const key = `${botId}:${chatId}`;
-      const state = this.state.get(key) ?? { until: 0, joins: [] };
-      const now = Date.now();
-
-      // Auto-trigger: N joins within a minute enables raid mode.
-      const threshold = Number(config.autoRaidJoinThreshold ?? 0);
-      if (threshold > 0) {
-        state.joins = [...state.joins.filter((ts) => now - ts < 60_000), now];
-        if (state.until <= Date.now() && state.joins.length >= threshold) {
-          const raidTime = Number(config.raidTimeSeconds ?? 21_600);
-          state.until = now + raidTime * 1000;
-          this.adminLog.emit({
-            botId,
-            chatId,
-            category: 'automated',
-            text: `AntiRaid auto-enabled (${state.joins.length} joins/min)`,
-          });
+    bot.on(['message:new_chat_members', 'chat_member'], async (update, next) => {
+      try {
+        if (!update.chat || (update.chat.type !== 'supergroup' && update.chat.type !== 'group')) {
+          return;
         }
-      }
+        const chatId = update.chat.id;
+        const config = await this.chatSettings.getEffectiveConfig(botId, chatId, this.moduleKey);
+        if (!isChatTargeted(config.targetChats, chatId)) return;
+        const key = `${botId}:${chatId}`;
+        const state = this.state.get(key) ?? { until: 0, joins: [] };
+        const now = Date.now();
 
-      if (state.until > Date.now()) {
-        const actionTime = Number(config.raidActionTimeSeconds ?? 3_600);
-        const newcomerId =
-          update.chatMember?.new_chat_member.user.id ?? update.msg?.new_chat_members?.[0]?.id;
-        if (newcomerId && newcomerId !== bot.botInfo?.id) {
-          await this.restrictions.ban(update.api, chatId, newcomerId, actionTime);
-          this.adminLog.emit({
-            botId,
-            chatId,
-            category: 'automated',
-            text: `AntiRaid temp-banned joiner ${newcomerId} (${formatDuration(actionTime)})`,
-          });
+        // Auto-trigger: N joins within a minute enables raid mode.
+        const threshold = Number(config.autoRaidJoinThreshold ?? 0);
+        if (threshold > 0) {
+          state.joins = [...state.joins.filter((ts) => now - ts < 60_000), now];
+          if (state.until <= Date.now() && state.joins.length >= threshold) {
+            const raidTime = Number(config.raidTimeSeconds ?? 21_600);
+            state.until = now + raidTime * 1000;
+            this.adminLog.emit({
+              botId,
+              chatId,
+              category: 'automated',
+              text: `AntiRaid auto-enabled (${state.joins.length} joins/min)`,
+            });
+          }
         }
-      }
 
-      this.state.set(key, state);
+        if (state.until > Date.now()) {
+          const actionTime = Number(config.raidActionTimeSeconds ?? 3_600);
+          const newcomerId =
+            update.chatMember?.new_chat_member.user.id ?? update.msg?.new_chat_members?.[0]?.id;
+          if (newcomerId && newcomerId !== bot.botInfo?.id) {
+            await this.restrictions.ban(update.api, chatId, newcomerId, actionTime);
+            this.adminLog.emit({
+              botId,
+              chatId,
+              category: 'automated',
+              text: `AntiRaid temp-banned joiner ${newcomerId} (${formatDuration(actionTime)})`,
+            });
+          }
+        }
+
+        this.state.set(key, state);
+      } finally {
+        await next();
+      }
     });
 
     bot.command('antiraid', (c) => this.handleAntiraid(c, botId));
