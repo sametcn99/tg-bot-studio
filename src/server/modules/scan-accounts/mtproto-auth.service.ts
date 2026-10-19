@@ -1,13 +1,10 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { Api, TelegramClient } from 'telegram';
-import { StringSession } from 'telegram/sessions';
-import { computeCheck } from 'telegram/Password';
-import { Logger as GramjsLogger, LogLevel } from 'telegram/extensions/Logger';
 import { SystemSettingsService } from '../../database/system-settings.service';
 import { openSecret, sealSecret } from '../../common/utils/secret-box.util';
 import { DEFAULT_JWT_SECRET } from '../../auth/auth-defaults';
 import { ScanAccountModel } from './scan-account.model';
 import { toScanAccountRow, type ScanAccountRow } from './scan-account.entity';
+import { loadGramjs, type GramjsClient } from './gramjs-loader';
 
 /** Studio setting keys for the shared MTProto application identity. */
 const SETTING_API_ID = 'mtproto_api_id';
@@ -24,7 +21,7 @@ interface LoginTicket {
   botId: string;
   phone: string;
   label: string | null;
-  client: TelegramClient;
+  client: GramjsClient;
   phoneCodeHash: string;
   expiresAt: number;
 }
@@ -96,20 +93,21 @@ export class MtprotoAuthService {
       throw new BadRequestException('phone must be in +<country><number> format');
     }
     const { apiId, apiHash } = this.credentialsOrThrow();
+    const gram = await loadGramjs();
 
-    const client = new TelegramClient(new StringSession(''), apiId, apiHash, {
+    const client = new gram.TelegramClient(new gram.StringSession(''), apiId, apiHash, {
       connectionRetries: 2,
       useWSS: false,
-      baseLogger: new GramjsLogger(LogLevel.NONE),
+      baseLogger: new gram.GramjsLogger(gram.LogLevel.NONE),
     });
     await client.connect();
     try {
       const sent = (await client.invoke(
-        new Api.auth.SendCode({
+        new gram.Api.auth.SendCode({
           phoneNumber: phoneNormalized,
           apiId,
           apiHash,
-          settings: new Api.CodeSettings({}),
+          settings: new gram.Api.CodeSettings({}),
         }),
       )) as { phoneCodeHash: string; isCodeViaApp?: boolean };
 
@@ -139,9 +137,10 @@ export class MtprotoAuthService {
    */
   async submitCode(botId: string, ticket: string, code: string): Promise<LoginStepResult> {
     const entry = this.requireTicket(botId, ticket);
+    const gram = await loadGramjs();
     try {
       await entry.client.invoke(
-        new Api.auth.SignIn({
+        new gram.Api.auth.SignIn({
           phoneNumber: entry.phone,
           phoneCodeHash: entry.phoneCodeHash,
           phoneCode: code.trim(),
@@ -165,10 +164,11 @@ export class MtprotoAuthService {
    */
   async submitPassword(botId: string, ticket: string, password: string): Promise<LoginStepResult> {
     const entry = this.requireTicket(botId, ticket);
+    const gram = await loadGramjs();
     try {
-      const passwordInfo = await entry.client.invoke(new Api.account.GetPassword());
-      const check = await computeCheck(passwordInfo, password);
-      await entry.client.invoke(new Api.auth.CheckPassword({ password: check }));
+      const passwordInfo = await entry.client.invoke(new gram.Api.account.GetPassword());
+      const check = await gram.computeCheck(passwordInfo, password);
+      await entry.client.invoke(new gram.Api.auth.CheckPassword({ password: check }));
     } catch (error) {
       throw this.toBadRequest(error, 'Password rejected');
     }
@@ -202,15 +202,16 @@ export class MtprotoAuthService {
   /**
    * Builds a connected client from a stored, sealed session.
    * @param {string} sessionEnc - Sealed session envelope.
-   * @returns {Promise<TelegramClient>} Connected client.
+   * @returns {Promise<GramjsClient>} Connected client.
    */
-  async clientFromSession(sessionEnc: string): Promise<TelegramClient> {
+  async clientFromSession(sessionEnc: string): Promise<GramjsClient> {
     const { apiId, apiHash } = this.credentialsOrThrow();
+    const gram = await loadGramjs();
     const session = openSecret(sessionEnc, this.boxKey());
-    const client = new TelegramClient(new StringSession(session), apiId, apiHash, {
+    const client = new gram.TelegramClient(new gram.StringSession(session), apiId, apiHash, {
       connectionRetries: 2,
       useWSS: false,
-      baseLogger: new GramjsLogger(LogLevel.NONE),
+      baseLogger: new gram.GramjsLogger(gram.LogLevel.NONE),
     });
     await client.connect();
     return client;

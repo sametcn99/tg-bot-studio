@@ -7,7 +7,11 @@
 # Bun is pinned to the same version CI tests with (floating tags make builds
 # and test runs diverge silently).
 # ============================================================================
-FROM oven/bun:1.4.2-alpine AS deps
+# GramJS (telegram) pulls websocket -> bufferutil/utf-8-validate native
+# modules. Bun 1.4 on musl skips those installs and the packages have no musl
+# prebuilds, so the unguarded require crashes the server on Alpine. The
+# Debian base installs and loads their glibc prebuilds cleanly.
+FROM oven/bun:1.4.2 AS deps
 WORKDIR /app
 COPY package.json bun.lock ./
 # Both install stages run the package's postinstall (`prisma generate`),
@@ -34,7 +38,7 @@ RUN bun run build
 # artifacts. Runs as the non-root `bun` user with a persistent data directory
 # and a native HEALTHCHECK against /api/health.
 # ============================================================================
-FROM oven/bun:1.4.2-alpine AS runner
+FROM oven/bun:1.4.2 AS runner
 WORKDIR /app
 ENV NODE_ENV=production \
     PORT=3000 \
@@ -66,8 +70,10 @@ USER bun
 
 EXPOSE 3000
 
+# Debian slim ships no wget; probe the health endpoint with Bun itself so
+# the check works on any base image.
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 --start-period=10s \
-    CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/api/health || exit 1
+    CMD ["bun", "-e", "await fetch('http://127.0.0.1:3000/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
 
 # Bun forwards SIGTERM/SIGINT to the process so NestJS shutdown hooks run and
 # every active grammY bot in the pool is stopped cleanly. Pending versioned

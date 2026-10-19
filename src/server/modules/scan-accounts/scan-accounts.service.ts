@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Api } from 'telegram';
 import { ScanAccountModel } from './scan-account.model';
 import { MtprotoAuthService } from './mtproto-auth.service';
 import { toScanAccountRow, type ScanAccountRow } from './scan-account.entity';
+import { loadGramjs } from './gramjs-loader';
 import { openSecret } from '../../common/utils/secret-box.util';
 import { DEFAULT_JWT_SECRET } from '../../auth/auth-defaults';
 
@@ -56,9 +56,10 @@ export class ScanAccountsService {
     const row = await this.scanModel.findById(botId, id);
     if (!row) throw new NotFoundException(`Scan account ${id} not found`);
     try {
+      const gram = await loadGramjs();
       const client = await this.mtproto.clientFromSession(row.sessionEnc);
       try {
-        await client.invoke(new Api.auth.LogOut());
+        await client.invoke(new gram.Api.auth.LogOut());
       } finally {
         await client.disconnect().catch(() => undefined);
       }
