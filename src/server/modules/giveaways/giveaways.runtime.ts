@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bot-module-handler';
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
+import { escapeHtml } from '../../common/utils/telegram-text.util';
 import { GiveawaysService } from './giveaways.service';
 
 /**
@@ -44,13 +45,15 @@ export class GiveawaysRuntime extends BotModuleHandler {
           return;
         }
         for (const giveaway of active) {
-          const channels = giveaway.requiredChannels as string[];
+          const channels = (giveaway.requiredChannels as string[]) ?? [];
           const requirement =
             channels.length > 0
-              ? `\nRequired channels: ${channels.map((channel) => String(channel)).join(', ')}`
+              ? `\nRequired channels: ${channels.map((channel) => escapeHtml(String(channel))).join(', ')}`
               : '';
+          const title = escapeHtml(String(giveaway.title ?? ''));
+          const prize = giveaway.prize_details ? escapeHtml(String(giveaway.prize_details)) : '';
           await update.reply(
-            `<b>${giveaway.title}</b>\n${(giveaway.prize_details as string) ?? ''}\nWinners: ${giveaway.winners_count}\nEnds: ${giveaway.ends_at ?? 'manual draw'}${requirement}`,
+            `<b>${title}</b>\n${prize}\nWinners: ${giveaway.winners_count}\nEnds: ${giveaway.ends_at ?? 'manual draw'}${requirement}`,
             { parse_mode: 'HTML', reply_markup: this.service.joinKeyboard(String(giveaway.id)) },
           );
         }

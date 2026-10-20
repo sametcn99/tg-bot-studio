@@ -48,7 +48,7 @@ export class MonetizationModel {
   async listSubscriptions(botId: string): Promise<VipSubscriptionEntity[]> {
     const rows = await this.prisma.vipSubscription.findMany({
       where: { botId },
-      orderBy: { id: 'desc' },
+      orderBy: { expiresAt: 'desc' },
     });
     return rows.map((r) => this.toEntity(r));
   }

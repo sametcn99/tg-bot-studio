@@ -103,6 +103,7 @@ export class MessageScoreService implements OnApplicationShutdown {
   private readonly logger = new Logger(MessageScoreService.name);
   private readonly ticker: ReturnType<typeof setInterval>;
   private lastPruneAt = 0;
+  private isRunning = false;
 
   constructor(
     private readonly scoreModel: MessageScoreModel,
@@ -201,6 +202,7 @@ export class MessageScoreService implements OnApplicationShutdown {
       const rank = index + 1;
       const rawName = entry.first_name || entry.username || `User ${entry.telegram_id}`;
       const safeName = isHtml ? escapeHtml(rawName) : rawName;
+      const mdSafeName = rawName.replace(/([\[\]\\])/g, '\\$1');
       const mention =
         config.parseMode === 'None'
           ? entry.username
@@ -210,7 +212,7 @@ export class MessageScoreService implements OnApplicationShutdown {
             ? `@${entry.username}`
             : config.parseMode === 'HTML'
               ? `<a href="tg://user?id=${entry.telegram_id}">${safeName}</a>`
-              : `[${rawName}](tg://user?id=${entry.telegram_id})`;
+              : `[${mdSafeName}](tg://user?id=${entry.telegram_id})`;
       const line = renderTemplate(config.rowTemplate || DEFAULT_ROW, {
         ...base,
         rank,
@@ -452,17 +454,23 @@ export class MessageScoreService implements OnApplicationShutdown {
   }
 
   private async dispatchDue(): Promise<void> {
-    await this.pruneOldActivity();
-    const now = new Date().toISOString();
-    const due = await this.scoreModel.findDueSchedules(now);
-    for (const schedule of due) {
-      try {
-        await this.dispatchSchedule(toScoreScheduleRow(schedule));
-      } catch (error) {
-        this.logger.warn(
-          `Score schedule ${schedule.id} failed: ${error instanceof Error ? error.message : String(error)}`,
-        );
+    if (this.isRunning) return;
+    this.isRunning = true;
+    try {
+      await this.pruneOldActivity();
+      const now = new Date().toISOString();
+      const due = await this.scoreModel.findDueSchedules(now);
+      for (const schedule of due) {
+        try {
+          await this.dispatchSchedule(toScoreScheduleRow(schedule));
+        } catch (error) {
+          this.logger.warn(
+            `Score schedule ${schedule.id} failed: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
       }
+    } finally {
+      this.isRunning = false;
     }
   }
 

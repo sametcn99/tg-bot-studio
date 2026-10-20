@@ -246,7 +246,7 @@ export function createWarnHandlers(deps: ModerationDeps): WarnHandlers {
       } else {
         const latest = await deps.prisma.chatWarn.findFirst({
           where: { botId, chatId: String(chatId), telegramId: BigInt(targetId) },
-          orderBy: { id: 'desc' },
+          orderBy: { createdAt: 'desc' },
         });
         if (latest) {
           await deps.prisma.chatWarn.delete({ where: { id: latest.id } });
@@ -285,7 +285,7 @@ export function createWarnHandlers(deps: ModerationDeps): WarnHandlers {
       }
       const latest = await deps.prisma.chatWarn.findFirst({
         where: { botId, chatId: String(chatId), telegramId: BigInt(targetId) },
-        orderBy: { id: 'desc' },
+        orderBy: { createdAt: 'desc' },
       });
       if (latest) {
         await deps.prisma.chatWarn.delete({ where: { id: latest.id } });
@@ -339,7 +339,7 @@ export function createWarnHandlers(deps: ModerationDeps): WarnHandlers {
           telegramId: BigInt(targetId),
           ...(cutoff ? { createdAt: { gte: cutoff } } : {}),
         },
-        orderBy: { id: 'desc' },
+        orderBy: { createdAt: 'desc' },
         take: 10,
       });
       const lines = warns.map((warn) =>

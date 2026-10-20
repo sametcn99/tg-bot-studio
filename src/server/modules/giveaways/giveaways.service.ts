@@ -3,6 +3,7 @@ import { InlineKeyboard } from 'grammy';
 import { BotPoolService } from '../../bot-engine/bot-pool.service';
 import { SystemSettingsService } from '../../database/system-settings.service';
 import { PrismaService } from '../../database/prisma.service';
+import { safeJsonObjectParse, safeJsonParse } from '../../common/utils/json.util';
 import { GiveawayModel } from './giveaway.model';
 
 /**
@@ -40,6 +41,7 @@ const TICK_INTERVAL_MS = 60_000;
 export class GiveawaysService implements OnApplicationShutdown {
   private readonly logger = new Logger(GiveawaysService.name);
   private readonly ticker: ReturnType<typeof setInterval>;
+  private isRunning = false;
 
   constructor(
     private readonly giveawayModel: GiveawayModel,
@@ -81,9 +83,11 @@ export class GiveawaysService implements OnApplicationShutdown {
         winnersCount: row.winnersCount,
         prizeDetails: row.prizeDetails,
         endsAt: row.endsAt,
-        requiredChannels: row.requiredChannelsJson
-          ? (JSON.parse(row.requiredChannelsJson) as string[])
-          : [],
+        requiredChannels: safeJsonParse<string[]>(
+          row.requiredChannelsJson,
+          [],
+          'giveaway:channels',
+        ),
         participants: (await this.participants(botId, row.id)).length,
       })),
     );
@@ -171,6 +175,10 @@ export class GiveawaysService implements OnApplicationShutdown {
    * Deletes a giveaway and its participant bookkeeping.
    */
   async remove(botId: string, id: string): Promise<void> {
+    const giveaway = await this.giveawayModel.findById(botId, id);
+    if (!giveaway) {
+      throw new NotFoundException(`Giveaway ${id} not found`);
+    }
     await this.giveawayModel.delete(id);
     await this.settings.setBotJson(botId, `giveaway_participants_${id}`, []);
   }
@@ -221,38 +229,46 @@ export class GiveawaysService implements OnApplicationShutdown {
    * verifiable after the fact.
    */
   private async finishDue(): Promise<void> {
-    const now = new Date().toISOString();
-    const due = await this.giveawayModel.findDue(now);
-    for (const giveaway of due) {
-      const bot = this.pool.getBot(giveaway.botId);
-      const participants = await this.participants(giveaway.botId, giveaway.id);
-      const winners = this.drawWinners(giveaway.id, participants, giveaway.winnersCount);
+    if (this.isRunning) return;
+    this.isRunning = true;
+    try {
+      const now = new Date().toISOString();
+      const due = await this.giveawayModel.findDue(now);
+      for (const giveaway of due) {
+        const bot = this.pool.getBot(giveaway.botId);
+        const participants = await this.participants(giveaway.botId, giveaway.id);
+        const winners = this.drawWinners(giveaway.id, participants, giveaway.winnersCount);
 
-      await this.giveawayModel.finish(giveaway.id);
-      await this.settings.setBotJson(giveaway.botId, `giveaway_winners_${giveaway.id}`, winners);
+        await this.giveawayModel.finish(giveaway.id);
+        await this.settings.setBotJson(giveaway.botId, `giveaway_winners_${giveaway.id}`, winners);
 
-      if (bot) {
-        const moduleRow = await this.prisma.botModule.findUnique({
-          where: { botId_moduleKey: { botId: giveaway.botId, moduleKey: 'giveaways' } },
-        });
-        const config = moduleRow?.configJson
-          ? (JSON.parse(moduleRow.configJson) as Record<string, unknown>)
-          : {};
-        const announce = config.announceWinners !== false;
+        if (bot) {
+          const moduleRow = await this.prisma.botModule.findUnique({
+            where: { botId_moduleKey: { botId: giveaway.botId, moduleKey: 'giveaways' } },
+          });
+          const config = safeJsonObjectParse<Record<string, unknown>>(
+            moduleRow?.configJson,
+            {},
+            'giveaway:config',
+          );
+          const announce = config.announceWinners !== false;
 
-        if (announce) {
-          for (const winner of winners) {
-            void bot.api
-              .sendMessage(
-                winner,
-                `🎉 Congratulations! You won the giveaway: ${giveaway.title}.\n${giveaway.prizeDetails ?? ''}`.trim(),
-              )
-              .catch(() => undefined);
-          }
+          if (announce) {
+            for (const winner of winners) {
+              void bot.api
+                .sendMessage(
+                  winner,
+                  `🎉 Congratulations! You won the giveaway: ${giveaway.title}.\n${giveaway.prizeDetails ?? ''}`.trim(),
+                )
+                .catch(() => undefined);
+            }
 
-          if (giveaway.requiredChannelsJson) {
-            try {
-              const channels = JSON.parse(giveaway.requiredChannelsJson) as string[];
+            if (giveaway.requiredChannelsJson) {
+              const channels = safeJsonParse<string[]>(
+                giveaway.requiredChannelsJson,
+                [],
+                'giveaway:announce_channels',
+              );
               const announcement = `🎉 <b>Giveaway Ended: ${giveaway.title}</b>\n\nPrize: ${giveaway.prizeDetails ?? 'Mystery Prize'}\nWinners drawn: ${winners.length}\nCongratulations to all winners!`;
               for (const ch of channels) {
                 const target = Number.isNaN(Number(ch)) ? ch : Number(ch);
@@ -260,11 +276,13 @@ export class GiveawaysService implements OnApplicationShutdown {
                   .sendMessage(target, announcement, { parse_mode: 'HTML' })
                   .catch(() => undefined);
               }
-            } catch {}
+            }
           }
         }
+        this.logger.log(`Giveaway ${giveaway.id} finished with ${winners.length} winner(s)`);
       }
-      this.logger.log(`Giveaway ${giveaway.id} finished with ${winners.length} winner(s)`);
+    } finally {
+      this.isRunning = false;
     }
   }
 

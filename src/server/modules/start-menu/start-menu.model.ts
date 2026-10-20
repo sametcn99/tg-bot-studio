@@ -14,7 +14,7 @@ export class StartMenuModel {
    */
   async list(botId: string): Promise<Link[]> {
     return this.prisma.link.findMany({
-      where: { botId },
+      where: { botId, type: { not: 'broadcast-tracking' } },
       orderBy: [{ orderIndex: 'asc' }, { id: 'asc' }],
     });
   }
@@ -24,7 +24,7 @@ export class StartMenuModel {
    */
   async listActive(botId: string): Promise<Link[]> {
     return this.prisma.link.findMany({
-      where: { botId, isActive: 1 },
+      where: { botId, isActive: 1, type: { not: 'broadcast-tracking' } },
       orderBy: [{ orderIndex: 'asc' }, { id: 'asc' }],
     });
   }

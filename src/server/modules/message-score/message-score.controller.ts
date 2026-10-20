@@ -102,8 +102,8 @@ export class MessageScoreController {
    * @returns {{success: boolean}} Confirmation payload.
    */
   @Delete('schedules/:id')
-  removeSchedule(@Param('botId') botId: string, @Param('id') id: string) {
-    this.service.removeSchedule(botId, id);
+  async removeSchedule(@Param('botId') botId: string, @Param('id') id: string) {
+    await this.service.removeSchedule(botId, id);
     return { success: true };
   }
 

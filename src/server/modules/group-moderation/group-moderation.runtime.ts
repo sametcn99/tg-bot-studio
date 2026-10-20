@@ -410,17 +410,30 @@ export class GroupModerationRuntime extends BotModuleHandler {
         ? Math.min(countArg, PURGE_HARD_CAP)
         : Math.min(c.msg.message_id - replied.message_id, PURGE_HARD_CAP);
 
-    let deleted = 0;
+    const messageIds: number[] = [];
     for (
       let id = replied.message_id;
       id < replied.message_id + limit && id < c.msg.message_id;
       id++
     ) {
-      const ok = await c.api.deleteMessage(chatId, id).then(
-        () => true,
-        () => false,
-      );
-      if (ok) deleted++;
+      messageIds.push(id);
+    }
+
+    let deleted = 0;
+    for (let i = 0; i < messageIds.length; i += 100) {
+      const batch = messageIds.slice(i, i + 100);
+      try {
+        await c.api.deleteMessages(chatId, batch);
+        deleted += batch.length;
+      } catch {
+        for (const id of batch) {
+          const ok = await c.api.deleteMessage(chatId, id).then(
+            () => true,
+            () => false,
+          );
+          if (ok) deleted++;
+        }
+      }
     }
     await c.deleteMessage().catch(() => undefined);
     this.adminLog.emit({
@@ -472,13 +485,25 @@ export class GroupModerationRuntime extends BotModuleHandler {
     }
     this.purgeAnchors.delete(chatId);
     const to = Math.min(c.msg!.message_id - 1, from + PURGE_HARD_CAP);
-    let deleted = 0;
+    const messageIds: number[] = [];
     for (let id = from; id <= to; id++) {
-      const ok = await c.api.deleteMessage(chatId, id).then(
-        () => true,
-        () => false,
-      );
-      if (ok) deleted++;
+      messageIds.push(id);
+    }
+    let deleted = 0;
+    for (let i = 0; i < messageIds.length; i += 100) {
+      const batch = messageIds.slice(i, i + 100);
+      try {
+        await c.api.deleteMessages(chatId, batch);
+        deleted += batch.length;
+      } catch {
+        for (const id of batch) {
+          const ok = await c.api.deleteMessage(chatId, id).then(
+            () => true,
+            () => false,
+          );
+          if (ok) deleted++;
+        }
+      }
     }
     await c.deleteMessage().catch(() => undefined);
     this.adminLog.emit({

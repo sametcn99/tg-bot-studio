@@ -56,6 +56,7 @@ export class DripService extends BotModuleHandler implements OnApplicationShutdo
   private readonly logger = new Logger(DripService.name);
   private readonly ticker: ReturnType<typeof setInterval>;
   private autoSubscribeConfig: Record<string, boolean> = {};
+  private isRunning = false;
 
   constructor(
     private readonly dripModel: DripModel,
@@ -179,6 +180,10 @@ export class DripService extends BotModuleHandler implements OnApplicationShutdo
    * Deletes a campaign and its subscribers.
    */
   async remove(botId: string, id: string): Promise<void> {
+    const campaign = await this.dripModel.findCampaignById(id);
+    if (!campaign || campaign.botId !== botId) {
+      throw new NotFoundException(`Drip campaign ${id} not found`);
+    }
     await this.dripModel.deleteCampaign(id);
   }
 
@@ -187,7 +192,9 @@ export class DripService extends BotModuleHandler implements OnApplicationShutdo
    */
   async subscribe(botId: string, campaignId: string, telegramId: number): Promise<void> {
     const campaign = await this.dripModel.findCampaignById(campaignId);
-    if (!campaign) return;
+    if (!campaign || campaign.botId !== botId) {
+      throw new NotFoundException(`Drip campaign ${campaignId} not found`);
+    }
     const steps = safeJsonParse<DripStep[]>(campaign.stepsJson, [], 'drip:steps');
     if (steps.length === 0) return;
     const firstDelay = Number(steps[0]?.delayMinutes ?? 0);
@@ -206,6 +213,10 @@ export class DripService extends BotModuleHandler implements OnApplicationShutdo
    * Unsubscribes a user from a campaign.
    */
   async unsubscribe(botId: string, campaignId: string, telegramId: number): Promise<void> {
+    const campaign = await this.dripModel.findCampaignById(campaignId);
+    if (!campaign || campaign.botId !== botId) {
+      throw new NotFoundException(`Drip campaign ${campaignId} not found`);
+    }
     await this.dripModel.unsubscribe(campaignId, telegramId);
   }
 
@@ -217,81 +228,91 @@ export class DripService extends BotModuleHandler implements OnApplicationShutdo
    * silently dropping the whole sequence.
    */
   private async advanceDue(): Promise<void> {
-    const now = new Date().toISOString();
-    const due = await this.dripModel.findDueSubscribers(now);
+    if (this.isRunning) return;
+    this.isRunning = true;
+    try {
+      const now = new Date().toISOString();
+      const due = await this.dripModel.findDueSubscribers(now);
 
-    for (const subscriber of due) {
-      const campaign = await this.dripModel.findCampaignById(subscriber.campaign_id);
-      if (!campaign || !campaign.isActive) {
-        await this.unsubscribe(subscriber.bot_id, subscriber.campaign_id, subscriber.telegram_id);
-        continue;
-      }
-      const steps = safeJsonParse<DripStep[]>(campaign.stepsJson, [], 'drip:steps');
-      const step = steps[subscriber.current_step];
-      if (!step) {
-        await this.unsubscribe(subscriber.bot_id, subscriber.campaign_id, subscriber.telegram_id);
-        continue;
-      }
-      const bot = this.pool.getBot(subscriber.bot_id);
-      if (!bot) continue;
-
-      try {
-        const user = await this.botUserModel.findByTelegramId(
-          subscriber.bot_id,
-          subscriber.telegram_id,
-        );
-        const text = renderTemplate(step.text, {
-          first_name: user?.firstName ?? '',
-          username: user?.username ?? '',
-          user_id: subscriber.telegram_id,
-          bot_name: bot.botInfo?.first_name ?? '',
-          date: new Date().toISOString().slice(0, 10),
-        });
-        await bot.api.sendMessage(subscriber.telegram_id, text, { parse_mode: 'HTML' });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        this.logger.warn(`Drip step failed for ${subscriber.telegram_id}: ${message}`);
-        if (message.includes('403') || message.toLowerCase().includes('forbidden')) {
-          // Bot blocked / account deleted — the sequence is undeliverable.
+      for (const subscriber of due) {
+        const campaign = await this.dripModel.findCampaignById(subscriber.campaign_id);
+        if (!campaign || !campaign.isActive) {
           await this.unsubscribe(subscriber.bot_id, subscriber.campaign_id, subscriber.telegram_id);
-        } else {
-          const attempts = await this.dripModel.recordTransientFailure(
-            subscriber.campaign_id,
+          continue;
+        }
+        const steps = safeJsonParse<DripStep[]>(campaign.stepsJson, [], 'drip:steps');
+        const step = steps[subscriber.current_step];
+        if (!step) {
+          await this.unsubscribe(subscriber.bot_id, subscriber.campaign_id, subscriber.telegram_id);
+          continue;
+        }
+        const bot = this.pool.getBot(subscriber.bot_id);
+        if (!bot) continue;
+
+        try {
+          const user = await this.botUserModel.findByTelegramId(
+            subscriber.bot_id,
             subscriber.telegram_id,
           );
-          if (attempts >= MAX_TRANSIENT_ATTEMPTS) {
-            this.logger.warn(
-              `Drip subscriber ${subscriber.telegram_id} dropped after ${attempts} transient failures`,
-            );
+          const text = renderTemplate(step.text, {
+            first_name: user?.firstName ?? '',
+            username: user?.username ?? '',
+            user_id: subscriber.telegram_id,
+            bot_name: bot.botInfo?.first_name ?? '',
+            date: new Date().toISOString().slice(0, 10),
+          });
+          await bot.api.sendMessage(subscriber.telegram_id, text, { parse_mode: 'HTML' });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          this.logger.warn(`Drip step failed for ${subscriber.telegram_id}: ${message}`);
+          if (message.includes('403') || message.toLowerCase().includes('forbidden')) {
+            // Bot blocked / account deleted — the sequence is undeliverable.
             await this.unsubscribe(
               subscriber.bot_id,
               subscriber.campaign_id,
               subscriber.telegram_id,
             );
+          } else {
+            const attempts = await this.dripModel.recordTransientFailure(
+              subscriber.campaign_id,
+              subscriber.telegram_id,
+            );
+            if (attempts >= MAX_TRANSIENT_ATTEMPTS) {
+              this.logger.warn(
+                `Drip subscriber ${subscriber.telegram_id} dropped after ${attempts} transient failures`,
+              );
+              await this.unsubscribe(
+                subscriber.bot_id,
+                subscriber.campaign_id,
+                subscriber.telegram_id,
+              );
+            }
           }
+          continue;
         }
-        continue;
-      }
 
-      const nextIndex = subscriber.current_step + 1;
-      const nextStep = steps[nextIndex];
-      if (!nextStep) {
-        await this.unsubscribe(subscriber.bot_id, subscriber.campaign_id, subscriber.telegram_id);
-      } else {
-        const nextRunAt = new Date(
-          Date.now() + Number(nextStep.delayMinutes) * 60_000,
-        ).toISOString();
-        await this.dripModel.advanceSubscriber(
-          subscriber.campaign_id,
-          subscriber.telegram_id,
-          nextIndex,
-          nextRunAt,
-        );
-      }
+        const nextIndex = subscriber.current_step + 1;
+        const nextStep = steps[nextIndex];
+        if (!nextStep) {
+          await this.unsubscribe(subscriber.bot_id, subscriber.campaign_id, subscriber.telegram_id);
+        } else {
+          const nextRunAt = new Date(
+            Date.now() + Number(nextStep.delayMinutes) * 60_000,
+          ).toISOString();
+          await this.dripModel.advanceSubscriber(
+            subscriber.campaign_id,
+            subscriber.telegram_id,
+            nextIndex,
+            nextRunAt,
+          );
+        }
 
-      // Pace the backlog: after downtime, all due subscribers used to fire in
-      // one tight sequential burst against Telegram's limits.
-      await new Promise((resolve) => setTimeout(resolve, SEND_PACE_MS));
+        // Pace the backlog: after downtime, all due subscribers used to fire in
+        // one tight sequential burst against Telegram's limits.
+        await new Promise((resolve) => setTimeout(resolve, SEND_PACE_MS));
+      }
+    } finally {
+      this.isRunning = false;
     }
   }
 }

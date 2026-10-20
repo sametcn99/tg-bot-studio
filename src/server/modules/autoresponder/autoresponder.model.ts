@@ -10,13 +10,47 @@ export class AutoresponderModel {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Lists rules for a bot ordered by id.
+   * Lists rules for a bot ordered by id, excluding mediaData BLOBs for performance.
    */
   async list(botId: string): Promise<Autoresponder[]> {
-    return this.prisma.autoresponder.findMany({
+    const rows = await this.prisma.autoresponder.findMany({
       where: { botId },
       orderBy: { id: 'asc' },
+      select: {
+        id: true,
+        botId: true,
+        command: true,
+        responseText: true,
+        mediaUrl: true,
+        buttonsJson: true,
+        isActive: true,
+        chatId: true,
+        scope: true,
+        matchMode: true,
+        adminOnly: true,
+        repeatSeconds: true,
+        lastRepeatAt: true,
+        deletePreviousResponse: true,
+        replyToMessage: true,
+        mediaMime: true,
+        mediaFileName: true,
+      },
     });
+    return rows.map((r) => ({
+      ...r,
+      mediaData: null,
+    }));
+  }
+
+  /**
+   * Fetches binary media data for an autoresponder on demand.
+   */
+  async getMediaData(id: string): Promise<Uint8Array | null> {
+    const row = await this.prisma.autoresponder.findUnique({
+      where: { id },
+      select: { mediaData: true },
+    });
+    return (row?.mediaData as unknown as Uint8Array | null) ?? null;
   }
 
   /**

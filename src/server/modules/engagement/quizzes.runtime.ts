@@ -4,6 +4,7 @@ import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry'
 import { EngineHelpersService } from '../../bot-engine/engine-helpers.service';
 import { ChatSettingsService } from '../../bot-engine/chat-settings.service';
 import { EngagementService } from './engagement.service';
+import { escapeHtml } from '../../common/utils/telegram-text.util';
 
 /**
  * Runtime for the Interactive Quizzes & Polls module. The configured command
@@ -83,7 +84,7 @@ export class QuizzesRuntime extends BotModuleHandler {
               ([telegramId, count], index) => `${index + 1}. <code>${telegramId}</code> - ${count}`,
             )
             .join('\n');
-          blocks.push(`<b>${quiz.question}</b>\n${entries || 'No answers yet.'}`);
+          blocks.push(`<b>${escapeHtml(quiz.question)}</b>\n${entries || 'No answers yet.'}`);
         }
         await update.reply(
           blocks.length ? `<b>Scoreboards</b>\n\n${blocks.join('\n\n')}` : 'No quizzes configured.',

@@ -19,6 +19,7 @@ export interface HttpRouteStats {
   buckets: number[];
 }
 
+const MAX_DISTINCT_ROUTES = 500;
 const store = new Map<string, HttpRouteStats>();
 
 export const httpMetricsStore = {
@@ -31,18 +32,24 @@ export const httpMetricsStore = {
    * @returns {void}
    */
   observe(method: string, route: string, durationMs: number, isError: boolean): void {
-    const key = `${method} ${route}`;
+    let key = `${method} ${route}`;
     let stats = store.get(key);
     if (!stats) {
-      stats = {
-        route,
-        method,
-        count: 0,
-        errors: 0,
-        sumMs: 0,
-        buckets: new Array<number>(HTTP_BUCKETS_MS.length + 1).fill(0),
-      };
-      store.set(key, stats);
+      if (store.size >= MAX_DISTINCT_ROUTES) {
+        key = 'OTHER';
+        stats = store.get(key);
+      }
+      if (!stats) {
+        stats = {
+          route: key === 'OTHER' ? 'other' : route,
+          method: key === 'OTHER' ? 'ALL' : method,
+          count: 0,
+          errors: 0,
+          sumMs: 0,
+          buckets: new Array<number>(HTTP_BUCKETS_MS.length + 1).fill(0),
+        };
+        store.set(key, stats);
+      }
     }
     stats.count++;
     if (isError) stats.errors++;

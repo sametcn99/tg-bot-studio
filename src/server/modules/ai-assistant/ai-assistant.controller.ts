@@ -12,6 +12,7 @@ import {
 import { AiAssistantService, type AiConfig } from './ai-assistant.service';
 import { BotModel } from '../../bots/bot.model';
 import { StudioException } from '../../common/errors/studio-error';
+import { safeJsonObjectParse } from '../../common/utils/json.util';
 
 /** Per-kind system instructions for the form-content generator. */
 const GENERATION_PROMPTS: Record<string, string> = {
@@ -60,7 +61,11 @@ export class AiAssistantController {
    */
   private async resolveConfig(botId: string): Promise<AiConfig> {
     const row = await this.botModel.getModule(botId, 'ai-assistant');
-    const stored = row?.configJson ? (JSON.parse(row.configJson) as Partial<AiConfig>) : {};
+    const stored = safeJsonObjectParse<Partial<AiConfig>>(
+      row?.configJson,
+      {},
+      'ai-assistant:config',
+    );
     return {
       provider: 'openai',
       apiKey: '',

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { BotUserModel } from './bot-user.model';
 import type { BotUserRow } from '../../bot-engine/engine-helpers.service';
+import { safeJsonObjectParse } from '../../common/utils/json.util';
 /**
  * CRM profile shape returned to the dashboard (tags parsed from JSON).
  * @interface CrmUser
@@ -27,11 +28,17 @@ export class UsersCrmService {
    * @returns {CrmUser} Decoded profile.
    */
   private decode(row: BotUserRow): CrmUser {
-    const parsed = row.tags_json
-      ? (JSON.parse(row.tags_json) as { tags?: string[]; notes?: string })
-      : {};
+    const parsed = safeJsonObjectParse<{ tags?: string[]; notes?: string }>(
+      row.tags_json,
+      { tags: [], notes: '' },
+      'crm:tags',
+    );
     const { tags_json: _tagsJson, ...rest } = row;
-    return { ...rest, tags: parsed.tags ?? [], notes: parsed.notes ?? '' };
+    return {
+      ...rest,
+      tags: Array.isArray(parsed.tags) ? parsed.tags : [],
+      notes: parsed.notes ? String(parsed.notes) : '',
+    };
   }
 
   /**

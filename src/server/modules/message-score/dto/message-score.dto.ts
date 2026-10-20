@@ -44,7 +44,7 @@ export class ScorePayloadDto {
   @IsArray()
   @ArrayMaxSize(50)
   @IsString({ each: true })
-  @MaxLength(64)
+  @MaxLength(64, { each: true })
   chatIds?: string[];
 
   /** Leaderboard period bucket. */

@@ -89,6 +89,7 @@ function normalizeType(type: unknown): string {
 export class ConnectionsService implements OnApplicationBootstrap, OnApplicationShutdown {
   private readonly logger = new Logger(ConnectionsService.name);
   private readonly ticker: ReturnType<typeof setInterval>;
+  private isRunning = false;
 
   /**
    * @param {ChatConnectionModel} connectionModel - Model for chat connections and groups.
@@ -298,12 +299,18 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
    * Imports discovered chats for every bot whose auto-sync stays enabled.
    */
   private async autoSyncAll(): Promise<void> {
-    const bots = await this.prisma.bot.findMany({ select: { id: true } });
-    for (const bot of bots) {
-      if (!(await this.autoSyncEnabled(bot.id))) continue;
-      await this.syncFromBot(bot.id, true).catch((error: Error) =>
-        this.logger.warn(`Auto-sync skipped for bot ${bot.id}: ${error.message}`),
-      );
+    if (this.isRunning) return;
+    this.isRunning = true;
+    try {
+      const bots = await this.prisma.bot.findMany({ select: { id: true } });
+      for (const bot of bots) {
+        if (!(await this.autoSyncEnabled(bot.id))) continue;
+        await this.syncFromBot(bot.id, true).catch((error: Error) =>
+          this.logger.warn(`Auto-sync skipped for bot ${bot.id}: ${error.message}`),
+        );
+      }
+    } finally {
+      this.isRunning = false;
     }
   }
 

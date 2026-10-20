@@ -62,7 +62,6 @@ export class Bot2BotRuntime extends BotModuleHandler {
       const decision = c.match[1];
       const nonce = String(c.match[2]);
       const action = this.pending.get(nonce);
-      this.pending.delete(nonce);
       if (!action || !c.from) {
         await c.answerCallbackQuery().catch(() => undefined);
         return;
@@ -72,6 +71,7 @@ export class Bot2BotRuntime extends BotModuleHandler {
         await c.answerCallbackQuery({ text: 'Admins only' }).catch(() => undefined);
         return;
       }
+      this.pending.delete(nonce);
       if (decision === 'ok') {
         await action.execute();
       }

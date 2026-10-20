@@ -17,7 +17,7 @@ export class BotTemplateModel {
    * @returns {Promise<BotTemplate[]>} Template rows.
    */
   async list(): Promise<BotTemplate[]> {
-    return this.prisma.botTemplate.findMany({ orderBy: { id: 'desc' } });
+    return this.prisma.botTemplate.findMany({ orderBy: { createdAt: 'desc' } });
   }
 
   /**

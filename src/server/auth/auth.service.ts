@@ -50,6 +50,7 @@ const ARGON2_PARAMS = {
 export class AuthService implements OnModuleInit {
   private readonly logger = new Logger(AuthService.name);
   private readonly failedAttempts = new Map<string, { count: number; lockedUntil: number }>();
+  private readonly lastActiveWrites = new Map<string, number>();
 
   /**
    * @param {PrismaService} prisma - Prisma ORM access service.
@@ -232,7 +233,14 @@ export class AuthService implements OnModuleInit {
   async isSessionValid(sessionId: string): Promise<boolean> {
     const session = await this.getSession(sessionId);
     if (!session || session.is_revoked) return false;
-    await this.sessionModel.updateLastActive(sessionId, new Date().toISOString());
+    const now = Date.now();
+    const lastWrite = this.lastActiveWrites.get(sessionId) ?? 0;
+    if (now - lastWrite > 120_000) {
+      this.lastActiveWrites.set(sessionId, now);
+      void this.sessionModel
+        .updateLastActive(sessionId, new Date(now).toISOString())
+        .catch(() => undefined);
+    }
     return true;
   }
 
@@ -242,6 +250,7 @@ export class AuthService implements OnModuleInit {
    * @returns {Promise<void>}
    */
   async logout(sessionId: string): Promise<void> {
+    this.lastActiveWrites.delete(sessionId);
     await this.sessionModel.revokeSession(sessionId);
   }
 

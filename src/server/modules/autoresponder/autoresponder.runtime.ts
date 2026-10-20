@@ -8,6 +8,7 @@ import { AdminGateService } from '../../bot-engine/admin-gate.service';
 import { BotI18nService } from '../../bot-engine/bot-i18n.service';
 import { renderTemplate, type TemplateContext } from '../../common/utils/template.util';
 import { normalizeText } from '../../common/utils/telegram-text.util';
+import { safeJsonParse } from '../../common/utils/json.util';
 
 /**
  * Button descriptor for autoresponder replies.
@@ -303,9 +304,11 @@ export class AutoresponderRuntime extends BotModuleHandler {
     templateCtx: TemplateContext,
   ): Promise<{ message_id: number } | undefined> {
     const body = renderTemplate(rule.response_text, templateCtx);
-    const buttons: ReplyButton[] = rule.buttons_json
-      ? (JSON.parse(rule.buttons_json) as ReplyButton[])
-      : [];
+    const buttons: ReplyButton[] = safeJsonParse<ReplyButton[]>(
+      rule.buttons_json,
+      [],
+      'autoresponder:buttons',
+    );
     const keyboard = new InlineKeyboard();
     for (const button of buttons) {
       keyboard.url(button.text, button.url).row();
@@ -328,8 +331,15 @@ export class AutoresponderRuntime extends BotModuleHandler {
           }
         : {}),
     };
-    const rawData =
+    let rawData =
       rule.media_data ?? (rule as unknown as { mediaData?: Buffer | Uint8Array | null }).mediaData;
+    if (!rawData && (rule.media_mime || rule.media_url?.startsWith('/api/bots/'))) {
+      const botId = rule.bot_id ?? rule.botId;
+      const media = await this.service.getMediaFile(botId, rule.id);
+      if (media?.data) {
+        rawData = media.data;
+      }
+    }
     const mime = (
       rule.media_mime ??
       (rule as unknown as { mediaMime?: string | null }).mediaMime ??

@@ -10,7 +10,7 @@ import { ChatSettingsService } from '../../bot-engine/chat-settings.service';
 import { RestrictionsService } from '../../bot-engine/restrictions.service';
 import { isChatTargeted, SIMULATOR_GROUP_ID } from '../../common/utils/chat-targets.util';
 import { formatDuration, splitDurationArg } from '../../common/utils/duration.util';
-import { userMentionHtml } from '../../common/utils/telegram-text.util';
+import { escapeHtml, userMentionHtml } from '../../common/utils/telegram-text.util';
 import { LOCK_TYPES, evaluateLocks, isAllowlisted } from './lock-evaluator';
 
 /** Parsed /lock custom rule (### reason {action}). */
@@ -178,7 +178,7 @@ export class LocksRuntime extends BotModuleHandler {
     if (!action.startsWith('s')) {
       await update
         .reply(
-          `${mention} ${rule.reason ?? action}${duration ? ` (${formatDuration(duration)})` : ''}`,
+          `${mention} ${escapeHtml(rule.reason ?? action)}${duration ? ` (${formatDuration(duration)})` : ''}`,
           { parse_mode: 'HTML' },
         )
         .catch(() => undefined);

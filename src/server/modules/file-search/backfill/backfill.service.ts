@@ -217,15 +217,7 @@ export class BackfillService {
         return;
       }
       if (name === 'FLOOD_WAIT' || /flood/i.test(String(error))) {
-        const seconds = Number((error as { seconds?: number }).seconds ?? 0);
-        if (seconds > MAX_FLOOD_WAIT_S) {
-          this.fail('flood', this.describe(error));
-          return;
-        }
-        // Short waits: pause and continue from where the iterator resumes.
-        await new Promise((resolve) => setTimeout(resolve, (seconds + 1) * 1000));
-        this.logger.warn(`backfill flood wait of ${seconds}s absorbed`);
-        this.settle('done');
+        this.fail('flood', this.describe(error));
         return;
       }
       this.fail('generic', this.describe(error));

@@ -273,6 +273,7 @@ export class BroadcastService implements OnModuleInit {
         .map((row) => row.id),
       {
         targetType: winner.targetType,
+        targetFilterJson: winner.targetFilterJson,
         messageText: winner.messageText,
         mediaUrl: winner.mediaUrl,
         buttonsJson: winner.buttonsJson,
@@ -285,11 +286,18 @@ export class BroadcastService implements OnModuleInit {
     });
     const bot = this.pool.getBot(botId);
     if (bot) {
+      const winnerFilter = safeJsonObjectParse<{ language?: string; recentDays?: number }>(
+        winner.targetFilterJson,
+        {},
+        'broadcast:winner:filter',
+      );
       void this.runQueue(
         botId,
         rolloutItem.id,
         {
           targetType: winner.targetType,
+          language: winnerFilter.language,
+          recentDays: winnerFilter.recentDays,
           messageText: winner.messageText,
           mediaUrl: winner.mediaUrl ?? undefined,
           buttons: safeJsonParse<BroadcastButton[]>(winner.buttonsJson, [], 'broadcast:buttons'),
@@ -299,6 +307,8 @@ export class BroadcastService implements OnModuleInit {
           estimatedTotal: Math.round(
             (await this.broadcastModel.countAudience(botId, {
               targetType: winner.targetType,
+              language: winnerFilter.language,
+              recentDays: winnerFilter.recentDays,
             })) *
               ((100 - meta.testSplitPercent) / 100),
           ),

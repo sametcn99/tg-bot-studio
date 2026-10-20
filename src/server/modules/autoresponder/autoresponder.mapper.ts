@@ -2,7 +2,9 @@ import type { Autoresponder } from '@prisma/client';
 import type { AutoresponderRow } from './autoresponder.entity';
 
 export function toAutoresponderRow(item: Autoresponder): AutoresponderRow {
-  const hasBytes = Boolean(item.mediaData && (item.mediaData as Buffer).length > 0);
+  const hasBytes = Boolean(
+    (item.mediaData && (item.mediaData as Buffer).length > 0) || (item.mediaMime && !item.mediaUrl),
+  );
   const mediaUrl = hasBytes
     ? `/api/bots/${item.botId}/autoresponders/${item.id}/media`
     : item.mediaUrl;

@@ -102,11 +102,11 @@ export class AuthController {
    */
   @Post('logout')
   @HttpCode(200)
-  logout(
+  async logout(
     @CurrentSession() session: { sessionId: string },
     @Res({ passthrough: true }) res: Response,
   ) {
-    this.authService.logout(session.sessionId);
+    await this.authService.logout(session.sessionId);
     res.clearCookie(SESSION_COOKIE, { path: '/' });
     return { success: true };
   }
@@ -137,8 +137,8 @@ export class AuthController {
    * @returns {{success: boolean}} Confirmation payload.
    */
   @Delete('sessions/:id')
-  revokeSession(@Param('id') id: string) {
-    this.authService.logout(id);
+  async revokeSession(@Param('id') id: string) {
+    await this.authService.logout(id);
     return { success: true };
   }
 
@@ -150,8 +150,8 @@ export class AuthController {
    */
   @Post('sessions/revoke-others')
   @HttpCode(200)
-  revokeOthers(@CurrentSession() session: { sessionId: string }) {
-    this.authService.revokeOtherSessions(session.sessionId);
+  async revokeOthers(@CurrentSession() session: { sessionId: string }) {
+    await this.authService.revokeOtherSessions(session.sessionId);
     return { success: true };
   }
 

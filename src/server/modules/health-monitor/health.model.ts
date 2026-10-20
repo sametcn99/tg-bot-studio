@@ -38,7 +38,7 @@ export class HealthModel {
   async listRecent(botId?: string, limit = 50): Promise<HealthEvent[]> {
     return this.prisma.healthEvent.findMany({
       where: botId ? { botId } : undefined,
-      orderBy: { id: 'desc' },
+      orderBy: { createdAt: 'desc' },
       take: limit,
     });
   }
@@ -53,7 +53,7 @@ export class HealthModel {
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     return this.prisma.healthEvent.findMany({
       where: { notified: 0, createdAt: { gte: cutoff }, level: { not: 'stopped' } },
-      orderBy: { id: 'asc' },
+      orderBy: { createdAt: 'asc' },
       take: limit,
     });
   }

@@ -30,7 +30,7 @@ export class MiniAppModel {
   async list(botId: string): Promise<MiniApp[]> {
     return this.prisma.miniApp.findMany({
       where: { botId },
-      orderBy: { id: 'asc' },
+      orderBy: { createdAt: 'asc' },
     });
   }
 
@@ -157,7 +157,7 @@ export class MiniAppModel {
   async listOrders(botId: string, appId: string, limit = 500): Promise<MiniAppOrderEntity[]> {
     const rows = await this.prisma.miniAppOrder.findMany({
       where: { botId, appId },
-      orderBy: { id: 'desc' },
+      orderBy: { createdAt: 'desc' },
       take: limit,
     });
     return rows.map((r) => this.toOrderEntity(r));
@@ -185,7 +185,7 @@ export class MiniAppModel {
         botId,
         telegramId: BigInt(telegramId),
       },
-      orderBy: { id: 'desc' },
+      orderBy: { createdAt: 'desc' },
       take: limit,
     });
     return rows.map((r) => this.toOrderEntity(r));

@@ -2,6 +2,7 @@ import { BadRequestException, Body, Controller, Delete, Get, Param, Put } from '
 import { PrismaService } from '../database/prisma.service';
 import { ChatSettingsService } from '../bot-engine/chat-settings.service';
 import { findModule } from '../bot-engine/module-registry';
+import { safeJsonObjectParse } from '../common/utils/json.util';
 
 /**
  * Per-chat module override endpoints powering the dashboard's per-group and
@@ -36,7 +37,7 @@ export class ChatSettingsController {
     });
     return rows.map((row) => ({
       chatId: row.chatId,
-      override: row.configJson ? (JSON.parse(row.configJson) as Record<string, unknown>) : {},
+      override: safeJsonObjectParse(row.configJson, {}, 'chat-settings:list'),
     }));
   }
 

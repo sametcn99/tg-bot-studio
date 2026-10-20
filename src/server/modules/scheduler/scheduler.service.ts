@@ -31,6 +31,7 @@ const TICK_INTERVAL_MS = 30_000;
 export class SchedulerService implements OnApplicationShutdown {
   private readonly logger = new Logger(SchedulerService.name);
   private readonly ticker: ReturnType<typeof setInterval>;
+  private isRunning = false;
 
   constructor(
     private readonly schedulerModel: SchedulerModel,
@@ -203,61 +204,67 @@ export class SchedulerService implements OnApplicationShutdown {
    * Dispatches every pending post whose time has arrived.
    */
   private async dispatchDue(): Promise<void> {
-    const now = new Date().toISOString();
-    const due = await this.schedulerModel.findDue(now);
-    for (const post of due) {
-      const bot = this.pool.getBot(post.botId);
-      if (!bot) continue; // Bot offline; retry on next tick.
-      try {
-        const config = await this.configFor(post.botId);
-        const offsetMs = config.timezoneOffsetMinutes * 60_000;
-        const localNow = new Date(Date.now() + offsetMs);
+    if (this.isRunning) return;
+    this.isRunning = true;
+    try {
+      const now = new Date().toISOString();
+      const due = await this.schedulerModel.findDue(now);
+      for (const post of due) {
+        const bot = this.pool.getBot(post.botId);
+        if (!bot) continue; // Bot offline; retry on next tick.
+        try {
+          const config = await this.configFor(post.botId);
+          const offsetMs = config.timezoneOffsetMinutes * 60_000;
+          const localNow = new Date(Date.now() + offsetMs);
 
-        const body = renderTemplate(post.messageText, {
-          group_name: '',
-          bot_name: bot.botInfo?.first_name ?? '',
-          date: localNow.toISOString().slice(0, 10),
-          time: localNow.toISOString().slice(11, 16),
-        });
-        const text = config.watermarkText ? `${body}\n\n${config.watermarkText}` : body;
-        const buttons = post.buttonsJson
-          ? (JSON.parse(post.buttonsJson) as Array<{ text: string; url: string }>)
-          : [];
-        const keyboard = new InlineKeyboard();
-        for (const button of buttons) {
-          keyboard.url(button.text, button.url).row();
+          const body = renderTemplate(post.messageText, {
+            group_name: '',
+            bot_name: bot.botInfo?.first_name ?? '',
+            date: localNow.toISOString().slice(0, 10),
+            time: localNow.toISOString().slice(11, 16),
+          });
+          const text = config.watermarkText ? `${body}\n\n${config.watermarkText}` : body;
+          const buttons = post.buttonsJson
+            ? (JSON.parse(post.buttonsJson) as Array<{ text: string; url: string }>)
+            : [];
+          const keyboard = new InlineKeyboard();
+          for (const button of buttons) {
+            keyboard.url(button.text, button.url).row();
+          }
+          const options = buttons.length > 0 ? { reply_markup: keyboard } : {};
+
+          const target = post.targetChatId;
+          const targetChat =
+            target.startsWith('@') || Number.isNaN(Number(target)) ? target : Number(target);
+
+          if (post.mediaUrl && /\.(mp4|mov|webm)$/i.test(post.mediaUrl)) {
+            await bot.api.sendVideo(targetChat, post.mediaUrl, {
+              caption: text,
+              parse_mode: 'HTML',
+              ...options,
+            });
+          } else if (post.mediaUrl) {
+            await bot.api.sendPhoto(targetChat, post.mediaUrl, {
+              caption: text,
+              parse_mode: 'HTML',
+              ...options,
+            });
+          } else {
+            await bot.api.sendMessage(targetChat, text, {
+              parse_mode: 'HTML',
+              ...options,
+            });
+          }
+          await this.schedulerModel.updateStatus(post.id, 'done');
+        } catch (error) {
+          this.logger.warn(
+            `Scheduled post ${post.id} failed: ${error instanceof Error ? error.message : String(error)}`,
+          );
+          await this.schedulerModel.updateStatus(post.id, 'failed');
         }
-        const options = buttons.length > 0 ? { reply_markup: keyboard } : {};
-
-        const target = post.targetChatId;
-        const targetChat =
-          target.startsWith('@') || Number.isNaN(Number(target)) ? target : Number(target);
-
-        if (post.mediaUrl && /\.(mp4|mov|webm)$/i.test(post.mediaUrl)) {
-          await bot.api.sendVideo(targetChat, post.mediaUrl, {
-            caption: text,
-            parse_mode: 'HTML',
-            ...options,
-          });
-        } else if (post.mediaUrl) {
-          await bot.api.sendPhoto(targetChat, post.mediaUrl, {
-            caption: text,
-            parse_mode: 'HTML',
-            ...options,
-          });
-        } else {
-          await bot.api.sendMessage(targetChat, text, {
-            parse_mode: 'HTML',
-            ...options,
-          });
-        }
-        await this.schedulerModel.updateStatus(post.id, 'done');
-      } catch (error) {
-        this.logger.warn(
-          `Scheduled post ${post.id} failed: ${error instanceof Error ? error.message : String(error)}`,
-        );
-        await this.schedulerModel.updateStatus(post.id, 'failed');
       }
+    } finally {
+      this.isRunning = false;
     }
   }
 }

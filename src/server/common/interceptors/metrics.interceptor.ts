@@ -38,12 +38,16 @@ export class MetricsInterceptor implements NestInterceptor {
    */
   private record(req: Request, res: Response, started: number, thrown?: boolean): void {
     try {
-      const routePath = (req.route?.path as string | undefined) ?? req.path ?? 'unmatched';
+      const hasMatchedRoute = Boolean(req.route?.path);
+      const routePath = hasMatchedRoute ? (req.route.path as string) || '/' : 'unmatched';
       const baseUrl = req.baseUrl ?? '';
+      const fullRoute = hasMatchedRoute
+        ? `${baseUrl}${routePath}`.replace(/\/:([A-Za-z0-9_]+)/g, '/:$1')
+        : 'unmatched';
       const status = res.statusCode ?? 0;
       httpMetricsStore.observe(
         req.method ?? 'GET',
-        `${baseUrl}${routePath}`.replace(/\/:([A-Za-z0-9_]+)/g, '/:$1'),
+        fullRoute,
         Date.now() - started,
         thrown === true || status >= 400,
       );

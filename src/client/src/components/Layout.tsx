@@ -1,21 +1,31 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
-import { Box, Drawer, IconButton, useMediaQuery, useTheme } from '@mui/material';
+import { Outlet, useLocation, Link as RouterLink } from 'react-router-dom';
+import {
+  Box,
+  Chip,
+  Drawer,
+  IconButton,
+  Stack,
+  Typography,
+  useMediaQuery,
+  useTheme,
+} from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import MenuIcon from '@mui/icons-material/Menu';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
 import { useTranslation } from 'react-i18next';
 import { useBots } from '../context/BotContext';
 import BotSimulatorDrawer from './BotSimulatorDrawer';
-import Sidebar, { SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_WIDTH } from './Sidebar';
+import Sidebar, { BrandMark, SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_WIDTH } from './Sidebar';
+import { openSimulator } from '../utils/simulatorBus';
 
 /** localStorage key for the persisted desktop rail state. */
 const SIDEBAR_COLLAPSED_KEY = 'studio-sidebar-collapsed';
 
 /**
- * Application shell: sidebar-centric workspace layout without top header.
- * All controls (workspace bot switcher, navigation, search, language,
- * theme mode, and sign-out) are integrated directly into the responsive
- * sidebar. On small screens, a floating mobile trigger opens the drawer.
+ * Application shell: sidebar-centric workspace layout.
+ * Desktop uses a collapsible rail sidebar.
+ * Mobile uses a sticky header with a sidebar toggle button and a temporary drawer.
  * @returns {React.ReactElement} The layout.
  */
 export default function Layout(): React.ReactElement {
@@ -78,37 +88,6 @@ export default function Layout(): React.ReactElement {
         </Box>
       )}
 
-      {/* Floating mobile drawer toggle on small viewports */}
-      {isCompact && (
-        <IconButton
-          edge="start"
-          onClick={() => setDrawerOpen(true)}
-          aria-label={t('nav.openMenu')}
-          aria-controls="app-sidebar"
-          aria-expanded={drawerOpen}
-          sx={(th) => ({
-            position: 'fixed',
-            top: 14,
-            left: 14,
-            zIndex: 1100,
-            borderRadius: '10px',
-            bgcolor: alpha(th.palette.background.paper, 0.9),
-            backdropFilter: 'blur(8px)',
-            border: '1px solid',
-            borderColor: 'divider',
-            boxShadow:
-              th.palette.mode === 'dark'
-                ? '0 4px 14px rgba(0,0,0,0.5)'
-                : '0 4px 14px rgba(15,23,42,0.1)',
-            '&:hover': {
-              bgcolor: th.palette.background.paper,
-            },
-          })}
-        >
-          <MenuIcon fontSize="small" />
-        </IconButton>
-      )}
-
       {/* Temporary drawer below md */}
       <Drawer
         variant="temporary"
@@ -142,10 +121,128 @@ export default function Layout(): React.ReactElement {
           overflowY: 'auto',
         }}
       >
+        {/* Sticky mobile header with sidebar toggle button */}
+        <Box
+          component="header"
+          sx={(th) => ({
+            display: { xs: 'flex', md: 'none' },
+            position: 'sticky',
+            top: 0,
+            zIndex: 1050,
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            px: 2,
+            py: 1,
+            minHeight: 56,
+            bgcolor: alpha(th.palette.background.paper, 0.92),
+            backdropFilter: 'blur(10px)',
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            flexShrink: 0,
+          })}
+        >
+          <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', minWidth: 0 }}>
+            <IconButton
+              edge="start"
+              onClick={() => setDrawerOpen(true)}
+              aria-label={t('nav.openMenu')}
+              aria-controls="app-sidebar"
+              aria-expanded={drawerOpen}
+              size="small"
+              sx={(th) => ({
+                borderRadius: '8px',
+                border: '1px solid',
+                borderColor: 'divider',
+                bgcolor: alpha(th.palette.text.primary, 0.02),
+                p: 0.75,
+                '&:hover': {
+                  bgcolor: alpha(th.palette.text.primary, 0.06),
+                },
+              })}
+            >
+              <MenuIcon fontSize="small" />
+            </IconButton>
+
+            <Box
+              component={RouterLink}
+              to="/"
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1.25,
+                textDecoration: 'none',
+                color: 'inherit',
+                minWidth: 0,
+              }}
+            >
+              <BrandMark size={28} />
+              <Typography
+                variant="subtitle2"
+                noWrap
+                sx={{
+                  fontWeight: 700,
+                  letterSpacing: '-0.01em',
+                }}
+              >
+                {t('app.title')}
+              </Typography>
+            </Box>
+          </Stack>
+
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexShrink: 0 }}>
+            {activeBot && (
+              <Chip
+                size="small"
+                label={activeBot.name}
+                avatar={
+                  <Box
+                    component="span"
+                    sx={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      bgcolor: activeBot.is_active ? 'success.main' : 'text.disabled',
+                      ml: '8px !important',
+                    }}
+                  />
+                }
+                sx={{
+                  display: { xs: 'none', sm: 'inline-flex' },
+                  maxWidth: 140,
+                  fontWeight: 600,
+                  fontSize: '0.75rem',
+                  bgcolor: (th) => alpha(th.palette.text.primary, 0.04),
+                  border: '1px solid',
+                  borderColor: 'divider',
+                }}
+              />
+            )}
+            {activeBot && (
+              <IconButton
+                size="small"
+                color="primary"
+                onClick={() => openSimulator()}
+                aria-label={t('simulator.title')}
+                sx={(th) => ({
+                  borderRadius: '8px',
+                  border: '1px solid',
+                  borderColor: alpha(th.palette.primary.main, 0.25),
+                  bgcolor: alpha(th.palette.primary.main, 0.08),
+                  p: 0.75,
+                  '&:hover': {
+                    bgcolor: alpha(th.palette.primary.main, 0.16),
+                  },
+                })}
+              >
+                <SmartToyIcon fontSize="small" />
+              </IconButton>
+            )}
+          </Stack>
+        </Box>
+
         <Box
           sx={{
             p: { xs: 2, sm: 3, md: 3.5 },
-            pt: { xs: 7, md: 3.5 },
             maxWidth: 1400,
             mx: 'auto',
             width: '100%',

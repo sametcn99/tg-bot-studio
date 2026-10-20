@@ -56,8 +56,8 @@ export class MiniAppsController {
    * @returns {{success: boolean}} Confirmation payload.
    */
   @Delete(':id')
-  remove(@Param('botId') botId: string, @Param('id') id: string) {
-    this.service.remove(botId, id);
+  async remove(@Param('botId') botId: string, @Param('id') id: string) {
+    await this.service.remove(botId, id);
     return { success: true };
   }
 

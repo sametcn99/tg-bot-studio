@@ -10,6 +10,8 @@ export interface BroadcastRow {
   failed_count: number;
   status: string;
   created_at: string | null;
+  target_filter_json?: string | null;
+  targetFilterJson?: string | null;
   botId: string;
   targetType: string;
   messageText: string;

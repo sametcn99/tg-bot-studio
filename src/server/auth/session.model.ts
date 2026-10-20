@@ -141,7 +141,7 @@ export class SessionModel {
    */
   async listSecurityLogs(limit = 100): Promise<SecurityLogEntity[]> {
     const rows = await this.prisma.securityLog.findMany({
-      orderBy: { id: 'desc' },
+      orderBy: { createdAt: 'desc' },
       take: limit,
     });
     return rows.map((r) => this.toSecurityLogEntity(r));

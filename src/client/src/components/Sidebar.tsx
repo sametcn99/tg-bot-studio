@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   Box,
+  Button,
   Divider,
   IconButton,
   InputBase,
@@ -25,6 +26,7 @@ import ExtensionOutlinedIcon from '@mui/icons-material/ExtensionOutlined';
 import PhoneIphoneIcon from '@mui/icons-material/PhoneIphone';
 import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
 import SearchIcon from '@mui/icons-material/Search';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
 import CloseIcon from '@mui/icons-material/Close';
 import KeyboardDoubleArrowLeftIcon from '@mui/icons-material/KeyboardDoubleArrowLeft';
 import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArrowRight';
@@ -32,6 +34,7 @@ import { useBots } from '../context/BotContext';
 import { useAuth } from '../context/AuthContext';
 import { useThemeMode } from '../theme';
 import { useLocalizedModules } from '../registry/localize';
+import { openSimulator } from '../utils/simulatorBus';
 import {
   BrandMark,
   IS_MAC,
@@ -310,6 +313,122 @@ export default function Sidebar({
           </Box>
         </Box>
       )}
+
+      {/* Live Bot Simulator Trigger */}
+      <Box sx={{ px: collapsed ? 1.5 : 2, pb: 1.5, flexShrink: 0 }}>
+        {collapsed ? (
+          <RailTooltip
+            collapsed={collapsed}
+            title={activeBot ? t('simulator.title') : t('nav.selectBotHint')}
+          >
+            <span>
+              <IconButton
+                size="small"
+                disabled={!activeBot}
+                onClick={() => {
+                  openSimulator();
+                  onNavigate?.();
+                }}
+                aria-label={t('simulator.title')}
+                sx={(th) => ({
+                  width: 42,
+                  height: 42,
+                  mx: 'auto',
+                  display: 'flex',
+                  borderRadius: '10px',
+                  color: '#fff',
+                  background:
+                    th.palette.mode === 'dark'
+                      ? 'linear-gradient(135deg, #2563eb 0%, #4f46e5 100%)'
+                      : 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)',
+                  boxShadow: `0 2px 8px ${alpha(th.palette.primary.main, 0.3)}`,
+                  '&:hover': {
+                    background:
+                      th.palette.mode === 'dark'
+                        ? 'linear-gradient(135deg, #1d4ed8 0%, #4338ca 100%)'
+                        : 'linear-gradient(135deg, #2563eb 0%, #4f46e5 100%)',
+                    boxShadow: `0 4px 12px ${alpha(th.palette.primary.main, 0.45)}`,
+                  },
+                  '&.Mui-disabled': {
+                    background: 'none',
+                    color: 'text.disabled',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    boxShadow: 'none',
+                  },
+                })}
+              >
+                <SmartToyIcon sx={{ fontSize: 20 }} />
+              </IconButton>
+            </span>
+          </RailTooltip>
+        ) : (
+          <Tooltip
+            title={!activeBot ? t('nav.selectBotHint') : ''}
+            disableHoverListener={Boolean(activeBot)}
+          >
+            <span>
+              <Button
+                variant="contained"
+                fullWidth
+                disabled={!activeBot}
+                startIcon={<SmartToyIcon sx={{ fontSize: 20 }} />}
+                onClick={() => {
+                  openSimulator();
+                  onNavigate?.();
+                }}
+                sx={(th) => ({
+                  minHeight: 40,
+                  py: 1,
+                  px: 1.75,
+                  borderRadius: '10px',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  fontSize: '0.8125rem',
+                  justifyContent: 'flex-start',
+                  gap: 1,
+                  background:
+                    th.palette.mode === 'dark'
+                      ? 'linear-gradient(135deg, #2563eb 0%, #4f46e5 100%)'
+                      : 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)',
+                  boxShadow: `0 2px 10px ${alpha(th.palette.primary.main, 0.28)}`,
+                  transition: th.transitions.create(['background', 'box-shadow', 'transform'], {
+                    duration: th.transitions.duration.shortest,
+                  }),
+                  '&:hover': {
+                    background:
+                      th.palette.mode === 'dark'
+                        ? 'linear-gradient(135deg, #1d4ed8 0%, #4338ca 100%)'
+                        : 'linear-gradient(135deg, #2563eb 0%, #4f46e5 100%)',
+                    boxShadow: `0 4px 14px ${alpha(th.palette.primary.main, 0.42)}`,
+                  },
+                  '&:active': {
+                    transform: 'scale(0.98)',
+                  },
+                  '&.Mui-disabled': {
+                    background: alpha(th.palette.text.primary, 0.05),
+                    color: 'text.disabled',
+                    boxShadow: 'none',
+                  },
+                })}
+              >
+                <Box
+                  component="span"
+                  sx={{
+                    flex: 1,
+                    textAlign: 'left',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {t('simulator.title')}
+                </Box>
+              </Button>
+            </span>
+          </Tooltip>
+        )}
+      </Box>
 
       {/* Scrollable navigation */}
       <Box

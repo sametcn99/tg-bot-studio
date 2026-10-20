@@ -176,14 +176,18 @@ export class MetricsService {
       name: 'tg_studio_http_request_duration_seconds',
       help: `Handler latency histogram buckets in seconds (bounds: ${HTTP_BUCKETS_MS.join(', ')} ms, +Inf).`,
       type: 'counter',
-      samples: stats.flatMap((s) =>
-        s.buckets.map((count, bucketIndex) => ({
-          labels: `{method="${s.method}",route="${this.escapeLabel(s.route)}",le="${
-            bucketIndex < HTTP_BUCKETS_MS.length ? HTTP_BUCKETS_MS[bucketIndex] / 1000 : '+Inf'
-          }"}`,
-          value: count,
-        })),
-      ),
+      samples: stats.flatMap((s) => {
+        let cumulative = 0;
+        return s.buckets.map((count, bucketIndex) => {
+          cumulative += count;
+          return {
+            labels: `{method="${s.method}",route="${this.escapeLabel(s.route)}",le="${
+              bucketIndex < HTTP_BUCKETS_MS.length ? HTTP_BUCKETS_MS[bucketIndex] / 1000 : '+Inf'
+            }"}`,
+            value: cumulative,
+          };
+        });
+      }),
     });
     return lines;
   }

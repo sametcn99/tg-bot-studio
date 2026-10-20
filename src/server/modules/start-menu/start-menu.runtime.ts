@@ -3,6 +3,7 @@ import { InlineKeyboard, type Context } from 'grammy';
 import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bot-module-handler';
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
 import { renderTemplate, type TemplateContext } from '../../common/utils/template.util';
+import { escapeHtml } from '../../common/utils/telegram-text.util';
 import { StartMenuService, type MenuItemRow } from './start-menu.service';
 
 /**
@@ -136,18 +137,20 @@ export class StartMenuRuntime extends BotModuleHandler {
     ctx: ModuleRuntimeContext,
   ): TemplateContext {
     const now = new Date().toISOString();
+    const rawFirst = from?.first_name ?? '';
+    const rawLast = from?.last_name ?? '';
     return {
-      first_name: from?.first_name,
-      last_name: from?.last_name,
+      first_name: rawFirst ? escapeHtml(rawFirst) : undefined,
+      last_name: rawLast ? escapeHtml(rawLast) : undefined,
       username: from?.username,
       user_id: from?.id,
       mention: from
         ? from.username
           ? `@${from.username}`
-          : `<a href="tg://user?id=${from.id}">${from.first_name}</a>`
+          : `<a href="tg://user?id=${from.id}">${escapeHtml(from.first_name)}</a>`
         : undefined,
-      group_name: update.chat?.title,
-      bot_name: ctx.bot.botInfo?.first_name ?? '',
+      group_name: update.chat?.title ? escapeHtml(update.chat.title) : undefined,
+      bot_name: ctx.bot.botInfo?.first_name ? escapeHtml(ctx.bot.botInfo.first_name) : '',
       date: now.slice(0, 10),
       time: now.slice(11, 16),
     };

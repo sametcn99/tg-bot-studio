@@ -1,4 +1,4 @@
-import { IsIn, IsOptional, IsString, Length, MaxLength } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, Length, MaxLength, Min } from 'class-validator';
 import { MEDIA_KINDS } from '../media-asset.constants';
 
 /**
@@ -25,6 +25,18 @@ export class CreateMediaAssetDto {
   @IsOptional()
   @IsIn(MEDIA_KINDS as unknown as string[])
   kind?: string;
+
+  /** MIME type (optional). */
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  mimeType?: string;
+
+  /** File size in bytes (optional). */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  fileSize?: number;
 
   /** Free-form tags for filtering. */
   @IsOptional()

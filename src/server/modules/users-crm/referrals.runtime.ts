@@ -3,6 +3,7 @@ import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bo
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
 import { EngineHelpersService } from '../../bot-engine/engine-helpers.service';
 import { BotUserModel } from './bot-user.model';
+import { escapeHtml } from '../../common/utils/telegram-text.util';
 
 /**
  * Runtime for the Affiliate & Referral Leaderboard module. Parses `ref_<id>`
@@ -72,7 +73,7 @@ export class ReferralsRuntime extends BotModuleHandler {
         const lines = rows.map((row, index) => {
           const name = row.username
             ? `@${row.username}`
-            : (row.first_name ?? String(row.telegram_id));
+            : escapeHtml(row.first_name ?? String(row.telegram_id));
           return `${index + 1}. ${name} - ${row.points} pts`;
         });
         await update.reply(`<b>Referral Leaderboard</b>\n\n${lines.join('\n')}`, {

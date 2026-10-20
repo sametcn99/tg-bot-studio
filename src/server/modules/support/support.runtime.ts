@@ -42,12 +42,26 @@ export class SupportRuntime extends BotModuleHandler {
 
     // ----- User -> Admin relay -------------------------------------------------
     bot.on('message', async (update, next) => {
+      let handled = false;
       try {
-        if (update.chat?.type !== 'private') return;
-        if ((update.msg as { business_connection_id?: string }).business_connection_id) return;
-        if (update.msg.text?.startsWith('/')) return;
-        if (!update.from) return;
+        if (update.chat?.type !== 'private') {
+          await next();
+          return;
+        }
+        if ((update.msg as { business_connection_id?: string }).business_connection_id) {
+          await next();
+          return;
+        }
+        if (update.msg.text?.startsWith('/')) {
+          await next();
+          return;
+        }
+        if (!update.from) {
+          await next();
+          return;
+        }
 
+        handled = true;
         const telegramId = update.from.id;
         let topicId: number | null = null;
         if (adminChatId) {
@@ -108,8 +122,9 @@ export class SupportRuntime extends BotModuleHandler {
         this.logger.warn(
           `Support user->admin relay error for bot ${ctx.botId}: ${err instanceof Error ? err.message : String(err)}`,
         );
-      } finally {
-        await next();
+        if (!handled) {
+          await next();
+        }
       }
     });
 
@@ -117,22 +132,44 @@ export class SupportRuntime extends BotModuleHandler {
 
     // ----- Admin -> User relay -------------------------------------------------
     bot.on('message', async (update, next) => {
+      let handled = false;
       try {
-        if (update.chat?.id !== adminChatId) return;
-        if (!update.msg.is_topic_message) return;
-        if (!update.from || update.from.id === bot.botInfo?.id) return;
+        if (update.chat?.id !== adminChatId) {
+          await next();
+          return;
+        }
+        if (!update.msg.is_topic_message) {
+          await next();
+          return;
+        }
+        if (!update.from || update.from.id === bot.botInfo?.id) {
+          await next();
+          return;
+        }
 
         const threadId = update.msg.message_thread_id;
-        if (!threadId) return;
+        if (!threadId) {
+          await next();
+          return;
+        }
         const mapping = this.settings.getBotSetting(ctx.botId, `support_topic_user_${threadId}`);
-        if (!mapping) return;
+        if (!mapping) {
+          await next();
+          return;
+        }
         const telegramId = Number(mapping);
+        handled = true;
 
         const commandText = update.msg.text?.trim() ?? '';
         if (commandText.startsWith('/ban')) {
+          const targetUser = await this.helpers.getUser(ctx.botId, telegramId);
           await this.helpers.blockUser(
             ctx.botId,
-            update.from,
+            {
+              id: telegramId,
+              username: targetUser?.username ?? undefined,
+              first_name: targetUser?.first_name ?? 'User',
+            } as any,
             `Support ban by admin ${update.from.id}`,
           );
           await update.reply('User banned from contacting the bot.');
@@ -173,8 +210,9 @@ export class SupportRuntime extends BotModuleHandler {
         this.logger.warn(
           `Support admin->user relay error for bot ${ctx.botId}: ${err instanceof Error ? err.message : String(err)}`,
         );
-      } finally {
-        await next();
+        if (!handled) {
+          await next();
+        }
       }
     });
   }

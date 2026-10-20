@@ -22,7 +22,7 @@ export class AiModel {
         botId,
         telegramId: BigInt(telegramId),
       },
-      orderBy: { id: 'desc' },
+      orderBy: { createdAt: 'desc' },
       take: limit,
       select: {
         role: true,
@@ -65,7 +65,7 @@ export class AiModel {
   async listDocs(botId: string): Promise<AiKnowledgeDocEntity[]> {
     const rows = await this.prisma.aiKnowledgeDoc.findMany({
       where: { botId },
-      orderBy: { id: 'desc' },
+      orderBy: { createdAt: 'desc' },
     });
     return rows.map((r) => ({
       id: r.id,

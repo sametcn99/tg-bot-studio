@@ -14,6 +14,8 @@ export function toBroadcastRow(b: Broadcast): BroadcastRow {
     failed_count: b.failedCount,
     status: b.status,
     created_at: b.createdAt,
+    target_filter_json: b.targetFilterJson,
+    targetFilterJson: b.targetFilterJson,
     botId: b.botId,
     targetType: b.targetType,
     messageText: b.messageText,

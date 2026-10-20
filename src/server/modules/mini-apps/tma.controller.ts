@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   HttpCode,
+  NotFoundException,
   Param,
   Post,
   Query,
@@ -200,7 +201,9 @@ export class TmaController {
    */
   private async appForSlug(slug: string): Promise<{ id: string; bot_id: string }> {
     const app = await this.miniAppModel.findBySlug(slug);
-    if (!app || app.isActive !== 1) return { id: '', bot_id: '' };
+    if (!app || app.isActive !== 1) {
+      throw new NotFoundException(`Mini App '${slug}' not found or inactive`);
+    }
     return { id: app.id, bot_id: app.botId };
   }
 }

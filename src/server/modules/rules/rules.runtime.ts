@@ -53,13 +53,22 @@ export class RulesRuntime extends BotModuleHandler {
 
     // PM deep link used by the {rules} placeholder: /start rules_<chatId>.
     bot.command('start', async (c, next) => {
+      if (c.chat?.type !== 'private' || !c.from) {
+        await next();
+        return;
+      }
+      const payload = String(typeof c.match === 'string' ? c.match : '').trim();
+      if (!payload.startsWith('rules_')) {
+        await next();
+        return;
+      }
       try {
-        if (c.chat?.type !== 'private' || !c.from) return;
-        const payload = String(typeof c.match === 'string' ? c.match : '').trim();
-        if (!payload.startsWith('rules_')) return;
         const chatId = payload.slice('rules_'.length);
         const config = await this.chatSettings.getEffectiveConfig(botId, chatId, this.moduleKey);
-        if (!isChatTargeted(config.targetChats, chatId)) return;
+        if (!isChatTargeted(config.targetChats, chatId)) {
+          await next();
+          return;
+        }
         const lang = await this.i18n.getChatLanguage(botId, chatId);
         const text = String(config.rulesText ?? '');
         if (!text) {
@@ -71,8 +80,6 @@ export class RulesRuntime extends BotModuleHandler {
         this.logger.warn(
           `Rules /start handling error for bot ${botId}: ${err instanceof Error ? err.message : String(err)}`,
         );
-      } finally {
-        await next();
       }
     });
   }

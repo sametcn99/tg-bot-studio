@@ -30,6 +30,7 @@ export class FlowsRuntime extends BotModuleHandler implements OnModuleDestroy {
 
   private readonly logger = new Logger(FlowsRuntime.name);
   private readonly tickers = new Map<string, ReturnType<typeof setInterval>>();
+  private readonly runningBots = new Set<string>();
 
   /**
    * @param {FlowModel} flowModel - Flow + session persistence.
@@ -238,6 +239,8 @@ export class FlowsRuntime extends BotModuleHandler implements OnModuleDestroy {
    * Resumes every session whose delay node elapsed.
    */
   private async resumeDueFlows(bot: Bot, botId: string): Promise<void> {
+    if (this.runningBots.has(botId)) return;
+    this.runningBots.add(botId);
     try {
       const due = await this.flowModel.findDueStates(botId, new Date().toISOString());
       for (const { state, flow } of due) {
@@ -266,6 +269,8 @@ export class FlowsRuntime extends BotModuleHandler implements OnModuleDestroy {
       this.logger.warn(
         `Flow resume sweep failed on bot ${botId}: ${error instanceof Error ? error.message : String(error)}`,
       );
+    } finally {
+      this.runningBots.delete(botId);
     }
   }
 

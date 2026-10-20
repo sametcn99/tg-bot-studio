@@ -7,7 +7,6 @@ import {
   CircularProgress,
   Divider,
   Drawer,
-  Fab,
   IconButton,
   InputAdornment,
   Paper,
@@ -68,8 +67,10 @@ export default function BotSimulatorDrawer(): React.ReactElement {
     () =>
       onSimulatorRequest((text) => {
         setOpen(true);
-        // Wait for the drawer to open and the bot context to be ready.
-        window.setTimeout(() => void sendRef.current(text), 250);
+        if (text) {
+          // Wait for the drawer to open and the bot context to be ready.
+          window.setTimeout(() => void sendRef.current(text), 250);
+        }
       }),
     [],
   );
@@ -230,299 +231,272 @@ export default function BotSimulatorDrawer(): React.ReactElement {
   if (!activeBot) return <React.Fragment />;
 
   return (
-    <>
-      {/* Floating Launch Button */}
-      <Fab
-        color="primary"
-        variant="extended"
-        size="medium"
-        onClick={() => setOpen(true)}
-        sx={{
-          position: 'fixed',
-          bottom: 24,
-          right: 24,
-          zIndex: 1200,
-          boxShadow: 4,
-          fontWeight: 700,
-          textTransform: 'none',
-          gap: 1,
-        }}
-      >
-        <SmartToyIcon />
-        {t('simulator.title')}
-      </Fab>
-
-      {/* Simulator Side Drawer */}
-      <Drawer
-        anchor="right"
-        open={open}
-        onClose={() => setOpen(false)}
-        slotProps={{
-          paper: {
-            sx: {
-              width: { xs: '100%', sm: 400 },
-              display: 'flex',
-              flexDirection: 'column',
-              bgcolor: 'background.default',
-            },
+    <Drawer
+      anchor="right"
+      open={open}
+      onClose={() => setOpen(false)}
+      slotProps={{
+        paper: {
+          sx: {
+            width: { xs: '100%', sm: 400 },
+            display: 'flex',
+            flexDirection: 'column',
+            bgcolor: 'background.default',
           },
+        },
+      }}
+    >
+      {/* Header */}
+      <Box
+        sx={{
+          p: 2,
+          bgcolor: 'background.paper',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
         }}
       >
-        {/* Header */}
-        <Box
+        <Stack
+          direction="row"
           sx={{
-            p: 2,
-            bgcolor: 'background.paper',
-            borderBottom: '1px solid',
-            borderColor: 'divider',
+            justifyContent: 'space-between',
+            alignItems: 'center',
           }}
         >
           <Stack
             direction="row"
+            spacing={1.5}
             sx={{
-              justifyContent: 'space-between',
               alignItems: 'center',
             }}
           >
-            <Stack
-              direction="row"
-              spacing={1.5}
-              sx={{
-                alignItems: 'center',
-              }}
-            >
-              <Avatar sx={{ bgcolor: 'primary.main', width: 36, height: 36 }}>
-                <SmartToyIcon fontSize="small" />
-              </Avatar>
-              <Box>
-                <Typography
-                  variant="subtitle2"
-                  sx={{
-                    fontWeight: 700,
-                  }}
-                >
-                  {activeBot.name}
-                </Typography>
-                <Typography
-                  variant="caption"
-                  sx={{
-                    color: 'success.main',
-                    fontWeight: 600,
-                  }}
-                >
-                  ● {t('simulator.sandboxActive')}
-                </Typography>
-              </Box>
-            </Stack>
-            <Stack direction="row" spacing={0.5}>
-              <Tooltip title={t('simulator.clear')}>
-                <IconButton size="small" onClick={handleClear}>
-                  <DeleteSweepIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-              <IconButton size="small" onClick={() => setOpen(false)}>
-                <CloseIcon fontSize="small" />
-              </IconButton>
-            </Stack>
-          </Stack>
-
-          {/* Quick command pills */}
-          <Stack direction="row" spacing={0.5} sx={{ mt: 1.5, overflowX: 'auto', pb: 0.5 }}>
-            <Chip size="small" label="/start" onClick={() => void sendMessage('/start')} />
-            <Chip size="small" label="/menu" onClick={() => void sendMessage('/menu')} />
-            <Chip
-              size="small"
-              label={t('simulator.quickHelp')}
-              onClick={() => void sendMessage('help')}
-            />
-            <Chip
-              size="small"
-              label={t('simulator.quickPricing')}
-              onClick={() => void sendMessage('pricing')}
-            />
-            {surface === 'supergroup' && (
-              <Chip
-                size="small"
-                icon={<PersonAddAlt1Icon sx={{ fontSize: 14 }} />}
-                label={t('simulator.simulateJoin')}
-                onClick={() => void sendEvent('join')}
-              />
-            )}
-          </Stack>
-        </Box>
-
-        {/* Message Stream */}
-        <Box
-          ref={streamRef}
-          sx={{
-            flexGrow: 1,
-            overflowY: 'auto',
-            p: 2,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 1.5,
-          }}
-        >
-          {messages.map((msg) => (
-            <Box
-              key={msg.id}
-              sx={{
-                alignSelf: msg.sender === 'user' ? 'flex-end' : 'flex-start',
-                maxWidth: '85%',
-              }}
-            >
-              <Paper
-                elevation={1}
+            <Avatar sx={{ bgcolor: 'primary.main', width: 36, height: 36 }}>
+              <SmartToyIcon fontSize="small" />
+            </Avatar>
+            <Box>
+              <Typography
+                variant="subtitle2"
                 sx={{
-                  p: 1.5,
-                  borderRadius: 2,
-                  bgcolor: msg.sender === 'user' ? 'primary.main' : 'background.paper',
-                  color: msg.sender === 'user' ? 'primary.contrastText' : 'text.primary',
+                  fontWeight: 700,
                 }}
               >
-                {msg.mediaUrl &&
-                  (/\.(mp4|mov|webm)(\?|$)/i.test(msg.mediaUrl) ||
-                  msg.mediaUrl.startsWith('data:video/') ? (
-                    <Box
-                      component="video"
-                      src={msg.mediaUrl}
-                      controls
-                      sx={{
-                        width: '100%',
-                        borderRadius: 1,
-                        mb: 1,
-                        maxHeight: 180,
-                      }}
-                    />
-                  ) : (
-                    <Box
-                      component="img"
-                      src={msg.mediaUrl}
-                      alt={t('simulator.mediaAlt')}
-                      sx={{
-                        width: '100%',
-                        borderRadius: 1,
-                        mb: 1,
-                        maxHeight: 180,
-                        objectFit: 'cover',
-                      }}
-                    />
-                  ))}
-                <Typography
-                  variant="body2"
-                  sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
-                >
-                  {msg.text}
-                </Typography>
-                <Typography
-                  variant="caption"
-                  sx={{
-                    display: 'block',
-                    textAlign: 'right',
-                    mt: 0.5,
-                    opacity: 0.7,
-                    fontSize: '0.6875rem',
-                  }}
-                >
-                  {msg.time}
-                </Typography>
-              </Paper>
-
-              {/* Bot Inline Buttons */}
-              {msg.buttons && msg.buttons.length > 0 && (
-                <Stack spacing={0.5} sx={{ mt: 0.75 }}>
-                  {msg.buttons.map((btn, bIdx) => (
-                    <Button
-                      key={bIdx}
-                      variant="contained"
-                      size="small"
-                      color="inherit"
-                      fullWidth
-                      endIcon={<OpenInNewIcon sx={{ fontSize: 13 }} />}
-                      onClick={() => void pressButton(btn)}
-                      sx={{
-                        bgcolor: (th) => (th.palette.mode === 'dark' ? '#253547' : '#e3edf7'),
-                        color: 'primary.main',
-                        textTransform: 'none',
-                        fontSize: '0.75rem',
-                        fontWeight: 600,
-                        py: 0.5,
-                        '&:hover': {
-                          bgcolor: (th) => (th.palette.mode === 'dark' ? '#2e435a' : '#d2e4f5'),
-                        },
-                      }}
-                    >
-                      {btn.text}
-                    </Button>
-                  ))}
-                </Stack>
-              )}
-            </Box>
-          ))}
-
-          {loading && (
-            <Box
-              sx={{ alignSelf: 'flex-start', p: 1.5, borderRadius: 2, bgcolor: 'background.paper' }}
-            >
-              <CircularProgress size={16} sx={{ mr: 1, verticalAlign: 'middle' }} />
+                {activeBot.name}
+              </Typography>
               <Typography
                 variant="caption"
                 sx={{
-                  color: 'text.secondary',
+                  color: 'success.main',
+                  fontWeight: 600,
                 }}
               >
-                {t('simulator.typing')}
+                ● {t('simulator.sandboxActive')}
               </Typography>
             </Box>
-          )}
-        </Box>
+          </Stack>
+          <Stack direction="row" spacing={0.5}>
+            <Tooltip title={t('simulator.clear')}>
+              <IconButton size="small" onClick={handleClear}>
+                <DeleteSweepIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <IconButton size="small" onClick={() => setOpen(false)}>
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </Stack>
+        </Stack>
 
-        <Divider />
-
-        {/* Surface switcher: private chat vs sandbox supergroup */}
-        <Box sx={{ px: 2, pt: 1.5, bgcolor: 'background.paper' }}>
-          <ToggleButtonGroup
-            exclusive
+        {/* Quick command pills */}
+        <Stack direction="row" spacing={0.5} sx={{ mt: 1.5, overflowX: 'auto', pb: 0.5 }}>
+          <Chip size="small" label="/start" onClick={() => void sendMessage('/start')} />
+          <Chip size="small" label="/menu" onClick={() => void sendMessage('/menu')} />
+          <Chip
             size="small"
-            value={surface}
-            onChange={(_, next) => next && setSurface(next)}
-            fullWidth
-          >
-            <ToggleButton value="private">{t('simulator.surfacePrivate')}</ToggleButton>
-            <ToggleButton value="supergroup">{t('simulator.surfaceGroup')}</ToggleButton>
-          </ToggleButtonGroup>
-        </Box>
-
-        {/* Input Bar */}
-        <Box sx={{ p: 2, bgcolor: 'background.paper' }}>
-          <TextField
-            fullWidth
-            size="small"
-            placeholder={t('simulator.placeholder')}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') void sendMessage();
-            }}
-            slotProps={{
-              input: {
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      color="primary"
-                      disabled={!input.trim() || loading}
-                      onClick={() => void sendMessage()}
-                      aria-label={t('simulator.sendMessageAria')}
-                    >
-                      <SendIcon fontSize="small" />
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              },
-            }}
+            label={t('simulator.quickHelp')}
+            onClick={() => void sendMessage('help')}
           />
-        </Box>
-      </Drawer>
-    </>
+          <Chip
+            size="small"
+            label={t('simulator.quickPricing')}
+            onClick={() => void sendMessage('pricing')}
+          />
+          {surface === 'supergroup' && (
+            <Chip
+              size="small"
+              icon={<PersonAddAlt1Icon sx={{ fontSize: 14 }} />}
+              label={t('simulator.simulateJoin')}
+              onClick={() => void sendEvent('join')}
+            />
+          )}
+        </Stack>
+      </Box>
+
+      {/* Message Stream */}
+      <Box
+        ref={streamRef}
+        sx={{
+          flexGrow: 1,
+          overflowY: 'auto',
+          p: 2,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 1.5,
+        }}
+      >
+        {messages.map((msg) => (
+          <Box
+            key={msg.id}
+            sx={{
+              alignSelf: msg.sender === 'user' ? 'flex-end' : 'flex-start',
+              maxWidth: '85%',
+            }}
+          >
+            <Paper
+              elevation={1}
+              sx={{
+                p: 1.5,
+                borderRadius: 2,
+                bgcolor: msg.sender === 'user' ? 'primary.main' : 'background.paper',
+                color: msg.sender === 'user' ? 'primary.contrastText' : 'text.primary',
+              }}
+            >
+              {msg.mediaUrl &&
+                (/\.(mp4|mov|webm)(\?|$)/i.test(msg.mediaUrl) ||
+                msg.mediaUrl.startsWith('data:video/') ? (
+                  <Box
+                    component="video"
+                    src={msg.mediaUrl}
+                    controls
+                    sx={{
+                      width: '100%',
+                      borderRadius: 1,
+                      mb: 1,
+                      maxHeight: 180,
+                    }}
+                  />
+                ) : (
+                  <Box
+                    component="img"
+                    src={msg.mediaUrl}
+                    alt={t('simulator.mediaAlt')}
+                    sx={{
+                      width: '100%',
+                      borderRadius: 1,
+                      mb: 1,
+                      maxHeight: 180,
+                      objectFit: 'cover',
+                    }}
+                  />
+                ))}
+              <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                {msg.text}
+              </Typography>
+              <Typography
+                variant="caption"
+                sx={{
+                  display: 'block',
+                  textAlign: 'right',
+                  mt: 0.5,
+                  opacity: 0.7,
+                  fontSize: '0.6875rem',
+                }}
+              >
+                {msg.time}
+              </Typography>
+            </Paper>
+
+            {/* Bot Inline Buttons */}
+            {msg.buttons && msg.buttons.length > 0 && (
+              <Stack spacing={0.5} sx={{ mt: 0.75 }}>
+                {msg.buttons.map((btn, bIdx) => (
+                  <Button
+                    key={bIdx}
+                    variant="contained"
+                    size="small"
+                    color="inherit"
+                    fullWidth
+                    endIcon={<OpenInNewIcon sx={{ fontSize: 13 }} />}
+                    onClick={() => void pressButton(btn)}
+                    sx={{
+                      bgcolor: (th) => (th.palette.mode === 'dark' ? '#253547' : '#e3edf7'),
+                      color: 'primary.main',
+                      textTransform: 'none',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      py: 0.5,
+                      '&:hover': {
+                        bgcolor: (th) => (th.palette.mode === 'dark' ? '#2e435a' : '#d2e4f5'),
+                      },
+                    }}
+                  >
+                    {btn.text}
+                  </Button>
+                ))}
+              </Stack>
+            )}
+          </Box>
+        ))}
+
+        {loading && (
+          <Box
+            sx={{ alignSelf: 'flex-start', p: 1.5, borderRadius: 2, bgcolor: 'background.paper' }}
+          >
+            <CircularProgress size={16} sx={{ mr: 1, verticalAlign: 'middle' }} />
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
+              {t('simulator.typing')}
+            </Typography>
+          </Box>
+        )}
+      </Box>
+
+      <Divider />
+
+      {/* Surface switcher: private chat vs sandbox supergroup */}
+      <Box sx={{ px: 2, pt: 1.5, bgcolor: 'background.paper' }}>
+        <ToggleButtonGroup
+          exclusive
+          size="small"
+          value={surface}
+          onChange={(_, next) => next && setSurface(next)}
+          fullWidth
+        >
+          <ToggleButton value="private">{t('simulator.surfacePrivate')}</ToggleButton>
+          <ToggleButton value="supergroup">{t('simulator.surfaceGroup')}</ToggleButton>
+        </ToggleButtonGroup>
+      </Box>
+
+      {/* Input Bar */}
+      <Box sx={{ p: 2, bgcolor: 'background.paper' }}>
+        <TextField
+          fullWidth
+          size="small"
+          placeholder={t('simulator.placeholder')}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') void sendMessage();
+          }}
+          slotProps={{
+            input: {
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    color="primary"
+                    disabled={!input.trim() || loading}
+                    onClick={() => void sendMessage()}
+                    aria-label={t('simulator.sendMessageAria')}
+                  >
+                    <SendIcon fontSize="small" />
+                  </IconButton>
+                </InputAdornment>
+              ),
+            },
+          }}
+        />
+      </Box>
+    </Drawer>
   );
 }

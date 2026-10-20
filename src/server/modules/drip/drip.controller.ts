@@ -55,8 +55,8 @@ export class DripController {
    * @returns {{success: boolean}} Confirmation payload.
    */
   @Delete('campaigns/:id')
-  remove(@Param('botId') botId: string, @Param('id') id: string) {
-    this.service.remove(botId, id);
+  async remove(@Param('botId') botId: string, @Param('id') id: string) {
+    await this.service.remove(botId, id);
     return { success: true };
   }
 
@@ -79,12 +79,12 @@ export class DripController {
    * @returns {{success: boolean}} Confirmation payload.
    */
   @Post('campaigns/:campaignId/subscribers')
-  subscribe(
+  async subscribe(
     @Param('botId') botId: string,
     @Param('campaignId') campaignId: string,
     @Body() body: { telegramId?: number },
   ) {
-    this.service.subscribe(botId, campaignId, Number(body.telegramId));
+    await this.service.subscribe(botId, campaignId, Number(body.telegramId));
     return { success: true };
   }
 
@@ -96,12 +96,12 @@ export class DripController {
    * @returns {{success: boolean}} Confirmation payload.
    */
   @Delete('campaigns/:campaignId/subscribers/:telegramId')
-  unsubscribe(
+  async unsubscribe(
     @Param('botId') botId: string,
     @Param('campaignId') campaignId: string,
     @Param('telegramId', ParseIntPipe) telegramId: number,
   ) {
-    this.service.unsubscribe(botId, campaignId, telegramId);
+    await this.service.unsubscribe(botId, campaignId, telegramId);
     return { success: true };
   }
 }

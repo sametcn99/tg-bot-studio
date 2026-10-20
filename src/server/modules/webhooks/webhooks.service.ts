@@ -132,37 +132,40 @@ export class WebhooksService {
     if (endpoints.length === 0) return;
 
     const body = JSON.stringify({ event, botId, payload, at: new Date().toISOString() });
-    for (const endpoint of endpoints) {
-      try {
-        const signature = createHmac('sha256', endpoint.secret).update(body).digest('hex');
-        const response = await fetch(endpoint.url, {
-          method: 'POST',
-          signal: AbortSignal.timeout(DISPATCH_TIMEOUT_MS),
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Studio-Event': event,
-            'X-Studio-Signature': signature,
-          },
-          body,
-        });
-        this.logDelivery(botId, {
-          event,
-          url: endpoint.url,
-          status: response.status,
-          at: new Date().toISOString(),
-        });
-      } catch (error) {
-        this.logger.warn(
-          `Webhook delivery to ${endpoint.url} failed: ${error instanceof Error ? error.message : String(error)}`,
-        );
-        this.logDelivery(botId, {
-          event,
-          url: endpoint.url,
-          status: 'error',
-          at: new Date().toISOString(),
-        });
-      }
-    }
+    await Promise.allSettled(
+      endpoints.map(async (endpoint) => {
+        try {
+          const signature = createHmac('sha256', endpoint.secret).update(body).digest('hex');
+          const response = await fetch(endpoint.url, {
+            method: 'POST',
+            signal: AbortSignal.timeout(DISPATCH_TIMEOUT_MS),
+            redirect: 'error',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Studio-Event': event,
+              'X-Studio-Signature': signature,
+            },
+            body,
+          });
+          this.logDelivery(botId, {
+            event,
+            url: endpoint.url,
+            status: response.status,
+            at: new Date().toISOString(),
+          });
+        } catch (error) {
+          this.logger.warn(
+            `Webhook delivery to ${endpoint.url} failed: ${error instanceof Error ? error.message : String(error)}`,
+          );
+          this.logDelivery(botId, {
+            event,
+            url: endpoint.url,
+            status: 'error',
+            at: new Date().toISOString(),
+          });
+        }
+      }),
+    );
   }
 
   /**

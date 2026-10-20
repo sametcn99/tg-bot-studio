@@ -166,7 +166,9 @@ export class ChatSettingsService {
     const row = await this.prisma.chatModuleSetting.findUnique({
       where: { botId_chatId_moduleKey: { botId, chatId: String(chatId), moduleKey } },
     });
-    return row?.configJson ? (JSON.parse(row.configJson) as Record<string, unknown>) : null;
+    return row?.configJson
+      ? safeJsonObjectParse<Record<string, unknown>>(row.configJson, {}, 'chat-settings:override')
+      : null;
   }
 
   /**

@@ -97,7 +97,8 @@ export class BotsService {
    * @returns {Promise<{timezone: string}>} Effective settings.
    */
   async getBotSettings(botId: string): Promise<{ timezone: string }> {
-    await this.botModel.findById(botId);
+    const bot = await this.botModel.findById(botId);
+    if (!bot) this.throwNotFound(botId);
     return { timezone: safeTimeZone(this.settings.getBotSetting(botId, 'timezone')) };
   }
 
@@ -112,12 +113,13 @@ export class BotsService {
     botId: string,
     body: { timezone?: string },
   ): Promise<{ timezone: string }> {
-    await this.botModel.findById(botId);
+    const bot = await this.botModel.findById(botId);
+    if (!bot) this.throwNotFound(botId);
     const requested = String(body.timezone ?? '').trim();
     if (requested && !isValidTimeZone(requested)) {
       throw new StudioException('INVALID_TIMEZONE', 'Unknown IANA time zone');
     }
-    this.settings.setBotSetting(botId, 'timezone', requested || 'UTC');
+    await this.settings.setBotSetting(botId, 'timezone', requested || 'UTC');
     return { timezone: requested || 'UTC' };
   }
 

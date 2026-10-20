@@ -324,6 +324,9 @@ export class FederationRuntime extends BotModuleHandler {
     if (c.chat?.type !== 'supergroup' && c.chat?.type !== 'group') return;
     if (!c.from) return;
     const chatId = c.chat.id;
+    if (!(await this.adminGate.isAdmin(c.api, chatId, c.from.id))) {
+      return;
+    }
     const membership = await this.prisma.fedChat.findFirst({
       where: { botId, chatId: String(chatId) },
     });

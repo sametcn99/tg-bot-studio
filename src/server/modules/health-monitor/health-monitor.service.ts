@@ -46,6 +46,7 @@ export class HealthMonitorService implements OnModuleInit, OnModuleDestroy {
   private readonly lastStatus = new Map<string, SweepStatus>();
   private readonly sweepTimer: ReturnType<typeof setInterval>;
   private operatorBot: { token: string; bot: Bot } | null = null;
+  private isRunning = false;
 
   /**
    * @param {BotModel} botModel - Bot rows and existence checks.
@@ -85,6 +86,8 @@ export class HealthMonitorService implements OnModuleInit, OnModuleDestroy {
    * @returns {Promise<void>} Resolves after one full sweep.
    */
   async sweep(): Promise<void> {
+    if (this.isRunning) return;
+    this.isRunning = true;
     try {
       const bots = await this.botModel.findAll();
       for (const bot of bots) {
@@ -134,6 +137,8 @@ export class HealthMonitorService implements OnModuleInit, OnModuleDestroy {
       this.logger.warn(
         `Health sweep failed: ${error instanceof Error ? error.message : String(error)}`,
       );
+    } finally {
+      this.isRunning = false;
     }
   }
 

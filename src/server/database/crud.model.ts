@@ -13,7 +13,7 @@ import { PrismaService } from './prisma.service';
 export abstract class BotScopedCrudModel<Row extends { id: string }> {
   protected readonly prisma: PrismaService;
   protected abstract readonly delegate: any;
-  protected readonly defaultOrder: Record<string, 'asc' | 'desc'> = { id: 'desc' };
+  protected readonly defaultOrder: Record<string, 'asc' | 'desc'> = { createdAt: 'desc' };
 
   /**
    * @param {PrismaService} prisma - Prisma ORM access service.

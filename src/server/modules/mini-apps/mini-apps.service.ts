@@ -56,8 +56,8 @@ export class MiniAppsService {
     const rows = await this.miniAppModel.list(botId);
     return rows.map((row) => ({
       ...row,
-      config: row.configJson ? JSON.parse(row.configJson) : {},
-      theme: row.themeJson ? JSON.parse(row.themeJson) : {},
+      config: safeJsonObjectParse(row.configJson, {}, 'mini-app:config'),
+      theme: safeJsonObjectParse(row.themeJson, {}, 'mini-app:theme'),
     }));
   }
 
@@ -145,7 +145,7 @@ export class MiniAppsService {
    */
   async publish(botId: string, id: string, publicBaseUrl: string): Promise<{ menuUrl: string }> {
     const app = await this.miniAppModel.findById(id);
-    if (!app) throw new NotFoundException(`Mini app ${id} not found`);
+    if (!app || app.botId !== botId) throw new NotFoundException(`Mini app ${id} not found`);
     const bot = this.pool.getBot(botId);
     if (!bot) throw new StudioException('BOT_NOT_RUNNING', 'Bot is not running');
     const rawBase =
@@ -235,19 +235,21 @@ export class MiniAppsService {
       isMe: Number(user.telegramId) === telegramId,
     }));
     let myRank: number | null = null;
+    let myPoints = entries.find((e) => e.isMe)?.points ?? 0;
     if (!entries.some((entry) => entry.isMe)) {
       const mine = await this.prisma.botUser.findUnique({
         where: { botId_telegramId: { botId, telegramId: BigInt(telegramId) } },
         select: { points: true },
       });
       if (mine && mine.points > 0) {
+        myPoints = mine.points;
         myRank = await this.prisma.botUser.count({
           where: { botId, points: { gt: mine.points } },
         });
         myRank += 1;
       }
     }
-    return { entries, myRank, total, myPoints: entries.find((e) => e.isMe)?.points ?? 0 };
+    return { entries, myRank, total, myPoints };
   }
 
   /**
@@ -316,15 +318,22 @@ export class MiniAppsService {
     this.settings.setBotJson(botId, key, today);
     const award = 5;
 
-    await this.prisma.botUser.update({
+    await this.prisma.botUser.upsert({
       where: {
         botId_telegramId: {
           botId,
           telegramId: BigInt(telegramId),
         },
       },
-      data: {
+      update: {
         points: { increment: award },
+      },
+      create: {
+        botId,
+        telegramId: BigInt(telegramId),
+        points: award,
+        firstSeenAt: new Date().toISOString(),
+        lastSeenAt: new Date().toISOString(),
       },
     });
 
@@ -365,15 +374,23 @@ export class MiniAppsService {
     const roll = Math.random() * totalWeight;
     const drawn = drawPrizeByRoll(prizes, prizeWeights, roll);
 
-    await this.prisma.botUser.update({
+    const pointsAward = Math.max(0, drawn.points);
+    await this.prisma.botUser.upsert({
       where: {
         botId_telegramId: {
           botId,
           telegramId: BigInt(telegramId),
         },
       },
-      data: {
-        points: { increment: Math.max(0, drawn.points) },
+      update: {
+        points: { increment: pointsAward },
+      },
+      create: {
+        botId,
+        telegramId: BigInt(telegramId),
+        points: pointsAward,
+        firstSeenAt: new Date().toISOString(),
+        lastSeenAt: new Date().toISOString(),
       },
     });
 

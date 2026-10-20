@@ -14,6 +14,7 @@ import faMessages from '../i18n/locales/bot-messages.fa.json';
 import idMessages from '../i18n/locales/bot-messages.id.json';
 import uzMessages from '../i18n/locales/bot-messages.uz.json';
 import { PrismaService } from '../database/prisma.service';
+import { safeJsonObjectParse } from '../common/utils/json.util';
 
 /** Supported bot-reply languages (extend by adding locale JSON files). */
 export type BotLanguage =
@@ -118,10 +119,12 @@ export class BotI18nService {
         },
       })
       .catch(() => null);
-    const raw = row?.configJson
-      ? (JSON.parse(row.configJson) as { language?: unknown }).language
-      : undefined;
-    const language: BotLanguage = this.normalizeLanguage(raw);
+    const parsed = safeJsonObjectParse<{ language?: unknown }>(
+      row?.configJson,
+      {},
+      'i18n:chat-language',
+    );
+    const language: BotLanguage = this.normalizeLanguage(parsed.language);
     this.cache.set(key, { language, cachedAt: Date.now() });
     return language;
   }

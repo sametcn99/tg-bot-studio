@@ -36,7 +36,7 @@ export class SupportModel {
   async listMessages(botId: string, limit = 500): Promise<SupportMessageEntity[]> {
     const rows = await this.prisma.supportMessage.findMany({
       where: { botId },
-      orderBy: { id: 'desc' },
+      orderBy: { createdAt: 'desc' },
       take: limit,
     });
     return rows.map((r) => this.toEntity(r));
@@ -52,28 +52,29 @@ export class SupportModel {
       by: ['telegramId'],
       where: { botId },
       _count: { _all: true },
-      _max: { id: true },
+      _max: { createdAt: true },
     });
-    const latestIds = groups.map((g) => g._max.id).filter((id): id is string => id !== null);
+    const latestCreatedAts = groups
+      .map((g) => g._max.createdAt)
+      .filter((c): c is string => Boolean(c));
     const latestRows =
-      latestIds.length > 0
+      latestCreatedAts.length > 0
         ? await this.prisma.supportMessage.findMany({
-            where: { id: { in: latestIds } },
-            select: { id: true, senderName: true, messageText: true, createdAt: true },
+            where: { botId, createdAt: { in: latestCreatedAts } },
+            select: { telegramId: true, senderName: true, messageText: true, createdAt: true },
           })
         : [];
-    const byId = new Map(latestRows.map((row) => [row.id, row]));
+    const byTelegramId = new Map(latestRows.map((row) => [row.telegramId.toString(), row]));
 
     const threads: SupportThreadEntity[] = [];
     for (const group of groups) {
-      const newest = group._max.id !== null ? byId.get(group._max.id) : undefined;
-      if (!newest) continue;
+      const newest = byTelegramId.get(group.telegramId.toString());
       threads.push({
         telegram_id: Number(group.telegramId),
-        sender_name: newest.senderName,
+        sender_name: newest?.senderName ?? null,
         message_count: group._count._all,
-        last_activity: newest.createdAt,
-        last_message: newest.messageText,
+        last_activity: group._max.createdAt ?? newest?.createdAt ?? null,
+        last_message: newest?.messageText ?? null,
       });
     }
 
@@ -125,7 +126,7 @@ export class SupportModel {
         telegramId: BigInt(telegramId),
         forumTopicId: { not: null },
       },
-      orderBy: { id: 'desc' },
+      orderBy: { createdAt: 'desc' },
       select: {
         adminChatId: true,
         forumTopicId: true,
@@ -153,14 +154,14 @@ export class SupportModel {
         telegramId: BigInt(telegramId),
         messageText: { not: null },
       },
-      orderBy: { id: 'asc' },
+      orderBy: { createdAt: 'desc' },
       take: limit,
       select: {
         direction: true,
         messageText: true,
       },
     });
-    return rows.map((r) => ({
+    return rows.reverse().map((r) => ({
       direction: r.direction,
       message_text: r.messageText ?? '',
     }));

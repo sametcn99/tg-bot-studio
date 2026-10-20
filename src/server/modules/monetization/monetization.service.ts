@@ -27,6 +27,7 @@ const TICK_INTERVAL_MS = 60_000;
 export class MonetizationService implements OnApplicationShutdown {
   private readonly logger = new Logger(MonetizationService.name);
   private readonly ticker: ReturnType<typeof setInterval>;
+  private isRunning = false;
 
   /**
    * @param {MonetizationModel} monetizationModel - Domain model for VIP subscriptions.
@@ -174,25 +175,40 @@ export class MonetizationService implements OnApplicationShutdown {
    * Sweeps expired subscriptions, removing members and deactivating rows.
    */
   private async sweepExpired(): Promise<void> {
-    const expired = await this.monetizationModel.findExpired(new Date().toISOString());
-    for (const row of expired) {
-      await this.removeMember(row.bot_id, row);
-      await this.monetizationModel.deactivate(row.id);
-      this.logger.log(`VIP subscription ${row.id} expired and removed`);
+    if (this.isRunning) return;
+    this.isRunning = true;
+    try {
+      const expired = await this.monetizationModel.findExpired(new Date().toISOString());
+      for (const row of expired) {
+        const removed = await this.removeMember(row.bot_id, row);
+        if (removed) {
+          await this.monetizationModel.deactivate(row.id);
+          this.logger.log(`VIP subscription ${row.id} expired and removed`);
+        } else {
+          this.logger.warn(
+            `VIP subscription ${row.id} bot offline or failed to remove member; will retry on next sweep`,
+          );
+        }
+      }
+    } finally {
+      this.isRunning = false;
     }
   }
 
   /**
-   * Removes a subscriber from the protected channel.
+   * Removes a subscriber from the protected channel. Returns true if removal succeeded.
    */
-  private async removeMember(botId: string, row: VipSubscriptionRow): Promise<void> {
+  private async removeMember(botId: string, row: VipSubscriptionRow): Promise<boolean> {
     const bot = this.pool.getBot(botId);
-    if (!bot) return;
-    await bot.api
-      .banChatMember(row.channel_id, row.telegram_id, { until_date: 0 })
-      .then(() =>
-        bot.api.unbanChatMember(row.channel_id, row.telegram_id, { only_if_banned: true }),
-      )
-      .catch(() => undefined);
+    if (!bot) return false;
+    try {
+      await bot.api.banChatMember(row.channel_id, row.telegram_id, { until_date: 0 });
+      await bot.api
+        .unbanChatMember(row.channel_id, row.telegram_id, { only_if_banned: true })
+        .catch(() => undefined);
+      return true;
+    } catch {
+      return false;
+    }
   }
 }

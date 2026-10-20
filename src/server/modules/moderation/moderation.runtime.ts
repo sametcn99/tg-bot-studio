@@ -90,9 +90,16 @@ export class ModerationRuntime extends BotModuleHandler {
     const { bot, botId } = ctx;
 
     bot.on('message', async (update, next) => {
+      let blocked = false;
       try {
-        if (update.chat?.type !== 'supergroup' && update.chat?.type !== 'group') return;
-        if (!update.from || update.from.id === bot.botInfo?.id) return;
+        if (update.chat?.type !== 'supergroup' && update.chat?.type !== 'group') {
+          await next();
+          return;
+        }
+        if (!update.from || update.from.id === bot.botInfo?.id) {
+          await next();
+          return;
+        }
         const chatId = update.chat.id;
         const from = update.from;
         const key = `${botId}:${chatId}:${from.id}`;
@@ -100,10 +107,16 @@ export class ModerationRuntime extends BotModuleHandler {
         this.lastSeen.set(key, Date.now());
 
         const config = await this.chatSettings.getEffectiveConfig(botId, chatId, this.moduleKey);
-        if (!isChatTargeted(config.targetChats, chatId)) return;
+        if (!isChatTargeted(config.targetChats, chatId)) {
+          await next();
+          return;
+        }
 
         // Admins and approved users are immune to automated moderation.
-        if (await this.isImmune(botId, update, chatId, from)) return;
+        if (await this.isImmune(botId, update, chatId, from)) {
+          await next();
+          return;
+        }
 
         // Blocklist (reference precedence: locks run in the locks module middleware
         // before blocklists when both modules are enabled).
@@ -113,6 +126,7 @@ export class ModerationRuntime extends BotModuleHandler {
         if (blockedWords.length > 0 && config.blocklistDelete !== false) {
           const hit = matchBlocklist(blockedWords, update.msg, from);
           if (hit) {
+            blocked = true;
             await this.applyBlocklistHit(
               ctx,
               update,
@@ -133,6 +147,7 @@ export class ModerationRuntime extends BotModuleHandler {
           config.blockLinks === true &&
           (text.includes('http://') || text.includes('https://') || text.includes('t.me/'))
         ) {
+          blocked = true;
           await this.applyBlocklistHit(ctx, update, chatId, from, config, 'Link posting');
           return;
         }
@@ -147,6 +162,7 @@ export class ModerationRuntime extends BotModuleHandler {
           timestamps.push(now);
           this.floodWindow.set(key, timestamps);
           if (timestamps.length > floodLimit) {
+            blocked = true;
             this.floodWindow.set(key, []);
             await this.applyFloodPunishment(update, botId, chatId, from, config);
             return;
@@ -156,7 +172,8 @@ export class ModerationRuntime extends BotModuleHandler {
         this.logger.warn(
           `Moderation message handling error for bot ${botId}: ${err instanceof Error ? err.message : String(err)}`,
         );
-      } finally {
+      }
+      if (!blocked) {
         await next();
       }
     });

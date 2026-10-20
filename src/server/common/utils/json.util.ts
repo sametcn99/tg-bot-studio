@@ -11,22 +11,22 @@ const logger = new Logger('JsonUtil');
  * @param {string} [context] - Short label included in the warning log.
  * @returns {Record<string, unknown>} Parsed object or the fallback.
  */
-export function safeJsonObjectParse(
+export function safeJsonObjectParse<T = Record<string, unknown>>(
   raw: string | null | undefined,
   fallback: Record<string, unknown> = {},
   context?: string,
-): Record<string, unknown> {
-  if (!raw) return fallback;
+): T {
+  if (!raw) return fallback as unknown as T;
   try {
     const parsed: unknown = JSON.parse(raw);
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      return parsed as Record<string, unknown>;
+      return parsed as T;
     }
   } catch {
     // fall through to the warning below
   }
   logger.warn(`Malformed JSON blob ignored${context ? ` at ${context}` : ''}`);
-  return fallback;
+  return fallback as unknown as T;
 }
 
 /**

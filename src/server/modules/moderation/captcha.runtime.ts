@@ -117,9 +117,18 @@ export class CaptchaRuntime extends BotModuleHandler {
     });
 
     bot.on('callback_query:data', async (update, next) => {
+      if (!update.callbackQuery.data.startsWith('captcha:')) {
+        await next();
+        return;
+      }
       try {
-        if (!update.callbackQuery.data.startsWith('captcha:')) return;
         const [, userIdRaw, nonce] = update.callbackQuery.data.split(':');
+        if (String(update.callbackQuery.from.id) !== userIdRaw) {
+          await update
+            .answerCallbackQuery({ text: 'This challenge is not for you.' })
+            .catch(() => undefined);
+          return;
+        }
         const chatId = Number(update.callbackQuery.message?.chat.id ?? 0);
         const key = `${botId}:${chatId}:${userIdRaw}`;
         const pending = this.pending.get(key);
@@ -135,19 +144,24 @@ export class CaptchaRuntime extends BotModuleHandler {
         this.logger.warn(
           `Captcha callback_query error for bot ${botId}: ${err instanceof Error ? err.message : String(err)}`,
         );
-      } finally {
-        await next();
       }
     });
 
     // Math-mode answer handling (in-group text or PM).
     bot.on('message:text', async (update, next) => {
+      let handled = false;
       try {
         const chatType = update.chat?.type;
         const isGroup = chatType === 'supergroup' || chatType === 'group';
         const isPrivate = chatType === 'private';
-        if (!isGroup && !isPrivate) return;
-        if (!update.from || update.from.id === bot.botInfo?.id) return;
+        if (!isGroup && !isPrivate) {
+          await next();
+          return;
+        }
+        if (!update.from || update.from.id === bot.botInfo?.id) {
+          await next();
+          return;
+        }
 
         // In groups only the challenged member's numeric reply counts.
         const groupKey = isGroup ? `${botId}:${update.chat!.id}:${update.from.id}` : null;
@@ -155,11 +169,21 @@ export class CaptchaRuntime extends BotModuleHandler {
           ([key, value]) => key.endsWith(`:${update.from!.id}`) && value.captchaMessageId === -1,
         );
         const key = groupKey && this.pending.has(groupKey) ? groupKey : pmCandidates[0]?.[0];
-        if (!key) return;
+        if (!key) {
+          await next();
+          return;
+        }
         const pending = this.pending.get(key)!;
-        if (pending.answer === 0) return;
-        if (Number(update.msg.text.trim()) !== pending.answer) return;
+        if (pending.answer === 0) {
+          await next();
+          return;
+        }
+        if (Number(update.msg.text.trim()) !== pending.answer) {
+          await next();
+          return;
+        }
 
+        handled = true;
         await this.verify(ctx, key, update.from.first_name);
         if (isPrivate && !pending.joinRequest) {
           await update.reply('✅').catch(() => undefined);
@@ -168,8 +192,9 @@ export class CaptchaRuntime extends BotModuleHandler {
         this.logger.warn(
           `Captcha math message:text error for bot ${botId}: ${err instanceof Error ? err.message : String(err)}`,
         );
-      } finally {
-        await next();
+        if (!handled) {
+          await next();
+        }
       }
     });
 
@@ -398,6 +423,8 @@ export class CaptchaRuntime extends BotModuleHandler {
     successText: string,
   ): void {
     void successText;
+    const existing = this.timers.get(key);
+    if (existing) clearTimeout(existing);
     const timer = setTimeout(() => {
       const pending = this.pending.get(key);
       this.pending.delete(key);
