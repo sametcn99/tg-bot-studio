@@ -199,17 +199,16 @@ export default function ModuleConfigPage({
       <Card>
         <CardContent>
           <Stack spacing={2.5}>
-            {!module.chatScoped &&
-              (module.configFields ?? []).map((field) => (
-                <ConfigFieldInput
-                  key={field.key}
-                  botId={botId}
-                  field={field}
-                  value={state.config[field.key]}
-                  onChange={(value) => setConfig(field.key, value)}
-                />
-              ))}
-            {!module.chatScoped && (module.configFields ?? []).length === 0 && (
+            {(module.configFields ?? []).map((field) => (
+              <ConfigFieldInput
+                key={field.key}
+                botId={botId}
+                field={field}
+                value={state.config[field.key]}
+                onChange={(value) => setConfig(field.key, value)}
+              />
+            ))}
+            {(module.configFields ?? []).length === 0 && (
               <Typography
                 variant="body2"
                 sx={{

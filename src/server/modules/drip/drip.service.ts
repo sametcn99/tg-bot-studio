@@ -84,10 +84,14 @@ export class DripService extends BotModuleHandler implements OnApplicationShutdo
    */
   register(ctx: ModuleRuntimeContext): void {
     this.autoSubscribeConfig[ctx.botId] = Boolean(ctx.config.subscribeOnStart);
-    ctx.bot.command('start', async (update) => {
-      if (!this.autoSubscribeConfig[ctx.botId] || !update.from) return;
-      const campaign = await this.dripModel.findFirstActive(ctx.botId);
-      if (campaign) await this.subscribe(ctx.botId, campaign.id, update.from.id);
+    ctx.bot.command('start', async (update, next) => {
+      try {
+        if (!this.autoSubscribeConfig[ctx.botId] || !update.from) return;
+        const campaign = await this.dripModel.findFirstActive(ctx.botId);
+        if (campaign) await this.subscribe(ctx.botId, campaign.id, update.from.id);
+      } finally {
+        await next();
+      }
     });
   }
 

@@ -1,7 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { findModule } from './module-registry';
-import { isChatTargeted } from '../common/utils/chat-targets.util';
+import {
+  isChatTargeted,
+  normalizeChatTargets,
+  SIMULATOR_GROUP_ID,
+  SIMULATOR_TELEGRAM_ID,
+} from '../common/utils/chat-targets.util';
+import { safeJsonObjectParse } from '../common/utils/json.util';
 
 /** Cache entry for effective per-chat config. */
 interface CacheEntry {
@@ -13,12 +19,11 @@ interface CacheEntry {
 const CACHE_TTL_MS = 15_000;
 
 /**
- * Per-chat module configuration layer. For chat-scoped modules the chat
- * entry IS the configuration: effective config merges the registry
- * `defaultConfig` under `chat_module_settings.config_json` for that chat —
- * there is no bot-level layer and no override/inheritance chain. A chat
- * entry existing means the module is targeted at that chat; deleting the
- * entry untargets it (the module stays idle there).
+ * Per-chat module configuration layer. Effective config merges registry
+ * `defaultConfig` <- bot-level `bot_modules.config_json` <- per-chat
+ * `chat_module_settings.config_json`. Enabled modules operate in all chats
+ * where the bot is active unless restricted via `targetChats` or disabled
+ * for a specific chat.
  */
 @Injectable()
 export class ChatSettingsService {
@@ -31,9 +36,7 @@ export class ChatSettingsService {
 
   /**
    * Reads the effective module config for one chat: registry defaults
-   * merged under that chat's own entry. When an entry exists, the returned
-   * config carries `targetChats: [chatId]` so runtimes treat the chat as
-   * explicitly targeted; without an entry the module is targeted nowhere.
+   * merged under the bot's module config and that chat's own override entry.
    *
    * @param {number} botId - Studio bot id.
    * @param {string | number} chatId - Telegram chat id.
@@ -52,20 +55,57 @@ export class ChatSettingsService {
     }
 
     const definition = findModule(moduleKey);
-    const chatSetting = await this.prisma.chatModuleSetting.findUnique({
-      where: { botId_chatId_moduleKey: { botId, chatId: String(chatId), moduleKey } },
-    });
+    const [botModule, exactChatSetting] = await Promise.all([
+      this.prisma.botModule
+        .findUnique({
+          where: { botId_moduleKey: { botId, moduleKey } },
+        })
+        .catch(() => null),
+      this.prisma.chatModuleSetting
+        .findUnique({
+          where: { botId_chatId_moduleKey: { botId, chatId: String(chatId), moduleKey } },
+        })
+        .catch(() => null),
+    ]);
 
-    const chatConfig = chatSetting?.configJson
-      ? (JSON.parse(chatSetting.configJson) as Record<string, unknown>)
-      : {};
+    const isSimulatorChat =
+      String(chatId) === String(SIMULATOR_GROUP_ID) ||
+      String(chatId) === String(SIMULATOR_TELEGRAM_ID);
+    const chatSetting =
+      exactChatSetting ??
+      (isSimulatorChat
+        ? await this.prisma.chatModuleSetting
+            .findFirst({ where: { botId, moduleKey } })
+            .catch(() => null)
+        : null);
+
+    const botConfig = safeJsonObjectParse(
+      botModule?.configJson,
+      {},
+      `chatSettings:bot:${botId}:${moduleKey}`,
+    );
+    const chatConfig = safeJsonObjectParse(
+      chatSetting?.configJson,
+      {},
+      `chatSettings:chat:${botId}:${chatId}:${moduleKey}`,
+    );
+
     const config: Record<string, unknown> = {
       ...(definition?.defaultConfig ?? {}),
+      ...botConfig,
       ...chatConfig,
     };
-    // Entry existence is the targeting signal consumed by every runtime
-    // gate (`isChatTargeted(config.targetChats, chatId)`).
-    config.targetChats = chatSetting ? [String(chatId)] : [];
+
+    const explicitTargets = normalizeChatTargets(botConfig.targetChats);
+    if (chatConfig.enabled === false || botConfig.enabled === false) {
+      config.targetChats = [];
+    } else if (exactChatSetting) {
+      config.targetChats = [String(chatId)];
+    } else if (explicitTargets.length > 0) {
+      config.targetChats = explicitTargets;
+    } else {
+      config.targetChats = [String(chatId)];
+    }
 
     this.cache.set(key, { config, cachedAt: Date.now() });
     return config;

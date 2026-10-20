@@ -35,7 +35,6 @@ export class SupportRuntime extends BotModuleHandler {
   register(ctx: ModuleRuntimeContext): void {
     const { bot } = ctx;
     const adminChatId = Number(ctx.config.adminChatId ?? 0);
-    if (!adminChatId) return;
     const welcomeText = String(
       ctx.config.welcomeText ?? 'Your message has been delivered to our support team.',
     );
@@ -50,26 +49,33 @@ export class SupportRuntime extends BotModuleHandler {
         if (!update.from) return;
 
         const telegramId = update.from.id;
-        const topicId = await this.ensureTopic(
-          bot,
-          ctx.botId,
-          adminChatId,
-          telegramId,
-          update.from.first_name,
-          update.from.username ?? null,
-        );
+        let topicId: number | null = null;
+        if (adminChatId) {
+          topicId = await this.ensureTopic(
+            bot,
+            ctx.botId,
+            adminChatId,
+            telegramId,
+            update.from.first_name,
+            update.from.username ?? null,
+          ).catch(() => null);
 
-        await update.copyMessage(adminChatId, { message_thread_id: topicId }).catch(() =>
-          bot.api.sendMessage(adminChatId, `#${telegramId} ${update.msg.text ?? '[media]'}`, {
-            message_thread_id: topicId,
-          }),
-        );
+          if (topicId !== null) {
+            await update.copyMessage(adminChatId, { message_thread_id: topicId }).catch(() =>
+              bot.api
+                .sendMessage(adminChatId, `#${telegramId} ${update.msg.text ?? '[media]'}`, {
+                  message_thread_id: topicId ?? undefined,
+                })
+                .catch(() => undefined),
+            );
+          }
+        }
 
         await this.supportModel.createMessage({
           botId: ctx.botId,
           telegramId,
           userMessageId: update.msg.message_id,
-          adminChatId,
+          adminChatId: adminChatId || null,
           forumTopicId: topicId,
           direction: 'in',
           senderName: `${update.from.first_name} ${update.from.last_name ?? ''}`.trim(),
@@ -85,13 +91,18 @@ export class SupportRuntime extends BotModuleHandler {
                   : 'text',
         });
 
-        // Throttled receipt auto-reply.
+        // Throttled receipt auto-reply (always responds in sandbox mode).
         const lastKey = `support_last_auto_${telegramId}`;
         const last = this.settings.getBotSetting(ctx.botId, lastKey);
-        const expired = !last || Date.now() - new Date(last).getTime() > throttleMinutes * 60_000;
-        if (expired) {
+        const expired =
+          Boolean(ctx.sandbox) ||
+          !last ||
+          Date.now() - new Date(last).getTime() > throttleMinutes * 60_000;
+        if (expired && welcomeText.trim()) {
           await bot.api.sendMessage(telegramId, welcomeText).catch(() => undefined);
-          this.settings.setBotSetting(ctx.botId, lastKey, new Date().toISOString());
+          if (!ctx.sandbox) {
+            await this.settings.setBotSetting(ctx.botId, lastKey, new Date().toISOString());
+          }
         }
       } catch (err) {
         this.logger.warn(
@@ -101,6 +112,8 @@ export class SupportRuntime extends BotModuleHandler {
         await next();
       }
     });
+
+    if (!adminChatId) return;
 
     // ----- Admin -> User relay -------------------------------------------------
     bot.on('message', async (update, next) => {

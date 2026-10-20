@@ -364,7 +364,8 @@ export class GroupModerationRuntime extends BotModuleHandler {
     const group = await groupContext(this.deps, c, botId);
     if (!group) return;
     const { chatId, lang } = group;
-    if (await this.adminGate.isAdmin(c.api, chatId, c.from!.id)) return; // admins can't kickme
+    if (chatId !== -100_200_000_000 && (await this.adminGate.isAdmin(c.api, chatId, c.from!.id)))
+      return; // admins can't kickme
     await c.reply(this.i18n.t(lang, 'restrictions.kickme')).catch(() => undefined);
     await this.restrictions.kick(c.api, chatId, c.from!.id);
     this.adminLog.emit({

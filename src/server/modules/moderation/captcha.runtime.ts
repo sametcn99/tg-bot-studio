@@ -174,21 +174,25 @@ export class CaptchaRuntime extends BotModuleHandler {
     });
 
     // /kick resets the solved flag so the member re-solves on next join.
-    bot.command('kick', async (update) => {
-      const target = update.msg?.reply_to_message?.from;
-      if (!target) return;
-      await this.prisma.chatMemberState
-        .update({
-          where: {
-            botId_chatId_telegramId: {
-              botId,
-              chatId: String(update.chat.id),
-              telegramId: target.id,
+    bot.command('kick', async (update, next) => {
+      try {
+        const target = update.msg?.reply_to_message?.from;
+        if (!target) return;
+        await this.prisma.chatMemberState
+          .update({
+            where: {
+              botId_chatId_telegramId: {
+                botId,
+                chatId: String(update.chat.id),
+                telegramId: target.id,
+              },
             },
-          },
-          data: { captchaVerified: 0 },
-        })
-        .catch(() => undefined);
+            data: { captchaVerified: 0 },
+          })
+          .catch(() => undefined);
+      } finally {
+        await next();
+      }
     });
 
     // Recovery sweeper: process persisted challenges the in-memory map lost

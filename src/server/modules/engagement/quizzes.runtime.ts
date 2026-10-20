@@ -49,41 +49,51 @@ export class QuizzesRuntime extends BotModuleHandler {
     const targeted = async (chatId: number): Promise<boolean> =>
       this.chatSettings.isTargeted(botId, chatId, this.moduleKey);
 
-    bot.command(String(ctx.config.defaultCommand ?? 'quiz'), async (update) => {
-      if (!(await targeted(update.chat.id))) return;
-      const quizzes = this.service.listQuizzes(ctx.botId);
-      if (quizzes.length === 0) {
-        await update.reply('No quizzes are configured yet.');
-        return;
+    bot.command(String(ctx.config.defaultCommand ?? 'quiz'), async (update, next) => {
+      try {
+        if (!(await targeted(update.chat.id))) return;
+        const quizzes = this.service.listQuizzes(ctx.botId);
+        if (quizzes.length === 0) {
+          await update.reply('No quizzes are configured yet.');
+          return;
+        }
+        const quiz = quizzes[Math.floor(Math.random() * quizzes.length)]!;
+        const sent = await bot.api.sendPoll(update.chat.id, quiz.question, quiz.options, {
+          type: 'quiz',
+          correct_option_ids: [quiz.correctOptionId],
+          is_anonymous: false,
+        });
+        this.activePolls.set(`${ctx.botId}:${sent.poll.id}`, quiz.id);
+      } finally {
+        await next();
       }
-      const quiz = quizzes[Math.floor(Math.random() * quizzes.length)]!;
-      const sent = await bot.api.sendPoll(update.chat.id, quiz.question, quiz.options, {
-        type: 'quiz',
-        correct_option_ids: [quiz.correctOptionId],
-        is_anonymous: false,
-      });
-      this.activePolls.set(`${ctx.botId}:${sent.poll.id}`, quiz.id);
     });
 
-    bot.command('scoreboard', async (update) => {
-      if (!(await targeted(update.chat.id))) return;
-      const quizzes = this.service.listQuizzes(ctx.botId);
-      const blocks: string[] = [];
-      for (const quiz of quizzes) {
-        const scores = this.service.getScoreboard(ctx.botId, quiz.id);
-        const entries = Object.entries(scores)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 10)
-          .map(
-            ([telegramId, count], index) => `${index + 1}. <code>${telegramId}</code> - ${count}`,
-          )
-          .join('\n');
-        blocks.push(`<b>${quiz.question}</b>\n${entries || 'No answers yet.'}`);
+    bot.command('scoreboard', async (update, next) => {
+      try {
+        if (!(await targeted(update.chat.id))) return;
+        const quizzes = this.service.listQuizzes(ctx.botId);
+        const blocks: string[] = [];
+        for (const quiz of quizzes) {
+          const scores = this.service.getScoreboard(ctx.botId, quiz.id);
+          const entries = Object.entries(scores)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10)
+            .map(
+              ([telegramId, count], index) => `${index + 1}. <code>${telegramId}</code> - ${count}`,
+            )
+            .join('\n');
+          blocks.push(`<b>${quiz.question}</b>\n${entries || 'No answers yet.'}`);
+        }
+        await update.reply(
+          blocks.length
+            ? `<b>Scoreboards</b>\n\n${blocks.join('\n\n')}`
+            : 'No quizzes configured.',
+          { parse_mode: 'HTML' },
+        );
+      } finally {
+        await next();
       }
-      await update.reply(
-        blocks.length ? `<b>Scoreboards</b>\n\n${blocks.join('\n\n')}` : 'No quizzes configured.',
-        { parse_mode: 'HTML' },
-      );
     });
 
     bot.on('poll_answer', async (update, next) => {

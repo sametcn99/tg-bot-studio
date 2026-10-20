@@ -34,24 +34,32 @@ export class GiveawaysRuntime extends BotModuleHandler {
   register(ctx: ModuleRuntimeContext): void {
     const { bot } = ctx;
 
-    bot.command('giveaway', async (update) => {
-      const active = (await this.service.list(ctx.botId)).filter(
-        (giveaway) => giveaway.status === 'active',
-      );
-      if (active.length === 0) {
-        await update.reply('There are no active giveaways right now.');
-        return;
-      }
-      for (const giveaway of active) {
-        const channels = giveaway.requiredChannels as string[];
-        const requirement =
-          channels.length > 0
-            ? `\nRequired channels: ${channels.map((channel) => String(channel)).join(', ')}`
-            : '';
-        await update.reply(
-          `<b>${giveaway.title}</b>\n${(giveaway.prize_details as string) ?? ''}\nWinners: ${giveaway.winners_count}\nEnds: ${giveaway.ends_at ?? 'manual draw'}${requirement}`,
-          { parse_mode: 'HTML', reply_markup: this.service.joinKeyboard(String(giveaway.id)) },
+    bot.command('giveaway', async (update, next) => {
+      try {
+        const active = (await this.service.list(ctx.botId)).filter(
+          (giveaway) => giveaway.status === 'active',
         );
+        if (active.length === 0) {
+          await update.reply('There are no active giveaways right now.');
+          return;
+        }
+        for (const giveaway of active) {
+          const channels = giveaway.requiredChannels as string[];
+          const requirement =
+            channels.length > 0
+              ? `\nRequired channels: ${channels.map((channel) => String(channel)).join(', ')}`
+              : '';
+          await update.reply(
+            `<b>${giveaway.title}</b>\n${(giveaway.prize_details as string) ?? ''}\nWinners: ${giveaway.winners_count}\nEnds: ${giveaway.ends_at ?? 'manual draw'}${requirement}`,
+            { parse_mode: 'HTML', reply_markup: this.service.joinKeyboard(String(giveaway.id)) },
+          );
+        }
+      } catch (err) {
+        this.logger.warn(
+          `Giveaway command handling error for bot ${ctx.botId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      } finally {
+        await next();
       }
     });
 

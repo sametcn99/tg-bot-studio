@@ -62,21 +62,29 @@ export class ReferralsRuntime extends BotModuleHandler {
       }
     });
 
-    bot.command('top', async (update) => {
-      const rows = await this.userModel.getReferralTop(ctx.botId, leaderboardSize);
-      if (rows.length === 0) {
-        await update.reply('The leaderboard is empty.');
-        return;
+    bot.command('top', async (update, next) => {
+      try {
+        const rows = await this.userModel.getReferralTop(ctx.botId, leaderboardSize);
+        if (rows.length === 0) {
+          await update.reply('The leaderboard is empty.');
+          return;
+        }
+        const lines = rows.map((row, index) => {
+          const name = row.username
+            ? `@${row.username}`
+            : (row.first_name ?? String(row.telegram_id));
+          return `${index + 1}. ${name} - ${row.points} pts`;
+        });
+        await update.reply(`<b>Referral Leaderboard</b>\n\n${lines.join('\n')}`, {
+          parse_mode: 'HTML',
+        });
+      } catch (err) {
+        this.logger.warn(
+          `Referrals /top handling error for bot ${ctx.botId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      } finally {
+        await next();
       }
-      const lines = rows.map((row, index) => {
-        const name = row.username
-          ? `@${row.username}`
-          : (row.first_name ?? String(row.telegram_id));
-        return `${index + 1}. ${name} - ${row.points} pts`;
-      });
-      await update.reply(`<b>Referral Leaderboard</b>\n\n${lines.join('\n')}`, {
-        parse_mode: 'HTML',
-      });
     });
   }
 }

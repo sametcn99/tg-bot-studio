@@ -385,7 +385,6 @@ export class BotsService {
           },
           update: {
             isEnabled: 1,
-            configJson: JSON.stringify(definition?.defaultConfig ?? {}),
           },
         });
       }),

@@ -8,7 +8,7 @@ import { AdminLogService } from '../../bot-engine/admin-log.service';
 import { BotI18nService, type BotLanguage } from '../../bot-engine/bot-i18n.service';
 import { ChatSettingsService } from '../../bot-engine/chat-settings.service';
 import { RestrictionsService } from '../../bot-engine/restrictions.service';
-import { isChatTargeted } from '../../common/utils/chat-targets.util';
+import { isChatTargeted, SIMULATOR_GROUP_ID } from '../../common/utils/chat-targets.util';
 import { formatDuration, splitDurationArg } from '../../common/utils/duration.util';
 import { userMentionHtml } from '../../common/utils/telegram-text.util';
 import { LOCK_TYPES, evaluateLocks, isAllowlisted } from './lock-evaluator';
@@ -74,7 +74,9 @@ export class LocksRuntime extends BotModuleHandler {
           this.moduleKey,
         );
         if (!isChatTargeted(config.targetChats, update.chat.id)) return;
-        const lockedTypes = Array.isArray(config.lockedTypes) ? (config.lockedTypes as string[]) : [];
+        const lockedTypes = Array.isArray(config.lockedTypes)
+          ? (config.lockedTypes as string[])
+          : [];
         if (lockedTypes.length === 0) return;
         if (await this.isImmune(botId, update, update.chat.id, update.from.id)) return;
         const allowlist = Array.isArray(config.allowlist) ? (config.allowlist as string[]) : [];
@@ -129,7 +131,8 @@ export class LocksRuntime extends BotModuleHandler {
     chatId: number,
     userId: number,
   ): Promise<boolean> {
-    if (await this.adminGate.isAdmin(update.api, chatId, userId)) return true;
+    if (chatId !== SIMULATOR_GROUP_ID && (await this.adminGate.isAdmin(update.api, chatId, userId)))
+      return true;
     const approved = await this.prisma.chatApproval
       .findUnique({
         where: { botId_chatId_telegramId: { botId, chatId: String(chatId), telegramId: userId } },
@@ -313,13 +316,18 @@ export class LocksRuntime extends BotModuleHandler {
     const override = (await this.chatSettings.getOverride(botId, chatId, this.moduleKey)) ?? {};
     const current = Array.isArray(override.lockedTypes)
       ? [...(override.lockedTypes as string[])]
-      : [];
+      : Array.isArray(group.config.lockedTypes)
+        ? [...(group.config.lockedTypes as string[])]
+        : [];
     const next = lock
       ? [...new Set([...current, ...valid])]
       : current.filter(
           (type) => !valid.includes(type) && !(valid.includes('all') && type !== 'all'),
         );
-    const rules = { ...((override.lockRules as Record<string, LockRule>) ?? {}) };
+    const rules = {
+      ...((group.config.lockRules as Record<string, LockRule>) ?? {}),
+      ...((override.lockRules as Record<string, LockRule>) ?? {}),
+    };
     if (rule) {
       for (const type of valid) rules[type] = rule;
     } else if (!lock) {
@@ -414,7 +422,9 @@ export class LocksRuntime extends BotModuleHandler {
     const override = (await this.chatSettings.getOverride(botId, chatId, this.moduleKey)) ?? {};
     const allowlist = Array.isArray(override.allowlist)
       ? [...(override.allowlist as string[])]
-      : [];
+      : Array.isArray(group.config.allowlist)
+        ? [...(group.config.allowlist as string[])]
+        : [];
     allowlist.push(entry);
     await this.chatSettings.setOverride(botId, chatId, this.moduleKey, {
       ...override,
@@ -435,7 +445,9 @@ export class LocksRuntime extends BotModuleHandler {
     const override = (await this.chatSettings.getOverride(botId, chatId, this.moduleKey)) ?? {};
     const allowlist = Array.isArray(override.allowlist)
       ? [...(override.allowlist as string[])]
-      : [];
+      : Array.isArray(group.config.allowlist)
+        ? [...(group.config.allowlist as string[])]
+        : [];
     const next = allowlist.filter((item) => item !== entry);
     await this.chatSettings.setOverride(botId, chatId, this.moduleKey, {
       ...override,

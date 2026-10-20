@@ -84,13 +84,15 @@ export class FileSearchRuntime extends BotModuleHandler {
       }
     });
 
-    bot.command(['ara', 'find'], async (update) => {
+    bot.command(['ara', 'find'], async (update, next) => {
       try {
         await this.handleSearchCommand(ctx, update);
       } catch (error) {
         this.logger.warn(
           `file-search command failed: ${error instanceof Error ? error.message : String(error)}`,
         );
+      } finally {
+        await next();
       }
     });
   }

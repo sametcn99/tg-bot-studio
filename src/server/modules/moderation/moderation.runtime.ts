@@ -10,7 +10,7 @@ import { BotI18nService, type BotLanguage } from '../../bot-engine/bot-i18n.serv
 import { ChatSettingsService } from '../../bot-engine/chat-settings.service';
 import { RestrictionsService } from '../../bot-engine/restrictions.service';
 import { PrismaService } from '../../database/prisma.service';
-import { isChatTargeted } from '../../common/utils/chat-targets.util';
+import { isChatTargeted, SIMULATOR_GROUP_ID } from '../../common/utils/chat-targets.util';
 import { splitDurationArg } from '../../common/utils/duration.util';
 import { userMentionHtml } from '../../common/utils/telegram-text.util';
 import { matchBlocklist } from './blocklist-matcher';
@@ -192,7 +192,8 @@ export class ModerationRuntime extends BotModuleHandler {
     from: User,
   ): Promise<boolean> {
     if (from.is_bot) return true;
-    if (await this.adminGate.isAdmin(update.api, chatId, from.id)) return true;
+    if (chatId !== SIMULATOR_GROUP_ID && (await this.adminGate.isAdmin(update.api, chatId, from.id)))
+      return true;
     const approved = await this.prisma.chatApproval
       .findUnique({
         where: { botId_chatId_telegramId: { botId, chatId: String(chatId), telegramId: from.id } },

@@ -93,7 +93,10 @@ export class RulesRuntime extends BotModuleHandler {
    * Handles /rules — in-chat text or PM button delivery.
    */
   private async handleRules(c: import('grammy').Context, botId: string): Promise<void> {
-    if (c.chat?.type !== 'supergroup' && c.chat?.type !== 'group') return;
+    if (!c.chat) return;
+    const isGroup = c.chat.type === 'supergroup' || c.chat.type === 'group';
+    const isPrivate = c.chat.type === 'private';
+    if (!isGroup && !isPrivate) return;
     const chatId = c.chat.id;
     const lang = await this.i18n.getChatLanguage(botId, chatId);
     const config = await this.chatSettings.getEffectiveConfig(botId, chatId, this.moduleKey);
@@ -104,7 +107,7 @@ export class RulesRuntime extends BotModuleHandler {
       return;
     }
 
-    if (config.privateRules !== false) {
+    if (isGroup && config.privateRules !== false) {
       const username = c.me.username ?? 'this_bot';
       await c
         .reply(this.i18n.t(lang, 'rules.dmPrompt'), {

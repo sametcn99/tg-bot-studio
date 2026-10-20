@@ -55,7 +55,6 @@ export class StartMenuRuntime extends BotModuleHandler {
     if (ctx.config.enableMenuCommand) {
       bot.command('menu', async (update: Context, next) => {
         try {
-          if (update.chat?.type !== 'private') return;
           await this.sendMenu(ctx, update);
         } catch (err) {
           this.logger.warn(
@@ -75,14 +74,17 @@ export class StartMenuRuntime extends BotModuleHandler {
    * @returns {Promise<void>} Resolves once the menu is delivered.
    */
   private async sendMenu(ctx: ModuleRuntimeContext, update: Context): Promise<void> {
-    const items = (await this.menuService.list(ctx.botId)).filter((item) => item.is_active);
-    if (items.length === 0) return;
-
     const from = update.from;
     const header = renderTemplate(
       String(ctx.config.startMessage ?? 'Welcome. Choose a destination:'),
       this.templateContextFor(update, from, ctx),
     );
+
+    const items = (await this.menuService.list(ctx.botId)).filter((item) => item.is_active);
+    if (items.length === 0) {
+      await update.reply(header, { parse_mode: 'HTML' });
+      return;
+    }
 
     const publicBaseUrl = String(ctx.config.publicBaseUrl ?? '').replace(/\/+$/, '');
     const track = Boolean(ctx.config.trackClicks) && publicBaseUrl.length > 0;

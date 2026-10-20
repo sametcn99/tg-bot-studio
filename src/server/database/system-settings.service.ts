@@ -198,10 +198,8 @@ export class SystemSettingsService implements OnModuleInit {
   }
 
   /**
-   * Evicts all cached effective-config entries for a bot. Called after
-   * bot-level module/config writes so the per-chat override cache cannot
-   * serve a stale merge of the previous bot configuration.
-   * @param {number} botId - Bot whose entries should be invalidated.
+   * Reloads all cached settings for a bot from the database.
+   * @param {number} botId - Bot whose entries should be refreshed.
    * @returns {void}
    */
   invalidateBotCache(botId: string): void {
@@ -209,5 +207,13 @@ export class SystemSettingsService implements OnModuleInit {
     for (const composite of this.botCache.keys()) {
       if (composite.startsWith(prefix)) this.botCache.delete(composite);
     }
+    void this.prisma.botSetting
+      .findMany({ where: { botId } })
+      .then((rows) => {
+        for (const row of rows) {
+          this.botCache.set(`${row.botId}:${row.key}`, row.value);
+        }
+      })
+      .catch(() => undefined);
   }
 }

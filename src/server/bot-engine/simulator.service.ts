@@ -3,6 +3,7 @@ import { Bot } from 'grammy';
 import type { UserFromGetMe } from 'grammy/types';
 import { PrismaService } from '../database/prisma.service';
 import { ModuleHandlerRegistry } from './module-handler-registry';
+import { EngineHelpersService } from './engine-helpers.service';
 import { findModule } from './module-registry';
 import { safeJsonObjectParse } from '../common/utils/json.util';
 import { SIMULATOR_TELEGRAM_ID, SIMULATOR_GROUP_ID } from '../common/utils/chat-targets.util';
@@ -38,6 +39,22 @@ const MESSAGE_METHODS = new Set([
   'sendAudio',
   'sendDocument',
   'sendVoice',
+  'sendPoll',
+]);
+
+/** Methods that perform non-text moderation/chat actions. */
+const ACTION_METHODS = new Set([
+  'deleteMessage',
+  'banChatMember',
+  'restrictChatMember',
+  'unbanChatMember',
+  'promoteChatMember',
+  'pinChatMessage',
+  'unpinChatMessage',
+  'unpinAllChatMessages',
+  'approveChatJoinRequest',
+  'declineChatJoinRequest',
+  'setMessageReaction',
 ]);
 
 /** Methods the fake API answers with a full result object. */
@@ -57,6 +74,22 @@ const OBJECT_RESULTS: Record<string, (payload: Record<string, unknown>) => unkno
     date: 0,
     chat: { id: Number(payload.chat_id ?? SIMULATOR_TELEGRAM_ID) },
   }),
+  sendPoll: (payload) => ({
+    message_id: 1,
+    date: 0,
+    chat: { id: Number(payload.chat_id ?? SIMULATOR_TELEGRAM_ID) },
+    poll: {
+      id: `sim_poll_${Date.now()}`,
+      question: String(payload.question ?? ''),
+      options: Array.isArray(payload.options) ? payload.options : [],
+    },
+  }),
+  createForumTopic: (payload) => ({
+    message_thread_id: 101,
+    name: String(payload.name ?? 'Support Topic'),
+    icon_color: 7322096,
+  }),
+  copyMessage: () => ({ message_id: 2 }),
   sendChatAction: () => true,
   answerCallbackQuery: () => true,
   answerPreCheckoutQuery: () => true,
@@ -68,13 +101,36 @@ const OBJECT_RESULTS: Record<string, (payload: Record<string, unknown>) => unkno
       user: { id: SIMULATOR_TELEGRAM_ID, is_bot: false, first_name: 'Tester' },
     },
   ],
-  getChatMember: () => ({ status: 'member', user: { id: SIMULATOR_TELEGRAM_ID, is_bot: false } }),
-  getChat: (payload) => ({
-    id: Number(payload.chat_id ?? SIMULATOR_TELEGRAM_ID),
-    type: 'supergroup',
-    title: 'Sandbox Group',
-    permissions: { can_send_messages: true },
-  }),
+  getChatMember: (payload) => {
+    const userId = Number(payload.user_id ?? SIMULATOR_TELEGRAM_ID);
+    return {
+      status: 'member',
+      user: {
+        id: userId,
+        is_bot: false,
+        first_name: userId === SIMULATOR_TELEGRAM_ID ? 'Tester' : `User ${userId}`,
+        username: userId === SIMULATOR_TELEGRAM_ID ? 'studio_test' : `user_${userId}`,
+      },
+    };
+  },
+  getChat: (payload) => {
+    const raw = String(payload.chat_id ?? SIMULATOR_TELEGRAM_ID);
+    if (raw.startsWith('@')) {
+      const username = raw.slice(1);
+      return {
+        id: SIMULATOR_TELEGRAM_ID + 1,
+        type: 'private',
+        first_name: username,
+        username,
+      };
+    }
+    return {
+      id: Number(payload.chat_id ?? SIMULATOR_TELEGRAM_ID),
+      type: 'supergroup',
+      title: 'Sandbox Group',
+      permissions: { can_send_messages: true },
+    };
+  },
 };
 
 /**
@@ -91,6 +147,7 @@ export class SimulatorService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly handlerRegistry: ModuleHandlerRegistry,
+    private readonly helpers: EngineHelpersService,
   ) {}
 
   /**
@@ -108,6 +165,7 @@ export class SimulatorService {
       callbackData?: string;
       chatType?: 'private' | 'supergroup' | 'group';
       event?: SimulationEvent;
+      _isRetry?: boolean;
     },
   ): Promise<SimulationResult> {
     const row = await this.prisma.bot.findUnique({ where: { id: botId } });
@@ -127,7 +185,7 @@ export class SimulatorService {
       supports_inline_queries: false,
     } as UserFromGetMe;
 
-    const simBot = new Bot(row.token);
+    const simBot = new Bot(row.token || '0:simulator');
     simBot.botInfo = botInfo; // never call init(): no network
     simBot.catch(() => undefined);
 
@@ -152,7 +210,10 @@ export class SimulatorService {
       is_bot: false,
       first_name: 'Tester',
       username: 'studio_test',
+      language_code: 'en',
     };
+    await this.helpers.upsertUser(botId, baseFrom);
+
     const privateChat = {
       id: SIMULATOR_TELEGRAM_ID,
       type: 'private' as const,
@@ -202,7 +263,27 @@ export class SimulatorService {
         } else if (event === 'leave') {
           message.left_chat_member = baseFrom;
         } else {
-          message.text = input.text ?? '';
+          const text = input.text ?? '';
+          message.text = text;
+          const entities: Array<{ offset: number; length: number; type: string }> = [];
+          if (text.startsWith('/')) {
+            const cmdToken = text.split(/\s+/)[0] ?? '';
+            if (cmdToken.length > 1) {
+              entities.push({ offset: 0, length: cmdToken.length, type: 'bot_command' });
+            }
+          }
+          const urlRegex = /(?:https?:\/\/|t\.me\/)\S+/gi;
+          let urlMatch: RegExpExecArray | null;
+          while ((urlMatch = urlRegex.exec(text)) !== null) {
+            entities.push({
+              offset: urlMatch.index,
+              length: urlMatch[0].length,
+              type: 'url',
+            });
+          }
+          if (entities.length > 0) {
+            message.entities = entities;
+          }
         }
         await simBot.handleUpdate({ update_id: Date.now(), message } as never);
       }
@@ -216,15 +297,76 @@ export class SimulatorService {
       };
     }
 
-    // First message addressed to the sandbox chat is the visible reply.
-    const replyCall = captured.find((call) => {
-      if (!MESSAGE_METHODS.has(call.method)) return false;
-      const chatTarget =
-        (call.payload as { chat_id?: unknown; chat?: { id?: unknown } }).chat_id ??
-        (call.payload as { chat?: { id?: unknown } }).chat?.id;
-      return Number(chatTarget ?? 0) === targetChatId;
-    });
+    // First message addressed to the sandbox chat (or the simulator user/group) is the visible reply.
+    const replyCall =
+      captured.find((call) => {
+        if (!MESSAGE_METHODS.has(call.method)) return false;
+        const chatTarget =
+          (call.payload as { chat_id?: unknown; chat?: { id?: unknown } }).chat_id ??
+          (call.payload as { chat?: { id?: unknown } }).chat?.id;
+        return Number(chatTarget ?? 0) === targetChatId;
+      }) ??
+      captured.find((call) => {
+        if (!MESSAGE_METHODS.has(call.method)) return false;
+        const chatTarget =
+          (call.payload as { chat_id?: unknown; chat?: { id?: unknown } }).chat_id ??
+          (call.payload as { chat?: { id?: unknown } }).chat?.id;
+        const id = Number(chatTarget ?? 0);
+        return id === SIMULATOR_TELEGRAM_ID || id === SIMULATOR_GROUP_ID;
+      });
+
     if (!replyCall) {
+      const actionCalls = captured.filter((call) => ACTION_METHODS.has(call.method));
+      if (actionCalls.length > 0) {
+        const summaries = actionCalls.map((call) => {
+          switch (call.method) {
+            case 'deleteMessage':
+              return '🗑️ Message deleted';
+            case 'banChatMember':
+              return '🔨 Member banned';
+            case 'restrictChatMember':
+              return '🔇 Member restricted/muted';
+            case 'unbanChatMember':
+              return '🔓 Member unbanned';
+            case 'promoteChatMember':
+              return '🛡️ Member admin privileges updated';
+            case 'pinChatMessage':
+              return '📌 Message pinned';
+            case 'unpinChatMessage':
+            case 'unpinAllChatMessages':
+              return '📌 Message(s) unpinned';
+            case 'approveChatJoinRequest':
+              return '✅ Join request approved';
+            case 'declineChatJoinRequest':
+              return '⛔ Join request declined';
+            case 'setMessageReaction':
+              return '👍 Reaction added';
+            default:
+              return `⚡ ${call.method}`;
+          }
+        });
+        return {
+          text: [...new Set(summaries)].join(' • '),
+          unmatched: false,
+          sentTo: inGroup ? 'group' : 'private',
+        };
+      }
+
+      // If a message/command produced no response on the selected surface,
+      // automatically try the alternate surface (e.g. group command typed on
+      // Private DM tab or private command typed on Group tab).
+      if (!input._isRetry && input.callbackData === undefined && (input.event ?? 'message') === 'message') {
+        const altSurface = inGroup ? 'private' : 'supergroup';
+        const altResult = await this.send(botId, {
+          ...input,
+          chatType: altSurface,
+          _isRetry: true,
+        });
+        if (!altResult.unmatched) {
+          return altResult;
+        }
+      }
+
       return {
         text:
           input.callbackData !== undefined
@@ -252,8 +394,21 @@ export class SimulatorService {
       }));
     }
 
+    let replyText = String(payload.caption ?? payload.text ?? '');
+    if (replyCall.method === 'sendPoll') {
+      const opts = Array.isArray(payload.options)
+        ? payload.options
+            .map(
+              (o, i) =>
+                `${i + 1}. ${typeof o === 'string' ? o : String((o as { text?: unknown })?.text ?? '')}`,
+            )
+            .join('\n')
+        : '';
+      replyText = `📊 ${String(payload.question ?? 'Poll')}${opts ? `\n${opts}` : ''}`;
+    }
+
     return {
-      text: String(payload.caption ?? payload.text ?? ''),
+      text: replyText,
       mediaUrl,
       buttons: buttons.length > 0 ? buttons : undefined,
       unmatched: false,

@@ -317,9 +317,9 @@ export class GroupToolsRuntime extends BotModuleHandler {
     const group = await this.guard(c, botId, 'report');
     if (!group) return;
     const { chatId, lang } = group;
-    if (!(await this.adminGate.isAdmin(c.api, chatId, c.from!.id))) {
+    if (chatId === -100_200_000_000 || !(await this.adminGate.isAdmin(c.api, chatId, c.from!.id))) {
       await this.notifyAdmins(c, botId, chatId, lang);
-      return; // admins cannot report (reference parity) — but still notify? No: ignore.
+      return;
     }
   }
 
