@@ -192,7 +192,10 @@ export class ModerationRuntime extends BotModuleHandler {
     from: User,
   ): Promise<boolean> {
     if (from.is_bot) return true;
-    if (chatId !== SIMULATOR_GROUP_ID && (await this.adminGate.isAdmin(update.api, chatId, from.id)))
+    if (
+      chatId !== SIMULATOR_GROUP_ID &&
+      (await this.adminGate.isAdmin(update.api, chatId, from.id))
+    )
       return true;
     const approved = await this.prisma.chatApproval
       .findUnique({
@@ -363,7 +366,6 @@ export class ModerationRuntime extends BotModuleHandler {
     }
     const lang = await this.i18n.getChatLanguage(botId, chatId);
     const config = await this.chatSettings.getEffectiveConfig(botId, chatId, this.moduleKey);
-    if (!isChatTargeted(config.targetChats, chatId)) return null;
     return { chatId, lang, config };
   }
 

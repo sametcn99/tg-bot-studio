@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import helmet from 'helmet';
+import { json, urlencoded } from 'express';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
@@ -43,6 +44,9 @@ async function bootstrap(): Promise<void> {
     // bytes the sender signed (JSON re-serialization is not byte-stable).
     rawBody: true,
   });
+
+  app.use(json({ limit: '25mb' }));
+  app.use(urlencoded({ limit: '25mb', extended: true }));
 
   const expressApp = app.getHttpAdapter().getInstance();
   // Trust reverse-proxy hop (default 1 for Coolify / Traefik / Nginx; set TRUST_PROXY=2 if behind Cloudflare).

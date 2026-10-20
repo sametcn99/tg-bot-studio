@@ -43,6 +43,11 @@ export class AutoresponderModel {
     matchMode?: string;
     adminOnly?: number;
     repeatSeconds?: number;
+    deletePreviousResponse?: number;
+    replyToMessage?: number;
+    mediaData?: Buffer | Uint8Array | null;
+    mediaMime?: string | null;
+    mediaFileName?: string | null;
   }): Promise<Autoresponder> {
     return this.prisma.autoresponder.create({
       data: {
@@ -57,6 +62,11 @@ export class AutoresponderModel {
         matchMode: data.matchMode ?? 'keyword',
         adminOnly: data.adminOnly ?? 0,
         repeatSeconds: data.repeatSeconds ?? 0,
+        deletePreviousResponse: data.deletePreviousResponse ?? 0,
+        replyToMessage: data.replyToMessage ?? 0,
+        mediaData: (data.mediaData as unknown as Uint8Array<ArrayBuffer> | null) ?? null,
+        mediaMime: data.mediaMime ?? null,
+        mediaFileName: data.mediaFileName ?? null,
       },
     });
   }
@@ -77,11 +87,22 @@ export class AutoresponderModel {
       matchMode?: string;
       adminOnly?: number;
       repeatSeconds?: number;
+      deletePreviousResponse?: number;
+      replyToMessage?: number;
+      mediaData?: Buffer | Uint8Array | null;
+      mediaMime?: string | null;
+      mediaFileName?: string | null;
     },
   ): Promise<Autoresponder> {
+    const { mediaData, ...rest } = data;
     return this.prisma.autoresponder.update({
       where: { id },
-      data,
+      data: {
+        ...rest,
+        ...(mediaData !== undefined
+          ? { mediaData: mediaData as unknown as Uint8Array<ArrayBuffer> | null }
+          : {}),
+      },
     });
   }
 

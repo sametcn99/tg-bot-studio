@@ -74,6 +74,11 @@ const OBJECT_RESULTS: Record<string, (payload: Record<string, unknown>) => unkno
     date: 0,
     chat: { id: Number(payload.chat_id ?? SIMULATOR_TELEGRAM_ID) },
   }),
+  sendAnimation: (payload) => ({
+    message_id: 1,
+    date: 0,
+    chat: { id: Number(payload.chat_id ?? SIMULATOR_TELEGRAM_ID) },
+  }),
   sendPoll: (payload) => ({
     message_id: 1,
     date: 0,
@@ -355,7 +360,11 @@ export class SimulatorService {
       // If a message/command produced no response on the selected surface,
       // automatically try the alternate surface (e.g. group command typed on
       // Private DM tab or private command typed on Group tab).
-      if (!input._isRetry && input.callbackData === undefined && (input.event ?? 'message') === 'message') {
+      if (
+        !input._isRetry &&
+        input.callbackData === undefined &&
+        (input.event ?? 'message') === 'message'
+      ) {
         const altSurface = inGroup ? 'private' : 'supergroup';
         const altResult = await this.send(botId, {
           ...input,
@@ -379,8 +388,35 @@ export class SimulatorService {
 
     const payload = replyCall.payload;
     let mediaUrl: string | null = null;
-    if (replyCall.method === 'sendPhoto') mediaUrl = String(payload.photo ?? '') || null;
-    if (replyCall.method === 'sendVideo') mediaUrl = String(payload.video ?? '') || null;
+    const extractMedia = (val: unknown): string | null => {
+      if (!val) return null;
+      if (typeof val === 'string') return val.trim() || null;
+      if (typeof val === 'object') {
+        const fileObj = val as { fileData?: unknown; filename?: string };
+        if (
+          fileObj.fileData &&
+          (Buffer.isBuffer(fileObj.fileData) || fileObj.fileData instanceof Uint8Array)
+        ) {
+          const fn = (fileObj.filename || 'media.jpg').toLowerCase();
+          const mime = fn.endsWith('.png')
+            ? 'image/png'
+            : fn.endsWith('.webp')
+              ? 'image/webp'
+              : fn.endsWith('.gif')
+                ? 'image/gif'
+                : fn.endsWith('.mp4')
+                  ? 'video/mp4'
+                  : 'image/jpeg';
+          const b64 = Buffer.from(fileObj.fileData as Uint8Array).toString('base64');
+          return `data:${mime};base64,${b64}`;
+        }
+      }
+      return null;
+    };
+
+    if (replyCall.method === 'sendPhoto') mediaUrl = extractMedia(payload.photo);
+    if (replyCall.method === 'sendVideo') mediaUrl = extractMedia(payload.video);
+    if (replyCall.method === 'sendAnimation') mediaUrl = extractMedia(payload.animation);
 
     let buttons: Array<{ text: string; url?: string; callback_data?: string }> = [];
     const markup = payload.reply_markup as

@@ -496,7 +496,7 @@ export class GroupModerationRuntime extends BotModuleHandler {
    * Handles /silentactions on|off — owner only.
    */
   private async handleSilentActions(c: Context, botId: string): Promise<void> {
-    const group = await groupContext(this.deps, c, botId);
+    const group = await groupContext(this.deps, c, botId, { allowUntargeted: true });
     if (!group) return;
     const { chatId, lang } = group;
     if (!(await this.adminGate.isOwner(c.api, chatId, c.from!.id))) {
@@ -524,7 +524,7 @@ export class GroupModerationRuntime extends BotModuleHandler {
    * Handles /adminerror on|off.
    */
   private async handleAdminError(c: Context, botId: string): Promise<void> {
-    const group = await groupContext(this.deps, c, botId);
+    const group = await groupContext(this.deps, c, botId, { allowUntargeted: true });
     if (!group) return;
     const { chatId, lang } = group;
     if (!(await requireCapability(this.deps, c, botId, chatId, lang, 'change_info'))) return;

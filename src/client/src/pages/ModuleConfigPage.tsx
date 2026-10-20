@@ -93,6 +93,28 @@ export default function ModuleConfigPage({
   }
 
   /**
+   * Toggles the module enabled state for this bot and hot-reloads.
+   * @param {boolean} enabled - Target state.
+   * @returns {void}
+   */
+  function handleToggle(enabled: boolean): void {
+    if (!state) return;
+    const previous = state.isEnabled;
+    setState((current) => (current ? { ...current, isEnabled: enabled } : current));
+    apiFetch(`/api/bots/${botId}/modules/${module.key}`, {
+      method: 'PUT',
+      body: JSON.stringify({ isEnabled: enabled, config: state.config }),
+    })
+      .then(() => {
+        showSuccess(enabled ? t('status.enabled') : t('status.disabled'));
+      })
+      .catch((err: Error) => {
+        setState((current) => (current ? { ...current, isEnabled: previous } : current));
+        showError(localizedErrorMessage(err));
+      });
+  }
+
+  /**
    * Persists the module state and hot-reloads the bot.
    * @returns {void}
    */
@@ -141,11 +163,7 @@ export default function ModuleConfigPage({
               </Typography>
               <Switch
                 checked={state.isEnabled}
-                onChange={(event) =>
-                  setState((current) =>
-                    current ? { ...current, isEnabled: event.target.checked } : current,
-                  )
-                }
+                onChange={(event) => handleToggle(event.target.checked)}
                 slotProps={{
                   input: { 'aria-label': `${module.name} ${t('status.enabled')}` },
                 }}
@@ -173,11 +191,7 @@ export default function ModuleConfigPage({
           </Typography>
           <Switch
             checked={state.isEnabled}
-            onChange={(event) =>
-              setState((current) =>
-                current ? { ...current, isEnabled: event.target.checked } : current,
-              )
-            }
+            onChange={(event) => handleToggle(event.target.checked)}
             slotProps={{
               input: { 'aria-label': `${module.name} ${t('status.enabled')}` },
             }}
@@ -196,48 +210,45 @@ export default function ModuleConfigPage({
         </Alert>
       )}
 
-      <Card>
-        <CardContent>
-          <Stack spacing={2.5}>
-            {(module.configFields ?? []).map((field) => (
-              <ConfigFieldInput
-                key={field.key}
-                botId={botId}
-                field={field}
-                value={state.config[field.key]}
-                onChange={(value) => setConfig(field.key, value)}
-              />
-            ))}
-            {(module.configFields ?? []).length === 0 && (
-              <Typography
-                variant="body2"
-                sx={{
-                  color: 'text.secondary',
-                }}
-              >
-                {t('modules.noOptions')}
-              </Typography>
-            )}
-            {module.chatScoped && (
-              <Typography
-                variant="body2"
-                sx={{
-                  color: 'text.secondary',
-                }}
-              >
-                {t('modules.chatScopedNote')}
-              </Typography>
-            )}
-            <Box>
-              <Button variant="contained" onClick={save}>
-                {t('actions.save')}
-              </Button>
-            </Box>
-          </Stack>
-        </CardContent>
-      </Card>
-
-      {module.chatScoped && <ChatModuleConfigsSection botId={botId} module={module} />}
+      {module.chatScoped ? (
+        <>
+          <Alert severity="info" sx={{ mb: 2 }}>
+            {t('modules.chatScopedNote')}
+          </Alert>
+          <ChatModuleConfigsSection botId={botId} module={module} />
+        </>
+      ) : (
+        <Card>
+          <CardContent>
+            <Stack spacing={2.5}>
+              {(module.configFields ?? []).map((field) => (
+                <ConfigFieldInput
+                  key={field.key}
+                  botId={botId}
+                  field={field}
+                  value={state.config[field.key]}
+                  onChange={(value) => setConfig(field.key, value)}
+                />
+              ))}
+              {(module.configFields ?? []).length === 0 && (
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
+                  {t('modules.noOptions')}
+                </Typography>
+              )}
+              <Box>
+                <Button variant="contained" onClick={save}>
+                  {t('actions.save')}
+                </Button>
+              </Box>
+            </Stack>
+          </CardContent>
+        </Card>
+      )}
 
       {module.key === 'ai-assistant' && <AiKnowledgeDocsManager botId={botId} />}
       {module.key === 'federation' && <FederationManager botId={botId} />}

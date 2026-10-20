@@ -51,7 +51,11 @@ export class ReactionsRuntime extends BotModuleHandler {
 
         // Effective per-chat weight (chat override -> bot config -> default),
         // and the explicit-target gate: untargeted chats earn nothing.
-        const config = await this.chatSettings.getEffectiveConfig(ctx.botId, chatId, this.moduleKey);
+        const config = await this.chatSettings.getEffectiveConfig(
+          ctx.botId,
+          chatId,
+          this.moduleKey,
+        );
         if (!isChatTargeted(config.targetChats, chatId)) return;
         const pointsPerReaction = Math.max(0, Number(config.pointsPerReaction ?? 1));
 

@@ -133,7 +133,6 @@ export class RulesRuntime extends BotModuleHandler {
    */
   private async handleSetRules(c: import('grammy').Context, botId: string): Promise<void> {
     if (c.chat?.type !== 'supergroup' && c.chat?.type !== 'group') return;
-    if (!(await this.chatSettings.isTargeted(botId, c.chat.id, this.moduleKey))) return;
     if (
       !c.from ||
       !(await this.adminGate.hasCapability(c.api, c.chat.id, c.from.id, 'change_info'))
@@ -162,7 +161,6 @@ export class RulesRuntime extends BotModuleHandler {
    */
   private async handleResetRules(c: import('grammy').Context, botId: string): Promise<void> {
     if (c.chat?.type !== 'supergroup' && c.chat?.type !== 'group') return;
-    if (!(await this.chatSettings.isTargeted(botId, c.chat.id, this.moduleKey))) return;
     if (
       !c.from ||
       !(await this.adminGate.hasCapability(c.api, c.chat.id, c.from.id, 'change_info'))
@@ -181,7 +179,6 @@ export class RulesRuntime extends BotModuleHandler {
    */
   private async handlePrivateRules(c: import('grammy').Context, botId: string): Promise<void> {
     if (c.chat?.type !== 'supergroup' && c.chat?.type !== 'group') return;
-    if (!(await this.chatSettings.isTargeted(botId, c.chat.id, this.moduleKey))) return;
     if (
       !c.from ||
       !(await this.adminGate.hasCapability(c.api, c.chat.id, c.from.id, 'change_info'))
@@ -207,7 +204,6 @@ export class RulesRuntime extends BotModuleHandler {
    */
   private async handleRulesButton(c: import('grammy').Context, botId: string): Promise<void> {
     if (c.chat?.type !== 'supergroup' && c.chat?.type !== 'group') return;
-    if (!(await this.chatSettings.isTargeted(botId, c.chat.id, this.moduleKey))) return;
     if (
       !c.from ||
       !(await this.adminGate.hasCapability(c.api, c.chat.id, c.from.id, 'change_info'))
@@ -230,7 +226,6 @@ export class RulesRuntime extends BotModuleHandler {
    */
   private async handleRulesButtonReset(c: import('grammy').Context, botId: string): Promise<void> {
     if (c.chat?.type !== 'supergroup' && c.chat?.type !== 'group') return;
-    if (!(await this.chatSettings.isTargeted(botId, c.chat.id, this.moduleKey))) return;
     if (
       !c.from ||
       !(await this.adminGate.hasCapability(c.api, c.chat.id, c.from.id, 'change_info'))

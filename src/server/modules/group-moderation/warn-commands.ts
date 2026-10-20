@@ -364,7 +364,7 @@ export function createWarnHandlers(deps: ModerationDeps): WarnHandlers {
      * Handles /setwarnlimit <n>.
      */
     async handleSetWarnLimit(c, botId): Promise<void> {
-      const group = await groupContext(deps, c, botId);
+      const group = await groupContext(deps, c, botId, { allowUntargeted: true });
       if (!group) return;
       const { chatId, lang } = group;
       if (!(await requireCapability(deps, c, botId, chatId, lang, 'change_info'))) return;
@@ -393,7 +393,7 @@ export function createWarnHandlers(deps: ModerationDeps): WarnHandlers {
      * Handles /setwarnmode <kick|ban|tban T|mute|tmute T>.
      */
     async handleSetWarnMode(c, botId): Promise<void> {
-      const group = await groupContext(deps, c, botId);
+      const group = await groupContext(deps, c, botId, { allowUntargeted: true });
       if (!group) return;
       const { chatId, lang } = group;
       if (!(await requireCapability(deps, c, botId, chatId, lang, 'change_info'))) return;
@@ -436,7 +436,7 @@ export function createWarnHandlers(deps: ModerationDeps): WarnHandlers {
      * Handles /warntime <duration>|off.
      */
     async handleWarnTime(c, botId): Promise<void> {
-      const group = await groupContext(deps, c, botId);
+      const group = await groupContext(deps, c, botId, { allowUntargeted: true });
       if (!group) return;
       const { chatId, lang } = group;
       if (!(await requireCapability(deps, c, botId, chatId, lang, 'change_info'))) return;

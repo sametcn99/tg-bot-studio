@@ -4,6 +4,7 @@ import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bo
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
 import { BotI18nService, BOT_LANGUAGES, type BotLanguage } from '../../bot-engine/bot-i18n.service';
 import { ChatSettingsService } from '../../bot-engine/chat-settings.service';
+import { AdminGateService } from '../../bot-engine/admin-gate.service';
 
 /** Display labels for /setlang buttons (mirrors the shipped locale files). */
 const LANGUAGE_LABELS: Record<BotLanguage, string> = {
@@ -36,11 +37,13 @@ export class LanguageRuntime extends BotModuleHandler {
   /**
    * @param {BotI18nService} i18n - Bot-reply localization.
    * @param {ChatSettingsService} chatSettings - Per-chat config layer.
+   * @param {AdminGateService} adminGate - Telegram permission gate.
    * @param {ModuleHandlerRegistry} registry - Handler registry (self sign-up).
    */
   constructor(
     private readonly i18n: BotI18nService,
     private readonly chatSettings: ChatSettingsService,
+    private readonly adminGate: AdminGateService,
     registry: ModuleHandlerRegistry,
   ) {
     super();
@@ -62,8 +65,14 @@ export class LanguageRuntime extends BotModuleHandler {
       ) {
         return;
       }
-      // Explicit-target gate: only configured chats manage their language.
-      if (!(await this.chatSettings.isTargeted(botId, c.chat.id, this.moduleKey))) return;
+      if (c.chat.type === 'supergroup' || c.chat.type === 'group') {
+        if (
+          !c.from ||
+          !(await this.adminGate.hasCapability(c.api, c.chat.id, c.from.id, 'change_info'))
+        ) {
+          return;
+        }
+      }
       const lang = await this.i18n.getChatLanguage(botId, c.chat.id);
       const args = String(typeof c.match === 'string' ? c.match : '')
         .trim()
@@ -85,8 +94,20 @@ export class LanguageRuntime extends BotModuleHandler {
     });
 
     bot.callbackQuery(/^lang:set:(\w+)$/, async (c) => {
-      const chatId = c.callbackQuery.message?.chat.id;
+      const chat = c.callbackQuery.message?.chat;
+      const chatId = chat?.id;
       if (!chatId) return;
+      if (chat.type === 'supergroup' || chat.type === 'group') {
+        if (
+          !c.from ||
+          !(await this.adminGate.hasCapability(c.api, chatId, c.from.id, 'change_info'))
+        ) {
+          await c
+            .answerCallbackQuery({ text: 'Admin permission required', show_alert: true })
+            .catch(() => undefined);
+          return;
+        }
+      }
       const lang = await this.i18n.getChatLanguage(botId, chatId);
       await this.apply(
         {

@@ -749,14 +749,25 @@
       },
       "matchMode": {
         "label": "Übereinstimmungsmodus"
+      },
+      "replyToMessage": {
+        "label": "Auf Benutzernachricht antworten",
+        "help": "Antwort als Antwort auf die auslösende Nachricht senden"
+      },
+      "deletePreviousResponse": {
+        "label": "Vorherige Antwort löschen",
+        "help": "Löscht automatisch die vorherige Bot-Antwort für diesen Auslöser im Chat bei erneutem Auslösen"
       }
     },
     "columns": {
       "command": "Auslöser",
       "response_text": "Antwort",
+      "media_url": "Medien",
       "scope": "Bereich",
       "chat_id": "Chat",
-      "is_active": "Aktiv"
+      "reply_to_message": "Antworten",
+      "is_active": "Aktiv",
+      "delete_previous_response": "Vorherige löschen"
     }
   },
   "paid-media": {

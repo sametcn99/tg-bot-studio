@@ -59,34 +59,36 @@ export class WelcomeRuntime extends BotModuleHandler {
         if (!isChatTargeted(config.targetChats, chatId)) return;
         const template = String(config.template ?? 'Welcome {mention} to {group_name}!');
 
-        for (const member of members) {
-          if (member.is_bot) continue;
-          const text = renderTemplate(
-            template,
-            this.templateParams(member, update.chat.title, bot.botInfo?.first_name ?? ''),
-          );
+        if (config.welcomeEnabled === true) {
+          for (const member of members) {
+            if (member.is_bot) continue;
+            const text = renderTemplate(
+              template,
+              this.templateParams(member, update.chat.title, bot.botInfo?.first_name ?? ''),
+            );
 
-          // Cleanwelcome: drop the previous greeting so only one stays visible.
-          if (config.cleanWelcome === true) {
-            const previous = this.lastGreeting.get(`${botId}:${chatId}`);
-            if (previous) {
-              await bot.api.deleteMessage(chatId, previous).catch(() => undefined);
+            // Cleanwelcome: drop the previous greeting so only one stays visible.
+            if (config.cleanWelcome === true) {
+              const previous = this.lastGreeting.get(`${botId}:${chatId}`);
+              if (previous) {
+                await bot.api.deleteMessage(chatId, previous).catch(() => undefined);
+              }
             }
-          }
 
-          const sent = await this.sendGreeting(update, chatId, text, config);
-          if (sent) {
-            this.lastGreeting.set(`${botId}:${chatId}`, sent.message_id);
-            const autoDelete = Number(config.autoDeleteSeconds ?? 0);
-            if (autoDelete >= 15 && autoDelete <= 3_600) {
-              setTimeout(() => {
-                void bot.api.deleteMessage(chatId, sent.message_id).catch(() => undefined);
-              }, autoDelete * 1000);
+            const sent = await this.sendGreeting(update, chatId, text, config);
+            if (sent) {
+              this.lastGreeting.set(`${botId}:${chatId}`, sent.message_id);
+              const autoDelete = Number(config.autoDeleteSeconds ?? 0);
+              if (autoDelete >= 15 && autoDelete <= 3_600) {
+                setTimeout(() => {
+                  void bot.api.deleteMessage(chatId, sent.message_id).catch(() => undefined);
+                }, autoDelete * 1000);
+              }
             }
           }
         }
 
-        if (config.deleteServiceMessages !== false) {
+        if (config.deleteServiceMessages === true) {
           await update.deleteMessage().catch(() => undefined);
         }
       } catch (err) {
@@ -243,12 +245,12 @@ export class WelcomeRuntime extends BotModuleHandler {
   }
 
   /**
-   * Guard: group + change_info + explicit target chat.
+   * Guard: group + change_info permission.
    */
   private async guard(c: import('grammy').Context, botId: string): Promise<number | null> {
+    void botId;
     if (c.chat?.type !== 'supergroup' && c.chat?.type !== 'group') return null;
     if (!c.from) return null;
-    if (!(await this.chatSettings.isTargeted(botId, c.chat.id, this.moduleKey))) return null;
     if (!(await this.adminGate.hasCapability(c.api, c.chat.id, c.from.id, 'change_info'))) {
       return null;
     }
@@ -289,7 +291,11 @@ export class WelcomeRuntime extends BotModuleHandler {
     if (chatId === null) return;
     const override = (await this.chatSettings.getOverride(botId, chatId, this.moduleKey)) ?? {};
     delete override[resetField];
-    await this.chatSettings.setOverride(botId, chatId, this.moduleKey, override);
+    if (Object.keys(override).length === 0) {
+      await this.chatSettings.clearOverride(botId, chatId, this.moduleKey);
+    } else {
+      await this.chatSettings.setOverride(botId, chatId, this.moduleKey, override);
+    }
     await c.reply('✅').catch(() => undefined);
   }
 

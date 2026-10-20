@@ -492,6 +492,16 @@ export class BotsService {
             mediaUrl: a.mediaUrl,
             buttonsJson: a.buttonsJson,
             isActive: a.isActive,
+            chatId: a.chatId,
+            scope: a.scope,
+            matchMode: a.matchMode,
+            adminOnly: a.adminOnly,
+            repeatSeconds: a.repeatSeconds,
+            deletePreviousResponse: a.deletePreviousResponse,
+            replyToMessage: a.replyToMessage,
+            mediaData: a.mediaData,
+            mediaMime: a.mediaMime,
+            mediaFileName: a.mediaFileName,
           },
         });
       }
@@ -596,6 +606,16 @@ export class BotsService {
         mediaUrl: a.mediaUrl,
         buttonsJson: a.buttonsJson,
         isActive: a.isActive,
+        chatId: a.chatId,
+        scope: a.scope,
+        matchMode: a.matchMode,
+        adminOnly: a.adminOnly,
+        repeatSeconds: a.repeatSeconds,
+        deletePreviousResponse: a.deletePreviousResponse,
+        replyToMessage: a.replyToMessage,
+        mediaBase64: a.mediaData ? Buffer.from(a.mediaData).toString('base64') : null,
+        mediaMime: a.mediaMime,
+        mediaFileName: a.mediaFileName,
       })),
       dripCampaigns: drips.map((d) => ({
         name: d.name,
@@ -691,6 +711,29 @@ export class BotsService {
             mediaUrl: row.mediaUrl ? String(row.mediaUrl) : null,
             buttonsJson: row.buttonsJson ? String(row.buttonsJson) : null,
             isActive: Number(row.isActive ?? 1),
+            chatId: row.chatId ? String(row.chatId) : null,
+            scope: String(row.scope ?? 'all'),
+            matchMode: String(row.matchMode ?? 'keyword'),
+            adminOnly: Number(row.adminOnly ?? 0),
+            repeatSeconds: Number(row.repeatSeconds ?? 0),
+            deletePreviousResponse: Number(
+              row.deletePreviousResponse ?? row.delete_previous_response ?? 0,
+            ),
+            replyToMessage: Number(
+              row.replyToMessage === true ||
+                row.replyToMessage === 1 ||
+                row.reply_to_message === true ||
+                row.reply_to_message === 1
+                ? 1
+                : 0,
+            ),
+            ...(row.mediaBase64
+              ? {
+                  mediaData: Buffer.from(String(row.mediaBase64), 'base64'),
+                  mediaMime: row.mediaMime ? String(row.mediaMime) : null,
+                  mediaFileName: row.mediaFileName ? String(row.mediaFileName) : null,
+                }
+              : {}),
           };
           const existing = await tx.autoresponder.findFirst({
             where: { botId, command },

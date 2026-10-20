@@ -96,15 +96,22 @@ describe('ChatSettingsService & SimulatorService module execution', () => {
 
     const chatSettings = new ChatSettingsService(prismaStub as never);
 
-    // Without any per-chat row, an enabled module is targeted in any active group chat
-    // and inherits botModule.configJson merged on top of defaultConfig.
+    // Without any per-chat row, a chat-scoped module (e.g. locks) is NOT targeted by default:
+    expect(await chatSettings.isTargeted('bot-1', -100555666, 'locks')).toBe(false);
+
+    // Setting a per-chat override targets that chat and applies the custom config:
+    await chatSettings.setOverride('bot-1', -100555666, 'locks', {
+      lockTypes: ['url'],
+      warnOnDelete: true,
+      allowlist: [],
+    });
     const effective = await chatSettings.getEffectiveConfig('bot-1', -100555666, 'locks');
     expect(effective.lockTypes).toEqual(['url']);
     expect(effective.warnOnDelete).toBe(true);
     expect(effective.allowlist).toEqual([]);
     expect(await chatSettings.isTargeted('bot-1', -100555666, 'locks')).toBe(true);
 
-    // Explicitly disabling the module for a specific chat untargets that chat.
+    // Explicitly disabling the module for a specific chat untargets that chat:
     await chatSettings.setOverride('bot-1', -100555666, 'locks', { enabled: false });
     expect(await chatSettings.isTargeted('bot-1', -100555666, 'locks')).toBe(false);
   });

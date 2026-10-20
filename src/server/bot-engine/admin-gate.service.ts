@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { Api } from 'grammy';
 import type { ChatMember } from 'grammy/types';
-import { GROUP_ANONYMOUS_BOT_ID } from '../common/utils/telegram-text.util';
+import { GROUP_ANONYMOUS_BOT_ID, CHANNEL_BOT_ID } from '../common/utils/telegram-text.util';
 
 /** Admin capabilities mapped from native Telegram permissions (reference model). */
 export type AdminCapability =
@@ -42,7 +42,7 @@ export class AdminGateService {
    * @returns {boolean} True when the sender acts as the anonymous group admin.
    */
   isAnonymousAdmin(userId: number, chatId: number): boolean {
-    return userId === GROUP_ANONYMOUS_BOT_ID || userId === chatId;
+    return userId === GROUP_ANONYMOUS_BOT_ID || userId === CHANNEL_BOT_ID || userId === chatId;
   }
 
   /**
@@ -59,7 +59,8 @@ export class AdminGateService {
     if (!force && cached && Date.now() - cached.cachedAt < ADMIN_CACHE_TTL_MS) {
       return cached.members;
     }
-    const members = await api.getChatAdministrators(chatId).catch(() => [] as ChatMember[]);
+    const raw = await api.getChatAdministrators(chatId).catch(() => [] as ChatMember[]);
+    const members = Array.isArray(raw) ? raw : [];
     this.cache.set(key, {
       members,
       byId: new Map(members.map((member) => [member.user.id, member])),

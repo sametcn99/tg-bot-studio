@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { InlineKeyboard, type Context } from 'grammy';
+import { InlineKeyboard, InputFile, type Context } from 'grammy';
 import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bot-module-handler';
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
 import { AutoresponderService, type AutoresponderRow } from './autoresponder.service';
@@ -31,6 +31,9 @@ export class AutoresponderRuntime extends BotModuleHandler {
   private readonly logger = new Logger(AutoresponderRuntime.name);
   /** Registry key of the module. */
   readonly moduleKey = 'autoresponder';
+
+  /** Last sent bot response message id per (botId:ruleId:chatId) for deletePreviousResponse. */
+  private readonly lastResponses = new Map<string, number>();
 
   /**
    * @param {AutoresponderService} service - Rule CRUD service.
@@ -88,19 +91,34 @@ export class AutoresponderRuntime extends BotModuleHandler {
     if (!text) return;
     const from = update.from;
     if (from && from.id === bot.botInfo?.id) return;
-    if (from && from.is_bot && isGroup) return;
 
     const chatId = String(update.chat!.id);
+    const senderChat = update.senderChat ?? update.msg?.sender_chat;
+    const isAnonAdmin =
+      Boolean(senderChat) ||
+      (from ? this.adminGate.isAnonymousAdmin(from.id, Number(chatId)) : false);
+
+    // Drop other 3rd-party bots in groups, but keep Telegram's anonymous admin and channel senders
+    if (from && from.is_bot && isGroup && !isAnonAdmin) return;
+
+    const senderTitle =
+      senderChat?.title ||
+      (!isAnonAdmin && from?.first_name ? from.first_name : '') ||
+      update.chat?.title ||
+      '';
+    const senderUsername =
+      senderChat?.username || (!isAnonAdmin && from?.username ? from.username : '') || '';
+
     const templateCtx: TemplateContext = {
-      first_name: from?.first_name ?? update.chat?.title ?? '',
+      first_name: senderTitle,
       last_name: from?.last_name ?? '',
-      username: from?.username ?? update.chat?.username ?? '',
-      user_id: from?.id ?? 0,
-      mention: from?.username
-        ? `@${from.username}`
-        : from
+      username: senderUsername,
+      user_id: from?.id ?? senderChat?.id ?? 0,
+      mention: senderUsername
+        ? `@${senderUsername}`
+        : !isAnonAdmin && from
           ? `<a href="tg://user?id=${from.id}">${from.first_name}</a>`
-          : (update.chat?.title ?? ''),
+          : senderTitle,
       group_name: update.chat?.title,
       bot_name: bot.botInfo?.first_name ?? '',
       date: new Date().toISOString().slice(0, 10),
@@ -109,13 +127,14 @@ export class AutoresponderRuntime extends BotModuleHandler {
 
     // Default /start message (skipped when the Start Menu module owns /start).
     if (isPrivate && text.startsWith('/start')) {
+      if (await this.startMenuOwnsStart(ctx.botId)) return;
       const startMessage = String(ctx.config.startMessage ?? '');
-      if (startMessage && !(await this.startMenuOwnsStart(ctx.botId))) {
+      if (startMessage) {
         await update.reply(renderTemplate(startMessage, templateCtx), {
           parse_mode: 'HTML',
         });
+        return;
       }
-      return;
     }
 
     const rules = (await this.service.list(ctx.botId)).filter((rule) => rule.is_active);
@@ -132,12 +151,44 @@ export class AutoresponderRuntime extends BotModuleHandler {
     if (!matched) return;
 
     // {admin} fillings: admin-only rules stay silent for regular users in groups.
-    if (matched.admin_only === 1 && isGroup && from) {
-      const isAdmin = await this.adminGate.isAdmin(update.api, Number(chatId), from.id);
+    if (matched.admin_only === 1 && isGroup) {
+      const senderId = from?.id ?? (senderChat ? Number(chatId) : 0);
+      const isAdmin =
+        isAnonAdmin ||
+        (senderId ? await this.adminGate.isAdmin(update.api, Number(chatId), senderId) : false);
       if (!isAdmin) return;
     }
 
-    await this.sendRule(update, matched, templateCtx);
+    // Clean previous response if enabled
+    const shouldDeletePrevious =
+      matched.delete_previous_response === 1 ||
+      (matched as unknown as { deletePreviousResponse?: number | boolean })
+        .deletePreviousResponse === 1 ||
+      (matched as unknown as { deletePreviousResponse?: number | boolean })
+        .deletePreviousResponse === true;
+
+    const previousKey = `${ctx.botId}:${matched.id}:${chatId}`;
+    if (shouldDeletePrevious) {
+      const prevMsgId = this.lastResponses.get(previousKey);
+      if (prevMsgId) {
+        await update.api.deleteMessage(chatId, prevMsgId).catch(() => undefined);
+      }
+    } else {
+      this.lastResponses.delete(previousKey);
+    }
+
+    const sent = await this.sendRule(update, matched, templateCtx);
+    if (
+      shouldDeletePrevious &&
+      sent &&
+      typeof (sent as { message_id?: number }).message_id === 'number'
+    ) {
+      if (this.lastResponses.size > 10_000) {
+        const firstKey = this.lastResponses.keys().next().value;
+        if (firstKey) this.lastResponses.delete(firstKey);
+      }
+      this.lastResponses.set(previousKey, sent.message_id);
+    }
   }
 
   /**
@@ -250,7 +301,7 @@ export class AutoresponderRuntime extends BotModuleHandler {
     update: Context,
     rule: AutoresponderRow,
     templateCtx: TemplateContext,
-  ): Promise<void> {
+  ): Promise<{ message_id: number } | undefined> {
     const body = renderTemplate(rule.response_text, templateCtx);
     const buttons: ReplyButton[] = rule.buttons_json
       ? (JSON.parse(rule.buttons_json) as ReplyButton[])
@@ -259,17 +310,97 @@ export class AutoresponderRuntime extends BotModuleHandler {
     for (const button of buttons) {
       keyboard.url(button.text, button.url).row();
     }
+    const shouldReply =
+      (rule.reply_to_message === 1 ||
+        rule.replyToMessage === 1 ||
+        (rule as unknown as { replyToMessage?: boolean }).replyToMessage === true) &&
+      Boolean(update.msg?.message_id);
+
     const options: Record<string, unknown> = {
       parse_mode: 'HTML',
       ...(buttons.length > 0 ? { reply_markup: keyboard } : {}),
+      ...(shouldReply
+        ? {
+            reply_parameters: {
+              message_id: update.msg!.message_id,
+              allow_sending_without_reply: true,
+            },
+          }
+        : {}),
     };
-    if (rule.media_url) {
-      await update
-        .replyWithPhoto(rule.media_url, { caption: body, ...options })
-        .catch(() => update.reply(body, options));
-      return;
+    const rawData =
+      rule.media_data ?? (rule as unknown as { mediaData?: Buffer | Uint8Array | null }).mediaData;
+    const mime = (
+      rule.media_mime ??
+      (rule as unknown as { mediaMime?: string | null }).mediaMime ??
+      ''
+    ).toLowerCase();
+    const fileName =
+      rule.media_file_name ??
+      (rule as unknown as { mediaFileName?: string | null }).mediaFileName ??
+      (mime.includes('png')
+        ? 'image.png'
+        : mime.includes('webp')
+          ? 'image.webp'
+          : mime.includes('gif')
+            ? 'image.gif'
+            : mime.includes('mp4')
+              ? 'video.mp4'
+              : 'image.jpg');
+
+    if (
+      rawData &&
+      (Buffer.isBuffer(rawData) ? rawData.length > 0 : (rawData as Uint8Array).length > 0)
+    ) {
+      const buffer = Buffer.isBuffer(rawData) ? rawData : Buffer.from(rawData);
+      const inputFile = new InputFile(buffer, fileName);
+      const isVideo = mime.startsWith('video/') || /\.(mp4|mov|webm)(\?|$)/i.test(fileName);
+      const isAnimation = mime === 'image/gif' || /\.gif(\?|$)/i.test(fileName);
+
+      if (isVideo) {
+        return await update
+          .replyWithVideo(inputFile, { caption: body, ...options })
+          .catch((err) => {
+            this.logger.warn(`Failed to send video autoresponder reply: ${err}`);
+            return update.reply(body, options);
+          });
+      }
+      if (isAnimation) {
+        return await update
+          .replyWithAnimation(inputFile, { caption: body, ...options })
+          .catch((err) => {
+            this.logger.warn(`Failed to send animation autoresponder reply: ${err}`);
+            return update.reply(body, options);
+          });
+      }
+      return await update.replyWithPhoto(inputFile, { caption: body, ...options }).catch((err) => {
+        this.logger.warn(`Failed to send photo autoresponder reply: ${err}`);
+        return update.reply(body, options);
+      });
     }
-    await update.reply(body, options);
+
+    if (rule.media_url) {
+      const url = rule.media_url.trim();
+      if (/^https?:\/\//i.test(url)) {
+        const isVideo = /\.(mp4|mov|webm)(\?|$)/i.test(url);
+        const isAnimation = /\.gif(\?|$)/i.test(url);
+
+        if (isVideo) {
+          return await update
+            .replyWithVideo(url, { caption: body, ...options })
+            .catch(() => update.reply(body, options));
+        }
+        if (isAnimation) {
+          return await update
+            .replyWithAnimation(url, { caption: body, ...options })
+            .catch(() => update.reply(body, options));
+        }
+        return await update
+          .replyWithPhoto(url, { caption: body, ...options })
+          .catch(() => update.reply(body, options));
+      }
+    }
+    return await update.reply(body, options);
   }
 
   /**

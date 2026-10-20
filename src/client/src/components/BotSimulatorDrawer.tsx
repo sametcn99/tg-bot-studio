@@ -380,20 +380,34 @@ export default function BotSimulatorDrawer(): React.ReactElement {
                   color: msg.sender === 'user' ? 'primary.contrastText' : 'text.primary',
                 }}
               >
-                {msg.mediaUrl && (
-                  <Box
-                    component="img"
-                    src={msg.mediaUrl}
-                    alt={t('simulator.mediaAlt')}
-                    sx={{
-                      width: '100%',
-                      borderRadius: 1,
-                      mb: 1,
-                      maxHeight: 180,
-                      objectFit: 'cover',
-                    }}
-                  />
-                )}
+                {msg.mediaUrl &&
+                  (/\.(mp4|mov|webm)(\?|$)/i.test(msg.mediaUrl) ||
+                  msg.mediaUrl.startsWith('data:video/') ? (
+                    <Box
+                      component="video"
+                      src={msg.mediaUrl}
+                      controls
+                      sx={{
+                        width: '100%',
+                        borderRadius: 1,
+                        mb: 1,
+                        maxHeight: 180,
+                      }}
+                    />
+                  ) : (
+                    <Box
+                      component="img"
+                      src={msg.mediaUrl}
+                      alt={t('simulator.mediaAlt')}
+                      sx={{
+                        width: '100%',
+                        borderRadius: 1,
+                        mb: 1,
+                        maxHeight: 180,
+                        objectFit: 'cover',
+                      }}
+                    />
+                  ))}
                 <Typography
                   variant="body2"
                   sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}

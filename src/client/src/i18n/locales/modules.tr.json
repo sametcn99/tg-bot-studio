@@ -732,14 +732,25 @@
       },
       "matchMode": {
         "label": "Eşleşme modu"
+      },
+      "replyToMessage": {
+        "label": "Kullanıcı mesajını yanıtla",
+        "help": "Yanıtı tetikleyen mesaja yanıt olarak gönder"
+      },
+      "deletePreviousResponse": {
+        "label": "Önceki yanıtı sil",
+        "help": "Aynı tetikleyici bu sohbette tekrar çalıştığında botun önceki yanıtını otomatik siler"
       }
     },
     "columns": {
       "command": "Tetikleyici",
       "response_text": "Yanıt",
+      "media_url": "Medya",
       "scope": "Kapsam",
       "chat_id": "Sohbet",
-      "is_active": "Aktif"
+      "reply_to_message": "Yanıtla",
+      "is_active": "Aktif",
+      "delete_previous_response": "Önceki Yanıtı Sil"
     },
     "docs": {
       "overview": [

@@ -10,6 +10,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControlLabel,
   IconButton,
   MenuItem,
   Stack,
@@ -27,6 +28,8 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import LinkIcon from '@mui/icons-material/Link';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../services/api';
 import { useUnsavedGuard } from '../hooks/useUnsavedGuard';
@@ -165,11 +168,22 @@ export default function CrudPage({
   function openEdit(row: Record<string, unknown>): void {
     setEditingId(String(row.id));
     const seeded: Record<string, unknown> = { ...resource.initialForm };
+    if (row.media_mime !== undefined || row.mediaMime !== undefined) {
+      seeded.mediaMime = row.media_mime ?? row.mediaMime;
+    }
+    if (row.media_file_name !== undefined || row.mediaFileName !== undefined) {
+      seeded.mediaFileName = row.media_file_name ?? row.mediaFileName;
+    }
+    if (row.media_url !== undefined || row.mediaUrl !== undefined) {
+      seeded.mediaUrl = row.media_url ?? row.mediaUrl;
+    }
     for (const field of resource.formFields) {
       const serverKey = serverKeyFor(field.key);
       if (row[serverKey] !== undefined) {
         if (field.type === 'json') {
           seeded[field.key] = JSON.stringify(row[serverKey], null, 2);
+        } else if (field.type === 'switch') {
+          seeded[field.key] = Boolean(row[serverKey]);
         } else if (field.type === 'chatMultiSelect') {
           const raw = row[serverKey];
           let list: unknown[] = [];
@@ -205,12 +219,17 @@ export default function CrudPage({
     const mapped: Record<string, string> = {
       responseText: 'response_text',
       mediaUrl: 'media_url',
+      mediaData: 'media_data',
+      mediaMime: 'media_mime',
+      mediaFileName: 'media_file_name',
       messageText: 'message_text',
       targetChatId: 'target_chat_id',
       chatId: 'chat_id',
       matchMode: 'match_mode',
       adminOnly: 'admin_only',
       repeatSeconds: 'repeat_seconds',
+      deletePreviousResponse: 'delete_previous_response',
+      replyToMessage: 'reply_to_message',
       scheduledAt: 'scheduled_at',
       winnersCount: 'winners_count',
       prizeDetails: 'prize_details',
@@ -245,6 +264,9 @@ export default function CrudPage({
       if (field.type === 'chatSelect' && typeof payload[field.key] === 'string') {
         const text = String(payload[field.key]).trim();
         payload[field.key] = /^-?\d+$/.test(text) ? Number(text) : text || undefined;
+      }
+      if (field.type === 'switch') {
+        payload[field.key] = Boolean(payload[field.key]);
       }
       if (field.type === 'chatMultiSelect') {
         const list = Array.isArray(payload[field.key]) ? payload[field.key] : [];
@@ -613,6 +635,10 @@ export default function CrudPage({
                   botId={botId}
                   field={field}
                   value={form?.[field.key]}
+                  form={form}
+                  onFormChange={(updates) =>
+                    setForm((current) => ({ ...(current ?? {}), ...updates }))
+                  }
                   onChange={(value) =>
                     setForm((current) => ({ ...(current ?? {}), [field.key]: value }))
                   }
@@ -654,9 +680,41 @@ function CellValue({
   type,
 }: {
   value: unknown;
-  type?: 'bool' | 'text' | 'number';
+  type?: 'bool' | 'text' | 'number' | 'media';
 }): React.ReactElement {
   const { t } = useTranslation();
+  if (type === 'media') {
+    if (!value) {
+      return (
+        <Typography variant="body2" color="text.secondary">
+          —
+        </Typography>
+      );
+    }
+    const str = String(value);
+    const isVideo = /\.(mp4|mov|webm)(\?|$)/i.test(str);
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+        {isVideo ? (
+          <Chip size="small" label="Video" variant="outlined" />
+        ) : (
+          <Box
+            component="img"
+            src={str}
+            alt="media"
+            sx={{
+              width: 34,
+              height: 34,
+              objectFit: 'cover',
+              borderRadius: 1,
+              border: '1px solid',
+              borderColor: 'divider',
+            }}
+          />
+        )}
+      </Box>
+    );
+  }
   if (type === 'bool') {
     return (
       <Typography variant="body2" color={value ? 'success.main' : 'text.secondary'}>
@@ -683,11 +741,15 @@ function CrudFormField({
   botId,
   field,
   value,
+  form,
+  onFormChange,
   onChange,
 }: {
   botId?: string;
   field: CrudField;
   value: unknown;
+  form?: Record<string, unknown> | null;
+  onFormChange?: (updates: Record<string, unknown>) => void;
   onChange: (value: unknown) => void;
 }): React.ReactElement {
   const { t } = useTranslation();
@@ -698,6 +760,25 @@ function CrudFormField({
     helperText: field.help,
   };
   switch (field.type) {
+    case 'switch':
+      return (
+        <Stack spacing={0.5}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={Boolean(value)}
+                onChange={(event) => onChange(event.target.checked)}
+              />
+            }
+            label={field.label}
+          />
+          {field.help && (
+            <Typography variant="caption" color="text.secondary" sx={{ pl: 1 }}>
+              {field.help}
+            </Typography>
+          )}
+        </Stack>
+      );
     case 'chatSelect':
       return (
         <ConnectionSelect
@@ -830,6 +911,17 @@ function CrudFormField({
           ))}
         </TextField>
       );
+    case 'mediaUpload':
+      return (
+        <MediaUploadField
+          label={field.label}
+          value={value}
+          form={form}
+          onFormChange={onFormChange}
+          onChange={onChange}
+          help={field.help}
+        />
+      );
     default:
       return (
         <TextField
@@ -839,4 +931,195 @@ function CrudFormField({
         />
       );
   }
+}
+
+/**
+ * Dedicated media upload / URL field with instant image/video preview,
+ * file-picker upload, clear action, and optional URL manual input.
+ */
+function MediaUploadField({
+  label,
+  value,
+  form,
+  onFormChange,
+  onChange,
+  help,
+}: {
+  label: string;
+  value: unknown;
+  form?: Record<string, unknown> | null;
+  onFormChange?: (updates: Record<string, unknown>) => void;
+  onChange: (value: unknown) => void;
+  help?: string;
+}): React.ReactElement {
+  const { t } = useTranslation();
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const currentUrl =
+    typeof form?.mediaUrl === 'string'
+      ? form.mediaUrl.trim()
+      : typeof value === 'string'
+        ? value.trim()
+        : '';
+  const currentData = typeof form?.mediaData === 'string' ? form.mediaData.trim() : '';
+  const displaySrc = currentData || currentUrl;
+  const [urlMode, setUrlMode] = React.useState(
+    Boolean(currentUrl && !currentData && !currentUrl.startsWith('/api/')),
+  );
+
+  const fileName =
+    (form?.mediaFileName as string) ||
+    (currentUrl ? currentUrl.split('/').pop()?.split('?')[0] : '');
+  const mime = ((form?.mediaMime as string) || '').toLowerCase();
+  const isVideo =
+    mime.startsWith('video/') || /\.(mp4|mov|webm)(\?|$)/i.test(fileName || displaySrc);
+
+  const handleFileSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      onFormChange?.({
+        mediaData: result,
+        mediaMime: file.type || 'image/jpeg',
+        mediaFileName: file.name,
+        mediaUrl: '',
+      });
+      onChange(result);
+    };
+    reader.readAsDataURL(file);
+    event.target.value = '';
+  };
+
+  const handleClear = () => {
+    onFormChange?.({
+      mediaData: null,
+      mediaMime: null,
+      mediaFileName: null,
+      mediaUrl: '',
+    });
+    onChange('');
+  };
+
+  return (
+    <Box
+      sx={{
+        p: 1.5,
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: 1.5,
+        bgcolor: 'background.default',
+      }}
+    >
+      <Stack spacing={1.5}>
+        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+            {label}
+          </Typography>
+          {displaySrc && (
+            <Button size="small" color="error" startIcon={<DeleteIcon />} onClick={handleClear}>
+              {t('actions.delete', 'Kaldır')}
+            </Button>
+          )}
+        </Stack>
+
+        {help && (
+          <Typography variant="caption" color="text.secondary">
+            {help}
+          </Typography>
+        )}
+
+        {displaySrc ? (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+            <Box
+              sx={{
+                maxHeight: 180,
+                borderRadius: 1,
+                overflow: 'hidden',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                bgcolor: 'action.hover',
+                border: '1px solid',
+                borderColor: 'divider',
+              }}
+            >
+              {isVideo ? (
+                <Box
+                  component="video"
+                  src={displaySrc}
+                  controls
+                  sx={{ maxHeight: 180, maxWidth: '100%' }}
+                />
+              ) : (
+                <Box
+                  component="img"
+                  src={displaySrc}
+                  alt="Preview"
+                  sx={{ maxHeight: 180, maxWidth: '100%', objectFit: 'contain' }}
+                />
+              )}
+            </Box>
+            {fileName && (
+              <Typography variant="caption" color="text.secondary" noWrap>
+                {fileName}
+              </Typography>
+            )}
+          </Box>
+        ) : null}
+
+        <input
+          type="file"
+          ref={fileInputRef}
+          accept="image/*,video/mp4,video/webm"
+          style={{ display: 'none' }}
+          onChange={handleFileSelected}
+        />
+
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<CloudUploadIcon />}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {displaySrc
+              ? t('actions.edit', 'Görseli Değiştir')
+              : t('actions.upload', 'Görsel / Medya Yükle')}
+          </Button>
+
+          <Button
+            size="small"
+            variant="text"
+            startIcon={<LinkIcon />}
+            onClick={() => setUrlMode(!urlMode)}
+          >
+            {urlMode
+              ? t('actions.close', 'URL Alanını Kapat')
+              : t('common.orEnterUrl', 'Veya URL Gir')}
+          </Button>
+        </Stack>
+
+        {urlMode && (
+          <TextField
+            label={t('mediaLibrary.url', 'Görsel veya Medya URL')}
+            size="small"
+            fullWidth
+            value={String(form?.mediaUrl ?? '')}
+            onChange={(e) => {
+              const url = e.target.value;
+              onFormChange?.({
+                mediaUrl: url,
+                mediaData: null,
+                mediaMime: null,
+                mediaFileName: null,
+              });
+              onChange(url);
+            }}
+            placeholder="https://example.com/image.jpg"
+          />
+        )}
+      </Stack>
+    </Box>
+  );
 }

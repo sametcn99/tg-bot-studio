@@ -222,7 +222,6 @@ export class AntiraidRuntime extends BotModuleHandler {
     }
     const lang = await this.i18n.getChatLanguage(botId, chatId);
     const config = await this.chatSettings.getEffectiveConfig(botId, chatId, this.moduleKey);
-    if (!isChatTargeted(config.targetChats, chatId)) return null;
     return { chatId, lang, config };
   }
 }

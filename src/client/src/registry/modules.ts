@@ -44,7 +44,7 @@ export interface ConfigField {
 export interface CrudColumn {
   key: string;
   label: string;
-  type?: 'bool' | 'text' | 'number';
+  type?: 'bool' | 'text' | 'number' | 'media';
 }
 
 /**
@@ -69,7 +69,9 @@ export interface CrudField {
     | 'stringList'
     | 'select'
     | 'chatSelect'
-    | 'chatMultiSelect';
+    | 'chatMultiSelect'
+    | 'switch'
+    | 'mediaUpload';
   options?: string[];
   help?: string;
   connectionTypes?: string[];
@@ -941,8 +943,11 @@ export const MODULES: ModuleEntry[] = [
       columns: [
         { key: 'command', label: 'Trigger' },
         { key: 'response_text', label: 'Response' },
+        { key: 'media_url', label: 'Media', type: 'media' },
         { key: 'scope', label: 'Scope' },
         { key: 'chat_id', label: 'Chat' },
+        { key: 'reply_to_message', label: 'Reply', type: 'bool' },
+        { key: 'delete_previous_response', label: 'Clean Prev', type: 'bool' },
         { key: 'is_active', label: 'Active', type: 'bool' },
       ],
       formFields: [
@@ -965,8 +970,20 @@ export const MODULES: ModuleEntry[] = [
           type: 'select',
           options: ['keyword', 'exact', 'prefix', 'hashtag'],
         },
-        { key: 'mediaUrl', label: 'Photo URL', type: 'text' },
+        { key: 'mediaUrl', label: 'Photo URL', type: 'mediaUpload' },
         { key: 'buttons', label: 'Buttons (JSON array)', type: 'json' },
+        {
+          key: 'replyToMessage',
+          label: 'Reply to user message',
+          type: 'switch',
+          help: 'Send response as a reply to the triggering message',
+        },
+        {
+          key: 'deletePreviousResponse',
+          label: 'Delete previous response',
+          type: 'switch',
+          help: 'Automatically delete the previous bot reply for this trigger in the chat when triggered again',
+        },
       ],
       initialForm: {
         command: '',
@@ -976,6 +993,8 @@ export const MODULES: ModuleEntry[] = [
         matchMode: 'keyword',
         mediaUrl: '',
         buttons: '',
+        replyToMessage: false,
+        deletePreviousResponse: false,
       },
     },
     docs: {

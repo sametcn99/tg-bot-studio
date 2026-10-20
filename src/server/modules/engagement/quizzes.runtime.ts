@@ -86,9 +86,7 @@ export class QuizzesRuntime extends BotModuleHandler {
           blocks.push(`<b>${quiz.question}</b>\n${entries || 'No answers yet.'}`);
         }
         await update.reply(
-          blocks.length
-            ? `<b>Scoreboards</b>\n\n${blocks.join('\n\n')}`
-            : 'No quizzes configured.',
+          blocks.length ? `<b>Scoreboards</b>\n\n${blocks.join('\n\n')}` : 'No quizzes configured.',
           { parse_mode: 'HTML' },
         );
       } finally {

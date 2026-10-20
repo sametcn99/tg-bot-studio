@@ -629,6 +629,11 @@ model Autoresponder {
   adminOnly    Int     @default(0) @map("admin_only")
   repeatSeconds Int    @default(0) @map("repeat_seconds")
   lastRepeatAt String? @map("last_repeat_at")
+  replyToMessage Int   @default(0) @map("reply_to_message")
+  deletePreviousResponse Int @default(0) @map("delete_previous_response")
+  mediaData     Bytes?  @map("media_data")
+  mediaMime     String? @map("media_mime")
+  mediaFileName String? @map("media_file_name")
 
   bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
 

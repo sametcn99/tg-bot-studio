@@ -9,6 +9,9 @@ import type { User } from 'grammy/types';
 /** Telegram's reserved id for messages sent by anonymous group admins. */
 export const GROUP_ANONYMOUS_BOT_ID = 108_796_882_4;
 
+/** Telegram's reserved id for messages sent on behalf of channels in groups. */
+export const CHANNEL_BOT_ID = 136_817_688;
+
 /**
  * Escapes plain text for safe embedding into HTML parse-mode messages.
  *

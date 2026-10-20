@@ -167,6 +167,31 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
           : null,
       isActive,
     });
+
+    if (/^-?\d+$/.test(chatId)) {
+      try {
+        await this.prisma.botGroup.upsert({
+          where: { botId_chatId: { botId, chatId: BigInt(chatId) } },
+          create: {
+            botId,
+            chatId: BigInt(chatId),
+            title,
+            type,
+            memberCount: 0,
+            isActive,
+            createdAt: new Date().toISOString(),
+          },
+          update: {
+            title,
+            type,
+            isActive,
+          },
+        });
+      } catch {
+        // Ignore
+      }
+    }
+
     return toChatConnectionRow(row);
   }
 
@@ -207,13 +232,34 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
             : 0
           : existing.isActive;
 
+    const targetType = data.type === undefined ? existing.type : normalizeType(data.type);
+    const targetTitle =
+      data.title === undefined ? existing.title : String(data.title).trim() || chatId;
+
     const row = await this.connectionModel.updateConnection(id, {
       chatId,
-      title: data.title === undefined ? existing.title : String(data.title).trim() || chatId,
-      type: data.type === undefined ? existing.type : normalizeType(data.type),
+      title: targetTitle,
+      type: targetType,
       username,
       isActive,
     });
+
+    const idsToSync = new Set([chatId, existing.chatId].filter((cid) => /^-?\d+$/.test(cid)));
+    for (const cid of idsToSync) {
+      try {
+        await this.prisma.botGroup.updateMany({
+          where: { botId, chatId: BigInt(cid) },
+          data: {
+            type: targetType,
+            title: targetTitle,
+            isActive,
+          },
+        });
+      } catch {
+        // Ignore if not present in bot_groups
+      }
+    }
+
     return toChatConnectionRow(row);
   }
 
@@ -221,8 +267,17 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
    * Deletes a connection.
    */
   async remove(botId: string, id: string): Promise<void> {
-    await this.getOrFail(botId, id);
+    const existing = await this.getOrFail(botId, id);
     await this.connectionModel.deleteConnection(id);
+    if (/^-?\d+$/.test(existing.chatId)) {
+      try {
+        await this.prisma.botGroup.deleteMany({
+          where: { botId, chatId: BigInt(existing.chatId) },
+        });
+      } catch {
+        // Ignore
+      }
+    }
   }
 
   /**
@@ -275,11 +330,20 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
         }
       }
 
-      await this.prisma.chatConnection.upsert({
-        where: {
-          botId_chatId: { botId, chatId },
-        },
-        create: {
+      if (known) {
+        // Chat is already connected; preserve user-configured type, title, and isActive.
+        // Enrich username only if missing.
+        if (enrich && !known.username && username) {
+          await this.prisma.chatConnection.update({
+            where: { id: known.id },
+            data: { username },
+          });
+        }
+        continue;
+      }
+
+      await this.prisma.chatConnection.create({
+        data: {
           botId,
           chatId,
           title,
@@ -287,11 +351,6 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
           username,
           isActive: group.isActive ? 1 : 0,
           createdAt: new Date().toISOString(),
-        },
-        update: {
-          title,
-          type,
-          isActive: group.isActive ? 1 : 0,
         },
       });
     }

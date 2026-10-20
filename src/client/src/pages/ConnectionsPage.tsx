@@ -172,7 +172,7 @@ export default function ConnectionsPage({
       title: form.title,
       type: form.type,
       chatId: form.chatId,
-      username: form.username || undefined,
+      username: form.username.trim() || null,
     };
     const url = editingId
       ? `/api/bots/${botId}/connections/${editingId}`
@@ -354,6 +354,8 @@ export default function ConnectionsPage({
                           size="small"
                           color={chipColor(row.type)}
                           label={typeLabel(row.type, t)}
+                          onClick={() => openEdit(row)}
+                          sx={{ cursor: 'pointer' }}
                         />
                       </TableCell>
                       <TableCell>

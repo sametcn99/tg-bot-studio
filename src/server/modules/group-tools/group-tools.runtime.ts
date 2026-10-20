@@ -33,6 +33,19 @@ const DISABLEABLE_COMMANDS = [
   'report',
 ];
 
+const SETTING_COMMANDS = new Set([
+  'reports',
+  'antichannelpins',
+  'antichannelpin',
+  'cleanlinked',
+  'disable',
+  'enable',
+  'disabled',
+  'disableable',
+  'disabledel',
+  'disableadmin',
+]);
+
 /**
  * Runtime for the Group Admin Tools module: pins (incl. permapin and loud),
  * linked-channel controls, user reports (/report, @admin), admin listing,
@@ -147,8 +160,13 @@ export class GroupToolsRuntime extends BotModuleHandler {
     if (c.chat?.type !== 'supergroup' && c.chat?.type !== 'group') return null;
     if (!c.from) return null;
     const chatId = c.chat.id;
-    // Explicit-target gate: the module only serves its configured chats.
-    if (!(await this.chatSettings.isTargeted(botId, chatId, this.moduleKey))) return null;
+    // Explicit-target gate: non-setting commands only serve configured chats.
+    if (
+      !SETTING_COMMANDS.has(command) &&
+      !(await this.chatSettings.isTargeted(botId, chatId, this.moduleKey))
+    ) {
+      return null;
+    }
     // Bot-to-bot gate mirrors group-moderation.
     if (c.from.is_bot) {
       const b2b = await this.chatSettings.getEffectiveConfig(botId, chatId, 'bot2bot');

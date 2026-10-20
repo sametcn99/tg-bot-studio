@@ -103,6 +103,8 @@ export class ChatSettingsService {
       config.targetChats = [String(chatId)];
     } else if (explicitTargets.length > 0) {
       config.targetChats = explicitTargets;
+    } else if (definition?.chatScoped) {
+      config.targetChats = isSimulatorChat ? [String(chatId)] : [];
     } else {
       config.targetChats = [String(chatId)];
     }

@@ -41,4 +41,19 @@ describe('Connections Synchronization and Chat Row Mapping', () => {
     expect(row.chat_id).toBe(hugeChatId);
     expect(String(row.chat_id)).toBe(hugeChatId);
   });
+
+  it('correctly maps type from supergroup to regular group', () => {
+    const row = toChatConnectionRow({
+      id: 'conn-3',
+      botId: 'bot-1',
+      chatId: '-1002488392193',
+      title: 'Converted Group',
+      type: 'group',
+      username: null,
+      isActive: 1,
+      createdAt: '2026-10-19T12:00:00Z',
+    });
+
+    expect(row.type).toBe('group');
+  });
 });

@@ -749,14 +749,25 @@
       },
       "matchMode": {
         "label": "Match mode"
+      },
+      "replyToMessage": {
+        "label": "Reply to user message",
+        "help": "Send response as a reply to the triggering message"
+      },
+      "deletePreviousResponse": {
+        "label": "Delete previous response",
+        "help": "Automatically delete the previous bot reply for this trigger in the chat when triggered again"
       }
     },
     "columns": {
       "command": "Trigger",
       "response_text": "Response",
+      "media_url": "Media",
       "scope": "Scope",
       "chat_id": "Chat",
-      "is_active": "Active"
+      "reply_to_message": "Reply",
+      "is_active": "Active",
+      "delete_previous_response": "Clean Prev"
     }
   },
   "paid-media": {

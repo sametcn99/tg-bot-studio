@@ -11,13 +11,23 @@ export interface AutoresponderRow {
   match_mode: string;
   admin_only: number;
   repeat_seconds: number;
+  delete_previous_response: number;
+  reply_to_message: number;
+  media_data?: Buffer | Uint8Array | null;
+  media_mime?: string | null;
+  media_file_name?: string | null;
   botId: string;
   responseText: string;
   mediaUrl: string | null;
+  mediaData?: Buffer | Uint8Array | null;
+  mediaMime?: string | null;
+  mediaFileName?: string | null;
   buttonsJson: string | null;
   isActive: number;
   chatId: string | null;
   matchMode: string;
   adminOnly: number;
   repeatSeconds: number;
+  deletePreviousResponse: number;
+  replyToMessage: number;
 }

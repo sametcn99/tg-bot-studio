@@ -143,6 +143,17 @@ export class ChatConnectionModel {
   }): Promise<BotGroup> {
     const chatId = BigInt(data.chatId);
     const chatIdStr = data.chatId.toString();
+
+    // Check if connection already exists in chatConnection to preserve user customization
+    const existingConn = await this.prisma.chatConnection.findUnique({
+      where: {
+        botId_chatId: { botId: data.botId, chatId: chatIdStr },
+      },
+    });
+
+    const effectiveTitle = existingConn ? existingConn.title : data.title;
+    const effectiveType = existingConn ? existingConn.type : data.type;
+
     const group = await this.prisma.botGroup.upsert({
       where: {
         botId_chatId: { botId: data.botId, chatId },
@@ -150,40 +161,33 @@ export class ChatConnectionModel {
       create: {
         botId: data.botId,
         chatId,
-        title: data.title,
-        type: data.type,
+        title: effectiveTitle,
+        type: effectiveType,
         memberCount: 0,
         isActive: data.isActive ?? 1,
         createdAt: new Date().toISOString(),
       },
       update: {
-        title: data.title,
-        type: data.type,
+        title: effectiveTitle,
+        type: effectiveType,
         ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
       },
     });
 
     try {
-      await this.prisma.chatConnection.upsert({
-        where: {
-          botId_chatId: { botId: data.botId, chatId: chatIdStr },
-        },
-        create: {
-          botId: data.botId,
-          chatId: chatIdStr,
-          title: data.title,
-          type: data.type,
-          username: data.username ?? null,
-          isActive: data.isActive ?? 1,
-          createdAt: new Date().toISOString(),
-        },
-        update: {
-          title: data.title,
-          type: data.type,
-          ...(data.username !== undefined ? { username: data.username } : {}),
-          ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
-        },
-      });
+      if (!existingConn) {
+        await this.prisma.chatConnection.create({
+          data: {
+            botId: data.botId,
+            chatId: chatIdStr,
+            title: data.title,
+            type: data.type,
+            username: data.username ?? null,
+            isActive: data.isActive ?? 1,
+            createdAt: new Date().toISOString(),
+          },
+        });
+      }
     } catch {
       // Ignore mirror errors
     }

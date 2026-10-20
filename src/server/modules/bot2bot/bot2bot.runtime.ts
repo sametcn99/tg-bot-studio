@@ -183,7 +183,6 @@ export class Bot2BotRuntime extends BotModuleHandler {
     if (c.chat?.type !== 'supergroup' && c.chat?.type !== 'group') return null;
     if (!c.from) return null;
     const chatId = c.chat.id;
-    if (!(await this.chatSettings.isTargeted(botId, chatId, this.moduleKey))) return null;
     if (!(await this.adminGate.hasCapability(c.api, chatId, c.from.id, 'change_info'))) {
       return null;
     }
