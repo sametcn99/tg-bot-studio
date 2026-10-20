@@ -202,7 +202,7 @@ export class MessageScoreService implements OnApplicationShutdown {
       const rank = index + 1;
       const rawName = entry.first_name || entry.username || `User ${entry.telegram_id}`;
       const safeName = isHtml ? escapeHtml(rawName) : rawName;
-      const mdSafeName = rawName.replace(/([\[\]\\])/g, '\\$1');
+      const mdSafeName = rawName.replace(/([[\]\\])/g, '\\$1');
       const mention =
         config.parseMode === 'None'
           ? entry.username

@@ -19,7 +19,7 @@ const PAGE_PAUSE_MS = 700;
 const PAGE_SIZE = 100;
 
 /** Flood waits up to this long are waited out; longer ones abort (seconds). */
-const MAX_FLOOD_WAIT_S = 120;
+const _MAX_FLOOD_WAIT_S = 120;
 
 /** Snapshot of the single studio-wide backfill job. */
 export interface BackfillState {

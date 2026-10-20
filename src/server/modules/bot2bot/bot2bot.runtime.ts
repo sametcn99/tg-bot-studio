@@ -179,7 +179,7 @@ export class Bot2BotRuntime extends BotModuleHandler {
   /**
    * Guard for the configuration commands: group + change_info + explicit target.
    */
-  private async requireSettings(c: Context, botId: string): Promise<number | null> {
+  private async requireSettings(c: Context, _botId: string): Promise<number | null> {
     if (c.chat?.type !== 'supergroup' && c.chat?.type !== 'group') return null;
     if (!c.from) return null;
     const chatId = c.chat.id;
