@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { Bot } from 'grammy';
+import { Bot, InputFile } from 'grammy';
 import { WelcomeRuntime } from '../modules/welcome/welcome.runtime';
 import { ChatSettingsService } from '../bot-engine/chat-settings.service';
 import { AdminGateService } from '../bot-engine/admin-gate.service';
@@ -126,7 +126,8 @@ describe('Welcome and Farewell per-chat targeting and runtime behavior', () => {
     expect(isTargeted).toBe(true);
   });
 
-  function createTestBot() {
+  function createTestBot(options: { failPhotoFor?: string[] } = {}) {
+    const failPhotoFor = new Set(options.failPhotoFor ?? []);
     const bot = new Bot('0:test');
     bot.botInfo = {
       id: 42,
@@ -138,17 +139,46 @@ describe('Welcome and Farewell per-chat targeting and runtime behavior', () => {
       supports_inline_queries: false,
     } as never;
 
-    const sentMessages: Array<{ chatId: number; text: string }> = [];
+    const sentMessages: Array<{ chatId: number; text: string; replyMarkup?: unknown }> = [];
     const deletedMessages: Array<{ chatId: number; messageId: number }> = [];
+    const sentPhotos: Array<{ chatId: number; photo: unknown }> = [];
+    const sentVideos: Array<{ chatId: number; video: unknown }> = [];
 
     bot.api.config.use((_prev, method, payload) => {
       if (method === 'sendMessage') {
-        const p = payload as { chat_id: number; text: string };
-        sentMessages.push({ chatId: p.chat_id, text: p.text });
+        const p = payload as { chat_id: number; text: string; reply_markup?: unknown };
+        sentMessages.push({ chatId: p.chat_id, text: p.text, replyMarkup: p.reply_markup });
         return Promise.resolve({
           ok: true,
           result: {
             message_id: 100 + sentMessages.length,
+            date: 0,
+            chat: { id: p.chat_id },
+          } as never,
+        });
+      }
+      if (method === 'sendPhoto') {
+        const p = payload as { chat_id: number; photo: unknown };
+        sentPhotos.push({ chatId: p.chat_id, photo: p.photo });
+        if (typeof p.photo === 'string' && failPhotoFor.has(p.photo)) {
+          return Promise.reject(new Error('Bad Request: wrong file identifier specified'));
+        }
+        return Promise.resolve({
+          ok: true,
+          result: {
+            message_id: 300 + sentPhotos.length,
+            date: 0,
+            chat: { id: p.chat_id },
+          } as never,
+        });
+      }
+      if (method === 'sendVideo') {
+        const p = payload as { chat_id: number; video: unknown };
+        sentVideos.push({ chatId: p.chat_id, video: p.video });
+        return Promise.resolve({
+          ok: true,
+          result: {
+            message_id: 400 + sentVideos.length,
             date: 0,
             chat: { id: p.chat_id },
           } as never,
@@ -178,7 +208,7 @@ describe('Welcome and Farewell per-chat targeting and runtime behavior', () => {
     });
 
     runtime.register({ bot, botId, config: {} });
-    return { bot, sentMessages, deletedMessages };
+    return { bot, sentMessages, deletedMessages, sentPhotos, sentVideos };
   }
 
   /** Builds a chat_member status-change update. */
@@ -426,6 +456,113 @@ describe('Welcome and Farewell per-chat targeting and runtime behavior', () => {
     expect(sentMessages[0].text).toContain('Hey Eve');
     expect(sentMessages[0].text).toContain('5 < 3');
     expect(sentMessages[0].text).not.toContain('<a');
+
+    resetTargetedConfig();
+  });
+
+  test('uploaded photo bytes (data URL) are sent via sendPhoto with an InputFile', async () => {
+    const dataUrl = `data:image/png;base64,${Buffer.from('fake-png-bytes').toString('base64')}`;
+    resetTargetedConfig({ mediaUrl: dataUrl });
+
+    const { bot, sentMessages, sentPhotos } = createTestBot();
+
+    await bot.handleUpdate({
+      update_id: 8,
+      message: {
+        message_id: 70,
+        date: Math.floor(Date.now() / 1000),
+        chat: { id: targetedChatId, type: 'supergroup', title: 'Targeted Community' },
+        new_chat_members: [{ id: 40001, is_bot: false, first_name: 'PhotoGuy' }],
+      } as never,
+    });
+
+    expect(sentPhotos.length).toBe(1);
+    expect(sentPhotos[0].chatId).toBe(targetedChatId);
+    expect(sentPhotos[0].photo instanceof InputFile).toBe(true);
+    // Media delivered: no text-only fallback send.
+    expect(sentMessages.length).toBe(0);
+
+    resetTargetedConfig();
+  });
+
+  test('uploaded video bytes (data URL) are sent via sendVideo', async () => {
+    const dataUrl = `data:video/mp4;base64,${Buffer.from('fake-mp4-bytes').toString('base64')}`;
+    resetTargetedConfig({ mediaUrl: dataUrl });
+
+    const { bot, sentVideos, sentPhotos } = createTestBot();
+
+    await bot.handleUpdate({
+      update_id: 9,
+      message: {
+        message_id: 71,
+        date: Math.floor(Date.now() / 1000),
+        chat: { id: targetedChatId, type: 'supergroup', title: 'Targeted Community' },
+        new_chat_members: [{ id: 40002, is_bot: false, first_name: 'VideoGuy' }],
+      } as never,
+    });
+
+    expect(sentVideos.length).toBe(1);
+    expect(sentVideos[0].video instanceof InputFile).toBe(true);
+    expect(sentPhotos.length).toBe(0);
+
+    resetTargetedConfig();
+  });
+
+  test('Telegram file_id media retries as video when photo is rejected', async () => {
+    const fileId = 'AgACAgIAAx0GfakeFileId987654321';
+    resetTargetedConfig({ mediaUrl: fileId });
+
+    const { bot, sentPhotos, sentVideos, sentMessages } = createTestBot({
+      failPhotoFor: [fileId],
+    });
+
+    await bot.handleUpdate({
+      update_id: 10,
+      message: {
+        message_id: 72,
+        date: Math.floor(Date.now() / 1000),
+        chat: { id: targetedChatId, type: 'supergroup', title: 'Targeted Community' },
+        new_chat_members: [{ id: 40003, is_bot: false, first_name: 'FileIdGuy' }],
+      } as never,
+    });
+
+    expect(sentPhotos.length).toBe(1);
+    expect(sentVideos.length).toBe(1);
+    expect(sentVideos[0].video).toBe(fileId);
+    expect(sentMessages.length).toBe(0);
+
+    resetTargetedConfig();
+  });
+
+  test('visual builder callback and URL buttons land in the inline keyboard', async () => {
+    resetTargetedConfig({
+      buttonsJson: JSON.stringify([
+        { text: 'Rules', callback_data: 'rules:main' },
+        { text: 'Channel', url: 'https://t.me/example' },
+      ]),
+    });
+
+    const { bot, sentMessages } = createTestBot();
+
+    await bot.handleUpdate({
+      update_id: 11,
+      message: {
+        message_id: 73,
+        date: Math.floor(Date.now() / 1000),
+        chat: { id: targetedChatId, type: 'supergroup', title: 'Targeted Community' },
+        new_chat_members: [{ id: 40004, is_bot: false, first_name: 'ButtonGuy' }],
+      } as never,
+    });
+
+    expect(sentMessages.length).toBe(1);
+    const keyboard = (
+      sentMessages[0].replyMarkup as { inline_keyboard?: Array<Array<Record<string, string>>> }
+    ).inline_keyboard;
+    expect(keyboard).toBeDefined();
+    expect(keyboard![0][0].text).toBe('Rules');
+    expect(keyboard![0][0].callback_data).toBe('rules:main');
+    expect(keyboard![1][0].text).toBe('Channel');
+    expect(keyboard![1][0].url).toBe('https://t.me/example');
 
     resetTargetedConfig();
   });

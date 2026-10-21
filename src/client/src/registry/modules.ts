@@ -10,7 +10,7 @@
  * @interface ConfigField
  * @property {string} key - Config object key.
  * @property {string} label - Display label.
- * @property {'text'|'number'|'switch'|'select'|'textarea'|'stringList'|'password'|'chatSelect'|'chatMultiSelect'|'mediaSelect'} type - Widget type.
+ * @property {'text'|'number'|'switch'|'select'|'textarea'|'stringList'|'password'|'chatSelect'|'chatMultiSelect'|'mediaSelect'|'mediaUpload'|'buttonBuilder'} type - Widget type.
  * @property {string[]} [options] - Choices for select fields.
  * @property {string} [help] - Tooltip text.
  * @property {string[]} [connectionTypes] - Connection type filter for chatSelect/chatMultiSelect fields.
@@ -28,7 +28,9 @@ export interface ConfigField {
     | 'password'
     | 'chatSelect'
     | 'chatMultiSelect'
-    | 'mediaSelect';
+    | 'mediaSelect'
+    | 'mediaUpload'
+    | 'buttonBuilder';
   options?: string[];
   help?: string;
   connectionTypes?: string[];
@@ -532,19 +534,24 @@ export const MODULES: ModuleEntry[] = [
       { key: 'cleanWelcome', label: 'Replace previous greeting', type: 'switch' },
       {
         key: 'mediaUrl',
-        label: 'Welcome media URL',
-        type: 'mediaSelect',
-        help: 'Photo or video sent with the greeting caption — pick from the media library',
+        label: 'Welcome media',
+        type: 'mediaUpload',
+        help: 'Photo, video or GIF sent with the greeting — upload a file, paste a URL / file_id, or pick from the media library',
       },
       {
         key: 'buttonsJson',
-        label: 'Buttons JSON',
-        type: 'text',
-        help: '[{"text": "Join channel", "url": "https://t.me/..."}] one per row',
+        label: 'Welcome buttons',
+        type: 'buttonBuilder',
+        help: 'Inline buttons under the greeting (URL, callback, Web App, copy text)',
       },
       { key: 'goodbyeEnabled', label: 'Goodbye messages enabled', type: 'switch' },
       { key: 'goodbyeText', label: 'Goodbye template', type: 'textarea' },
-      { key: 'goodbyeMediaUrl', label: 'Goodbye media URL', type: 'mediaSelect' },
+      {
+        key: 'goodbyeMediaUrl',
+        label: 'Goodbye media',
+        type: 'mediaUpload',
+        help: 'Media sent with the goodbye message',
+      },
       { key: 'deleteServiceMessages', label: 'Delete join service messages', type: 'switch' },
       { key: 'deleteLeaveMessages', label: 'Delete leave service messages', type: 'switch' },
     ],
@@ -559,14 +566,14 @@ export const MODULES: ModuleEntry[] = [
         'Add the bot as a group administrator with delete permissions.',
         'Save a per-chat entry for the group below — enabling the module alone keeps it idle in that chat.',
         'Compose templates with placeholders such as {mention} and {group_name}.',
-        'Attach a media URL and buttons JSON for rich greetings.',
+        'Attach media (file upload, URL or file_id) and build the buttons visually.',
         'Keep the greeting short when Captcha is enabled so both messages stay readable in busy chats.',
       ],
       troubleshooting: [
         'Joins are detected from both service messages and chat_member updates, so greetings still fire when the group hides join messages.',
         'Goodbyes also fire on kicks and bans, which never produce a leave service message.',
         'Templates are sent as HTML; invalid markup (a raw < or &) falls back to plain text and logs a server-side warning.',
-        'Media greetings fall back to text when the URL cannot be sent.',
+        'Media greetings (uploads, URLs, file_ids) fall back to text when they cannot be sent.',
         'Auto-delete accepts 15 seconds up to one hour.',
         'Does not fire in channels; welcomes are group/supergroup only.',
       ],

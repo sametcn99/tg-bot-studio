@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { Api, Bot, Context } from 'grammy';
+import { InlineKeyboard, InputFile, type Api, type Bot, type Context } from 'grammy';
 import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bot-module-handler';
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
 import { AdminGateService } from '../../bot-engine/admin-gate.service';
@@ -8,10 +8,23 @@ import { renderTemplate } from '../../common/utils/template.util';
 import { escapeHtml } from '../../common/utils/telegram-text.util';
 import { isChatTargeted } from '../../common/utils/chat-targets.util';
 
-/** Parsed inline button rows config: `[{text, url}]`. */
+/**
+ * Parsed inline button config: one Telegram button shape per entry — URL,
+ * callback, Web App, or copy-text (the visual builder's four types).
+ */
 interface ButtonSpec {
   text: string;
-  url: string;
+  url?: string;
+  callbackData?: string;
+  webAppUrl?: string;
+  copyText?: string;
+}
+
+/** Decoded `data:` URL payload of an uploaded media file. */
+interface UploadedMedia {
+  buffer: Buffer;
+  mime: string;
+  fileName: string;
 }
 
 /** Telegram member subset consumed by template rendering. */
@@ -340,10 +353,12 @@ export class WelcomeRuntime extends BotModuleHandler {
   }
 
   /**
-   * Sends a greeting with optional media and inline buttons. Failures are
-   * logged, and an HTML send rejected by Telegram's entity parser (raw `<`
-   * or `&` in the template) falls back to plain text so the greeting is
-   * never silently dropped.
+   * Sends a greeting with optional media and inline buttons. Media arrives
+   * as an uploaded `data:` URL (bytes sent via InputFile, no public host
+   * needed), an http(s) URL, or a Telegram file_id. Failures are logged, and
+   * an HTML send rejected by Telegram's entity parser (raw `<` or `&` in the
+   * template) falls back to plain text so the greeting is never silently
+   * dropped.
    *
    * @param {Api} api - Telegram API adapter.
    * @param {number} chatId - Target chat id.
@@ -358,36 +373,12 @@ export class WelcomeRuntime extends BotModuleHandler {
     config: Record<string, unknown>,
   ): Promise<{ message_id: number } | null> {
     const buttons = this.parseButtons(config.buttonsJson);
-    const markup = buttons ? { inline_keyboard: this.toKeyboard(buttons) } : undefined;
-    const mediaUrl = typeof config.mediaUrl === 'string' ? config.mediaUrl.trim() : '';
+    const markup = buttons ? this.toKeyboard(buttons) : undefined;
+    const caption = { caption: text, parse_mode: 'HTML' as const, reply_markup: markup };
+    const media = typeof config.mediaUrl === 'string' ? config.mediaUrl.trim() : '';
 
-    if (mediaUrl) {
-      const video = /\.(mp4|mov|webm)(\?|$)/i.test(mediaUrl);
-      const sent = video
-        ? await api
-            .sendVideo(chatId, mediaUrl, {
-              caption: text,
-              parse_mode: 'HTML',
-              reply_markup: markup,
-            })
-            .catch((err: unknown) => {
-              this.logger.warn(
-                `Welcome video send failed in chat ${chatId}: ${this.describeError(err)}`,
-              );
-              return null;
-            })
-        : await api
-            .sendPhoto(chatId, mediaUrl, {
-              caption: text,
-              parse_mode: 'HTML',
-              reply_markup: markup,
-            })
-            .catch((err: unknown) => {
-              this.logger.warn(
-                `Welcome photo send failed in chat ${chatId}: ${this.describeError(err)}`,
-              );
-              return null;
-            });
+    if (media) {
+      const sent = await this.sendMedia(api, chatId, media, caption);
       if (sent) return sent;
       // Media unusable: fall through and deliver the text greeting.
     }
@@ -413,6 +404,124 @@ export class WelcomeRuntime extends BotModuleHandler {
   }
 
   /**
+   * Delivers greeting media in whichever form it was configured: uploaded
+   * bytes (data: URL) as an InputFile, an http(s) URL by link kind, or an
+   * opaque Telegram file_id (photo first, video as retry).
+   *
+   * @param {Api} api - Telegram API adapter.
+   * @param {number} chatId - Target chat id.
+   * @param {string} media - data: URL, http(s) URL, or file_id.
+   * @param {Record<string, unknown>} caption - Caption/parse_mode/reply_markup options.
+   * @returns {Promise<{message_id: number} | null>} Sent media message, or null.
+   */
+  private async sendMedia(
+    api: Api,
+    chatId: number,
+    media: string,
+    caption: Record<string, unknown>,
+  ): Promise<{ message_id: number } | null> {
+    if (media.startsWith('data:')) {
+      const uploaded = this.parseDataUrl(media);
+      if (!uploaded) {
+        this.logger.warn(`Welcome media data URL could not be parsed in chat ${chatId}`);
+        return null;
+      }
+      return this.sendFileMedia(
+        api,
+        chatId,
+        new InputFile(uploaded.buffer, uploaded.fileName),
+        uploaded.mime,
+        caption,
+      );
+    }
+
+    if (/^https?:\/\//i.test(media)) {
+      const isVideo = /\.(mp4|mov|webm)(\?|$)/i.test(media);
+      const isAnimation = /\.gif(\?|$)/i.test(media);
+      if (isAnimation) {
+        return await api.sendAnimation(chatId, media, caption).catch((err: unknown) => {
+          this.logger.warn(
+            `Welcome animation send failed in chat ${chatId}: ${this.describeError(err)}`,
+          );
+          return null;
+        });
+      }
+      if (isVideo) {
+        return await api.sendVideo(chatId, media, caption).catch((err: unknown) => {
+          this.logger.warn(
+            `Welcome video send failed in chat ${chatId}: ${this.describeError(err)}`,
+          );
+          return null;
+        });
+      }
+      return await api.sendPhoto(chatId, media, caption).catch((err: unknown) => {
+        this.logger.warn(`Welcome photo send failed in chat ${chatId}: ${this.describeError(err)}`);
+        return null;
+      });
+    }
+
+    // Opaque Telegram file_id: its media type is not visible, so try photo
+    // first and retry as video when Telegram rejects it.
+    const asPhoto = await api.sendPhoto(chatId, media, caption).catch(() => null);
+    if (asPhoto) return asPhoto;
+    return await api.sendVideo(chatId, media, caption).catch((err: unknown) => {
+      this.logger.warn(
+        `Welcome file_id media send failed in chat ${chatId}: ${this.describeError(err)}`,
+      );
+      return null;
+    });
+  }
+
+  /**
+   * Sends uploaded bytes as animation (GIF), video, or photo by MIME type.
+   *
+   * @param {Api} api - Telegram API adapter.
+   * @param {number} chatId - Target chat id.
+   * @param {InputFile} file - Upload payload.
+   * @param {string} mime - Media MIME type.
+   * @param {Record<string, unknown>} caption - Caption/parse_mode/reply_markup options.
+   * @returns {Promise<{message_id: number} | null>} Sent media message, or null.
+   */
+  private async sendFileMedia(
+    api: Api,
+    chatId: number,
+    file: InputFile,
+    mime: string,
+    caption: Record<string, unknown>,
+  ): Promise<{ message_id: number } | null> {
+    const isVideo = mime.startsWith('video/');
+    const isAnimation = mime === 'image/gif';
+    const attempt = isAnimation
+      ? api.sendAnimation(chatId, file, caption)
+      : isVideo
+        ? api.sendVideo(chatId, file, caption)
+        : api.sendPhoto(chatId, file, caption);
+    return attempt.catch((err: unknown) => {
+      this.logger.warn(
+        `Welcome uploaded media send failed in chat ${chatId}: ${this.describeError(err)}`,
+      );
+      return null;
+    });
+  }
+
+  /**
+   * Decodes a `data:<mime>;base64,<payload>` URL into sendable bytes.
+   *
+   * @param {string} dataUrl - Data URL stored by the media upload field.
+   * @returns {UploadedMedia | null} Decoded media, or null when malformed.
+   */
+  private parseDataUrl(dataUrl: string): UploadedMedia | null {
+    const match = /^data:([^;,]+);base64,(.+)$/s.exec(dataUrl);
+    if (!match) return null;
+    const buffer = Buffer.from(match[2], 'base64');
+    if (buffer.length === 0) return null;
+    const mime = match[1].toLowerCase();
+    const extension = mime.split('/')[1]?.split('+')[0] ?? 'bin';
+    const kind = mime.startsWith('video/') ? 'video' : mime === 'image/gif' ? 'animation' : 'photo';
+    return { buffer, mime, fileName: `${kind}.${extension}` };
+  }
+
+  /**
    * Strips HTML markup for the plain-text fallback, preserving link text
    * (mention anchors degrade to the display name).
    *
@@ -434,16 +543,41 @@ export class WelcomeRuntime extends BotModuleHandler {
   }
 
   /**
-   * Parses a buttons JSON spec (tolerant).
+   * Parses a buttons JSON spec (tolerant): accepts every shape the visual
+   * button builder emits — `{text, url}`, `{text, callback_data}`,
+   * `{text, web_app: {url}}`, and `{text, copy_text: {text}}`.
+   *
+   * @param {unknown} raw - Stored buttons JSON string.
+   * @returns {ButtonSpec[] | null} Parsed buttons, or null when none usable.
    */
   private parseButtons(raw: unknown): ButtonSpec[] | null {
     if (typeof raw !== 'string' || !raw.trim()) return null;
     try {
       const parsed = JSON.parse(raw);
       if (!Array.isArray(parsed)) return null;
-      const buttons = parsed
-        .filter((item) => item && typeof item.text === 'string' && typeof item.url === 'string')
-        .map((item) => ({ text: String(item.text), url: String(item.url) }));
+      const buttons: ButtonSpec[] = [];
+      for (const item of parsed) {
+        if (!item || typeof item.text !== 'string') continue;
+        const button: ButtonSpec = { text: String(item.text) };
+        if (typeof item.url === 'string') button.url = String(item.url);
+        if (typeof item.callback_data === 'string')
+          button.callbackData = String(item.callback_data);
+        if (item.web_app && typeof item.web_app.url === 'string') {
+          button.webAppUrl = String(item.web_app.url);
+        }
+        if (item.copy_text && typeof item.copy_text.text === 'string') {
+          button.copyText = String(item.copy_text.text);
+        }
+        if (
+          button.url === undefined &&
+          button.callbackData === undefined &&
+          button.webAppUrl === undefined &&
+          button.copyText === undefined
+        ) {
+          continue;
+        }
+        buttons.push(button);
+      }
       return buttons.length > 0 ? buttons : null;
     } catch {
       return null;
@@ -452,9 +586,20 @@ export class WelcomeRuntime extends BotModuleHandler {
 
   /**
    * Wraps button specs one per row (matching the autoresponder convention).
+   *
+   * @param {ButtonSpec[]} buttons - Parsed button specs.
+   * @returns {InlineKeyboard} Keyboard with one button per row.
    */
-  private toKeyboard(buttons: ButtonSpec[]): Array<Array<{ text: string; url: string }>> {
-    return buttons.map((button) => [button]);
+  private toKeyboard(buttons: ButtonSpec[]): InlineKeyboard {
+    const keyboard = new InlineKeyboard();
+    for (const button of buttons) {
+      if (button.url !== undefined) keyboard.url(button.text, button.url);
+      else if (button.callbackData !== undefined) keyboard.text(button.text, button.callbackData);
+      else if (button.webAppUrl !== undefined) keyboard.webApp(button.text, button.webAppUrl);
+      else if (button.copyText !== undefined) keyboard.copyText(button.text, button.copyText);
+      keyboard.row();
+    }
+    return keyboard;
   }
 
   /**

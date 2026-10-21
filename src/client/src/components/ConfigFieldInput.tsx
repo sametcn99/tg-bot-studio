@@ -12,10 +12,14 @@ import {
   Typography,
 } from '@mui/material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import DeleteIcon from '@mui/icons-material/Delete';
+import LinkIcon from '@mui/icons-material/Link';
 import { useTranslation } from 'react-i18next';
 import { ConnectionSelect, ConnectionMultiSelect } from './ConnectionSelect';
 import MediaPicker from './MediaPicker';
 import AiTranslateDialog from './AiTranslateDialog';
+import VisualButtonBuilder from './VisualButtonBuilder';
 import type { ConfigField } from '../registry/modules';
 
 /**
@@ -138,6 +142,30 @@ export function ConfigFieldInput({
         </Box>
         {action}
       </Stack>
+    );
+  }
+
+  if (field.type === 'mediaUpload') {
+    return (
+      <MediaUploadConfigField
+        botId={botId}
+        label={field.label}
+        help={field.help}
+        value={String(value ?? '')}
+        onChange={onChange}
+        action={action}
+      />
+    );
+  }
+
+  if (field.type === 'buttonBuilder') {
+    return (
+      <VisualButtonBuilder
+        label={field.label}
+        value={String(value ?? '')}
+        onChange={(next) => onChange(next)}
+        helperText={field.help}
+      />
     );
   }
 
@@ -278,6 +306,199 @@ export function ConfigFieldInput({
         />
       );
   }
+}
+
+/**
+ * Media field with byte upload: a file picker stores the file inline as a
+ * data: URL (sent by the server as raw bytes via a Telegram InputFile), with
+ * instant preview, clear action, manual URL / file_id input, and the shared
+ * media library picker. Mirrors the Commands & Auto-Responder upload widget.
+ * @param {object} props - Component props.
+ * @param {number} props.botId - Active bot id (media library picker).
+ * @param {string} props.label - Field label.
+ * @param {string} [props.help] - Helper text under the label.
+ * @param {string} props.value - Current value: data: URL, http(s) URL, or file_id.
+ * @param {(value: unknown) => void} props.onChange - Change callback.
+ * @param {React.ReactElement} [props.action] - Optional trailing control.
+ * @returns {React.ReactElement} The upload field.
+ */
+function MediaUploadConfigField({
+  botId,
+  label,
+  help,
+  value,
+  onChange,
+  action,
+}: {
+  botId: string;
+  label: string;
+  help?: string;
+  value: string;
+  onChange: (value: unknown) => void;
+  action?: React.ReactElement;
+}): React.ReactElement {
+  const { t } = useTranslation();
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [urlMode, setUrlMode] = useState(
+    Boolean(value) && !value.startsWith('data:') && !/^(file_)?[A-Za-z0-9_-]{20,}$/.test(value),
+  );
+
+  const trimmed = value.trim();
+  const isUploaded = trimmed.startsWith('data:');
+  const mime = isUploaded ? (trimmed.slice(5, trimmed.indexOf(';')) || '').toLowerCase() : '';
+  const isVideo = mime.startsWith('video/') || /\.(mp4|mov|webm)(\?|$)/i.test(trimmed);
+  const fileName = isUploaded
+    ? `${isVideo ? 'video' : mime === 'image/gif' ? 'animation' : 'photo'}.${mime.split('/')[1] ?? 'bin'}`
+    : trimmed
+      ? (trimmed.split('/').pop()?.split('?')[0] ?? '')
+      : '';
+
+  /**
+   * Reads the picked file as a data: URL so its bytes travel inside the
+   * config value and the runtime can send them without a public host.
+   * @param {React.ChangeEvent<HTMLInputElement>} event - File input change.
+   * @returns {void}
+   */
+  const handleFileSelected = (event: React.ChangeEvent<HTMLInputElement>): void => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      onChange(reader.result as string);
+      setUrlMode(false);
+    };
+    reader.readAsDataURL(file);
+    event.target.value = '';
+  };
+
+  return (
+    <Box>
+      <Box
+        sx={{
+          p: 1.5,
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: 1.5,
+          bgcolor: 'background.default',
+        }}
+      >
+        <Stack spacing={1.5}>
+          <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              {label}
+            </Typography>
+            {trimmed && (
+              <Button
+                size="small"
+                color="error"
+                startIcon={<DeleteIcon />}
+                onClick={() => onChange('')}
+              >
+                {t('actions.delete')}
+              </Button>
+            )}
+          </Stack>
+
+          {help && (
+            <Typography variant="caption" color="text.secondary">
+              {help}
+            </Typography>
+          )}
+
+          {trimmed ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+              <Box
+                sx={{
+                  maxHeight: 180,
+                  borderRadius: 1,
+                  overflow: 'hidden',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  bgcolor: 'action.hover',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                }}
+              >
+                {isVideo ? (
+                  <Box
+                    component="video"
+                    src={trimmed}
+                    controls
+                    sx={{ maxHeight: 180, maxWidth: '100%' }}
+                  />
+                ) : (
+                  <Box
+                    component="img"
+                    src={trimmed}
+                    alt="Preview"
+                    sx={{ maxHeight: 180, maxWidth: '100%', objectFit: 'contain' }}
+                  />
+                )}
+              </Box>
+              {fileName && (
+                <Typography variant="caption" color="text.secondary" noWrap>
+                  {fileName}
+                </Typography>
+              )}
+            </Box>
+          ) : null}
+
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept="image/*,video/mp4,video/webm"
+            style={{ display: 'none' }}
+            onChange={handleFileSelected}
+          />
+
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<CloudUploadIcon />}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {trimmed ? t('actions.edit') : t('actions.upload')}
+            </Button>
+            <Button
+              size="small"
+              variant="text"
+              startIcon={<LinkIcon />}
+              onClick={() => setUrlMode(!urlMode)}
+            >
+              {urlMode ? t('actions.close') : t('common.orEnterUrl')}
+            </Button>
+            <Button size="small" onClick={() => setPickerOpen(true)} sx={{ whiteSpace: 'nowrap' }}>
+              {t('mediaLibrary.select')}
+            </Button>
+          </Stack>
+
+          {urlMode && (
+            <TextField
+              label={t('mediaLibrary.url')}
+              size="small"
+              fullWidth
+              value={trimmed.startsWith('data:') ? '' : trimmed}
+              onChange={(event) => onChange(event.target.value)}
+              placeholder="https://example.com/image.jpg or Telegram file_id"
+            />
+          )}
+        </Stack>
+      </Box>
+      {action}
+      <MediaPicker
+        botId={botId}
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onSelect={(picked) => {
+          onChange(picked);
+          setUrlMode(false);
+        }}
+      />
+    </Box>
+  );
 }
 
 /**

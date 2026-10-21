@@ -323,12 +323,12 @@
         "label": "Vorherige Begrüßung ersetzen"
       },
       "mediaUrl": {
-        "label": "Willkommens-Medien-URL",
-        "help": "Foto oder Video mit der Begrüßungsbeschriftung gesendet"
+        "label": "Willkommens-Medien",
+        "help": "Foto, Video oder GIF mit der Begrüßung — Datei hochladen, URL / file_id einfügen oder aus der Medienbibliothek wählen"
       },
       "buttonsJson": {
-        "label": "Buttons-JSON",
-        "help": "[{\"text\": \"Kanal beitreten\", \"url\": \"https://t.me/...\"}] einer pro Reihe"
+        "label": "Willkommens-Buttons",
+        "help": "Inline-Buttons unter der Begrüßung (URL, Callback, Web App, Text kopieren)"
       },
       "goodbyeEnabled": {
         "label": "Abschiedsnachrichten aktiv"
@@ -337,7 +337,8 @@
         "label": "Abschiedsvorlage"
       },
       "goodbyeMediaUrl": {
-        "label": "Abschieds-Medien-URL"
+        "label": "Abschieds-Medien",
+        "help": "Mit der Abschiedsnachricht gesendete Medien"
       },
       "deleteServiceMessages": {
         "label": "Beitritts-Service Nachrichten löschen"
@@ -357,14 +358,14 @@
         "Füge den Bot als Gruppenadministrator mit Löschrechten hinzu.",
         "Lege unten für die Gruppe einen Chat-Eintrag an — das Modul allein zu aktivieren lässt es in dem Chat inaktiv.",
         "Stelle Vorlagen mit Platzhaltern wie {mention} und {group_name} zusammen.",
-        "Hänge eine Medien-URL und Buttons-JSON für reichhaltige Begrüßungen an.",
+        "Medien anhängen (Datei-Upload, URL oder file_id) und Buttons visuell zusammenstellen.",
         "Halte die Begrüßung kurz, wenn Captcha aktiv ist, damit beide Nachrichten in belebten Chats lesbar bleiben."
       ],
       "troubleshooting": [
         "Beitritte werden sowohl aus Servicenachrichten als auch aus chat_member-Updates erkannt — Begrüßungen erscheinen auch, wenn die Gruppe Beitrittsnachrichten ausblendet.",
         "Abschiedsnachrichten erscheinen auch bei Kicks und Banns, die nie eine Verlassens-Servicenachricht erzeugen.",
         "Vorlagen werden als HTML gesendet; ungültiges Markup (ein rohes < oder &) fällt auf Klartext zurück und protokolliert eine serverseitige Warnung.",
-        "Medienbegrüßungen fallen auf Text zurück, wenn die URL nicht gesendet werden kann.",
+        "Medienbegrüßungen (Uploads, URLs, file_ids) fallen auf Text zurück, wenn sie nicht gesendet werden können.",
         "Auto-Löschen akzeptiert 15 Sekunden bis zu einer Stunde.",
         "Feuert nicht in Kanälen; Begrüßungen sind nur für Gruppen/Superggruppen."
       ]

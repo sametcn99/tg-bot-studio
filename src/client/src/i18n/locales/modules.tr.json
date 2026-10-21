@@ -323,12 +323,12 @@
         "label": "Önceki karşılamanın yerine geç"
       },
       "mediaUrl": {
-        "label": "Karşılama medya URL",
-        "help": "Karşılamayla gönderilen fotoğraf veya video"
+        "label": "Karşılama medyası",
+        "help": "Karşılamayla gönderilen fotoğraf, video veya GIF — dosya yükleyin, URL / file_id girin veya medya kütüphanesinden seçin"
       },
       "buttonsJson": {
-        "label": "Butonlar JSON",
-        "help": "[{\"text\": \"Kanala katıl\", \"url\": \"https://t.me/...\"}] satır başına bir"
+        "label": "Karşılama butonları",
+        "help": "Karşılama mesajının altındaki satır içi butonlar (URL, callback, Web App, metin kopyala)"
       },
       "goodbyeEnabled": {
         "label": "Vedalaşma mesajları açık"
@@ -337,7 +337,8 @@
         "label": "Vedalaşma şablonu"
       },
       "goodbyeMediaUrl": {
-        "label": "Vedalaşma medya URL"
+        "label": "Vedalaşma medyası",
+        "help": "Vedalaşma mesajıyla gönderilen medya"
       },
       "deleteServiceMessages": {
         "label": "Katılım servis mesajlarını sil"
@@ -357,14 +358,14 @@
         "Botu silme yetkisiyle grup yöneticisi olarak ekleyin.",
         "Aşağıdan grup için bir sohbet kaydı oluşturun — modülü etkinleştirmek tek başına o sohbette çalıştırmaz.",
         "Şablonları {mention} ve {group_name} gibi placeholder'larla yazın.",
-        "Zengin karşılama için medya URL ve butonlar JSON ekleyin.",
+        "Medya ekleyin (dosya yükleme, URL veya file_id) ve butonları görsel olarak oluşturun.",
         "Captcha etkinken karşılamayı kısa tutun ki iki mesaj da kalabalık sohbetlerde okunaklı kalsın."
       ],
       "troubleshooting": [
         "Katılımlar hem servis mesajlarından hem chat_member güncellemelerinden algılanır; grup katılım mesajlarını gizlese bile karşılamalar gönderilir.",
         "Veda mesajları, hiçbir ayrılma servis mesajı üretmeyen atma ve yasaklama durumlarında da gönderilir.",
         "Şablonlar HTML olarak gönderilir; geçersiz biçimlendirme (ham < veya &) düz metne düşer ve sunucu tarafında uyarı olarak loglanır.",
-        "Medya gönderilemezse karşılama metne döner.",
+        "Medya karşılamaları (yüklemeler, URL'ler, file_id'ler) gönderilemediğinde metne döner.",
         "Otomatik silme 15 saniye ile bir saat arasını kabul eder.",
         "Kanallarda tetiklenmez; karşılamalar yalnızca grup/süpergrup içindir."
       ]

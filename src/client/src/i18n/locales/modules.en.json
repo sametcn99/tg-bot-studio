@@ -323,12 +323,12 @@
         "label": "Replace previous greeting"
       },
       "mediaUrl": {
-        "label": "Welcome media URL",
-        "help": "Photo or video sent with the greeting caption"
+        "label": "Welcome media",
+        "help": "Photo, video or GIF sent with the greeting — upload a file, paste a URL / file_id, or pick from the media library"
       },
       "buttonsJson": {
-        "label": "Buttons JSON",
-        "help": "[{\"text\": \"Join channel\", \"url\": \"https://t.me/...\"}] one per row"
+        "label": "Welcome buttons",
+        "help": "Inline buttons under the greeting (URL, callback, Web App, copy text)"
       },
       "goodbyeEnabled": {
         "label": "Goodbye messages enabled"
@@ -337,7 +337,8 @@
         "label": "Goodbye template"
       },
       "goodbyeMediaUrl": {
-        "label": "Goodbye media URL"
+        "label": "Goodbye media",
+        "help": "Media sent with the goodbye message"
       },
       "deleteServiceMessages": {
         "label": "Delete join service messages"
@@ -357,14 +358,14 @@
         "Add the bot as a group administrator with delete permissions.",
         "Save a per-chat entry for the group below — enabling the module alone keeps it idle in that chat.",
         "Compose templates with placeholders such as {mention} and {group_name}.",
-        "Attach a media URL and buttons JSON for rich greetings.",
+        "Attach media (file upload, URL or file_id) and build the buttons visually.",
         "Keep the greeting short when Captcha is enabled so both messages stay readable in busy chats."
       ],
       "troubleshooting": [
         "Joins are detected from both service messages and chat_member updates, so greetings still fire when the group hides join messages.",
         "Goodbyes also fire on kicks and bans, which never produce a leave service message.",
         "Templates are sent as HTML; invalid markup (a raw < or &) falls back to plain text and logs a server-side warning.",
-        "Media greetings fall back to text when the URL cannot be sent.",
+        "Media greetings (uploads, URLs, file_ids) fall back to text when they cannot be sent.",
         "Auto-delete accepts 15 seconds up to one hour.",
         "Does not fire in channels; welcomes are group/supergroup only."
       ]
