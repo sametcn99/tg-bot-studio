@@ -68,6 +68,12 @@ const TEMPLATE_FIELD_KINDS: Record<string, ContentTemplateKind> = {
 };
 
 /**
+ * Field widgets too large for the create/edit dialog's two-column grid —
+ * they always span the full dialog width.
+ */
+const WIDE_FORM_FIELD_TYPES = new Set(['textarea', 'json', 'mediaUpload', 'stringList']);
+
+/**
  * Generic bot-scoped CRUD page driven by a registry resource descriptor:
  * a searchable/sortable/paginated data table, a create/edit dialog with
  * busy-state protection, delete confirmation, row reordering for ordered
@@ -591,7 +597,7 @@ export default function CrudPage({
       <Dialog
         open={Boolean(form)}
         onClose={() => setForm(null)}
-        maxWidth="sm"
+        maxWidth="md"
         fullWidth
         fullScreen={compactDialogs}
         aria-labelledby="crud-form-dialog-title"
@@ -600,9 +606,20 @@ export default function CrudPage({
           {editingId ? t('actions.edit') : t('actions.create')} - {module.name}
         </DialogTitle>
         <DialogContent>
-          <Stack spacing={2} sx={{ pt: 1 }}>
+          <Box
+            sx={{
+              pt: 1,
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+              gap: 2,
+              alignItems: 'start',
+            }}
+          >
             {resource.formFields.map((field) => (
-              <Box key={field.key}>
+              <Box
+                key={field.key}
+                sx={{ gridColumn: WIDE_FORM_FIELD_TYPES.has(field.type) ? '1 / -1' : undefined }}
+              >
                 {AI_FIELD_KINDS[field.key] && (
                   <Box sx={{ mb: 0.5, display: 'flex', justifyContent: 'flex-end' }}>
                     <AiGenerateButton
@@ -645,7 +662,7 @@ export default function CrudPage({
                 />
               </Box>
             ))}
-          </Stack>
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setForm(null)}>{t('actions.cancel')}</Button>

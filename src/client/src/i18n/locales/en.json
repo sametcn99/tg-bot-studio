@@ -70,7 +70,8 @@
     "applyPreset": "Apply Preset",
     "runDiagnostics": "Run Diagnostics",
     "next": "Next",
-    "done": "Done"
+    "done": "Done",
+    "discard": "Discard"
   },
   "status": {
     "active": "Active",
@@ -176,7 +177,8 @@
     "settings": "Module settings",
     "recordRemoved": "This record will be permanently removed.",
     "invalidJson": "Invalid JSON for field \"{{field}}\"",
-    "includedModules": "Included Modules:"
+    "includedModules": "Included Modules:",
+    "unsavedChanges": "Unsaved changes"
   },
   "placeholders": {
     "first_name": "User's Telegram first name",
@@ -1007,7 +1009,11 @@
     "save": "Save for this chat",
     "saved": "Saved",
     "remove": "Remove this chat",
-    "noFields": "This module has no per-chat fields — saving activates it for this chat."
+    "noFields": "This module has no per-chat fields — saving activates it for this chat.",
+    "unsavedChanges": "Unsaved changes",
+    "pickToEdit": "Pick a chat on the left to edit its settings.",
+    "removeConfirmTitle": "Remove chat settings?",
+    "removeConfirmMessage": "The module goes idle in this chat until you add it again."
   },
   "fileIndex": {
     "title": "Indexed files",

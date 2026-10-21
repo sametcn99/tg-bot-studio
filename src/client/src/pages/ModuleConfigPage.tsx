@@ -1,5 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Box, Button, Card, CardContent, Stack, Switch, Typography } from '@mui/material';
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Chip,
+  Divider,
+  Paper,
+  Stack,
+  Switch,
+  Typography,
+} from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../services/api';
 import PageHeader from '../components/PageHeader';
@@ -29,11 +41,56 @@ interface ModuleState {
   config: Record<string, unknown>;
 }
 
+/** Structural value equality for dirty-state tracking. */
+function sameConfig(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
 /**
- * Generic configuration page rendered for `config`-type modules. Renders
- * registry-declared fields (text, number, switch, select, textarea,
- * string list, password), the enable toggle, the documentation dialog, and
- * — for chat-scoped modules — the per-group/per-channel override editor.
+ * The module's enable toggle with a clear status chip — shared by the
+ * embedded and standalone page headers.
+ */
+function EnabledToggle({
+  enabled,
+  onChange,
+  label,
+}: {
+  enabled: boolean;
+  onChange: (next: boolean) => void;
+  label: string;
+}): React.ReactElement {
+  const { t } = useTranslation();
+  return (
+    <Stack
+      direction="row"
+      spacing={1.5}
+      sx={{
+        alignItems: 'center',
+      }}
+    >
+      <Chip
+        size="small"
+        color={enabled ? 'success' : 'default'}
+        variant={enabled ? 'filled' : 'outlined'}
+        label={enabled ? t('status.enabled') : t('status.disabled')}
+      />
+      <Switch
+        checked={enabled}
+        onChange={(event) => onChange(event.target.checked)}
+        slotProps={{
+          input: { 'aria-label': `${label} ${t('status.enabled')}` },
+        }}
+      />
+    </Stack>
+  );
+}
+
+/**
+ * Generic configuration page rendered for `config`-type modules. Switch
+ * fields render as a compact settings list, editor widgets below it, and a
+ * sticky-feeling action bar tracks unsaved changes with explicit
+ * save/discard. Chat-scoped modules show the per-chat master-detail editor
+ * instead of bot-level fields. Documentation dialog stays in the header.
  * @param {object} props - Component props.
  * @param {number} props.botId - Active bot id.
  * @param {ModuleEntry} props.module - Module catalog entry.
@@ -53,6 +110,7 @@ export default function ModuleConfigPage({
   const { showSuccess, showError } = useSnackbar();
   const { openDocs } = useModuleDocs();
   const [state, setState] = useState<ModuleState | null>(null);
+  const [baseline, setBaseline] = useState<Record<string, unknown>>({});
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,6 +125,7 @@ export default function ModuleConfigPage({
           isEnabled: found?.isEnabled ?? false,
           config: found?.config ?? {},
         });
+        setBaseline(found?.config ?? {});
       })
       .catch((err: Error) => setError(localizedErrorMessage(err)));
   }, [botId, module.key]);
@@ -80,6 +139,11 @@ export default function ModuleConfigPage({
     );
   }
 
+  const fields = module.configFields ?? [];
+  const switchFields = fields.filter((field) => field.type === 'switch');
+  const contentFields = fields.filter((field) => field.type !== 'switch');
+  const dirty = !sameConfig(state.config, baseline);
+
   /**
    * Updates one config value locally.
    * @param {string} key - Config key.
@@ -90,6 +154,7 @@ export default function ModuleConfigPage({
     setState((current) =>
       current ? { ...current, config: { ...current.config, [key]: value } } : current,
     );
+    setStatus(null);
   }
 
   /**
@@ -128,6 +193,7 @@ export default function ModuleConfigPage({
       body: JSON.stringify({ isEnabled: snapshot.isEnabled, config: snapshot.config }),
     })
       .then(() => {
+        setBaseline({ ...snapshot.config });
         const msg = t('modules.configSaved') || 'Module configuration saved';
         setStatus(msg);
         showSuccess(msg);
@@ -138,65 +204,70 @@ export default function ModuleConfigPage({
       });
   }
 
+  /**
+   * Reverts unsaved edits back to the last saved configuration.
+   * @returns {void}
+   */
+  function discard(): void {
+    setState((current) => (current ? { ...current, config: { ...baseline } } : current));
+    setStatus(null);
+  }
+
+  const actionBar = (
+    <Stack
+      direction="row"
+      spacing={1}
+      sx={{
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: 1,
+      }}
+    >
+      {dirty && <Chip size="small" color="warning" label={t('modules.unsavedChanges')} />}
+      <Button variant="contained" onClick={save} disabled={!dirty}>
+        {t('actions.save')}
+      </Button>
+      {dirty && (
+        <Button variant="text" onClick={discard}>
+          {t('actions.discard')}
+        </Button>
+      )}
+    </Stack>
+  );
+
   return (
     <Box>
-      {!embedded ? (
+      {embedded ? (
+        <Stack
+          direction="row"
+          spacing={1.5}
+          sx={{
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            mb: 1.5,
+            flexWrap: 'wrap',
+            gap: 1,
+          }}
+        >
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="subtitle1" noWrap sx={{ fontWeight: 700 }}>
+              {module.name}
+            </Typography>
+            <Typography variant="caption" sx={{ color: 'text.secondary' }} noWrap>
+              {module.description}
+            </Typography>
+          </Box>
+          <EnabledToggle enabled={state.isEnabled} onChange={handleToggle} label={module.name} />
+        </Stack>
+      ) : (
         <PageHeader
           title={module.name}
           subtitle={module.description}
           onDocs={() => openDocs(module)}
           actions={
-            <Stack
-              direction="row"
-              spacing={1}
-              sx={{
-                alignItems: 'center',
-              }}
-            >
-              <Typography
-                variant="caption"
-                sx={{
-                  color: 'text.secondary',
-                }}
-              >
-                {state.isEnabled ? t('status.enabled') : t('status.disabled')}
-              </Typography>
-              <Switch
-                checked={state.isEnabled}
-                onChange={(event) => handleToggle(event.target.checked)}
-                slotProps={{
-                  input: { 'aria-label': `${module.name} ${t('status.enabled')}` },
-                }}
-              />
-            </Stack>
+            <EnabledToggle enabled={state.isEnabled} onChange={handleToggle} label={module.name} />
           }
         />
-      ) : (
-        <Stack
-          direction="row"
-          spacing={1}
-          sx={{
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            mb: 1.5,
-          }}
-        >
-          <Typography
-            variant="caption"
-            sx={{
-              color: 'text.secondary',
-            }}
-          >
-            {state.isEnabled ? t('status.enabled') : t('status.disabled')}
-          </Typography>
-          <Switch
-            checked={state.isEnabled}
-            onChange={(event) => handleToggle(event.target.checked)}
-            slotProps={{
-              input: { 'aria-label': `${module.name} ${t('status.enabled')}` },
-            }}
-          />
-        </Stack>
       )}
 
       {status && (
@@ -221,16 +292,37 @@ export default function ModuleConfigPage({
         <Card>
           <CardContent>
             <Stack spacing={2.5}>
-              {(module.configFields ?? []).map((field) => (
-                <ConfigFieldInput
-                  key={field.key}
-                  botId={botId}
-                  field={field}
-                  value={state.config[field.key]}
-                  onChange={(value) => setConfig(field.key, value)}
-                />
-              ))}
-              {(module.configFields ?? []).length === 0 && (
+              {switchFields.length > 0 && (
+                <Paper variant="outlined" sx={{ px: 2, py: 0.5 }}>
+                  {switchFields.map((field, index) => (
+                    <React.Fragment key={field.key}>
+                      {index > 0 && <Divider />}
+                      <ConfigFieldInput
+                        botId={botId}
+                        field={field}
+                        value={state.config[field.key]}
+                        onChange={(value) => setConfig(field.key, value)}
+                      />
+                    </React.Fragment>
+                  ))}
+                </Paper>
+              )}
+
+              {contentFields.length > 0 && (
+                <Stack spacing={2.5}>
+                  {contentFields.map((field) => (
+                    <ConfigFieldInput
+                      key={field.key}
+                      botId={botId}
+                      field={field}
+                      value={state.config[field.key]}
+                      onChange={(value) => setConfig(field.key, value)}
+                    />
+                  ))}
+                </Stack>
+              )}
+
+              {fields.length === 0 && (
                 <Typography
                   variant="body2"
                   sx={{
@@ -240,11 +332,10 @@ export default function ModuleConfigPage({
                   {t('modules.noOptions')}
                 </Typography>
               )}
-              <Box>
-                <Button variant="contained" onClick={save}>
-                  {t('actions.save')}
-                </Button>
-              </Box>
+
+              <Divider />
+
+              {actionBar}
             </Stack>
           </CardContent>
         </Card>

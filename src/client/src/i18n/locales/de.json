@@ -70,7 +70,8 @@
     "applyPreset": "Voreinstellung anwenden",
     "runDiagnostics": "Diagnose ausführen",
     "next": "Weiter",
-    "done": "Fertig"
+    "done": "Fertig",
+    "discard": "Verwerfen"
   },
   "status": {
     "active": "Aktiv",
@@ -176,7 +177,8 @@
     "settings": "Moduleinstellungen",
     "recordRemoved": "Dieser Datensatz wird dauerhaft entfernt.",
     "invalidJson": "Ungültiges JSON für Feld „{{field}}“",
-    "includedModules": "Enthaltene Module:"
+    "includedModules": "Enthaltene Module:",
+    "unsavedChanges": "Ungespeicherte Änderungen"
   },
   "placeholders": {
     "first_name": "Telegram-Vorname des Benutzers",
@@ -1007,7 +1009,11 @@
     "save": "Für diesen Chat speichern",
     "saved": "Gespeichert",
     "remove": "Diesen Chat entfernen",
-    "noFields": "Dieses Modul hat keine Pro-Chat-Felder — Speichern aktiviert es für den Chat."
+    "noFields": "Dieses Modul hat keine Pro-Chat-Felder — Speichern aktiviert es für den Chat.",
+    "unsavedChanges": "Ungespeicherte Änderungen",
+    "pickToEdit": "Wähle links einen Chat, um seine Einstellungen zu bearbeiten.",
+    "removeConfirmTitle": "Chat-Einstellungen entfernen?",
+    "removeConfirmMessage": "Das Modul bleibt in diesem Chat inaktiv, bis du ihn wieder hinzufügst."
   },
   "fileIndex": {
     "title": "Indizierte Dateien",

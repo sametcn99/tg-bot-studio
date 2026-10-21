@@ -70,7 +70,8 @@
     "applyPreset": "Hazır Paket Uygula",
     "runDiagnostics": "Sağlık Testini Çalıştır",
     "next": "İleri",
-    "done": "Bitti"
+    "done": "Bitti",
+    "discard": "Geri al"
   },
   "status": {
     "active": "Aktif",
@@ -176,7 +177,8 @@
     "settings": "Modül ayarları",
     "recordRemoved": "Bu kayıt kalıcı olarak silinecek.",
     "invalidJson": "\"{{field}}\" alanı için geçersiz JSON",
-    "includedModules": "Dahil Edilen Modüller:"
+    "includedModules": "Dahil Edilen Modüller:",
+    "unsavedChanges": "Kaydedilmemiş değişiklikler"
   },
   "placeholders": {
     "first_name": "Kullanıcının Telegram adı",
@@ -1007,7 +1009,11 @@
     "save": "Bu sohbet için kaydet",
     "saved": "Kaydedildi",
     "remove": "Bu sohbeti kaldır",
-    "noFields": "Bu modülün sohbet bazlı alanı yok — kaydetmek sohbet için etkinleştirir."
+    "noFields": "Bu modülün sohbet bazlı alanı yok — kaydetmek sohbet için etkinleştirir.",
+    "unsavedChanges": "Kaydedilmemiş değişiklikler",
+    "pickToEdit": "Ayarlarını düzenlemek için soldan bir sohbet seçin.",
+    "removeConfirmTitle": "Sohbet ayarları kaldırılsın mı?",
+    "removeConfirmMessage": "Modül, bu sohbeti tekrar eklemeden sürece pasif kalır."
   },
   "fileIndex": {
     "title": "İndekslenmiş dosyalar",
