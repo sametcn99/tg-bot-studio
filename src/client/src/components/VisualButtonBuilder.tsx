@@ -5,12 +5,13 @@ import {
   Button,
   Chip,
   IconButton,
-  MenuItem,
   Paper,
   Stack,
   Tab,
   Tabs,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Tooltip,
   Typography,
 } from '@mui/material';
@@ -69,6 +70,14 @@ const TYPE_ICONS: Record<TelegramButtonType, React.ReactElement> = {
   webapp: <LanguageIcon sx={{ fontSize: 13, opacity: 0.85 }} />,
   copy: <ContentCopyIcon sx={{ fontSize: 13, opacity: 0.85 }} />,
 };
+
+/** Selectable button types in the per-card type switcher. */
+const TYPE_OPTIONS: Array<{ value: TelegramButtonType; labelKey: string }> = [
+  { value: 'url', labelKey: 'visual.typeUrl' },
+  { value: 'callback', labelKey: 'visual.typeCallback' },
+  { value: 'webapp', labelKey: 'visual.typeWebApp' },
+  { value: 'copy', labelKey: 'visual.typeCopyText' },
+];
 
 const asRecord = (value: unknown): Record<string, unknown> | null =>
   value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -416,14 +425,22 @@ export default function VisualButtonBuilder({
           mb: 1.5,
         }}
       >
-        <Typography
-          variant="subtitle2"
-          sx={{
-            fontWeight: 600,
-          }}
-        >
-          {label ?? t('buttons.builderTitle')}
-        </Typography>
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline' }}>
+          <Typography
+            variant="subtitle2"
+            sx={{
+              fontWeight: 600,
+            }}
+          >
+            {label ?? t('buttons.builderTitle')}
+          </Typography>
+          <Typography
+            variant="caption"
+            color={buttons.length > MAX_TOTAL_BUTTONS ? 'error' : 'text.secondary'}
+          >
+            {t('visual.buttonCount', { count: buttons.length, max: MAX_TOTAL_BUTTONS })}
+          </Typography>
+        </Stack>
         <Tabs
           value={tab}
           onChange={(_, v) => setTab(v)}
@@ -460,37 +477,40 @@ export default function VisualButtonBuilder({
             </Alert>
           ))}
 
-          {/* Preset Suggestions */}
-          <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
-            <Typography
-              variant="caption"
-              sx={{
-                color: 'text.secondary',
-                alignSelf: 'center',
-                mr: 0.5,
-              }}
-            >
-              {t('visual.presetsLabel')}
-            </Typography>
-            <Chip
-              size="small"
-              label={t('visual.presetWebsite')}
-              variant="outlined"
-              onClick={() => addPreset('Visit Website', 'https://example.com')}
-            />
-            <Chip
-              size="small"
-              label={t('visual.presetChannel')}
-              variant="outlined"
-              onClick={() => addPreset('Join Channel', 'https://t.me/example')}
-            />
-            <Chip
-              size="small"
-              label={t('visual.presetSupport')}
-              variant="outlined"
-              onClick={() => addPreset('Contact Support', 'https://t.me/support_bot')}
-            />
-          </Stack>
+          {/* Preset suggestions — offered only on an empty list to keep the
+              editing surface calm once buttons exist. */}
+          {buttons.length === 0 && (
+            <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
+              <Typography
+                variant="caption"
+                sx={{
+                  color: 'text.secondary',
+                  alignSelf: 'center',
+                  mr: 0.5,
+                }}
+              >
+                {t('visual.presetsLabel')}
+              </Typography>
+              <Chip
+                size="small"
+                label={t('visual.presetWebsite')}
+                variant="outlined"
+                onClick={() => addPreset('Visit Website', 'https://example.com')}
+              />
+              <Chip
+                size="small"
+                label={t('visual.presetChannel')}
+                variant="outlined"
+                onClick={() => addPreset('Join Channel', 'https://t.me/example')}
+              />
+              <Chip
+                size="small"
+                label={t('visual.presetSupport')}
+                variant="outlined"
+                onClick={() => addPreset('Contact Support', 'https://t.me/support_bot')}
+              />
+            </Stack>
+          )}
 
           {/* List of buttons */}
           {buttons.map((btn, idx) => {
@@ -502,40 +522,58 @@ export default function VisualButtonBuilder({
                 variant="outlined"
                 sx={{ p: 1.5, bgcolor: 'background.default', borderRadius: 1.5 }}
               >
-                <Stack
-                  direction="row"
-                  spacing={1}
-                  sx={{
-                    alignItems: 'flex-start',
-                    flexWrap: 'wrap',
-                    rowGap: 1,
-                  }}
-                >
-                  <TextField
-                    select
-                    label={t('visual.buttonType')}
-                    size="small"
-                    value={btn.type}
-                    onChange={(e) => patchCard(idx, { type: e.target.value as TelegramButtonType })}
-                    sx={{ width: 150 }}
+                <Stack spacing={1.25}>
+                  <Stack
+                    direction="row"
+                    sx={{
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 1,
+                      flexWrap: 'wrap',
+                    }}
                   >
-                    <MenuItem value="url">{t('visual.typeUrl')}</MenuItem>
-                    <MenuItem value="callback">{t('visual.typeCallback')}</MenuItem>
-                    <MenuItem value="webapp">{t('visual.typeWebApp')}</MenuItem>
-                    <MenuItem value="copy">{t('visual.typeCopyText')}</MenuItem>
-                  </TextField>
+                    <ToggleButtonGroup
+                      exclusive
+                      size="small"
+                      value={btn.type}
+                      onChange={(_, v) => v && patchCard(idx, { type: v as TelegramButtonType })}
+                      sx={{ flexWrap: 'wrap' }}
+                    >
+                      {TYPE_OPTIONS.map((option) => (
+                        <ToggleButton
+                          key={option.value}
+                          value={option.value}
+                          sx={{ gap: 0.5, px: 1.25 }}
+                        >
+                          {TYPE_ICONS[option.value]}
+                          {t(option.labelKey)}
+                        </ToggleButton>
+                      ))}
+                    </ToggleButtonGroup>
+                    <Tooltip title={t('actions.delete')}>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => removeButton(idx)}
+                        aria-label={t('visual.deleteButtonAria')}
+                      >
+                        <DeleteOutlineIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Stack>
                   <TextField
                     label={t('buttons.text')}
                     size="small"
+                    fullWidth
                     value={btn.text}
                     placeholder={t('visual.buttonFallback')}
                     onChange={(e) => patchCard(idx, { text: e.target.value })}
-                    sx={{ flex: 1, minWidth: 160 }}
                   />
                   {btn.type === 'callback' ? (
                     <TextField
                       label={t('visual.callbackData')}
                       size="small"
+                      fullWidth
                       value={btn.callbackData}
                       placeholder="menu:main"
                       error={Boolean(payloadIssue)}
@@ -543,20 +581,20 @@ export default function VisualButtonBuilder({
                         payloadIssue ? t(payloadIssue.key, payloadIssue.params) : undefined
                       }
                       onChange={(e) => patchCard(idx, { callbackData: e.target.value })}
-                      sx={{ flex: 2, minWidth: 200 }}
                     />
                   ) : btn.type === 'copy' ? (
                     <TextField
                       label={t('visual.copyText')}
                       size="small"
+                      fullWidth
                       value={btn.copyText}
                       onChange={(e) => patchCard(idx, { copyText: e.target.value })}
-                      sx={{ flex: 2, minWidth: 200 }}
                     />
                   ) : (
                     <TextField
                       label={btn.type === 'webapp' ? t('visual.webAppUrl') : t('buttons.url')}
                       size="small"
+                      fullWidth
                       value={btn.url}
                       placeholder="https://..."
                       error={Boolean(payloadIssue)}
@@ -564,68 +602,44 @@ export default function VisualButtonBuilder({
                         payloadIssue ? t(payloadIssue.key, payloadIssue.params) : undefined
                       }
                       onChange={(e) => patchCard(idx, { url: e.target.value })}
-                      sx={{ flex: 2, minWidth: 200 }}
                     />
                   )}
-                  <Tooltip title={t('actions.delete')}>
-                    <IconButton
+                  {/* Unknown button properties, preserved for lossless round-trips */}
+                  {hasExtraField(btn) && (
+                    <TextField
+                      label={`${t('visual.extraProps')} ${t('common.optional')}`}
                       size="small"
-                      color="error"
-                      onClick={() => removeButton(idx)}
-                      aria-label={t('visual.deleteButtonAria')}
-                      sx={{ mt: 0.5 }}
-                    >
-                      <DeleteOutlineIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
+                      fullWidth
+                      multiline
+                      maxRows={4}
+                      value={extraValue(btn)}
+                      onChange={(e) => patchCard(idx, { extraRaw: e.target.value })}
+                      error={issue?.key === 'visual.errExtraJson'}
+                      helperText={
+                        issue?.key === 'visual.errExtraJson' ? t('visual.errExtraJson') : undefined
+                      }
+                      sx={{
+                        '& .MuiOutlinedInput-input': {
+                          fontFamily: 'monospace',
+                          fontSize: '0.75rem',
+                        },
+                      }}
+                    />
+                  )}
                 </Stack>
-                {/* Unknown button properties, preserved for lossless round-trips */}
-                {hasExtraField(btn) && (
-                  <TextField
-                    label={`${t('visual.extraProps')} ${t('common.optional')}`}
-                    size="small"
-                    fullWidth
-                    multiline
-                    maxRows={4}
-                    value={extraValue(btn)}
-                    onChange={(e) => patchCard(idx, { extraRaw: e.target.value })}
-                    error={issue?.key === 'visual.errExtraJson'}
-                    helperText={
-                      issue?.key === 'visual.errExtraJson' ? t('visual.errExtraJson') : undefined
-                    }
-                    sx={{
-                      mt: 1.5,
-                      '& .MuiOutlinedInput-input': { fontFamily: 'monospace', fontSize: '0.75rem' },
-                    }}
-                  />
-                )}
               </Paper>
             );
           })}
 
-          <Stack
-            direction="row"
-            sx={{
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
+          <Button
+            fullWidth
+            variant="outlined"
+            startIcon={<AddIcon />}
+            onClick={addButton}
+            sx={{ borderStyle: 'dashed', py: 0.9 }}
           >
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<AddIcon />}
-              onClick={addButton}
-              sx={{ alignSelf: 'flex-start' }}
-            >
-              {t('buttons.addButton')}
-            </Button>
-            <Typography
-              variant="caption"
-              color={buttons.length > MAX_TOTAL_BUTTONS ? 'error' : 'text.secondary'}
-            >
-              {t('visual.buttonCount', { count: buttons.length, max: MAX_TOTAL_BUTTONS })}
-            </Typography>
-          </Stack>
+            {t('buttons.addButton')}
+          </Button>
 
           {/* Telegram-style Preview of buttons (3 per row, studio default) */}
           {buttons.length > 0 && (

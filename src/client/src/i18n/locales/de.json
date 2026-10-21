@@ -870,7 +870,9 @@
     "select": "Bibliothek",
     "empty": "Noch keine Assets — fügen Sie eines hinzu, um es überall wiederzuverwenden.",
     "deleteTitle": "Asset löschen",
-    "deleteMessage": "Dieses Asset aus der Bibliothek entfernen? Formulare, die es verwenden, behalten den gespeicherten Wert."
+    "deleteMessage": "Dieses Asset aus der Bibliothek entfernen? Formulare, die es verwenden, behalten den gespeicherten Wert.",
+    "dropHere": "Datei hochladen oder hierher ziehen",
+    "dragReplace": "Klicken oder neue Datei ziehen, um die Medien zu ersetzen"
   },
   "inlineMode": {
     "botFatherHint": "Der Inline-Modus muss zuerst für den Bot aktiviert sein: @BotFather → /setinline. Anschließend durchsucht @yourbot <Abfrage> in jedem Chat diese Antworten.",

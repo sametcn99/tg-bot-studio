@@ -718,7 +718,8 @@
         "label": "Varsayılan /start mesajı"
       },
       "command": {
-        "label": "Komut (/fiyat) veya anahtar kelime"
+        "label": "Tetikleyiciler (virgülle ayrılmış)",
+        "help": "Tek kural birden çok komut/anahtar kelimeye yanıt verebilir, ör. /fiyat, /price, fiyat"
       },
       "responseText": {
         "label": "Yanıt metni"
@@ -748,7 +749,7 @@
       }
     },
     "columns": {
-      "command": "Tetikleyici",
+      "command": "Tetikleyiciler",
       "response_text": "Yanıt",
       "media_url": "Medya",
       "scope": "Kapsam",
@@ -764,7 +765,7 @@
         "Kurallar artık gruplarda da çalışabilir — her kuralı özel/grup/her ikisi olarak kapsamlayın, gerekirse tek sohbete sabitleyin."
       ],
       "setup": [
-        "Kurallar oluşturun; komutlar / ile başlamalı, anahtar kelimeler başlamamalıdır.",
+        "Kurallar oluşturun; komutlar / ile başlamalı, anahtar kelimeler başlamamalıdır. Birden fazla tetikleyiciyi virgülle ayırın (/fiyat, /pricing, price) — tek kural hepsini yanıtlar.",
         "Fotoğraf URL'leri ve inline butonlar isteğe bağlı zenginleştirmelerdir.",
         "Anahtar kelime eşleşmesi o mesaj için çift yanıtı önlemek üzere AI Assistant'ı geçici olarak durdurur."
       ],

@@ -5,6 +5,29 @@ import { type AutoresponderRow } from './autoresponder.entity';
 
 export { AutoresponderRow };
 
+/**
+ * Splits a rule trigger field into individual triggers. Multiple triggers may
+ * be comma- or semicolon-separated ("/fiyat, /pricing; price"); a single
+ * value keeps working as one trigger.
+ * @param {string} command - Raw trigger field value.
+ * @returns {string[]} Non-empty trimmed triggers.
+ */
+export function splitTriggers(command: string): string[] {
+  return command
+    .split(/[,;]/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Canonicalizes a trigger list to comma-separated form for storage.
+ * @param {unknown} value - Raw command payload.
+ * @returns {string} Normalized trigger string ('' when empty).
+ */
+function normalizeTriggerList(value: unknown): string {
+  return splitTriggers(String(value ?? '')).join(', ');
+}
+
 function parseMediaPayload(data: Record<string, unknown>): {
   mediaBuffer?: Buffer | null;
   mediaMime?: string | null;
@@ -63,7 +86,7 @@ export class AutoresponderService {
     const { mediaBuffer, mediaMime, mediaFileName } = parseMediaPayload(data);
     const item = await this.autoresponderModel.create({
       botId,
-      command: String(data.command ?? ''),
+      command: normalizeTriggerList(data.command),
       responseText: String(data.responseText ?? data.response_text ?? ''),
       mediaUrl: (data.mediaUrl as string) ?? (data.media_url as string) ?? null,
       buttonsJson: data.buttons
@@ -111,7 +134,7 @@ export class AutoresponderService {
     const rawChatId = data.chatId !== undefined ? data.chatId : data.chat_id;
     const { mediaBuffer, mediaMime, mediaFileName } = parseMediaPayload(data);
     const updated = await this.autoresponderModel.update(id, {
-      command: data.command !== undefined ? String(data.command) : existing.command,
+      command: data.command !== undefined ? normalizeTriggerList(data.command) : existing.command,
       responseText:
         data.responseText !== undefined
           ? String(data.responseText)

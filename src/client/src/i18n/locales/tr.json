@@ -870,7 +870,9 @@
     "select": "Kütüphane",
     "empty": "Henüz varlık yok — her yerde kullanmak için bir tane ekleyin.",
     "deleteTitle": "Varlığı sil",
-    "deleteMessage": "Bu varlık kütüphaneden kaldırılsın mı? Onu kullanan formlar kaydedilmiş değeri korur."
+    "deleteMessage": "Bu varlık kütüphaneden kaldırılsın mı? Onu kullanan formlar kaydedilmiş değeri korur.",
+    "dropHere": "Bir dosya yükleyin veya buraya sürükleyip bırakın",
+    "dragReplace": "Medyayı değiştirmek için tıklayın veya yeni dosya sürükleyin"
   },
   "inlineMode": {
     "botFatherHint": "Önce botta inline mod açık olmalı: @BotFather → /setinline. Sonra herhangi bir sohbette @botunuz <sorgu> yazınca bu yanıtlar aranır.",

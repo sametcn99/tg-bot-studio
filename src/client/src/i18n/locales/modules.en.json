@@ -720,7 +720,7 @@
         "Rules can run in groups too — scope each rule to private, group, or both, and pin it to one chat if needed."
       ],
       "setup": [
-        "Create rules; commands must start with /, keywords must not.",
+        "Create rules; commands must start with /, keywords must not. Comma-separate several triggers (/price, /pricing, fiyat) so one rule answers them all.",
         "Photo URLs and inline buttons are optional enhancements.",
         "Keyword matches temporarily pause the AI Assistant for that message to prevent double answers."
       ],
@@ -735,7 +735,8 @@
         "label": "Default /start message"
       },
       "command": {
-        "label": "Command (/price) or keyword"
+        "label": "Triggers (comma-separated)",
+        "help": "One rule can answer several commands/keywords, e.g. /price, /pricing, fiyat"
       },
       "responseText": {
         "label": "Response text"
@@ -765,7 +766,7 @@
       }
     },
     "columns": {
-      "command": "Trigger",
+      "command": "Triggers",
       "response_text": "Response",
       "media_url": "Media",
       "scope": "Scope",

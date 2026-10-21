@@ -28,8 +28,6 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import LinkIcon from '@mui/icons-material/Link';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../services/api';
 import { useUnsavedGuard } from '../hooks/useUnsavedGuard';
@@ -37,6 +35,7 @@ import PageHeader from './PageHeader';
 import ConfirmDialog from './ConfirmDialog';
 import DataTable, { type Column } from './DataTable';
 import { ConnectionSelect, ConnectionMultiSelect } from './ConnectionSelect';
+import MediaUploadField from './MediaUploadField';
 import VisualButtonBuilder from './VisualButtonBuilder';
 import VisualDripStepsBuilder from './VisualDripStepsBuilder';
 import { LoadingState } from './Feedback';
@@ -414,9 +413,13 @@ export default function CrudPage({
                 <IconButton
                   size="small"
                   onClick={() => {
-                    const command = String(row.command ?? '').trim();
-                    if (command)
-                      openSimulatorWith(command.startsWith('/') ? command : `/${command}`);
+                    // Multi-trigger rules: exercise the first listed trigger.
+                    const trigger =
+                      String(row.command ?? '')
+                        .split(',')[0]
+                        ?.trim() ?? '';
+                    if (trigger)
+                      openSimulatorWith(trigger.startsWith('/') ? trigger : `/${trigger}`);
                   }}
                   aria-label={`${t('crud.testInSimulator')} ${String(row.id ?? '')}`}
                 >
@@ -932,11 +935,23 @@ function CrudFormField({
       return (
         <MediaUploadField
           label={field.label}
-          value={value}
-          form={form}
-          onFormChange={onFormChange}
-          onChange={onChange}
           help={field.help}
+          botId={botId}
+          value={String(value ?? '')}
+          onChange={(next) => onChange(next)}
+          meta={{
+            data: (form?.mediaData as string | null) ?? null,
+            mime: (form?.mediaMime as string | null) ?? null,
+            fileName: (form?.mediaFileName as string | null) ?? null,
+          }}
+          onMetaChange={(meta) =>
+            onFormChange?.({
+              mediaData: meta.data,
+              mediaMime: meta.mime,
+              mediaFileName: meta.fileName,
+              ...(meta.data ? { mediaUrl: '' } : {}),
+            })
+          }
         />
       );
     default:
@@ -948,195 +963,4 @@ function CrudFormField({
         />
       );
   }
-}
-
-/**
- * Dedicated media upload / URL field with instant image/video preview,
- * file-picker upload, clear action, and optional URL manual input.
- */
-function MediaUploadField({
-  label,
-  value,
-  form,
-  onFormChange,
-  onChange,
-  help,
-}: {
-  label: string;
-  value: unknown;
-  form?: Record<string, unknown> | null;
-  onFormChange?: (updates: Record<string, unknown>) => void;
-  onChange: (value: unknown) => void;
-  help?: string;
-}): React.ReactElement {
-  const { t } = useTranslation();
-  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
-  const currentUrl =
-    typeof form?.mediaUrl === 'string'
-      ? form.mediaUrl.trim()
-      : typeof value === 'string'
-        ? value.trim()
-        : '';
-  const currentData = typeof form?.mediaData === 'string' ? form.mediaData.trim() : '';
-  const displaySrc = currentData || currentUrl;
-  const [urlMode, setUrlMode] = React.useState(
-    Boolean(currentUrl && !currentData && !currentUrl.startsWith('/api/')),
-  );
-
-  const fileName =
-    (form?.mediaFileName as string) ||
-    (currentUrl ? currentUrl.split('/').pop()?.split('?')[0] : '');
-  const mime = ((form?.mediaMime as string) || '').toLowerCase();
-  const isVideo =
-    mime.startsWith('video/') || /\.(mp4|mov|webm)(\?|$)/i.test(fileName || displaySrc);
-
-  const handleFileSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      onFormChange?.({
-        mediaData: result,
-        mediaMime: file.type || 'image/jpeg',
-        mediaFileName: file.name,
-        mediaUrl: '',
-      });
-      onChange(result);
-    };
-    reader.readAsDataURL(file);
-    event.target.value = '';
-  };
-
-  const handleClear = () => {
-    onFormChange?.({
-      mediaData: null,
-      mediaMime: null,
-      mediaFileName: null,
-      mediaUrl: '',
-    });
-    onChange('');
-  };
-
-  return (
-    <Box
-      sx={{
-        p: 1.5,
-        border: '1px solid',
-        borderColor: 'divider',
-        borderRadius: 1.5,
-        bgcolor: 'background.default',
-      }}
-    >
-      <Stack spacing={1.5}>
-        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography variant="body2" sx={{ fontWeight: 600 }}>
-            {label}
-          </Typography>
-          {displaySrc && (
-            <Button size="small" color="error" startIcon={<DeleteIcon />} onClick={handleClear}>
-              {t('actions.delete', 'Kaldır')}
-            </Button>
-          )}
-        </Stack>
-
-        {help && (
-          <Typography variant="caption" color="text.secondary">
-            {help}
-          </Typography>
-        )}
-
-        {displaySrc ? (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-            <Box
-              sx={{
-                maxHeight: 180,
-                borderRadius: 1,
-                overflow: 'hidden',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                bgcolor: 'action.hover',
-                border: '1px solid',
-                borderColor: 'divider',
-              }}
-            >
-              {isVideo ? (
-                <Box
-                  component="video"
-                  src={displaySrc}
-                  controls
-                  sx={{ maxHeight: 180, maxWidth: '100%' }}
-                />
-              ) : (
-                <Box
-                  component="img"
-                  src={displaySrc}
-                  alt="Preview"
-                  sx={{ maxHeight: 180, maxWidth: '100%', objectFit: 'contain' }}
-                />
-              )}
-            </Box>
-            {fileName && (
-              <Typography variant="caption" color="text.secondary" noWrap>
-                {fileName}
-              </Typography>
-            )}
-          </Box>
-        ) : null}
-
-        <input
-          type="file"
-          ref={fileInputRef}
-          accept="image/*,video/mp4,video/webm"
-          style={{ display: 'none' }}
-          onChange={handleFileSelected}
-        />
-
-        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<CloudUploadIcon />}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            {displaySrc
-              ? t('actions.edit', 'Görseli Değiştir')
-              : t('actions.upload', 'Görsel / Medya Yükle')}
-          </Button>
-
-          <Button
-            size="small"
-            variant="text"
-            startIcon={<LinkIcon />}
-            onClick={() => setUrlMode(!urlMode)}
-          >
-            {urlMode
-              ? t('actions.close', 'URL Alanını Kapat')
-              : t('common.orEnterUrl', 'Veya URL Gir')}
-          </Button>
-        </Stack>
-
-        {urlMode && (
-          <TextField
-            label={t('mediaLibrary.url', 'Görsel veya Medya URL')}
-            size="small"
-            fullWidth
-            value={String(form?.mediaUrl ?? '')}
-            onChange={(e) => {
-              const url = e.target.value;
-              onFormChange?.({
-                mediaUrl: url,
-                mediaData: null,
-                mediaMime: null,
-                mediaFileName: null,
-              });
-              onChange(url);
-            }}
-            placeholder="https://example.com/image.jpg"
-          />
-        )}
-      </Stack>
-    </Box>
-  );
 }

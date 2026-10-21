@@ -952,7 +952,7 @@ export const MODULES: ModuleEntry[] = [
     crud: {
       endpoint: '/bots/{botId}/autoresponders',
       columns: [
-        { key: 'command', label: 'Trigger' },
+        { key: 'command', label: 'Triggers' },
         { key: 'response_text', label: 'Response' },
         { key: 'media_url', label: 'Media', type: 'media' },
         { key: 'scope', label: 'Scope' },
@@ -962,7 +962,12 @@ export const MODULES: ModuleEntry[] = [
         { key: 'is_active', label: 'Active', type: 'bool' },
       ],
       formFields: [
-        { key: 'command', label: 'Command (/price) or keyword', type: 'text' },
+        {
+          key: 'command',
+          label: 'Triggers (comma-separated)',
+          type: 'text',
+          help: 'One rule can answer several commands/keywords, e.g. /price, /pricing, fiyat',
+        },
         { key: 'responseText', label: 'Response text', type: 'textarea' },
         {
           key: 'scope',
@@ -1015,7 +1020,7 @@ export const MODULES: ModuleEntry[] = [
         'Rules can run in groups too — scope each rule to private, group, or both, and pin it to one chat if needed.',
       ],
       setup: [
-        'Create rules; commands must start with /, keywords must not.',
+        'Create rules; commands must start with /, keywords must not. Comma-separate several triggers (/price, /pricing, fiyat) so one rule answers them all.',
         'Photo URLs and inline buttons are optional enhancements.',
         'Keyword matches temporarily pause the AI Assistant for that message to prevent double answers.',
       ],

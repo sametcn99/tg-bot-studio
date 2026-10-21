@@ -720,7 +720,7 @@
         "Regeln können auch in Gruppen laufen — scope jede Regel auf privat, Gruppe oder beides und pinne sie bei Bedarf an einen Chat."
       ],
       "setup": [
-        "Erstelle Regeln; Befehle müssen mit / beginnen, Schlüsselwörter nicht.",
+        "Erstelle Regeln; Befehle müssen mit / beginnen, Schlüsselwörter nicht. Mehrere Auslöser durch Kommas trennen (/preis, /preise, price) — eine Regel beantwortet alle.",
         "Foto-URLs und Inline-Buttons sind optionale Erweiterungen.",
         "Schlüsselwort-Treffer pausieren den KI-Assistenten für diese Nachricht, um Doppelantworten zu vermeiden."
       ],
@@ -735,7 +735,8 @@
         "label": "Standard-/start-Nachricht"
       },
       "command": {
-        "label": "Befehl (/preis) oder Schlüsselwort"
+        "label": "Auslöser (durch Komma getrennt)",
+        "help": "Eine Regel kann auf mehrere Befehle/Schlüsselwörter antworten, z. B. /price, /pricing, preis"
       },
       "responseText": {
         "label": "Antworttext"

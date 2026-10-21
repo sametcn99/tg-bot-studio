@@ -2,7 +2,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InlineKeyboard, InputFile, type Context } from 'grammy';
 import { BotModuleHandler, type ModuleRuntimeContext } from '../../bot-engine/bot-module-handler';
 import { ModuleHandlerRegistry } from '../../bot-engine/module-handler-registry';
-import { AutoresponderService, type AutoresponderRow } from './autoresponder.service';
+import {
+  AutoresponderService,
+  splitTriggers,
+  type AutoresponderRow,
+} from './autoresponder.service';
 import { BotModel } from '../../bots/bot.model';
 import { AdminGateService } from '../../bot-engine/admin-gate.service';
 import { BotI18nService } from '../../bot-engine/bot-i18n.service';
@@ -25,7 +29,8 @@ interface ReplyButton {
  * Runtime for the Custom Commands & Auto-Responder module (v2, reference
  * filters/notes parity): rules now work in groups too, scoped globally
  * (chatId null) or per chat, with keyword/command/hashtag/prefix/exact
- * matching modes, admin-only visibility, and #hashtag note triggers.
+ * matching modes, admin-only visibility, #hashtag note triggers, and
+ * comma-separated multi-trigger lists per rule.
  */
 @Injectable()
 export class AutoresponderRuntime extends BotModuleHandler {
@@ -228,42 +233,47 @@ export class AutoresponderRuntime extends BotModuleHandler {
     const isTargetedAtUs = !targetBot || !botUsername || targetBot === botUsername;
 
     return (
-      // 1. Exact /command rules.
+      // 1. Exact /command rules (any trigger of the rule).
       (isTargetedAtUs
-        ? scoped.find(
-            (rule) =>
-              rule.command.startsWith('/') &&
-              !rule.command.includes(' ') &&
-              rule.command.toLowerCase() === rawCmd,
+        ? scoped.find((rule) =>
+            splitTriggers(rule.command).some(
+              (trigger) =>
+                trigger.startsWith('/') &&
+                !trigger.includes(' ') &&
+                trigger.toLowerCase() === rawCmd,
+            ),
           )
         : undefined) ??
-      // 2. Hashtag notes: "#trigger" anywhere in the text.
+      // 2. Hashtag notes: "#trigger" anywhere in the text (leading # optional).
       scoped.find((rule) => {
-        const mode = rule.match_mode ?? 'keyword';
-        const trigger = rule.command.toLowerCase();
+        if ((rule.match_mode ?? 'keyword') !== 'hashtag') return false;
+        const triggers = splitTriggers(rule.command);
         return (
-          mode === 'hashtag' &&
-          (lower.split(/\s+/).includes(`#${trigger}`) || rule.command.startsWith('/'))
+          triggers.some((trigger) =>
+            lower.split(/\s+/).includes(`#${trigger.replace(/^#/, '').toLowerCase()}`),
+          ) || triggers.some((trigger) => trigger.startsWith('/'))
         );
       }) ??
       // 3. prefix: triggers.
       scoped.find((rule) => {
-        const mode = rule.match_mode ?? 'keyword';
-        return mode === 'prefix' && normalized.startsWith(normalizeText(rule.command));
+        if ((rule.match_mode ?? 'keyword') !== 'prefix') return false;
+        return splitTriggers(rule.command).some((trigger) =>
+          normalized.startsWith(normalizeText(trigger)),
+        );
       }) ??
       // 4. exact: triggers.
       scoped.find((rule) => {
-        const mode = rule.match_mode ?? 'keyword';
-        return mode === 'exact' && normalized === normalizeText(rule.command);
+        if ((rule.match_mode ?? 'keyword') !== 'exact') return false;
+        return splitTriggers(rule.command).some((trigger) => normalized === normalizeText(trigger));
       }) ??
       // 5. Plain keyword substring rules (backwards compatible).
       scoped.find((rule) => {
-        const mode = rule.match_mode ?? 'keyword';
-        return !rule.command.startsWith('/') && mode === 'keyword'
-          ? normalized.includes(normalizeText(rule.command))
-          : rule.command.startsWith('/') && rule.command.includes(' ')
-            ? lower.startsWith(rule.command.toLowerCase())
-            : false;
+        if ((rule.match_mode ?? 'keyword') !== 'keyword') return false;
+        return splitTriggers(rule.command).some((trigger) =>
+          !trigger.startsWith('/')
+            ? normalized.includes(normalizeText(trigger))
+            : trigger.includes(' ') && lower.startsWith(trigger.toLowerCase()),
+        );
       })
     );
   }

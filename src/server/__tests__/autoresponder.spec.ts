@@ -3,6 +3,7 @@ import { Bot } from 'grammy';
 import { AutoresponderRuntime } from '../modules/autoresponder/autoresponder.runtime';
 import {
   AutoresponderService,
+  splitTriggers,
   type AutoresponderRow,
 } from '../modules/autoresponder/autoresponder.service';
 import { AdminGateService } from '../bot-engine/admin-gate.service';
@@ -263,6 +264,61 @@ describe('AutoresponderRuntime admin and member message execution', () => {
       replyToMessage: 0,
     },
   ];
+
+  /**
+   * Builds a full rule row from a partial, filling both snake/camel key sets.
+   * @param {Partial<AutoresponderRow>} partial - Overrides (id/command/response_text required).
+   * @returns {AutoresponderRow} Complete rule row.
+   */
+  function makeRule(
+    partial: Partial<AutoresponderRow> & Pick<AutoresponderRow, 'id' | 'command' | 'response_text'>,
+  ): AutoresponderRow {
+    return {
+      bot_id: botId,
+      botId,
+      responseText: partial.response_text,
+      media_url: null,
+      mediaUrl: null,
+      buttons_json: null,
+      buttonsJson: null,
+      is_active: 1,
+      isActive: 1,
+      chat_id: null,
+      chatId: null,
+      scope: 'all',
+      match_mode: partial.match_mode ?? 'keyword',
+      matchMode: partial.matchMode ?? partial.match_mode ?? 'keyword',
+      admin_only: 0,
+      adminOnly: 0,
+      repeat_seconds: 0,
+      repeatSeconds: 0,
+      delete_previous_response: 0,
+      deletePreviousResponse: 0,
+      reply_to_message: 0,
+      replyToMessage: 0,
+      ...partial,
+    };
+  }
+
+  rules.push(
+    makeRule({
+      id: 'rule-multi',
+      command: '/fiyat, /pricing, price',
+      response_text: 'çoklu tetikleyici yanıtı',
+    }),
+    makeRule({
+      id: 'rule-multi-hashtag',
+      command: '#sss, #faq',
+      response_text: 'not yanıtı',
+      match_mode: 'hashtag',
+    }),
+    makeRule({
+      id: 'rule-multi-exact',
+      command: 'evet, yes',
+      response_text: 'onay yanıtı',
+      match_mode: 'exact',
+    }),
+  );
 
   const fakeService = {
     list: async () => rules,
@@ -854,5 +910,122 @@ describe('AutoresponderRuntime admin and member message execution', () => {
     expect(mediaFile).not.toBeNull();
     expect(mediaFile?.mime).toBe('image/png');
     expect(Buffer.isBuffer(mediaFile?.data)).toBe(true);
+  });
+
+  test('multi-trigger rules respond to every comma-separated trigger', async () => {
+    const { bot, replies } = createTestBot();
+
+    const cases = ['/fiyat', '/pricing', 'what is the PRICE here?'];
+    for (const [i, text] of cases.entries()) {
+      await bot.handleUpdate({
+        update_id: 20000 + i,
+        message: {
+          message_id: 2000 + i,
+          from: { id: 12345, is_bot: false, first_name: 'Alice' },
+          chat: { id: -1001234567, type: 'supergroup', title: 'Community Group' },
+          date: 1000,
+          text,
+        },
+      } as never);
+    }
+
+    expect(replies.length).toBe(3);
+    expect(replies.every((reply) => reply?.text === 'çoklu tetikleyici yanıtı')).toBe(true);
+  });
+
+  test('multi-trigger hashtag rules match any listed hashtag', async () => {
+    const { bot, replies } = createTestBot();
+
+    await bot.handleUpdate({
+      update_id: 20010,
+      message: {
+        message_id: 2010,
+        from: { id: 12345, is_bot: false, first_name: 'Alice' },
+        chat: { id: -1001234567, type: 'supergroup', title: 'Community Group' },
+        date: 1000,
+        text: 'lütfen #faq notuna bakın',
+      },
+    } as never);
+
+    expect(replies.length).toBe(1);
+    expect(replies[0]?.text).toBe('not yanıtı');
+  });
+
+  test('multi-trigger exact rules match only whole-message triggers', async () => {
+    const { bot, replies } = createTestBot();
+
+    await bot.handleUpdate({
+      update_id: 20011,
+      message: {
+        message_id: 2011,
+        from: { id: 12345, is_bot: false, first_name: 'Alice' },
+        chat: { id: -1001234567, type: 'supergroup', title: 'Community Group' },
+        date: 1000,
+        text: 'yes',
+      },
+    } as never);
+    expect(replies.length).toBe(1);
+    expect(replies[0]?.text).toBe('onay yanıtı');
+
+    // 'yes please' contains the trigger but exact mode requires equality.
+    await bot.handleUpdate({
+      update_id: 20012,
+      message: {
+        message_id: 2012,
+        from: { id: 12345, is_bot: false, first_name: 'Alice' },
+        chat: { id: -1001234567, type: 'supergroup', title: 'Community Group' },
+        date: 1005,
+        text: 'yes please',
+      },
+    } as never);
+    expect(replies.length).toBe(1);
+  });
+
+  test('unrelated messages do not match multi-trigger rules', async () => {
+    const { bot, replies } = createTestBot();
+
+    await bot.handleUpdate({
+      update_id: 20013,
+      message: {
+        message_id: 2013,
+        from: { id: 12345, is_bot: false, first_name: 'Alice' },
+        chat: { id: -1001234567, type: 'supergroup', title: 'Community Group' },
+        date: 1000,
+        text: 'merhaba dünya',
+      },
+    } as never);
+
+    expect(replies.length).toBe(0);
+  });
+
+  test('splitTriggers splits comma/semicolon lists and drops empties', () => {
+    expect(splitTriggers('/a,b; c ,,')).toEqual(['/a', 'b', 'c']);
+    expect(splitTriggers('single')).toEqual(['single']);
+    expect(splitTriggers('  ')).toEqual([]);
+  });
+
+  test('AutoresponderService normalizes comma-separated trigger lists on save', async () => {
+    let storedData: Record<string, unknown> = {};
+    const mockModel = {
+      create: async (data: Record<string, unknown>) => {
+        storedData = { id: 'multi-1', ...data };
+        return storedData;
+      },
+      findById: async () => storedData,
+      update: async (id: string, data: Record<string, unknown>) => {
+        storedData = { ...storedData, ...data };
+        return storedData;
+      },
+    };
+    const svc = new AutoresponderService(mockModel as never);
+
+    const created = await svc.create('bot-1', {
+      command: ' /fiyat ,  /pricing ; price ',
+      responseText: 'hello',
+    });
+    expect(created.command).toBe('/fiyat, /pricing, price');
+
+    const updated = await svc.update('bot-1', 'multi-1', { command: 'a,, b ' });
+    expect(updated.command).toBe('a, b');
   });
 });

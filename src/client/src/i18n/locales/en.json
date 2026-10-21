@@ -870,7 +870,9 @@
     "select": "Library",
     "empty": "No assets yet — add one to reuse it everywhere.",
     "deleteTitle": "Delete asset",
-    "deleteMessage": "Remove this asset from the library? Composers using it keep the saved value."
+    "deleteMessage": "Remove this asset from the library? Composers using it keep the saved value.",
+    "dropHere": "Upload a file or drag & drop it here",
+    "dragReplace": "Click or drag a new file to replace the media"
   },
   "inlineMode": {
     "botFatherHint": "Inline mode must be enabled for the bot first: @BotFather → /setinline. Then typing @yourbot <query> in any chat searches these answers.",
