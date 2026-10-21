@@ -355,11 +355,15 @@
       ],
       "setup": [
         "Add the bot as a group administrator with delete permissions.",
+        "Save a per-chat entry for the group below — enabling the module alone keeps it idle in that chat.",
         "Compose templates with placeholders such as {mention} and {group_name}.",
         "Attach a media URL and buttons JSON for rich greetings.",
         "Keep the greeting short when Captcha is enabled so both messages stay readable in busy chats."
       ],
       "troubleshooting": [
+        "Joins are detected from both service messages and chat_member updates, so greetings still fire when the group hides join messages.",
+        "Goodbyes also fire on kicks and bans, which never produce a leave service message.",
+        "Templates are sent as HTML; invalid markup (a raw < or &) falls back to plain text and logs a server-side warning.",
         "Media greetings fall back to text when the URL cannot be sent.",
         "Auto-delete accepts 15 seconds up to one hour.",
         "Does not fire in channels; welcomes are group/supergroup only."

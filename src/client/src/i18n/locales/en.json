@@ -420,7 +420,8 @@
     "supportDesc": "Combines Support Desk, 24/7 AI Knowledge Assistant, and Auto-Responder rules.",
     "growthTitle": "Viral Growth & Loyalty",
     "growthDesc": "Integrates Referral Leaderboard, Loyalty Mini App, Spin Wheel, and Drip Campaigns.",
-    "applied": "Preset bundle activated successfully! Modules hot-reloaded."
+    "applied": "Preset bundle activated successfully! Modules hot-reloaded.",
+    "appliedChatScoped": "Note: {{modules}} work per chat — open their settings page and save a per-chat entry for each group so they start acting."
   },
   "simulator": {
     "title": "Live Bot Simulator",

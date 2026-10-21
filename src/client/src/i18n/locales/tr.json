@@ -420,7 +420,8 @@
     "supportDesc": "Canlı Destek Masası, 7/24 AI Bilgi Asistanı ve Otomatik Yanıtlayıcı kurallarını birleştirir.",
     "growthTitle": "Viral Büyüme & Sadakat",
     "growthDesc": "Tavsiye Liderliği (Referral), Sadakat Mini Uygulaması, Çarkıfelek ve Damla Kampanyaları entegrasyonu.",
-    "applied": "Hazır paket başarıyla etkinleştirildi! Modüller anında güncellendi."
+    "applied": "Hazır paket başarıyla etkinleştirildi! Modüller anında güncellendi.",
+    "appliedChatScoped": "Not: {{modules}} sohbet bazlı çalışır — harekete geçmeleri için ayar sayfalarından her grup için bir sohbet kaydı oluşturun."
   },
   "simulator": {
     "title": "Canlı Bot Test Simülatörü",

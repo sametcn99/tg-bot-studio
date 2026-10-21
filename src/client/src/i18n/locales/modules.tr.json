@@ -355,11 +355,15 @@
       ],
       "setup": [
         "Botu silme yetkisiyle grup yöneticisi olarak ekleyin.",
+        "Aşağıdan grup için bir sohbet kaydı oluşturun — modülü etkinleştirmek tek başına o sohbette çalıştırmaz.",
         "Şablonları {mention} ve {group_name} gibi placeholder'larla yazın.",
         "Zengin karşılama için medya URL ve butonlar JSON ekleyin.",
         "Captcha etkinken karşılamayı kısa tutun ki iki mesaj da kalabalık sohbetlerde okunaklı kalsın."
       ],
       "troubleshooting": [
+        "Katılımlar hem servis mesajlarından hem chat_member güncellemelerinden algılanır; grup katılım mesajlarını gizlese bile karşılamalar gönderilir.",
+        "Veda mesajları, hiçbir ayrılma servis mesajı üretmeyen atma ve yasaklama durumlarında da gönderilir.",
+        "Şablonlar HTML olarak gönderilir; geçersiz biçimlendirme (ham < veya &) düz metne düşer ve sunucu tarafında uyarı olarak loglanır.",
         "Medya gönderilemezse karşılama metne döner.",
         "Otomatik silme 15 saniye ile bir saat arasını kabul eder.",
         "Kanallarda tetiklenmez; karşılamalar yalnızca grup/süpergrup içindir."

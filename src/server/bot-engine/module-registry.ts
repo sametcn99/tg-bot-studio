@@ -163,7 +163,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     name: 'Group Welcome & Clean Chat',
     category: 'Community & Moderation',
     description:
-      'Greets new group members with placeholder templates and auto-cleans join service messages.',
+      'Greets new group members and says goodbye on leaves, kicks and bans from service messages and chat_member updates (works when join messages are hidden), with service-message cleanup.',
     defaultConfig: {
       template: 'Welcome {mention} to {group_name}!',
       welcomeEnabled: true,

@@ -398,6 +398,12 @@ export class BotsService {
       success: true,
       presetKey,
       enabledModules: modulesToEnable,
+      // Chat-scoped modules stay idle after a preset until a per-chat entry
+      // is saved — surfaced so the panel can tell the user.
+      chatScopedModules: modulesToEnable
+        .map((key) => findModule(key))
+        .filter((definition) => definition?.chatScoped)
+        .map((definition) => definition!.name),
     };
   }
 

@@ -54,8 +54,12 @@ const CHAT_TYPES: readonly string[] = ['channel', 'group', 'supergroup'];
 /** Auto-sync interval for discovered chats (30 seconds). */
 const AUTO_SYNC_INTERVAL_MS = 30_000;
 
+/** Minimum delay between @username resolution attempts for one chat (10 minutes). */
+const USERNAME_RESOLVE_RETRY_MS = 10 * 60_000;
+
 /** Minimal chat payload returned by `getChat` enrichment. */
 interface DiscoveredChatInfo {
+  id?: string;
   title?: string;
   username?: string;
   type?: string;
@@ -90,6 +94,8 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
   private readonly logger = new Logger(ConnectionsService.name);
   private readonly ticker: ReturnType<typeof setInterval>;
   private isRunning = false;
+  /** Last @username resolution attempt per chat ref, throttling retries. */
+  private readonly usernameAttempts = new Map<string, number>();
 
   /**
    * @param {ChatConnectionModel} connectionModel - Model for chat connections and groups.
@@ -136,9 +142,18 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
    */
   async create(botId: string, data: Record<string, unknown>): Promise<ChatConnectionRow> {
     const rawChatId = data.chatId !== undefined ? data.chatId : data.chat_id;
-    const chatId = normalizeChatId(rawChatId);
+    let chatId = normalizeChatId(rawChatId);
+    // Resolve @username refs to numeric ids via the live bot: per-chat module
+    // settings only accept numeric ids, so an unresolved ref would stay
+    // unconfigurable. Unresolvable refs (bot not in the chat yet) are kept
+    // as-is and retried by the auto-sync pass.
+    let resolvedInfo: DiscoveredChatInfo | null = null;
+    if (chatId.startsWith('@')) {
+      resolvedInfo = await this.fetchChatInfo(botId, chatId);
+      if (resolvedInfo?.id) chatId = resolvedInfo.id;
+    }
     const type = normalizeType(data.type);
-    const title = String(data.title ?? '').trim() || chatId;
+    const title = String(data.title ?? '').trim() || resolvedInfo?.title || chatId;
 
     const existing = await this.connectionModel.findConnectionByChatId(botId, chatId);
     if (existing) {
@@ -163,9 +178,7 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
       type,
       username: data.username
         ? String(data.username).replace(/^@/, '')
-        : chatId.startsWith('@')
-          ? chatId.slice(1)
-          : null,
+        : (resolvedInfo?.username ?? (chatId.startsWith('@') ? chatId.slice(1) : null)),
       isActive,
     });
 
@@ -206,7 +219,13 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
   ): Promise<ChatConnectionRow> {
     const existing = await this.getOrFail(botId, id);
     const rawChatId = data.chatId !== undefined ? data.chatId : data.chat_id;
-    const chatId = rawChatId === undefined ? existing.chatId : normalizeChatId(rawChatId);
+    let chatId = rawChatId === undefined ? existing.chatId : normalizeChatId(rawChatId);
+    if (chatId !== existing.chatId && chatId.startsWith('@')) {
+      // Same numeric-id requirement as create: resolve when the live bot
+      // knows the chat, otherwise keep the ref for the auto-sync retry.
+      const info = await this.fetchChatInfo(botId, chatId);
+      if (info?.id) chatId = info.id;
+    }
 
     if (chatId !== existing.chatId) {
       const duplicate = await this.connectionModel.findConnectionByChatId(botId, chatId);
@@ -361,18 +380,68 @@ export class ConnectionsService implements OnApplicationBootstrap, OnApplication
         },
       });
     }
+
+    if (enrich) {
+      await this.resolveUsernameConnections(botId);
+    }
     return { synced: groups.length };
   }
 
   /**
-   * Fetches chat info via live bot instance.
+   * Rewrites @username connection rows to their numeric chat ids once the
+   * live bot can resolve them (bot joined the chat), so the numeric-only
+   * per-chat module settings become available for those chats. Retries are
+   * throttled per chat ref; a numeric twin row absorbs the duplicate.
+   */
+  private async resolveUsernameConnections(botId: string): Promise<void> {
+    const rows = await this.prisma.chatConnection.findMany({ where: { botId } });
+    for (const row of rows) {
+      if (!row.chatId.startsWith('@')) continue;
+      const attemptKey = `${botId}:${row.chatId}`;
+      const lastAttempt = this.usernameAttempts.get(attemptKey) ?? 0;
+      if (Date.now() - lastAttempt < USERNAME_RESOLVE_RETRY_MS) continue;
+      this.usernameAttempts.set(attemptKey, Date.now());
+
+      const info = await this.fetchChatInfo(botId, row.chatId);
+      if (!info?.id) continue;
+      try {
+        const twin = await this.connectionModel.findConnectionByChatId(botId, info.id);
+        if (twin && twin.id !== row.id) {
+          await this.connectionModel.deleteConnection(row.id);
+        } else {
+          await this.connectionModel.updateConnection(row.id, {
+            chatId: info.id,
+            username: row.username ?? info.username ?? null,
+          });
+        }
+        this.usernameAttempts.delete(attemptKey);
+      } catch (error) {
+        this.logger.warn(
+          `Resolving ${row.chatId} to ${info.id} failed for bot ${botId}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
+  }
+
+  /**
+   * Fetches chat info (numeric id, title, username, type) via live bot instance.
    */
   private async fetchChatInfo(botId: string, chatId: string): Promise<DiscoveredChatInfo | null> {
     const bot = this.pool.getBot(botId);
     if (!bot) return null;
     try {
-      const info = (await bot.api.getChat(chatId)) as DiscoveredChatInfo;
-      return { title: info.title, username: info.username, type: info.type };
+      const info = (await bot.api.getChat(chatId)) as {
+        id?: number | bigint;
+        title?: string;
+        username?: string;
+        type?: string;
+      };
+      return {
+        id: info.id !== undefined ? String(info.id) : undefined,
+        title: info.title,
+        username: info.username,
+        type: info.type,
+      };
     } catch {
       return null;
     }

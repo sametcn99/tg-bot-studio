@@ -80,15 +80,25 @@ export default function BotPresetsDialog({
     setError(null);
     setSuccessMsg(null);
     try {
-      await apiFetch(`/api/bots/${botId}/presets/${presetKey}`, {
-        method: 'POST',
-      });
-      setSuccessMsg(t('presets.applied'));
+      const result = await apiFetch<{ chatScopedModules?: string[] }>(
+        `/api/bots/${botId}/presets/${presetKey}`,
+        {
+          method: 'POST',
+        },
+      );
+      const chatScopedNote =
+        result.chatScopedModules && result.chatScopedModules.length > 0
+          ? ` ${t('presets.appliedChatScoped', { modules: result.chatScopedModules.join(', ') })}`
+          : '';
+      setSuccessMsg(`${t('presets.applied')}${chatScopedNote}`);
       onSuccess();
-      setTimeout(() => {
-        onClose();
-        setSuccessMsg(null);
-      }, 1500);
+      setTimeout(
+        () => {
+          onClose();
+          setSuccessMsg(null);
+        },
+        chatScopedNote ? 6_000 : 1_500,
+      );
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {

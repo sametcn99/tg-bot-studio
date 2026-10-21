@@ -420,7 +420,8 @@
     "supportDesc": "Kombiniert Support-Desk, 24/7-KI-Wissensassistenten und Autoresponder-Regeln.",
     "growthTitle": "Virales Wachstum & Treueprogramm",
     "growthDesc": "Integriert Empfehlungsbestenliste, Treue-Mini-App, Glücksrad und Drip-Kampagnen.",
-    "applied": "Voreinstellungspaket erfolgreich aktiviert! Module hot-neu geladen."
+    "applied": "Voreinstellungspaket erfolgreich aktiviert! Module hot-neu geladen.",
+    "appliedChatScoped": "Hinweis: {{modules}} arbeiten pro Chat — lege auf der Einstellungsseite für jede Gruppe einen Chat-Eintrag an, damit sie aktiv werden."
   },
   "simulator": {
     "title": "Live-Bot-Simulator",

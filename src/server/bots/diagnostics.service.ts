@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { BotPoolService } from '../bot-engine/bot-pool.service';
+import { findModule } from '../bot-engine/module-registry';
 import { callGetMe } from '../common/utils/telegram.util';
 import { BotModel } from './bot.model';
 import { listModuleStates } from './module-states';
@@ -184,6 +185,32 @@ export class DiagnosticsService {
         details: 'No channels or groups connected yet. Schedulers and Giveaways need target chats.',
       });
       recommendations.push('Add your channels or press "Sync from bot" in Chat Connections.');
+    }
+
+    // 4b. Chat-scoped modules enabled without any per-chat entry stay idle:
+    // enabling alone never targets them, a common "module not working" report.
+    const targetedKeys = new Set(
+      (
+        await this.prisma.chatModuleSetting.findMany({
+          where: { botId },
+          select: { moduleKey: true },
+        })
+      ).map((row) => row.moduleKey),
+    );
+    const idleChatScoped = activeModules
+      .map((m) => findModule(String(m.key)))
+      .filter((definition) => definition?.chatScoped && !targetedKeys.has(definition.key))
+      .map((definition) => definition!.name);
+    if (idleChatScoped.length > 0) {
+      checks.push({
+        key: 'chat_targeting',
+        title: 'Per-Chat Module Targeting',
+        status: 'warning',
+        details: `Enabled but not targeted at any chat: ${idleChatScoped.join(', ')}.`,
+      });
+      recommendations.push(
+        'Chat-scoped modules stay idle until you save a per-chat entry on their settings page (or run e.g. /setwelcome in the group).',
+      );
     }
 
     // 5. Smart usage-based module recommendations
